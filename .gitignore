@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+media/
+renders/
+out/
+*.mp4
+*.wav
+node_modules/
