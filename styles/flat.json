@@ -1,10 +1,23 @@
 {
   "name": "flat",
   "label": "Flat illustrated",
-  "palette": { "paper": "#f4eee1", "ink": "#16324f", "accent": "#e8833a", "highlight": "#ffd93d" },
-  "fonts": { "caption": "Arial Black", "title": "Arial Black", "body": "Arial" },
+  "palette": {
+    "paper": "#f4eee1",
+    "ink": "#16324f",
+    "accent": "#e8833a",
+    "highlight": "#ffd93d"
+  },
+  "fonts": {
+    "caption": "Arial Black",
+    "title": "Arial Black",
+    "body": "Arial"
+  },
   "artPrefix": "Flat vector illustration in a modern science explainer style: bold simple shapes, soft gradients, limited palette of teal, navy, warm orange and cream, subtle grain, no outlines. Absolutely no text, letters, numbers or captions anywhere.",
+  "realAssets": "proof",
   "grain": 0.25,
   "vignette": 0.3,
-  "voice": { "id": "JBFqnCBsd6RMkjVDRZzb", "model": "eleven_v4" }
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  }
 }

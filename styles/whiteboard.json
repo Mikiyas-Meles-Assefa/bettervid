@@ -1,10 +1,23 @@
 {
   "name": "whiteboard",
   "label": "Whiteboard",
-  "palette": { "paper": "#fbfbf8", "ink": "#1b1b1b", "accent": "#2b6cd4", "highlight": "#ffd93d" },
-  "fonts": { "caption": "Arial Black", "title": "Marker Felt", "body": "Marker Felt" },
+  "palette": {
+    "paper": "#fbfbf8",
+    "ink": "#1b1b1b",
+    "accent": "#2b6cd4",
+    "highlight": "#ffd93d"
+  },
+  "fonts": {
+    "caption": "Arial Black",
+    "title": "Marker Felt",
+    "body": "Marker Felt"
+  },
   "artPrefix": "Whiteboard explainer drawing: confident black marker line art on a clean white board, simple grey marker shading, one blue accent color, minimal and clear. Absolutely no text, letters, numbers or captions anywhere.",
+  "realAssets": "proof",
   "grain": 0.1,
   "vignette": 0.15,
-  "voice": { "id": "JBFqnCBsd6RMkjVDRZzb", "model": "eleven_v4" }
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  }
 }

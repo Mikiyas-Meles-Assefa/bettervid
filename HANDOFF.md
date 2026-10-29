@@ -12,7 +12,10 @@ For the next agent picking up bettervid. Read `AGENTS.md`, then `docs/PLAN.md` (
   - `schemas/project.ts`: the Project JSON contract. `styles/*.json` (collage, flat, whiteboard) and `prompts/*.md` (craft rules, research, writer, director) are data.
   - `pipeline/stages/`: research (Spark + web_search, structured output), writer, voice (ElevenLabs v4 word times), director (shots on word indices; receipts filled from the fact sheet by code), assets (archives + Spark pick, Muse Image fallback, SAM cutouts baked by `pipeline/tools/bake_cutout.py`), timeline, render (Remotion, concurrency 4).
   - Caching: each stage is skipped when its inputs are unchanged; assets also cache per shot. Code changes are not in the cache key, so use `--force <stage>` after editing a stage.
-  - Spend ledger: `projects/spend.jsonl`; `BUDGET_USD` (default 5) stops runs at the cap. The user approved $5 of dev runs on Oct 29; $0.77 used so far.
+  - Spend ledger: `projects/spend.jsonl`; `BUDGET_USD` (default 5) stops runs at the cap. The user approved $5 of dev runs on Oct 29; $2.61 used so far.
+  - Asset rules (Oct 29, after reviewing 3 test videos): the picker gets the topic and rejects images whose visible labels name another event or mission; real images need 1000 px on the short side; `styles/*.json` `realAssets` is "prefer" (collage) or "proof" (flat, whiteboard: generate almost everything); no cutouts of scenery; never generate a likeness of a named real person (title card instead). The asset stage never edits shots: fallbacks go in `Asset.override` and the timeline applies them. Bump `RULES_VERSION` in `pipeline/stages/assets.ts` when picking rules change.
+  - Commons only serves standard thumbnail widths: `/400px-` returns 400, `/500px-` works.
+  - Test videos so far: John Snow (collage), Apollo 13 (collage), why the sky is blue (flat), all in `projects/`.
   - Gotchas found: with web search Spark sends progress messages before the JSON (take the last message); Muse Image refuses some prompts (beer, bodies) with `content_policy_violation` (retry with the neutral query, else title card).
 - **Next (plan section 9, Sat Oct 31):** shot types 3, 5, 6, 7, 8, 10, 11; style loader with the 3 core styles tested; license records and credits card; music and SFX (stage 5d); then the critic (stage 8) and the fix round.
 

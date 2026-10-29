@@ -2,7 +2,7 @@
 // receipts from the fact sheet so outlets, quotes and URLs are never invented.
 import type { Project, Shot, ShotType } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
-import { charge, prompt, stage } from "../lib/project.ts";
+import { charge, prompt, stage, style } from "../lib/project.ts";
 
 type Planned = { beatId: string; type: ShotType; startWord: number; kind: "real" | "generated" | "none"; query: string; prompt: string; subject: string; text: string; claimId: string };
 
@@ -34,13 +34,20 @@ const schema = {
   },
 } as const;
 
+const REAL_POLICY = {
+  prefer: "This style is documentary collage: use real archival images wherever they exist, and generated art only for moments no camera or archive captured.",
+  proof:
+    "This style is fully illustrated: generate almost every image in the style so the video looks unified. Use real images only as proof: a real person's portrait, a real document or map, or a real photo of the actual event. Never use real paintings or stock scenery for ideas, places or moods.",
+};
+
 export async function director(p: Project, force = false) {
   const n = p.narration!;
   const system = prompt("director")
     .replace("{{craft}}", prompt("craft-rules"))
     .replace("{{shots}}", String(Math.round(n.seconds / 2.3)))
     .replace("{{seconds}}", String(Math.round(n.seconds)))
-    .replace("{{mode}}", p.input.mode);
+    .replace("{{mode}}", p.input.mode)
+    .replace("{{realPolicy}}", REAL_POLICY[style(p.input.style).realAssets]);
   const words = n.words.map((w, i) => `${i} ${w.start.toFixed(2)}s ${w.text}`).join("\n");
   const user =
     `Topic: ${p.input.prompt}\n\nScript beats:\n${JSON.stringify(p.script!.beats, null, 1)}\n\n` +

@@ -2,13 +2,28 @@
 // Returns candidates with a thumbnail for judging and a large image URL for the video.
 import { sleep } from "./util.ts";
 
-export type Candidate = { source: string; title: string; license: string; credit: string; page: string; thumb: string; full: string };
+export type Candidate = { source: string; title: string; license: string; credit: string; page: string; thumb: string; full: string; size?: string };
+
+// Below this on the short side, a still blown up to a 1080x1920 frame looks blurry (seen on Oct 29: 649x649).
+export const MIN_SIDE = 1000;
 
 const UA = "bettervid/0.1 (hackathon project; mikiyasmeles77@gmail.com)";
 const SAFE = /public domain|^pd|cc0|^cc[ -]by(-sa)?( |$|-\d|\d)/i;
 
+// Retries network failures (seen Oct 29: "fetch failed" on every archive at once for a few seconds).
+async function fetchRetry(url: string, timeoutMs: number, tries = 3): Promise<Response> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (e) {
+      if (i >= tries) throw e;
+      await sleep(2000 * i);
+    }
+  }
+}
+
 async function get(url: string, timeoutMs = 20000): Promise<any> {
-  const r = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(timeoutMs) });
+  const r = await fetchRetry(url, timeoutMs);
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   const j: any = await r.json();
   if (j.error) throw new Error(`${j.error.code ?? "error"}: ${j.error.info ?? ""}`);
@@ -26,15 +41,17 @@ async function commons(q: string, n: number): Promise<Candidate[]> {
   return (Object.values(j.query?.pages ?? {}) as any[])
     .sort((a, b) => a.index - b.index)
     .map((p) => ({ p, ii: p.imageinfo?.[0] }))
-    .filter(({ ii }) => ii && /image\/(jpeg|png)/.test(ii.mime) && ii.width >= 500)
+    .filter(({ ii }) => ii && /image\/(jpeg|png)/.test(ii.mime) && Math.min(ii.width, ii.height) >= MIN_SIDE)
     .map(({ p, ii }) => ({
       source: "Wikimedia Commons",
       title: p.title.replace(/^File:/, "").replace(/\.\w+$/, ""),
       license: ii.extmetadata?.LicenseShortName?.value ?? "unknown",
       credit: strip(ii.extmetadata?.Artist?.value) || "unknown",
       page: ii.descriptionurl,
-      thumb: ii.thumburl.replace(/\/\d+px-/, "/400px-"),
+      // Commons only serves standard thumbnail widths; 400px returns 400 Bad Request, 500px works.
+      thumb: ii.thumburl.replace(/\/\d+px-/, "/500px-"),
       full: ii.thumburl,
+      size: `${ii.width}x${ii.height}`,
     }))
     .filter((c) => SAFE.test(c.license))
     .slice(0, n);
@@ -77,7 +94,7 @@ export async function searchArchives(q: string, perSource = 3): Promise<Candidat
 }
 
 export async function download(url: string): Promise<Uint8Array> {
-  const r = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(60000) });
+  const r = await fetchRetry(url, 60000);
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return new Uint8Array(await r.arrayBuffer());
 }

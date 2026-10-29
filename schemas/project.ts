@@ -64,10 +64,13 @@ export type Shot = {
 export type AssetRequest = { kind: "real" | "generated"; query: string; prompt: string; subject?: string };
 
 // Stages 5a to 5c: assets
+// The asset stage never edits the director's shots. When a shot can't be made as planned (no cutout, a refused
+// prompt, no portrait of a real person), `override` says how the timeline should show it instead.
 export type Asset = {
   shotId: string;
-  kind: "real" | "generated";
-  path: string;
+  kind: "real" | "generated" | "none";
+  path?: string;
+  override?: { type: ShotType; text?: string };
   cutout?: string; // PNG with outline and shadow baked in
   title?: string;
   source?: string;
@@ -97,6 +100,9 @@ export type StyleFile = {
   palette: { paper: string; ink: string; accent: string; highlight: string };
   fonts: { caption: string; title: string; body: string };
   artPrefix: string; // prepended to every Muse Image prompt
+  // "prefer": real archival images wherever they exist (documentary collage).
+  // "proof": real images only for proof (real people, documents, events); everything else is generated in the style.
+  realAssets: "prefer" | "proof";
   grain: number; // 0 to 1
   vignette: number; // 0 to 1
   voice: { id: string; model: string };

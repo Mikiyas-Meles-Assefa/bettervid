@@ -52,7 +52,8 @@ export async function timeline(p: Project, force = false) {
       const from = Math.round(shot.start * FPS);
       const to = i + 1 < p.shots!.length ? Math.round(p.shots![i + 1]!.start * FPS) : frames;
       const a = assets.get(shot.id);
-      return { shotId: shot.id, type: shot.type, from, frames: Math.max(1, to - from), image: a?.path, cutout: a?.cutout, text: shot.text, receipt: shot.receipt };
+      const type = a?.override?.type ?? shot.type;
+      return { shotId: shot.id, type, from, frames: Math.max(1, to - from), image: a?.path, cutout: a?.cutout, text: a?.override?.text ?? shot.text, receipt: shot.receipt };
     });
     // The same archival image twice in a row (e.g. one map for two beats) becomes a punch-in, not a repeat.
     const sameImage = (a?: string, b?: string) => !!a && !!b && readFileSync(join(dir(p), a)).equals(readFileSync(join(dir(p), b)));
