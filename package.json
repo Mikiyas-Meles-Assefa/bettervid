@@ -1,0 +1,27 @@
+{
+  "name": "bettervid",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "spike": "node --env-file=.env --experimental-strip-types",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@meta-sam/parser": "^0.1.0",
+    "@remotion/bundler": "^4.0.539",
+    "@remotion/renderer": "^4.0.539",
+    "@remotion/transitions": "^4.0.539",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.539"
+  }
+}
