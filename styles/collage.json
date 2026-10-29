@@ -1,0 +1,10 @@
+{
+  "name": "collage",
+  "label": "Documentary collage",
+  "palette": { "paper": "#e9dfc9", "ink": "#1d1b18", "accent": "#c8372d", "highlight": "#ffd93d" },
+  "fonts": { "caption": "Arial Black", "title": "Georgia", "body": "Georgia" },
+  "artPrefix": "Documentary paper collage: aged paper, halftone print texture, torn edges, muted archival color, film grain. Absolutely no text, letters, numbers or captions anywhere.",
+  "grain": 0.5,
+  "vignette": 0.55,
+  "voice": { "id": "JBFqnCBsd6RMkjVDRZzb", "model": "eleven_v4" }
+}

@@ -7,7 +7,8 @@
   },
   "scripts": {
     "spike": "node --env-file=.env --experimental-strip-types",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pipeline": "node --env-file=.env --experimental-strip-types pipeline/run.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
