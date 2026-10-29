@@ -1,0 +1,32 @@
+{
+  "john-snow": [
+    { "line": "In 1854, cholera killed hundreds in Soho in a matter of days.", "need": "Victorian-era image of cholera in London", "query": "cholera London 1854" },
+    { "line": "Doctors blamed miasma: a poisonous bad air.", "need": "period illustration of miasma or bad air as disease", "query": "miasma cholera illustration" },
+    { "line": "One physician, John Snow, didn't buy it.", "need": "portrait of John Snow", "query": "John Snow physician portrait" },
+    { "line": "He marked every death on a map.", "need": "John Snow's 1854 cholera map", "query": "John Snow cholera map" },
+    { "line": "The deaths clustered around one water pump on Broad Street.", "need": "the Broad Street pump", "query": "Broad Street pump" },
+    { "line": "London drank Thames water full of sewage.", "need": "period cartoon or image of dirty Thames water", "query": "Monster Soup Thames water" },
+    { "line": "Decades later, scientists saw the bacteria behind it.", "need": "micrograph of Vibrio cholerae", "query": "Vibrio cholerae micrograph" },
+    { "line": "London rebuilt its sewers, and cholera never returned.", "need": "Victorian London sewer construction", "query": "Bazalgette sewer construction London" }
+  ],
+  "apollo-13": [
+    { "line": "April 11, 1970: Apollo 13 lifts off.", "need": "Apollo 13 launch photo", "query": "Apollo 13 launch" },
+    { "line": "Three astronauts: Lovell, Swigert and Haise.", "need": "Apollo 13 crew portrait", "query": "Apollo 13 crew portrait" },
+    { "line": "Two days out, an oxygen tank exploded.", "need": "the damaged Apollo 13 service module", "query": "Apollo 13 service module damage" },
+    { "line": "Mission Control had hours to save them.", "need": "Apollo 13 Mission Control in Houston", "query": "Apollo 13 mission control" },
+    { "line": "Engineers built a square filter for a round hole out of tape and cardboard.", "need": "the improvised lithium hydroxide canister adapter", "query": "Apollo 13 lithium hydroxide canister" },
+    { "line": "They swung around the Moon to get home.", "need": "the Moon seen from Apollo 13", "query": "Apollo 13 moon photograph" },
+    { "line": "On April 17, they splashed down in the Pacific.", "need": "Apollo 13 splashdown or recovery", "query": "Apollo 13 splashdown" },
+    { "line": "All three came home alive.", "need": "the Apollo 13 crew after recovery", "query": "Apollo 13 crew USS Iwo Jima" }
+  ],
+  "crispr": [
+    { "line": "Bacteria have been fighting viruses for billions of years.", "need": "electron micrograph of bacteria", "query": "bacteria electron micrograph" },
+    { "line": "The attackers are called phages.", "need": "image of a bacteriophage", "query": "bacteriophage electron micrograph" },
+    { "line": "Bacteria keep mugshots of old viruses in their own DNA.", "need": "DNA double helix image", "query": "DNA double helix model" },
+    { "line": "In 2012, Jennifer Doudna and Emmanuelle Charpentier turned that defense into a tool.", "need": "photo of Jennifer Doudna or Emmanuelle Charpentier", "query": "Jennifer Doudna" },
+    { "line": "The tool is a protein called Cas9: molecular scissors.", "need": "Cas9 protein structure", "query": "Cas9 protein structure" },
+    { "line": "Now labs everywhere can edit genes.", "need": "scientist working in a genetics lab", "query": "laboratory pipette scientist" },
+    { "line": "It's already curing sickle cell disease.", "need": "sickle cell red blood cells", "query": "sickle cell red blood cells" },
+    { "line": "And in 2018, a scientist edited human babies.", "need": "photo of He Jiankui", "query": "He Jiankui" }
+  ]
+}

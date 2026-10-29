@@ -15,9 +15,9 @@ Ground truth for bettervid. Read this first after any context reset.
 | `REVIEW.md` | Phase 3: adversarial feasibility review of the hypothesis |
 | `DECISIONS.md` | What we take, change or reject from REVIEW.md (27 items). Source of truth for v2 |
 | `../docs/pipeline.html` | Pipeline diagram (open in a browser) |
-| `spikes/` | Phase 4 spike results, one file each: `S1-muse-image-916.md`, `S2-character-consistency.md`, `S3-styles.md`, `S4-sam-cutouts.md`, `S5-critic-faults.md`, `S6-elevenlabs-timestamps.md`, `S7-remotion-render.md`, `S9-image-n4-rpm.md`, `S10-video-tokens.md`. All PASS (S4 with conditions) |
+| `spikes/` | Phase 4 spike results, one file each: `S1-muse-image-916.md`, `S2-character-consistency.md`, `S3-styles.md`, `S4-sam-cutouts.md`, `S5-critic-faults.md`, `S6-elevenlabs-timestamps.md`, `S7-remotion-render.md`, `S8-archive-coverage.md`, `S9-image-n4-rpm.md`, `S10-video-tokens.md`. All PASS (S4 with conditions) |
 | `sources/<topic>/` | Saved excerpts of primary sources (URL, date retrieved, verbatim key parts) |
 
-Phase 4 in progress: S1 to S7, S9, S10 passed. Left: S8 (archive coverage).
+Phase 4 done: all ten spikes S1 to S10 passed (S4 with conditions). Next: the build per `docs/PLAN.md` section 9.
 
 Confidence tags used in all files: `[verified]` official source read, `[reported]` third party, `[unverified]` inferred.
