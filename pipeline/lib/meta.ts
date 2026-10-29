@@ -94,3 +94,21 @@ export async function json<T>(c: JsonCall): Promise<{ value: T; usd: number; sea
     throw Object.assign(new Error(`meta ${model} returned non-JSON: ${text.slice(0, 300)}`), { usd });
   }
 }
+
+type TextCall = Omit<JsonCall, "schema" | "schemaName" | "webSearch">;
+
+// One Responses call that returns free text. Used for writing prose: a JSON form makes the model write in boxes.
+export async function text(c: TextCall): Promise<{ value: string; usd: number; raw: any }> {
+  const model = c.model ?? "muse-spark-1.3";
+  const r = await post("/responses", {
+    model,
+    store: false,
+    reasoning: { effort: c.effort ?? "low" },
+    max_output_tokens: c.maxOutput ?? 32000,
+    instructions: c.system,
+    input: [{ role: "user", content: typeof c.user === "string" ? [{ type: "input_text", text: c.user }] : c.user }],
+  });
+  const usd = tokenCost(model, r.usage);
+  if (r.status !== "completed") throw Object.assign(new Error(`meta ${model} ended ${r.status}: ${JSON.stringify(r.incomplete_details)}`), { usd });
+  return { value: outputText(r).trim(), usd, raw: r };
+}

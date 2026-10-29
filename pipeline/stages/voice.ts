@@ -2,7 +2,7 @@
 // the master clock every later stage cuts to.
 import { join } from "node:path";
 import type { Project, Word } from "../../schemas/project.ts";
-import { charge, dir, stage, style } from "../lib/project.ts";
+import { charge, dir, persona, stage, style } from "../lib/project.ts";
 import { env, write } from "../lib/util.ts";
 
 type Alignment = { characters: string[]; character_start_times_seconds: number[]; character_end_times_seconds: number[] };
@@ -28,7 +28,8 @@ export function toWords(a: Alignment): Omit<Word, "beatId">[] {
 }
 
 export async function voice(p: Project, force = false) {
-  const v = style(p.input.style).voice;
+  // The persona's voice wins over the style's, so narrator and look can be chosen separately.
+  const v = persona(p.input.persona).voice ?? style(p.input.style).voice;
   const beats = p.script!.beats;
   const text = beats.map((b) => b.text.trim()).join(" ");
   await stage(p, "voice", [v, text], 0, async () => {

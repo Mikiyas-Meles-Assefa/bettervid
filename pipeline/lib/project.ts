@@ -1,7 +1,7 @@
 // Project folders, the stage runner (hash cache) and the spend ledger with its budget cap.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Project, StageName, StyleFile } from "../../schemas/project.ts";
+import type { Persona, Project, StageName, StyleFile } from "../../schemas/project.ts";
 import { hash, write } from "./util.ts";
 
 export const ROOT = process.env.PROJECTS_DIR ?? "projects";
@@ -21,6 +21,10 @@ export async function save(p: Project) {
 
 export function style(name: string): StyleFile {
   return JSON.parse(readFileSync(`styles/${name}.json`, "utf8"));
+}
+
+export function persona(name: string): Persona {
+  return JSON.parse(readFileSync(`personas/${name || "auto"}.json`, "utf8"));
 }
 
 export function prompt(name: string): string {

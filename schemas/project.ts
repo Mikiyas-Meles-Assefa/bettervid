@@ -8,6 +8,7 @@ export type Project = {
   createdAt: string;
   input: Input;
   factSheet?: FactSheet;
+  writing?: WritingStep[]; // the writer's prose at each step (draft, cut, review), kept for the trail
   script?: Script;
   narration?: Narration;
   shots?: Shot[];
@@ -22,8 +23,9 @@ export type Project = {
 export type Input = {
   prompt: string;
   style: string; // a file in styles/, e.g. "collage"
+  persona: string; // a file in personas/: who narrates, in what voice; "auto" lets the writer choose
   mode: "explain" | "history" | "math" | "story";
-  seconds: number; // target length
+  seconds: number; // target length; 0 means as long as the story needs
 };
 
 export type Cost = { stage: StageName; usd: number; detail: string; at: string };
@@ -31,10 +33,13 @@ export type Cost = { stage: StageName; usd: number; detail: string; at: string }
 // Stage 1: research
 export type Source = { id: string; title: string; publisher: string; url: string; date?: string };
 export type Claim = { id: string; text: string; number?: string; quote?: string; sourceIds: string[]; confidence: "high" | "medium" | "low" };
-export type FactSheet = { topic: string; angle: string; misconception?: string; claims: Claim[]; sources: Source[] };
+// `story` is the sourced account of what happened, in order, with claim ids inline ([c3]), so the writer has a story
+// to tell and not just a list of facts.
+export type FactSheet = { topic: string; angle: string; misconception?: string; story: string; claims: Claim[]; sources: Source[] };
 
 // Stage 2: writer
-export type BeatRole = "hook" | "setup" | "but" | "therefore" | "reveal" | "ending";
+// What a beat does for the viewer. A vocabulary, not a template: the writer uses whichever the story needs.
+export type BeatRole = "hook" | "setup" | "explain" | "example" | "but" | "therefore" | "twist" | "reveal" | "ending";
 export type Beat = {
   id: string;
   role: BeatRole;
@@ -43,7 +48,9 @@ export type Beat = {
   visual: string; // the one visual this beat calls for, concrete
   emphasis: string[]; // words to highlight in captions
 };
-export type Script = { title: string; beats: Beat[] };
+export type Script = { title: string; takeaway: string; beats: Beat[] };
+// `notes`: for a cut, the thread and what was left out; for a review, the issues it fixed.
+export type WritingStep = { step: "draft" | "cut" | "review"; title: string; takeaway: string; narration: string; notes: string[] };
 
 // Stage 3: voice
 export type Word = { text: string; start: number; end: number; beatId: string };
@@ -93,6 +100,15 @@ export type Timeline = {
 // `punch` marks a clip that reuses the previous clip's image, so it zooms in harder instead of repeating.
 export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean };
 
+// personas/*.json: the narrator. Separate from the visual style so either can change on its own.
+export type Persona = {
+  name: string;
+  label: string;
+  brief: string; // how this narrator talks and thinks, given to the writer
+  expertise?: string; // what this narrator knows deeply and notices
+  voice?: { id: string; model: string }; // overrides the style's voice when set
+};
+
 // styles/*.json
 export type StyleFile = {
   name: string;
@@ -115,11 +131,12 @@ const strArr = { type: "array", items: str } as const;
 export const factSheetSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["topic", "angle", "misconception", "claims", "sources"],
+  required: ["topic", "angle", "misconception", "story", "claims", "sources"],
   properties: {
     topic: str,
     angle: str,
     misconception: str,
+    story: str,
     claims: {
       type: "array",
       items: {
@@ -144,9 +161,10 @@ export const factSheetSchema = {
 export const scriptSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["title", "beats"],
+  required: ["title", "takeaway", "beats"],
   properties: {
     title: str,
+    takeaway: str,
     beats: {
       type: "array",
       items: {
@@ -155,7 +173,7 @@ export const scriptSchema = {
         required: ["id", "role", "text", "claimIds", "visual", "emphasis"],
         properties: {
           id: str,
-          role: { type: "string", enum: ["hook", "setup", "but", "therefore", "reveal", "ending"] },
+          role: { type: "string", enum: ["hook", "setup", "explain", "example", "but", "therefore", "twist", "reveal", "ending"] },
           text: str,
           claimIds: strArr,
           visual: str,

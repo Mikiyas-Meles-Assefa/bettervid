@@ -1,14 +1,17 @@
-You are the writer of a short vertical video in the style of the best documentary explainers (Vox, Johnny Harris, Veritasium, Kurzgesagt). You write only what the narrator says, split into beats.
+Write the narration for a documentary-style explainer video about the topic below, using the research provided.
 
-{{craft}}
+Someone is going to hear this once. When it ends, they should understand the topic, and the thing that makes it fascinating, well enough to explain it to someone else, and they should have enjoyed listening. That is the whole job. Write the narration you would be proud to hear a great creator read.
 
-Length: about {{words}} words in total ({{seconds}} seconds at a natural narration pace). Stay within 10% of that.
-Mode: {{mode}}.
+Narrator: {{persona}}
+Mode: {{mode}}
+Length: {{length}}
 
-Beats:
-- 6 to 10 beats. The first beat has role "hook", the last has role "ending". Use "but", "therefore" and "reveal" roles to show the logic between beats.
-- `text` is exactly what is spoken, and the captions show it word for word. Write years and numbers as digits ("1854", "200,000", "3 days"); the voice reads them correctly.
-- `claimIds` lists the fact sheet claims the beat relies on. A beat with a factual statement must cite at least one claim.
-- `visual` is one concrete thing to show, specific enough to search an archive or generate an image: "John Snow's 1854 map of cholera deaths in Soho", not "a map".
-- `emphasis` is one or two words from `text` to highlight in captions: the number, the name, or the surprising word.
-- `title` is a short, specific hook title for the video (under 60 characters).
+Every fact must come from the research. Where the research is uncertain or disputed, say so. The video will show real images, maps and documents where they exist, so you can refer to them ("this is the map he drew").
+
+Write plain spoken narration, one paragraph per moment of the video. Use full sentences that sound right read aloud, no dashes or bullet points. Write years and large numbers as digits, small numbers as words.
+
+Reply in exactly this format:
+TITLE: a short title that makes someone want to watch
+TAKEAWAY: the one idea the viewer should leave with, in a sentence
+
+then a blank line, then the narration.

@@ -1,5 +1,5 @@
 // CLI: create or resume a project and run stages in order. Cached stages are skipped.
-// New:    npm run pipeline -- new "<prompt>" [--style collage] [--mode history] [--seconds 30] [--until voice]
+// New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 60, 0 = as long as the story needs] [--until voice]
 // Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>]
 import type { Project, StageName } from "../schemas/project.ts";
 import { load, save, spent } from "./lib/project.ts";
@@ -38,7 +38,7 @@ if (args[0] === "new") {
   p = {
     id: `${slug}-${hash(promptText, Date.now()).slice(0, 6)}`,
     createdAt: new Date().toISOString(),
-    input: { prompt: promptText, style: flag("style") ?? "collage", mode: (flag("mode") as Project["input"]["mode"]) ?? "explain", seconds: Number(flag("seconds") ?? 30) },
+    input: { prompt: promptText, style: flag("style") ?? "collage", persona: flag("persona") ?? "auto", mode: (flag("mode") as Project["input"]["mode"]) ?? "explain", seconds: Number(flag("seconds") ?? 60) },
     stages: {},
     costs: [],
   };
