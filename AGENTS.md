@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Start here after any context reset.
+Start here after any context reset. Latest state: `HANDOFF.md`.
 
 1. `docs/PLAN.md`: the plan (v2). Source of truth for what we build and when.
 2. `docs/pipeline.html`: pipeline diagram (open in a browser).
