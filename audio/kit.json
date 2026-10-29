@@ -1,0 +1,15 @@
+{
+  "sfx": {
+    "whoosh": { "text": "fast cinematic whoosh transition, short airy swish passing by, clean, no music", "seconds": 0.9, "gainDb": -14 },
+    "impact": { "text": "deep cinematic boom impact hit with a short low tail, punchy, no music", "seconds": 1.6, "gainDb": -12 },
+    "paper": { "text": "a paper photo cutout slapped down onto a wooden desk, crisp paper slide and tap", "seconds": 0.8, "gainDb": -16 },
+    "pop": { "text": "soft subtle pop click for a graphic appearing on screen", "seconds": 0.5, "gainDb": -20 }
+  },
+  "music": {
+    "documentary": { "prompt": "Cinematic documentary underscore for a history explainer: low ambient strings, soft felt piano motif, gentle ticking pulse, minor key, mysterious and investigative, steady 90 bpm, no vocals, no big drums.", "seconds": 60 },
+    "curious": { "prompt": "Light curious science explainer music: pizzicato strings, marimba and soft synth plucks, playful and inquisitive, bright major key, steady 100 bpm, no vocals, unobtrusive.", "seconds": 60 },
+    "focus": { "prompt": "Calm focused background music for a math explainer: warm electric piano, soft pads, light minimal beat, thoughtful and clear, 85 bpm, no vocals.", "seconds": 60 },
+    "tension": { "prompt": "Dark tense storytelling underscore: low drones, sparse plucked strings, distant heartbeat pulse, slow build of suspense, 70 bpm, no vocals.", "seconds": 60 }
+  },
+  "moodByMode": { "history": "documentary", "explain": "curious", "math": "focus", "story": "tension" }
+}

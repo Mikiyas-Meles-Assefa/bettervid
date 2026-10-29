@@ -6,6 +6,7 @@ import { load, save, spent } from "./lib/project.ts";
 import { hash } from "./lib/util.ts";
 import { assets } from "./stages/assets.ts";
 import { director } from "./stages/director.ts";
+import { mix } from "./stages/mix.ts";
 import { render } from "./stages/render.ts";
 import { research } from "./stages/research.ts";
 import { timeline } from "./stages/timeline.ts";
@@ -19,6 +20,7 @@ const ORDER: [StageName, (p: Project, force: boolean) => Promise<void>][] = [
   ["director", director],
   ["assets", assets],
   ["timeline", timeline],
+  ["mix", mix],
   ["render", render],
 ];
 

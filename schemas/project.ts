@@ -1,7 +1,7 @@
 // The Project JSON: one file per run. Each pipeline stage reads earlier fields and writes its own.
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
 
-export type StageName = "research" | "writer" | "voice" | "director" | "assets" | "art" | "cutouts" | "timeline" | "render" | "critic";
+export type StageName = "research" | "writer" | "voice" | "director" | "assets" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
