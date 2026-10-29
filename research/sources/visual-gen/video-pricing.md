@@ -1,0 +1,19 @@
+# Video model pricing and specs (multiple sources, retrieved 2026-10-29)
+## fal.ai/pricing (official)
+MiniMax H3 Max I2V $0.03/s; H3 Max Turbo $0.015/s; Kling v2.5-turbo Pro I2V $0.07/s; Kling v3 Pro I2V $0.14/s; Seedance 2 I2V $0.014 per 1000 tokens. Images: Nano Banana $0.0398, Nano Banana 2 $0.08, Nano Banana Pro $0.15, GPT Image 2 "$1/unit", Z Image Turbo $0.005/MP, FLUX.1 schnell $0.003/MP. GPUs: H100 $4.50/h list ($2.49 low), H200 $6/h, RTX PRO 6000 $4/h.
+## Runway API pricing https://docs.dev.runwayml.com/guides/pricing/ (official) credit = $0.01
+gen4_turbo 5 cr/s; gen4.5 12; aleph2 28 (min 56); veo3.1 40 audio/20 none; veo3.1_fast 15/10; kling3.0_pro 17 audio/12; wan3 5/10/20 (480/720/1080); seedance2 14/30/40; seedance2_5 20/30/68 + input video fees; hailuo3 10 (768p)/15 (2K); gemini_omni_flash_1.1 3.4/10/15/30 (360/720/1080/4K).
+## Luma Ray3.2 https://lumalabs.ai/api/pricing (official)
+I2V 5 s: $0.15 (540p), $0.30 (720p), $1.20 (1080p); 10 s: $0.45/$0.90/$3.60. Aspect 9:16, 3:4, 1:1, 4:3, 16:9, 21:9. Billed per 5 s block. "no latency SLA".
+## Gemini API https://ai.google.dev/gemini-api/docs/pricing and /docs/video (official)
+Gemini Omni Flash (gemini-omni-1.1-flash): output video $17.50 per 1M tokens, "5,792 tokens per second of 720p video ... approximately $0.10 per second". Video docs: Veo 3.1 previews "shut down on October 22, 2026"; migrate to Gemini Omni Flash or GA Veo on Gemini Enterprise Agent Platform. Veo 3.1 Lite/Fast/Std per-second numbers (third party, not on official page): Lite $0.05 (720p) $0.08 (1080p); Fast $0.10/$0.12; Std $0.40.
+## Wan 3.0 (third party: llm-stats, atlascloud, openrouter listing): closed, API only. $0.05/0.10/0.20 per s at 480/720/1080; up to 30 s one pass; audio; 5 concurrent, 300 RPM on Qwen Cloud. Wan 2.2 last open (Apache 2.0).
+## Seedance 2.5 (third party citing BytePlus): $10.70/M video tokens at 480/720p, $11.70 1080p => ~$0.103, $0.231, $0.569 per s; up to 30 s; Replicate same as BytePlus; fal $0.473/s at 720p. Not sold in US per one source (unverified).
+## Kling 3.0 (third party, sites quoting official): unit $0.14; 720p no audio $0.084/s, 1080p $0.112, audio $0.126/$0.168; 3 to 15 s; fal v3 Pro I2V $0.112 (no audio) / $0.168 (audio). Aspect ratio of I2V follows the start image.
+## Hailuo 3 / MiniMax H3 (third party): official 2K $0.13/s; 768p $0.08/s reported; 4 to 15 s. HF card https://huggingface.co/MiniMaxAI/MiniMax-H3: 33B dense, 768 short side default, 4-15 s, 24 fps, aspect incl 9:16, I2V via first/last frame, SGLang example uses 4 GPUs. License text (HF LICENSE): "Excluded Territories ... the European Union, the United Kingdom, the Republic of Korea and the United States of America"; use of Outputs outside Applicable Territory prohibited; >$20M revenue needs authorization; must display "MiniMax H3".
+## Pika (third party): Pika API Club $10/mo membership + pay as you go; Pika 2.5 $0.04/s 720p, $0.09/s 1080p.
+## Sora: OpenAI Videos API and sora-2 aliases removed 2026-09-24 (deprecations notice March 24 2026); app stopped new generations 2026-04-26 (third party summaries, e.g. techjacksolutions, videocreate.org).
+## Runway Gen-4.5 (help.runwayml.com + dev.runway.com via search): 2 to 10 s, 720p, 9:16 supported, $0.12/s. Krea reports ~5 min per clip for Gen-4.5; ~1 min Gen-4.
+## Latency (higgsfield.ai/blog/how-long-ai-video-generation-takes, third party): Kling 720p 5 s ~60 s, 15 s ~130 s; Wan ~85 s generation; Seedance 8 s 720p ~206 s + queue; Veo 1080p under 2 min.
+## LTX-2.5 HF card: 22B DiT, Gemma 4 12B encoder, native audio, license "ltx-2.x-community-license-agreement": free commercial under $10M annual revenue; paid above. 8-step distilled variant.
+## HunyuanVideo 1.5: 8.3B, 480/720p, custom community license, not applicable in EU/UK/South Korea (Turing Post etc, sources conflict with Apache claims).

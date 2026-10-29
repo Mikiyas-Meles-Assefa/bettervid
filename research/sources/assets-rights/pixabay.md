@@ -1,0 +1,2 @@
+# Pixabay API (retrieved 2026-10-29) https://pixabay.com/api/docs/
+- key param. "100 requests per 60 seconds". "requests must be cached for 24 hours". "permanent hotlinking of images ... is not allowed. Download images to your own server". Videos: GET /api/videos/, renditions large(4K, may be empty)/medium(1080)/small/tiny; videos may be embedded, recommended self-host. "Systematic mass downloads are not allowed." Show Pixabay as source when showing results. Full-res originals need approval for full API access.

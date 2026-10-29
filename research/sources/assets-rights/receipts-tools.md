@@ -1,0 +1,6 @@
+# Screenshot APIs and web data (retrieved 2026-10-29)
+- Microlink: free 25 req/day no key (api.microlink.io); Pro $49/mo, 46k req (~$1.07/1k). Sources disagree on free tier (100/month on one page). https://microlink.io/screenshot [reported]
+- ScreenshotOne: free 100/mo; $17/2,000; $79/10,000; $259/50,000 (checked Aug-Sep 2026 by third parties). https://screenshotone.com/blog/best-screenshot-apis/ [reported]
+- OWID: own charts CC BY, "provided that you cite us"; third-party data keeps source license; one chart download got 403 non-redistributable (Oct 28 2026 GitHub PR). https://ourworldindata.org/faqs
+- Exa $7/1k (10 results), $1/1k extra per result; Tavily $0.008/credit, basic search 1 credit, 1000 free credits/mo, include_images=true returns image URLs (+descriptions). Image URLs carry no license info. https://keirolabs.cloud/blog/exa-api-pricing-2026 ; https://docs.tavily.com/sdk/javascript/reference [reported]
+- Imgflip: /get_memes and /caption_image free (needs account creds; watermark unless premium); Premium $9.99/mo for gif, search, ai_meme, no watermark. https://imgflip.com/api [reported]. KnowYourMeme: "we don't have a public API at the moment and we don't allow scraping". https://x.com/knowyourmeme/status/1504092733568389127

@@ -1,0 +1,3 @@
+# Stock sites (retrieved 2026-10-29) [reported via https://noncopyrighted.com/creator/mixkit/ , https://mixkit.co/llm-info/]
+- Mixkit: Free License (commercial, no attribution) vs Restricted License (personal non-commercial only) per clip; no API found. Cannot redistribute unmodified.
+- Coverr: commercial and non-commercial, attribution optional; no selling/redistributing, no competing service, "using the content to train AI models or as part of a dataset" prohibited; some AI-generated clips in results. Coverr has an API for approved partners (unverified). Page https://coverr.co/license was JS-heavy, text not extractable via curl.

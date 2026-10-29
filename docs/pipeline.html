@@ -1,0 +1,103 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>bettervid pipeline v2</title>
+<style>
+:root{--m:var(--accent,#6d5efc);--b:var(--border,#333);--c:var(--card,#17171a);--mf:var(--muted-foreground,#999);--f:var(--foreground,#eee);--code:var(--warning,#d9a400)}
+body{font-family:var(--font-sans,system-ui,sans-serif);color:var(--f)}
+.wrap{max-width:780px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mf);margin:0 0 12px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.meta{background:var(--m)}
+.ext{border:1.5px solid var(--mf)}
+.codec{border:1.5px dashed var(--code)}
+.io{border:1px dashed var(--b);border-radius:var(--radius,10px);padding:10px 14px;font-size:13px;color:var(--mf);line-height:1.5}
+.io b{color:var(--f)}
+.arrow{text-align:center;color:var(--mf);font-size:12px;line-height:18px;margin:3px 0}
+.stage{background:var(--c);border:1px solid var(--b);border-radius:var(--radius,10px);padding:12px 14px;display:grid;grid-template-columns:28px 1fr auto;gap:4px 10px;align-items:start;min-width:0}
+.stage.code{border:1.5px dashed var(--code)}
+.stage.key{border:1.5px solid var(--m)}
+.n{font-weight:700;font-size:13px;color:var(--m);padding-top:1px}
+.t{font-weight:600;font-size:14px}
+.t small{font-weight:500;color:var(--m);font-size:11px;margin-left:6px}
+.d{grid-column:2/4;font-size:12.5px;color:var(--mf);line-height:1.45}
+.k{font-size:11.5px;color:var(--mf);text-align:right;white-space:nowrap;font-family:var(--font-mono,monospace)}
+.chips{grid-column:2/4;display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.chip{font-size:11px;padding:2px 7px;border-radius:999px}
+.chip.meta{color:#fff}
+.chip.ext{color:var(--f)}
+.chip.codec{color:var(--f)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.grid .stage{grid-template-columns:1fr auto}
+.grid .d,.grid .chips{grid-column:1/3}
+.loop{margin-top:6px;border:1.5px solid var(--m);border-radius:var(--radius,10px);padding:8px 12px;font-size:12.5px;line-height:1.45}
+.loop b{color:var(--m)}
+.total{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:12px}
+.tot{padding:10px 14px;border-radius:var(--radius,10px);background:var(--accent-surface,#221f3a);color:var(--accent-surface-foreground,#ddd);font-size:12px}
+.tot b{display:block;font-size:16px;margin-bottom:2px}
+</style></head><body><div class="wrap">
+<div class="legend"><span><i class="dot meta"></i>Meta model</span><span><i class="dot ext"></i>External / open source</span><span><i class="dot codec"></i>Our code (deterministic)</span><span>cost · time per 60 s video</span></div>
+
+<div class="io"><b>Input</b> · prompt · PDF · URL (we extract the page ourselves) · user video <i>(stretch: SAM 3.1 tracks the speaker, Voice Transcribe reads it)</i> · optional style, mode, length</div>
+<div class="arrow">↓</div>
+
+<div class="stage"><div class="n">1</div><div class="t">Research</div><div class="k">$0.35 · 2–4 min</div>
+<div class="d">Searches and reads sources. Fact sheet where every claim, number and quote has a source.</div>
+<div class="chips"><span class="chip meta">Muse Spark 1.3 + web search</span></div></div>
+<div class="arrow">↓</div>
+
+<div class="stage"><div class="n">2</div><div class="t">Writer</div><div class="k">$0.15 · 1–2 min</div>
+<div class="d">Craft rulebook: hook under 2 s, but/therefore beats, open loops, payoff, loop ending. Narrator delivery tags.</div>
+<div class="chips"><span class="chip meta">Muse Spark 1.3</span></div></div>
+<div class="arrow">↓</div>
+
+<div class="stage key"><div class="n">3</div><div class="t">Voice first<small>NEW</small></div><div class="k">$0.12 · &lt;1 min</div>
+<div class="d">Narration is made before any visuals. Its word timings become the master clock for every shot and caption.</div>
+<div class="chips"><span class="chip ext">ElevenLabs v4 with timestamps</span><span class="chip ext">fallback: v3 / Scribe</span></div></div>
+<div class="arrow">↓</div>
+
+<div class="stage"><div class="n">4</div><div class="t">Director</div><div class="k">$0.40–0.80 · 2–4 min</div>
+<div class="d">Tags each beat (claim, proof, example, joke, number, reveal) and places shots on the word times: shot type, asset, on-screen text, motion, SFX. Picks the style file (Vox/Harris collage, flat illustrated, whiteboard, anime, retro paper, or auto).</div>
+<div class="chips"><span class="chip meta">Muse Wonder</span><span class="chip meta">Spark (cheap mode)</span></div></div>
+<div class="arrow">↓ all in parallel</div>
+
+<div class="grid">
+<div class="stage"><div class="t">5a · Real assets</div><div class="k">$0.10</div>
+<div class="d">Archival, photos, maps, clips. Safe mode: PD / CC0 / CC BY only. Web search is opt-in "editorial". Every asset gets a license record.</div>
+<div class="chips"><span class="chip meta">Spark vision picks</span><span class="chip ext">Commons · Openverse · NASA · Met · LoC · Pexels</span></div></div>
+<div class="stage"><div class="t">5b · Art</div><div class="k">$0.40</div>
+<div class="d">Reference image first, then all shots in parallel with it attached. Best-of-2 or 3 if cheap. Title cards, thumbnail, infographics, original memes.</div>
+<div class="chips"><span class="chip meta">Muse Image</span><span class="chip meta">Spark judges</span></div></div>
+<div class="stage"><div class="t">5c · Cutouts</div><div class="k">$0.15</div>
+<div class="d">Subjects cut from any image, white outline and shadow baked in, masks tell callouts exactly where to point.</div>
+<div class="chips"><span class="chip meta">SAM 3.1</span><span class="chip ext">BiRefNet backup</span></div></div>
+<div class="stage"><div class="t">5d · Music + SFX</div><div class="k">$0.05</div>
+<div class="d">Cached music per mood and a pre-made SFX kit (whoosh, hit, riser, paper, click).</div>
+<div class="chips"><span class="chip ext">ElevenLabs Music + SFX</span></div></div>
+</div>
+<div class="arrow">↓</div>
+
+<div class="stage code"><div class="n">6</div><div class="t">Timeline fixer<small>NEW</small></div><div class="k">$0 · seconds</div>
+<div class="d">Craft rules enforced in code, not by asking the AI: no still over 3 s, a pattern interrupt every 5–8 s, captions in the safe zone, durations fit the words.</div>
+<div class="chips"><span class="chip codec">our code</span></div></div>
+<div class="arrow">↓</div>
+
+<div class="stage key"><div class="n">7</div><div class="t">Live preview → render<small>NEW</small></div><div class="k">$0.10 · preview at ~6–8 min</div>
+<div class="d">The video plays in the browser as soon as assets exist; change a caption or style and it updates instantly. Then MP4 render, mix (ducking, -14 LUFS) and invisible watermark.</div>
+<div class="chips"><span class="chip ext">Remotion Player + render</span><span class="chip ext">ffmpeg</span><span class="chip meta">Video Seal</span></div></div>
+<div class="arrow">↓</div>
+
+<div class="stage"><div class="n">8</div><div class="t">Critic</div><div class="k">$0.40 · 2–4 min</div>
+<div class="d">Automatic checks first, then Spark reviews keyframes + shot list + transcript against the rubric and the fact sheet. Glimmer checks every frame for typos. Watching the full MP4 is a bonus signal.</div>
+<div class="chips"><span class="chip codec">auto checks</span><span class="chip meta">Muse Spark</span><span class="chip meta">Muse Glimmer (open weights)</span></div></div>
+<div class="loop"><b>↺ One fix round</b> · tickets from a fixed menu (swap image, change caption, change duration, drop sound) go back to step 4, 5 or 6. Only those shots re-render. Before/after is kept for the demo.</div>
+<div class="arrow">↓</div>
+
+<div class="io"><b>Output</b> · 9:16 MP4 · credits card from license records · "AI-assisted, sources in description" end card · full trail (fact sheet, script, shot list, critic tickets, before/after) · editable project</div>
+
+<div class="total">
+<div class="tot"><b>≈ $3.10</b>per 60 s video today</div>
+<div class="tot"><b>≈ $0.60</b>floor at scale</div>
+<div class="tot"><b>18–25 min</b>end to end</div>
+<div class="tot"><b>~48 videos</b>on the $150 credit</div>
+</div>
+</div></body></html>

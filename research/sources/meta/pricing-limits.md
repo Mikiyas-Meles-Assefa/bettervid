@@ -1,0 +1,6 @@
+# Meta Model API pricing and rate limits
+URL: https://dev.meta.ai/docs/pricing-rate-limits  (retrieved 2026-10-29)
+Per 1M tokens: muse-wonder-1.0 cached $0.20 / input $4.00 / output $20.00 (no Contributor). Muse Spark 1.3/1.2/1.1 Standard cached $0.15 / input $1.25 / output $4.25; Contributor cached $0.002 / input $0.10 / output $0.20 (1.3 and 1.2 only). No long-context premium. Web search $2.50 per 1,000 queries on top of tokens.
+Non-token: Muse Image $0.01/image (search included, failed images not billed). Voice Transcribe $0.18/hour (whole seconds, rounded down). SAM 3.1 $2.50 per 1,000 images; $0.20 per 1,000 video frames, min 50 frames per video request.
+Rate limits per team per model: wonder-1.0, spark-1.3/1.2/1.1: 3,000 RPM, 4,000,000 TPM. spark-1.3-contributor and 1.2-contributor: 150 RPM, 3,000,000 TPM. sam-3.1: 3,000 RPM. muse-image-1.0: 150 RPM. Voice: 256 concurrent streams, 16,000 streams/hour. Background responses: 600 submissions/min/team. 429 with Retry-After.
+Third party (therouter/layer3labs summaries): $20 one-time free credit per new account; Contributor RPM reported as 100 in one guide (official page says 150). Public preview launched 2026-07-09 (Spark 1.1); Spark 1.3 launched 2026-09-02.

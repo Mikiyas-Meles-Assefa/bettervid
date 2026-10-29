@@ -1,0 +1,7 @@
+# Short-form, sound design, captions (vendor blogs, directional)
+Shorts: https://prepublish.ai/guides/youtube-shorts-retention ; https://joinbrands.com/blog/youtube-shorts-best-practices/ ; https://humbleandbrag.com/blog/youtube-shorts-benchmarks
+- No official YouTube retention benchmark; numbers conflict (3 s retention 35% to 80%). Swipe-away healthy 10-30%, under 20% stricter. Swipe decision in ~1-1.5 s. New beat every 2-3 s. Three zones: 0-3 hook/pattern interrupt, 3-12 value, 12+ payoff plus loop setup. Loop ending: end feeds the beginning; since March 2025 every loop counts as a view; replay rate above 15%.
+Sound: https://mytasker.com/blog/the-complete-guide-to-sound-design-for-video-creators ; https://musicvivo.com/blog/music-under-voiceover ; https://www.skillsdirectory.com/skills/aicodedecode-video-sound-design
+- Music 20-25 dB below voice for explainers (12-15 for energetic); duck 6-10 dB, attack 10-30 ms, release 300-600 ms; final -14 LUFS, peaks under -1 dBTP; SFX -18 to -12 dB; whoosh starts 10-20 ms before the visual, 400-500 ms long; HPF 80-100 Hz on voice; cut music 1-4 kHz for masking; overused whooshes become noise.
+Captions: https://ascynd.io/en/blog/hormozi-captions ; https://blitzcutai.com/blog/best-caption-placement-short-form-video
+- Montserrat Black/Anton, ALL CAPS, ~100 px at 1080 wide, white fill, #FFD93D highlight on ONE keyword, 10 px black stroke, 1-3 words, Y about 1150-1300 of 1920, keep inside central ~900 px; bottom 15-25% unsafe on TikTok.

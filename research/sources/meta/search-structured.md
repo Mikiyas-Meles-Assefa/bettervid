@@ -1,0 +1,3 @@
+# Search + structured output
+https://dev.meta.ai/docs/search-grounding : tools [{"type":"web_search"}] on Responses and Messages API only (not Chat Completions); search_context_size low|medium|high; user_location; include ["web_search_call.results"]; url_citation annotations; reserved tool names browser.search/open/find; $2.50/1k queries. Multi-hop research "less dependable". Code/shell tool not documented on this page (shell flag exists for Muse Image).
+https://dev.meta.ai/docs/structured-output : response_format json_schema (Chat) / text.format (Responses); decoding constrained; strict false behaves same as true; no recursive schemas; depth 10; 5,000 props. Interaction with reasoning/video undocumented.

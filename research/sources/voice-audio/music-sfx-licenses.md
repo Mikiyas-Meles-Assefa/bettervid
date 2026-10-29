@@ -1,0 +1,13 @@
+# Music / SFX sources (retrieved 2026-10-29)
+ElevenLabs Music https://elevenlabs.io/docs/overview/capabilities/music : 3 s to 5 min; MP3 44.1k 128-192kbps or WAV; instrumental supported; composition plans, audio reference (<=30 s clip), inpainting; "cleared for nearly all commercial uses" incl social video; API needs paid sub; model_id="music_v2_5" (v1 still API default). Stems and loops: NOT covered by the page.
+Music v2.5 (reported, search: invideo.io, vercel.com/ai-gateway/models/music-v2.5): released 2026-09-11; Vercel lists $0.07/min promo (50% off $0.08?) ending 2026-11-09; official API page says $0.15/min. Licensed training data via Merlin, Kobalt, Believe; UMG deal 2026-09-10. Self-serve plans exclude film/TV/Studio Games (reported).
+Stability https://docs.stability.ai/pricing : Stable Audio 3.0 and 2.5 both 8 credits ($0.08) per generation, 1 credit=$0.01; 3.0 up to 6 min, 2.5 up to 3 min. 3.0 Small SFX/Small/Medium open weights under Stability Community License (free commercial below $1M revenue, registration) (reported: therundown.ai/tools/stable-audio-3-0). Other sites quote 20/26 credits (stale).
+Lyria (reported, search): Gemini API lyria-3.5 $0.08 per song (paid tier, public preview since 2026-09-04); lyria-3-clip-preview $0.04 / 30 s; SynthID watermark; no explicit commercial statement or stems found.
+Suno (reported): no official public API; unofficial wrappers violate ToS. Warner settlement 2025-11-25; paid plans (from ~$10/mo) get commercial rights. Udio (reported): walled garden, downloads off, licensed platform not shipped as of Jun 2026.
+AudioCraft https://github.com/facebookresearch/audiocraft : "code ... released under the MIT license"; "The models weights in this repository are released under the CC-BY-NC 4.0 license." => MusicGen/AudioGen weights non-commercial.
+ACE-Step 1.5 https://github.com/ace-step/ACE-Step-1.5 (reported via search): MIT license, 48 kHz stereo, 10 s-10 min, <4GB VRAM with offload, <10 s/song on RTX 3090 (vendor). XL 4B released 2026-04-02 MIT.
+ElevenLabs SFX v2 (reported, X post 1962912811392131214 + docs): up to 30 s, loop=true, 48kHz, model eleven_text_to_sound_v2, duration 0.5-30 s. API price $0.12/min, per generation.
+Meta SAM Audio (reported): released 2025-12-16, SAM License, separation not generation. Not a music/SFX generator.
+Freesound https://freesound.org/help/faq/ : CC0 no conditions; CC-BY must credit; CC-BY-NC no money; Sampling+ legacy. API users can filter by license.
+Pixabay (reported, sonilo.com): Pixabay Content License, free commercial, no attribution, cannot resell standalone.
+Zapsplat https://www.zapsplat.com/license-type/standard-license/ (reported excerpt): free tier requires credit "ZapSplat", mp3 only, download limits; premium credit-free.

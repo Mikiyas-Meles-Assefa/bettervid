@@ -1,0 +1,8 @@
+# Search/GIF API status (retrieved 2026-10-29)
+- Tenor: Google support page: Jan 13 2026 no new API keys; "June 30, 2026: ... Tenor API ... fully decommissioned". https://9to5google.com/2026/06/30/google-tenor-api-gif-updates/ ; https://news.ycombinator.com/item?id=46603473. Replacements: Giphy, Klipy (reported).
+- Bing Search APIs (web, image, news, custom, visual) retired Aug 11 2025, no Microsoft replacement for images (Grounding with Bing in Azure AI Agents only). https://ppc.land/microsoft-ends-bing-search-apis-on-august-11-alternative-costs-40-483-more/
+- Google Custom Search JSON API: "closed to new customers"; existing customers "until January 1, 2027". Was 100/day free then $5/1k. [reported via blogs, e.g. https://blog.apify.com/google-custom-search-api-alternative/]
+- Brave Search API: Search plan $5 per 1k requests covers Web, Images, News, Videos; free tier dropped Feb 12 2026 -> $5 monthly credit (some snippet says up to $20), card required, attribution needed for free credit; 50 QPS. https://brave.com/search/api/ , https://www.implicator.ai/brave-drops-free-search-api-tier-puts-all-developers-on-metered-billing/ [reported]
+- Serper.dev (Google results): images = 1 credit per <=10 results; $50/50k credits ($1/1k) down to $0.30/1k; 2,500 free once; 50 qps. https://coldiq.com/blog/serper-pricing [reported]
+- SerpApi: Free 250, $25/1k, $75/5k, $150/15k, $275/30k per month. [reported]
+- Giphy: beta key 100 calls/hour, search max 50 results; production key needs application + fee; requires "Powered by GIPHY" attribution. https://developers.giphy.com/docs/api/ , https://support.giphy.com/hc/en-us/articles/360035340511 [reported]
