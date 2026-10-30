@@ -1,8 +1,8 @@
 // The live whiteboard: one continuous board that starts empty. Words are written and shapes are drawn as the narrator
 // speaks, images drop in, and a camera moves across it, ending on the whole board.
 import React from "react";
-import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import type { BoardCamera, Clip, StyleFile, TimedElement, TimedMark } from "../schemas/project.ts";
+import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import type { BoardCamera, Clip, MathToken, StyleFile, TimedElement, TimedMark } from "../schemas/project.ts";
 import { Marks } from "./marks.tsx";
 
 const MOVE = 0.9; // seconds for the camera to move between stops
@@ -18,6 +18,51 @@ const Text: React.FC<{ e: TimedElement; style: StyleFile }> = ({ e, style }) => 
     <div style={{ position: "absolute", left: e.x, top: e.y, width: e.w, fontFamily: style.fonts.body, fontSize: e.size ?? 60, lineHeight: 1.18, color: style.palette[e.color ?? "ink"] }}>
       {text.slice(0, n)}
       <span style={{ visibility: "hidden" }}>{text.slice(n)}</span>
+    </div>
+  );
+};
+
+// Real notation: fractions and matrices, swept in like the rest of the board. Highlighted columns show what the voice means.
+const Matrix: React.FC<{ t: MathToken; style: StyleFile; size: number; start: number }> = ({ t, style, size, start }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  // A highlighted column slides in from above and lands, so the viewer sees it replace what was there.
+  const drop = spring({ frame: frame - start - 0.5 * fps, fps, config: { damping: 14, stiffness: 120 } });
+  const line = `${Math.max(4, size * 0.07)}px solid ${style.palette.ink}`;
+  const bracket = t.bars ? { borderLeft: line, borderRight: line } : { borderLeft: line, borderRight: line, borderRadius: size * 0.22 };
+  return (
+    <div style={{ display: "inline-grid", gridTemplateColumns: `repeat(${t.rows[0]?.length ?? 1}, auto)`, ...bracket, margin: `0 ${size * 0.15}px`, padding: `${size * 0.1}px 0` }}>
+      {t.rows.flatMap((row, r) =>
+        row.map((cell, c) => {
+          const hit = t.highlight.includes(c);
+          return (
+            <span key={`${r}-${c}`} style={{ padding: `0 ${size * 0.32}px`, textAlign: "center", color: hit ? style.palette.accent : style.palette.ink, fontWeight: hit ? 700 : 400, background: hit ? `${style.palette.accent}1f` : undefined, display: "inline-block", transform: hit ? `translateY(${(1 - drop) * -size * 2.4}px)` : undefined, opacity: hit ? drop : 1 }}>
+              {cell}
+            </span>
+          );
+        }),
+      )}
+    </div>
+  );
+};
+
+const Fraction: React.FC<{ t: MathToken; size: number; ink: string }> = ({ t, size, ink }) => (
+  <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", margin: `0 ${size * 0.15}px`, lineHeight: 1.1 }}>
+    <span style={{ padding: `0 ${size * 0.15}px` }}>{t.num}</span>
+    <span style={{ alignSelf: "stretch", borderTop: `${Math.max(4, size * 0.06)}px solid ${ink}` }} />
+    <span style={{ padding: `0 ${size * 0.15}px` }}>{t.den}</span>
+  </span>
+);
+
+const Mathematics: React.FC<{ e: TimedElement; style: StyleFile }> = ({ e, style }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const size = e.size ?? 76;
+  const t = interpolate(frame, [e.frame, e.frame + 0.8 * fps], [-15, 120], { extrapolateRight: "clamp" });
+  const mask = `linear-gradient(90deg, black ${t}%, transparent ${t + 15}%)`;
+  return (
+    <div style={{ position: "absolute", left: e.x, top: e.y, width: e.w, height: e.h, display: "flex", alignItems: "center", flexWrap: "wrap", gap: size * 0.2, fontFamily: style.fonts.body, fontSize: size, color: style.palette.ink, WebkitMaskImage: mask, maskImage: mask }}>
+      {e.math!.map((m, i) => (m.type === "matrix" ? <Matrix key={i} t={m} style={style} size={size} start={e.frame} /> : m.type === "frac" ? <Fraction key={i} t={m} size={size} ink={style.palette.ink} /> : <span key={i}>{m.text}</span>))}
     </div>
   );
 };
@@ -56,6 +101,7 @@ export const BoardShot: React.FC<{ clip: Clip; style: StyleFile; index: number }
       <div style={{ position: "absolute", left: 0, top: 0, transformOrigin: "0 0", transform: `scale(${s}) translate(${-cam.x}px, ${-cam.y}px)` }}>
         {shown.filter((e) => e.kind === "image").map((e, i) => <Picture key={i} e={e} />)}
         {shown.filter((e) => e.kind === "text").map((e, i) => <Text key={i} e={e} style={style} />)}
+        {shown.filter((e) => e.kind === "math").map((e, i) => <Mathematics key={i} e={e} style={style} />)}
         <Marks marks={marks} view={WORLD} style={style} />
       </div>
     </AbsoluteFill>

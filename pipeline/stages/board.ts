@@ -3,13 +3,26 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { BoardElement, BoardPlan, Project, Shot } from "../../schemas/project.ts";
+import type { BoardElement, BoardPlan, MathToken, Project, Shot } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, dir, prompt, stage, style, topic } from "../lib/project.ts";
 import { hash, write } from "../lib/util.ts";
 import { generate } from "./assets.ts";
 
 const str = { type: "string" } as const;
+const token = {
+  type: "object",
+  additionalProperties: false,
+  required: ["type", "text", "num", "den", "rows", "highlight", "bars"],
+  properties: {
+    type: { type: "string", enum: ["text", "frac", "matrix"] },
+    text: str, num: str, den: str,
+    rows: { type: "array", items: { type: "array", items: str } },
+    highlight: { type: "array", items: { type: "integer" } },
+    bars: { type: "boolean" },
+  },
+} as const;
+
 const schema = {
   type: "object",
   additionalProperties: false,
@@ -24,16 +37,16 @@ const schema = {
         properties: {
           word: { type: "integer" },
           heading: str,
-          layout: { type: "string", enum: ["hero", "pair", "steps", "cycle", "statement"] },
-          items: { type: "array", items: { type: "object", additionalProperties: false, required: ["word", "picture", "label"], properties: { word: { type: "integer" }, picture: str, label: str } } },
+          layout: { type: "string", enum: ["hero", "pair", "steps", "cycle", "work", "statement"] },
+          items: { type: "array", items: { type: "object", additionalProperties: false, required: ["word", "picture", "label", "math"], properties: { word: { type: "integer" }, picture: str, label: str, math: { type: "array", items: token } } } },
         },
       },
     },
   },
 } as const;
 
-type Item = { word: number; picture: string; label: string };
-type Scene = { word: number; heading: string; layout: "hero" | "pair" | "steps" | "cycle" | "statement"; items: Item[] };
+type Item = { word: number; picture: string; label: string; math: MathToken[] };
+type Scene = { word: number; heading: string; layout: "hero" | "pair" | "steps" | "cycle" | "work" | "statement"; items: Item[] };
 
 // Code does the layout, so pictures are big, nothing overlaps and every view is full. A scene is one 1080 by 1620 area.
 const W = 1080;
@@ -41,7 +54,11 @@ const H = 1620;
 const STEP = { x: 1320, y: 1860 };
 const blank = { x: 0, y: 0, w: 0, h: 0, points: [] as [number, number][] };
 
-function lay(scene: Scene, ox: number, oy: number): BoardElement[] {
+function lay(raw: Scene, ox: number, oy: number): BoardElement[] {
+  // A layout built for pictures, with none in it, would leave holes: notation becomes work, and words become a statement.
+  const empty = !raw.items.some((it) => it.picture || it.math.length);
+  const notes = raw.items.some((it) => it.math.length) && !raw.items.some((it) => it.picture);
+  const scene = raw.layout === "work" || raw.layout === "statement" ? raw : { ...raw, layout: empty ? ("statement" as const) : notes ? ("work" as const) : raw.layout };
   const out: BoardElement[] = [];
   const text = (word: number, x: number, y: number, w: number, value: string, size: number, color: BoardElement["color"] = "ink") =>
     value && out.push({ ...blank, kind: "text", word, x: ox + x, y: oy + y, w, text: value, size: Math.max(54, Math.min(size, Math.round((w * 5) / Math.max(4, value.length)))), color });
@@ -49,14 +66,27 @@ function lay(scene: Scene, ox: number, oy: number): BoardElement[] {
     it.picture && out.push({ ...blank, kind: "image", word: it.word, x: ox + x, y: oy + y, w, h, prompt: it.picture });
   const arrow = (word: number, x1: number, y1: number, x2: number, y2: number, color: BoardElement["color"] = "accent") =>
     out.push({ ...blank, kind: "arrow", word, points: [[ox + x1, oy + y1], [ox + x2, oy + y2]], color });
-  const items = scene.items.slice(0, 4);
+  const math = (it: Item, x: number, y: number, w: number, h: number, size = 76) => it.math.length && out.push({ ...blank, kind: "math", word: it.word, x: ox + x, y: oy + y, w, h, size, math: it.math });
+  const items = scene.items.slice(0, scene.layout === "work" ? 3 : 4);
   const big = scene.layout === "statement";
+  if (scene.layout === "work") {
+    const row = (H - 210) / Math.max(1, items.length);
+    items.forEach((it, i) => {
+      const y = 200 + i * row;
+      text(it.word, 60, y, W - 120, it.label, it.math.length ? 58 : 84, it.math.length ? "accent" : "ink");
+      math(it, 60, y + 80, W - 120, row - 100, Math.min(120, (row - 100) / 1.7));
+    });
+    return out;
+  }
   text(scene.word, 60, big ? 460 : 40, W - 120, scene.heading, big ? 150 : 100, big ? "accent" : "ink");
-  if (big) items.forEach((it, i) => text(it.word, 60, 900 + i * 130, W - 120, it.label, 84));
+  // Below the heading, however many lines it wraps to.
+  const below = 460 + Math.ceil((scene.heading.length * 150 * 0.5) / (W - 120)) * 180 + 60;
+  if (big) items.forEach((it, i) => text(it.word, 60, below + i * 130, W - 120, it.label, 84));
   if (scene.layout === "hero") {
     const [first, ...rest] = items;
     if (first) {
-      picture(first, 60, 220, 960, 900);
+      if (first.math.length) math(first, 60, 420, W - 120, 500, 100);
+      else picture(first, 60, 220, 960, 900);
       text(first.word, 60, 1140, W - 120, first.label, 90, "accent");
     }
     rest.forEach((it, i) => text(it.word, 60, 1270 + i * 110, W - 120, it.label, 76));
@@ -73,7 +103,8 @@ function lay(scene: Scene, ox: number, oy: number): BoardElement[] {
     const row = (H - 230) / Math.max(1, items.length);
     items.forEach((it, i) => {
       const y = 230 + i * row;
-      picture(it, 40, y, 500, row - 60);
+      if (it.math.length) math(it, 40, y + 20, 520, row - 80, 58);
+      else picture(it, 40, y, 500, row - 60);
       text(it.word, 570, y + row / 2 - 110, 470, it.label, 84, i === items.length - 1 ? "accent" : "ink");
       if (i) arrow(it.word, 290, y - 66, 290, y + 2);
     });

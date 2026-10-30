@@ -130,7 +130,8 @@ export type Timeline = {
 // `punch` marks a clip that reuses the previous clip's image, so it zooms in harder instead of repeating.
 export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits; board?: { elements: TimedElement[]; camera: BoardCamera[] } };
 // A live whiteboard: everything is placed in board pixels and starts on a spoken word.
-export type BoardElement = { kind: MarkTool | "text" | "image"; word: number; x: number; y: number; w: number; h: number; points: [number, number][]; text?: string; size?: number; color?: "ink" | "accent" | "highlight"; prompt?: string; image?: string };
+export type MathToken = { type: "text" | "frac" | "matrix"; text: string; num: string; den: string; rows: string[][]; highlight: number[]; bars: boolean };
+export type BoardElement = { kind: MarkTool | "text" | "image" | "math"; math?: MathToken[]; word: number; x: number; y: number; w: number; h: number; points: [number, number][]; text?: string; size?: number; color?: "ink" | "accent" | "highlight"; prompt?: string; image?: string };
 export type BoardPlan = { elements: BoardElement[]; camera: { word: number; x: number; y: number; w: number }[] };
 export type TimedElement = BoardElement & { frame: number };
 export type BoardCamera = { frame: number; x: number; y: number; w: number; hold?: number }; // hold: seconds the move takes
