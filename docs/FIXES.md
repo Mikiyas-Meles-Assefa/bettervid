@@ -56,6 +56,8 @@ Fixes and ideas the user raised while reviewing test videos. All are open unless
 
 25. **The paper overlay covers photos.** The blotches were a bug and are fixed, but the user questions any layer over photos. Waiting on their call to remove it from images.
 
+26. **Staying on the topic.** The cut swapped "Taytu's role in Adwa" for the siege of Mekele, and a soft rule did not fix it. `prompts/cut.md` now names the subject first and must spend most of its time inside it. Tested on this one video only.
+
 ## Done (Oct 30)
 
 - Default length is story-led (1). Annotation and the drawing toolset on any image (2, 3). Board format and whiteboard motion (4), first version. Clear look by image type (6). Accuracy in the review (7). Picker stricter on kind of thing, models and loose matches, with no second chance for a rejected image (8, 16, 20). Fake writing checked and redone (11). Reuse capped per image, honest illustrations for gaps (9, 12, 17). Compression (15). Paper and grain softened (18). Duplicate titles (19).
