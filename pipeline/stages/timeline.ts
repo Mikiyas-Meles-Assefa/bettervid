@@ -2,11 +2,24 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Project, Timeline } from "../../schemas/project.ts";
+import type { Asset, Clip, Credits, Project, Timeline } from "../../schemas/project.ts";
 import { dir, stage, style, topic } from "../lib/project.ts";
 
 const FPS = 30;
 const TAIL = 0.6; // seconds of picture after the last word
+const CREDITS = 4; // seconds of the end card
+
+const line = (a: Asset) => [a.credit?.replace(/^(.+?)\1$/, "$1"), a.source, a.license].filter(Boolean).join(", ");
+
+// Only what the video really uses: sources behind the facts in the script and on the source cards, and images that were shown.
+function credits(p: Project, used: Asset[]): Credits {
+  const claims = new Set(p.script!.beats.flatMap((b) => b.claimIds));
+  const ids = new Set(p.factSheet!.claims.filter((c) => claims.has(c.id)).flatMap((c) => c.sourceIds));
+  const sources = p.factSheet!.sources.filter((s) => ids.has(s.id)).map((s) => s.publisher || s.title);
+  const images = used.filter((a) => a.kind === "real").map(line);
+  const made = used.some((a) => a.kind === "generated") ? ["Illustrations made with Muse Image"] : [];
+  return { sources: [...new Set(sources)], images: [...new Set(images), ...made] };
+}
 
 // Caption pages: 1 to 3 words, broken after punctuation, after an emphasis word and at beat changes (craft rule C1).
 // Only the emphasis words are highlighted, and pages that start during a title card are dropped: the title is the text.
@@ -46,14 +59,17 @@ export async function timeline(p: Project, force = false) {
   await stage(p, "timeline", [p.shots, p.assets, p.narration, s], 0, async () => {
     const grain = join(dir(p), "grain.png");
     if (!existsSync(grain)) execFileSync("python3", ["-I", "pipeline/tools/make_grain.py", grain]);
+    const paper = join(dir(p), "paper.png");
+    if (s.surface?.paper && !existsSync(paper)) execFileSync("python3", ["-I", "pipeline/tools/make_paper.py", paper]);
     const assets = new Map((p.assets ?? []).map((a) => [a.shotId, a]));
-    const frames = Math.ceil((p.narration!.seconds + TAIL) * FPS);
+    const story = Math.ceil((p.narration!.seconds + TAIL) * FPS);
+    const frames = story + CREDITS * FPS;
     const planned = p.shots!.map((shot, i) => {
       const from = Math.round(shot.start * FPS);
-      const to = i + 1 < p.shots!.length ? Math.round(p.shots![i + 1]!.start * FPS) : frames;
+      const to = i + 1 < p.shots!.length ? Math.round(p.shots![i + 1]!.start * FPS) : story;
       const a = assets.get(shot.id);
       const type = a?.override?.type ?? shot.type;
-      return { shotId: shot.id, type, from, frames: Math.max(1, to - from), image: a?.path, cutout: a?.cutout, text: a?.override?.text ?? shot.text, receipt: shot.receipt, size: a?.size, focus: a?.focus };
+      return { shotId: shot.id, type, from, frames: Math.max(1, to - from), image: a?.path, cutout: a?.cutout, text: a?.override?.text ?? shot.text, receipt: shot.receipt, size: a?.size, focus: a?.focus, zoom: a?.zoom, credit: a?.kind === "real" ? line(a) : undefined, marks: (a?.marks ?? []).map((m) => ({ ...m, frame: Math.round(p.narration!.words[m.word]!.start * FPS) - from })) };
     });
     // A shot with no honest image is dropped and the previous clip holds through it (at the very start, the next one).
     const clips: typeof planned = [];
@@ -68,13 +84,15 @@ export async function timeline(p: Project, force = false) {
       clips.push(carry ? { ...c, from: c.from - carry, frames: c.frames + carry } : c);
       carry = 0;
     }
-    if (!clips.length) clips.push({ shotId: "title", type: "kinetic_title", from: 0, frames, text: topic(p) } as (typeof planned)[number]);
+    if (!clips.length) clips.push({ shotId: "title", type: "kinetic_title", from: 0, frames: story, text: topic(p) } as (typeof planned)[number]);
     // The same archival image twice in a row (e.g. one map for two beats) becomes a punch-in, not a repeat.
     const sameImage = (a?: string, b?: string) => !!a && !!b && readFileSync(join(dir(p), a)).equals(readFileSync(join(dir(p), b)));
     clips.forEach((c, i) => {
       const prev = clips[i - 1];
       if (prev && c.type === "photo_kenburns" && !c.focus && sameImage(prev.image, c.image)) Object.assign(c, { punch: true });
     });
+    const used = clips.flatMap((c) => assets.get(c.shotId) ?? []);
+    (clips as Clip[]).push({ shotId: "credits", type: "credits", from: story, frames: CREDITS * FPS, credits: credits(p, used) });
     const titles = clips.filter((c) => c.type === "kinetic_title").map((c): [number, number] => [c.from, c.from + c.frames]);
     p.timeline = { fps: FPS, width: 1080, height: 1920, frames, audio: p.narration!.audio, style: s, clips, captions: captions(p, titles) };
   }, force);

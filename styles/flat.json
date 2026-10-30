@@ -12,12 +12,20 @@
     "title": "Arial Black",
     "body": "Arial"
   },
-  "artPrefix": "Flat vector illustration in a modern science explainer style: bold simple shapes, soft gradients, limited palette of teal, navy, warm orange and cream, subtle grain, no outlines. Absolutely no text, letters, numbers or captions anywhere.",
+  "art": {
+    "scene": "Flat vector illustration in a modern science explainer style: bold simple shapes, soft gradients, limited palette of teal, navy, warm orange and cream, no outlines, the subject instantly recognizable.",
+    "object": "Flat vector illustration of a single object shown whole on a plain cream background: bold simple shapes, limited palette of teal, navy and warm orange, no outlines.",
+    "diagram": "Flat vector explainer diagram: simple clear shapes, limited palette of teal, navy and warm orange, plain cream background, one idea only."
+  },
   "realAssets": "proof",
   "grain": 0.25,
   "vignette": 0.3,
   "voice": {
     "id": "JBFqnCBsd6RMkjVDRZzb",
     "model": "eleven_v4"
+  },
+  "hand": {
+    "wobble": 0,
+    "weight": 1.1
   }
 }

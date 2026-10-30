@@ -36,7 +36,23 @@ Fixes and ideas the user raised while reviewing test videos. All are open unless
 
 15. **File size.** The Rosetta video is 378 MB, far too big for the web app. Compress the final video.
 
+16. **Real but silly images.** John Snow v5 opens on a toy model of a horse and cart. It passed every rule because it is a real object. The picker should reject models, toys and replicas unless the narration is about them.
+
+17. **One image repeated when the real ones run out.** The Linear B tablet fills 7 of 15 clips, because Kober, Ventris, the map and the grid were all marked must-be-real and not found. Reuse should not keep picking the same image, and an honest illustration of the idea (not a likeness or a fake document) may be better than a repeat.
+
+18. **Paper layer speckles.** The new `paper.png` shows as dirty specks on pale cards and paper backgrounds. Make it subtler.
+
+19. **Duplicate title cards.** "180,000" appeared twice in Linear B: a filled gap came first, then the director's own title. The duplicate check only looks backward.
+
+20. **Loosely related real images.** A medieval manuscript of the Crucifixion stood in for "the way Latin swaps endings".
+
+21. **Independent review of the moon video (Spark 1.2, with sound): 7.5 of 10.** Narration clear over music, pictures in step, and it understood the explanation. Weak spots: the voice is a little flat and obviously synthetic, captions split awkwardly across cards, and the origin-story part at 0:24 is where a casual viewer might leave.
+
+22. **Not built yet.** A real hosted deploy (the `Dockerfile` is unbuilt), style switching from the page, and simulations with a frame review.
+
 ## Done (Oct 30)
+
+- Default length is story-led (1). Annotation and the drawing toolset on any image (2, 3). Board format and whiteboard motion (4), first version. Clear look by image type (6). Accuracy in the review (7). Picker stricter on kind of thing, models and loose matches, with no second chance for a rejected image (8, 16, 20). Fake writing checked and redone (11). Reuse capped per image, honest illustrations for gaps (9, 12, 17). Compression (15). Paper and grain softened (18). Duplicate titles (19).
 
 - The plan step reads any kind of request, and each stage gets only its part (`c078969`).
 - Story-led pacing, readable source cards, no visual spoilers (`c078969`).

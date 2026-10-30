@@ -1,10 +1,12 @@
 // CLI: create or resume a project and run stages in order. Cached stages are skipped.
-// New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 60, 0 = as long as the story needs; a length in the prompt wins] [--until voice]
-// Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>]
+// New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 0, 0 = as long as the story needs; a length in the prompt wins] [--until voice]
+// Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>] [--only <stage>]
 import type { Project, StageName } from "../schemas/project.ts";
 import { load, save, spent } from "./lib/project.ts";
 import { hash } from "./lib/util.ts";
+import { annotate } from "./stages/annotate.ts";
 import { assets } from "./stages/assets.ts";
+import { critic } from "./stages/critic.ts";
 import { director } from "./stages/director.ts";
 import { mix } from "./stages/mix.ts";
 import { plan } from "./stages/plan.ts";
@@ -21,9 +23,11 @@ const ORDER: [StageName, (p: Project, force: boolean) => Promise<void>][] = [
   ["voice", voice],
   ["director", director],
   ["assets", assets],
+  ["annotate", annotate],
   ["timeline", timeline],
   ["mix", mix],
   ["render", render],
+  ["critic", critic],
 ];
 
 const args = process.argv.slice(2);
@@ -40,7 +44,7 @@ if (args[0] === "new") {
   p = {
     id: `${slug}-${hash(promptText, Date.now()).slice(0, 6)}`,
     createdAt: new Date().toISOString(),
-    input: { prompt: promptText, style: flag("style") ?? "collage", persona: flag("persona") ?? "auto", mode: (flag("mode") as Project["input"]["mode"]) ?? "explain", seconds: Number(flag("seconds") ?? 60) },
+    input: { prompt: promptText, style: flag("style") ?? "collage", persona: flag("persona") ?? "auto", mode: (flag("mode") as Project["input"]["mode"]) ?? "explain", seconds: Number(flag("seconds") ?? 0) },
     stages: {},
     costs: [],
   };
@@ -52,7 +56,9 @@ if (args[0] === "new") {
 
 const until = flag("until") as StageName | undefined;
 const force = flag("force") as StageName | undefined;
+const only = flag("only") as StageName | undefined;
 for (const [name, run] of ORDER) {
+  if (only && only !== name) continue;
   await run(p, force === name);
   if (until === name) break;
 }

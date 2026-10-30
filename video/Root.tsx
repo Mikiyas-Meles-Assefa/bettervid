@@ -9,7 +9,7 @@ const empty: Timeline = {
   height: 1920,
   frames: 30,
   audio: "narration.mp3",
-  style: { name: "", label: "", palette: { paper: "#eee", ink: "#111", accent: "#c33", highlight: "#ffd93d" }, fonts: { caption: "Arial Black", title: "Arial Black", body: "Georgia" }, artPrefix: "", realAssets: "prefer", grain: 0, vignette: 0, voice: { id: "", model: "" } },
+  style: { name: "", label: "", palette: { paper: "#eee", ink: "#111", accent: "#c33", highlight: "#ffd93d" }, fonts: { caption: "Arial Black", title: "Arial Black", body: "Georgia" }, art: { scene: "", object: "", diagram: "" }, realAssets: "prefer", grain: 0, vignette: 0, voice: { id: "", model: "" } },
   clips: [],
   captions: [],
 };

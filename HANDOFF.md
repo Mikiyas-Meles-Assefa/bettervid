@@ -1,6 +1,25 @@
-# HANDOFF (2026-10-29, Doha time ~19:45)
+# HANDOFF (updated 2026-10-30)
 
 For the next agent picking up bettervid. Read `AGENTS.md`, then `docs/PLAN.md` (v2, source of truth), then `research/DECISIONS.md`.
+
+## Latest state (Oct 30)
+Open items and the user's ideas live in `docs/FIXES.md`. Read it first.
+
+Pipeline order: plan, research, writer (draft, cut, review, structure), voice, director, assets, annotate, timeline, mix, render, critic. `--only <stage>` runs one stage, `--force <stage>` redoes one.
+- **Plan** (`pipeline/stages/plan.ts`): reads the user's message once and sorts what they explicitly asked for by part of the work. Empty means the usual way. Each stage gets its part, marked as deliberate.
+- **Writer** is prose-first, and saves each step so a failed run resumes. Personas are data in `personas/`.
+- **Length**: `seconds` defaults to 0, so the story decides; a length in the message wins.
+- **Images**: styles describe `art` by image type (scene, object, diagram), so subjects stay clear; texture comes from `surface` in the video. Nothing generated stands in for a specific real thing (`mustBeReal`). Broader archive search, a 6 s hold, reuse (at most 3 shots per image), an honest `idea` illustration, then a title card. Generated images are checked for fake writing and redone blank.
+- **Annotate** (`pipeline/stages/annotate.ts`, `video/marks.tsx`): Spark looks at an image twice and draws ring, box, underline, arrow, line, dots, label or path, timed to spoken words. Most shots get none.
+- **Critic** (`pipeline/stages/critic.ts`): reviews one frame per shot and files tickets; one fix round re-renders.
+- **Board** (`video/Board.tsx`): `motion: "board"` in a style makes one continuous canvas with a moving camera and a final pull-back. Whiteboard uses it.
+- **Credits**: end card plus a source line on real images. Render uses CRF 23.
+- **Web app** (`app/server.ts`, `app/public/index.html`, no new packages): `npm run app`, then http://localhost:4173. Prompt box, optional style, narrator and length, live stages, the plan, player, script, critic notes, sources and gallery. Caption editing re-renders with no model calls. Replay walks through a finished run for free, for when the budget or rate limits stop new videos. It spawns the real pipeline, one run at a time, and listens on 127.0.0.1 only. Setting `HOST` makes it public: new videos are limited (`RUNS_PER_DAY` 20, `RUNS_PER_VISITOR` 2) and editing is off; those limits are tested, and `BUDGET_USD` is the hard stop. A `Dockerfile` is written but has never been built, because Docker was not running. Not hosted yet: the user must pick a provider, and it needs a volume at /srv/projects and the keys passed in at run time.
+- **Simulations**: not in the pipeline. `research/spikes/S11-simulation.md` has the result: formula-based ideas only, and they need a frame review. Spike code is in `scripts/s11/`.
+- **Network from Doha**: IPv4 only (`pipeline/lib/meta.ts`). Background tasks die when the session restarts, so long renders should run detached with a log in the project folder.
+- **Dev budget**: $15, raised by the user on Oct 30. The ledger misses the simulation spikes, about $0.37.
+
+Rules from the user: every fix must be general, never tuned to one video, and prompt examples must not come from the test topic. They dislike fallbacks: prefer repair loops, and say so plainly if a fallback remains. Discuss design ideas first unless told to go ahead.
 
 ## Where things stand
 - Phases 0 to 3b are done: research (6 files), `research/HYPOTHESIS.md`, `research/REVIEW.md`, `research/DECISIONS.md` (27 items), `docs/PLAN.md` v2, `docs/pipeline.html` (v2 diagram).

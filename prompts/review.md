@@ -4,7 +4,7 @@ Narrator: {{persona}}
 Length: {{length}}
 {{thread}}
 
-List every place where that viewer would get lost or stop caring: the subject itself (the disease, the event, the thing being explained) never named or explained, someone or something mentioned before it is explained, a phrase nobody would say out loud, a jump where the connection is missing, a fact that is mentioned but never made to matter, a conclusion far from its evidence, or anything not supported by the research.
+List every place where that viewer would get lost or stop caring: the subject itself (the disease, the event, the thing being explained) never named or explained, someone or something mentioned before it is explained, a phrase nobody would say out loud, a jump where the connection is missing, a fact that is mentioned but never made to matter, a conclusion far from its evidence, a line that sounds good but is not literally true (the listener will take it as fact), or anything not supported by the research.
 
 Anything the user asked for on purpose is not a problem, even if it breaks a usual rule (a reveal held back, an unusual opening): keep it, and fix only what gets in its way.
 

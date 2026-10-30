@@ -1,10 +1,10 @@
 // Stage 4: director. Spark plans shots on word indices; code turns them into timed shots and fills
 // receipts from the fact sheet so outlets, quotes and URLs are never invented.
-import type { Project, Shot, ShotType } from "../../schemas/project.ts";
+import type { ImageType, Project, Shot, ShotType } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, prompt, stage, style, topic } from "../lib/project.ts";
 
-type Planned = { beatId: string; type: ShotType; startWord: number; kind: "real" | "generated" | "none"; query: string; broadQuery: string; prompt: string; subject: string; focus: string; mustBeReal: boolean; text: string; claimId: string };
+type Planned = { beatId: string; type: ShotType; startWord: number; kind: "real" | "generated" | "none"; query: string; broadQuery: string; prompt: string; idea: string; imageType: ImageType; subject: string; focus: string; mustBeReal: boolean; text: string; claimId: string };
 
 const str = { type: "string" } as const;
 const schema = {
@@ -17,7 +17,7 @@ const schema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["beatId", "type", "startWord", "kind", "query", "broadQuery", "prompt", "subject", "focus", "mustBeReal", "text", "claimId"],
+        required: ["beatId", "type", "startWord", "kind", "query", "broadQuery", "prompt", "idea", "imageType", "subject", "focus", "mustBeReal", "text", "claimId"],
         properties: {
           beatId: str,
           type: { type: "string", enum: ["photo_kenburns", "cutout_on_paper", "receipt", "kinetic_title"] },
@@ -26,6 +26,8 @@ const schema = {
           query: str,
           broadQuery: str,
           prompt: str,
+          idea: str,
+          imageType: { type: "string", enum: ["scene", "object", "diagram"] },
           subject: str,
           focus: str,
           mustBeReal: { type: "boolean" },
@@ -63,7 +65,7 @@ export async function director(p: Project, force = false) {
   }, force);
 }
 
-const MIN_SECONDS: Record<ShotType, number> = { receipt: 3.5, kinetic_title: 1.5, photo_kenburns: 1.2, cutout_on_paper: 1.2 };
+const MIN_SECONDS: Record<ShotType, number> = { receipt: 3.5, kinetic_title: 1.5, photo_kenburns: 1.2, cutout_on_paper: 1.2, credits: 0 };
 
 // Sorts and clamps start words, drops shots that would cut the one before too short, then times each shot from its first word to the next shot.
 export function toShots(p: Project, planned: Planned[]): Shot[] {
@@ -96,10 +98,11 @@ export function toShots(p: Project, planned: Planned[]): Shot[] {
       shot.text = s.text || claim?.number || p.script!.beats.find((b) => b.id === s.beatId)?.emphasis.join(" ") || "";
     }
     if (s.type === "photo_kenburns" || s.type === "cutout_on_paper") {
-      shot.asset = { kind: s.kind === "real" ? "real" : "generated", query: s.query, prompt: s.prompt, subject: s.subject || undefined };
+      shot.asset = { kind: s.kind === "real" ? "real" : "generated", query: s.query, prompt: s.prompt, imageType: s.imageType, subject: s.subject || undefined };
       if (s.broadQuery && s.broadQuery !== s.query) shot.asset.broadQuery = s.broadQuery;
       if (s.type === "photo_kenburns" && s.focus) shot.asset.focus = s.focus;
       if (s.kind === "real" && s.mustBeReal) shot.asset.mustBeReal = true;
+      if (shot.asset.mustBeReal && s.idea) shot.asset.idea = s.idea;
     }
     return shot;
   });

@@ -1,0 +1,11 @@
+.env
+.git
+.venv
+node_modules
+projects
+media
+research
+docs
+scripts
+*.mp4
+*.wav

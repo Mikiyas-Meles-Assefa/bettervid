@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bettervid</title>
+<style>
+  :root {
+    --paper: #f3ecdd; --card: #fbf7ee; --ink: #1d1b18; --soft: #6b6458; --line: #ddd3bf;
+    --accent: #c8372d; --ok: #2f6b4f;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.5; }
+  a { color: inherit; }
+  header { max-width: 1120px; margin: 0 auto; padding: 22px 24px; display: flex; align-items: baseline; gap: 14px; }
+  header a { font-family: var(--serif); font-size: 26px; font-weight: 700; text-decoration: none; letter-spacing: -0.01em; }
+  header span { color: var(--soft); font-size: 14px; }
+  main { max-width: 1120px; margin: 0 auto; padding: 0 24px 80px; }
+
+  .compose { padding: 40px 0 56px; max-width: 760px; }
+  h1 { font-family: var(--serif); font-size: clamp(34px, 6vw, 54px); line-height: 1.06; letter-spacing: -0.02em; margin: 0 0 12px; font-weight: 700; }
+  .lede { color: var(--soft); font-size: 18px; margin: 0 0 26px; max-width: 620px; }
+  textarea { width: 100%; min-height: 136px; padding: 16px 18px; resize: vertical; background: var(--card); color: var(--ink); border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 18px; }
+  textarea:focus, select:focus, button:focus-visible, a:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; align-items: center; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+  button.make { background: var(--ink); color: var(--paper); border: 0; border-radius: 8px; padding: 13px 26px; font: inherit; font-weight: 600; font-size: 17px; cursor: pointer; }
+  button.make:hover { background: var(--accent); }
+  button.make:disabled { opacity: 0.5; cursor: wait; }
+  details summary { cursor: pointer; color: var(--soft); }
+  .options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; }
+  label { display: block; font-size: 14px; color: var(--soft); }
+  select { display: block; width: 100%; margin-top: 4px; padding: 9px 10px; background: var(--card); color: var(--ink); border: 1.5px solid var(--line); border-radius: 8px; font: inherit; }
+  .error { color: var(--accent); margin-top: 12px; font-weight: 600; min-height: 24px; }
+
+  h2 { font-family: var(--serif); font-size: 26px; margin: 0 0 18px; letter-spacing: -0.01em; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 22px; }
+  .tile { text-decoration: none; display: block; }
+  .thumb { aspect-ratio: 9 / 16; width: 100%; background: var(--ink); border-radius: 10px; overflow: hidden; display: block; object-fit: cover; }
+  .tile:hover .thumb { outline: 3px solid var(--accent); }
+  .tile b { display: block; font-family: var(--serif); font-size: 17px; line-height: 1.25; margin-top: 10px; }
+  .tile small { color: var(--soft); }
+
+  .run { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 44px; align-items: start; padding-top: 18px; }
+  .stick { position: sticky; top: 18px; }
+  .screen { aspect-ratio: 9 / 16; width: 100%; max-height: calc(100vh - 110px); background: var(--ink); color: var(--paper); border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; padding: 26px; font-family: var(--serif); font-size: 22px; line-height: 1.3; }
+  .screen video { width: 100%; height: 100%; display: block; background: #000; }
+  .screen.playing { padding: 0; }
+  .after { margin-top: 12px; display: flex; gap: 16px; font-size: 15px; color: var(--soft); flex-wrap: wrap; }
+  .run h1 { font-size: clamp(28px, 4vw, 40px); }
+  .asked { color: var(--soft); margin: 0 0 26px; }
+  section { border-top: 1.5px solid var(--line); padding: 18px 0 22px; }
+  section h3 { font-family: var(--serif); font-size: 20px; margin: 0 0 10px; }
+  ol.stages { list-style: none; margin: 0; padding: 0; }
+  ol.stages li { display: flex; align-items: center; gap: 12px; padding: 5px 0; color: var(--soft); }
+  ol.stages li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
+  ol.stages li.done { color: var(--ink); }
+  ol.stages li.done::before { background: var(--ok); border-color: var(--ok); }
+  ol.stages li.now { color: var(--ink); font-weight: 650; }
+  ol.stages li.now::before { border-color: var(--accent); background: var(--accent); animation: pulse 1.2s infinite; }
+  ol.stages li.bad::before { background: var(--accent); border-color: var(--accent); }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  @media (prefers-reduced-motion: reduce) { ol.stages li.now::before { animation: none; } }
+  ul.wishes { margin: 0; padding-left: 20px; }
+  .script p { font-family: var(--serif); font-size: 18px; line-height: 1.55; margin: 0 0 12px; max-width: 62ch; }
+  .facts { display: flex; flex-wrap: wrap; gap: 22px; }
+  .facts div b { display: block; font-family: var(--serif); font-size: 26px; }
+  .facts div { color: var(--soft); font-size: 14px; }
+  ul.sources { columns: 2; margin: 0; padding-left: 18px; font-size: 15px; }
+  .ticket { margin: 0 0 8px; }
+  .ticket b { color: var(--accent); font-weight: 600; }
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; margin: -10px 0 22px; }
+  .tools button { background: none; border: 1.5px solid var(--ink); color: var(--ink); border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  .tools button:hover { background: var(--ink); color: var(--paper); }
+  .edit { border-top: 1.5px solid var(--line); padding: 16px 0; }
+  .edit h3 { font-family: var(--serif); font-size: 20px; margin: 0 0 10px; }
+  .edit input { display: block; width: 100%; max-width: 460px; margin-bottom: 6px; padding: 7px 10px; background: var(--card); color: var(--ink); border: 1.5px solid var(--line); border-radius: 6px; font: inherit; }
+  .edit .make { margin-top: 8px; }
+  @media (max-width: 760px) {
+    .run { grid-template-columns: 1fr; gap: 24px; }
+    .stick { position: static; }
+    .screen { max-width: 340px; margin: 0 auto; }
+    .options { grid-template-columns: 1fr; }
+    ul.sources { columns: 1; }
+  }
+</style>
+</head>
+<body>
+<header><a href="#">bettervid</a><span>Say what you want to understand. Get a sourced video.</span></header>
+<main id="app"></main>
+<script>
+const STAGES = [
+  ["plan", "Reading your request"], ["research", "Researching the story"], ["writer", "Writing the script"],
+  ["voice", "Recording the narration"], ["director", "Planning the shots"], ["assets", "Finding and making images"],
+  ["annotate", "Drawing on the images"], ["timeline", "Cutting it together"], ["mix", "Mixing the sound"],
+  ["render", "Rendering the video"], ["critic", "Reviewing and fixing"],
+];
+const LENGTHS = [["auto", "As long as the story needs"], ["short", "Under 1 minute"], ["medium", "1 to 3 minutes"], ["long", "3 to 5 minutes"], ["longer", "5 to 8 minutes"]];
+const app = document.getElementById("app");
+let timer;
+let misses = 0;
+
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== false) n.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid !== undefined && kid !== null && kid !== false) n.append(kid);
+  return n;
+}
+const api = (path, init) => fetch(path, init).then(async (r) => {
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error || "Something went wrong.");
+  return body;
+});
+const minutes = (s) => (s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s} s`);
+
+function tile(v) {
+  return el("a", { class: "tile", href: `#${v.id}` },
+    v.video ? el("video", { class: "thumb", src: `/videos/${v.id}.mp4#t=4`, preload: "metadata", muted: "", playsinline: "", "aria-hidden": "true", tabindex: "-1" }) : el("div", { class: "thumb" }),
+    el("b", {}, v.title),
+    el("small", {}, [v.seconds && minutes(v.seconds), v.style].filter(Boolean).join(", ")));
+}
+
+async function home() {
+  const [opts, videos] = await Promise.all([api("/api/options"), api("/api/videos")]);
+  const prompt = el("textarea", { id: "prompt", placeholder: "How did anyone read the Rosetta Stone?\n\nOr tell it everything: the angle, the tone, what to skip, how it should look.", "aria-label": "What should the video be about?" });
+  const choose = (id, text, list) => el("label", { for: id }, text, el("select", { id }, list.map(([v, t]) => el("option", { value: v }, t))));
+  const style = choose("style", "Style", opts.styles.map((s) => [s.name, s.label]));
+  const persona = choose("persona", "Narrator", opts.personas.map((s) => [s.name, s.label]));
+  const length = choose("length", "Length", LENGTHS);
+  const err = el("div", { class: "error", role: "alert" });
+  const go = el("button", { class: "make", type: "submit" }, "Make the video");
+  const form = el("form", { onsubmit: async (e) => {
+    e.preventDefault();
+    go.disabled = true;
+    err.textContent = "";
+    try {
+      const { id } = await api("/api/videos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: prompt.value, style: style.querySelector("select").value, persona: persona.querySelector("select").value, length: length.querySelector("select").value }) });
+      location.hash = id;
+    } catch (e) { err.textContent = e.message; go.disabled = false; }
+  } }, prompt,
+    el("div", { class: "row" }, go, el("details", {}, el("summary", {}, "Options"), el("div", { class: "options" }, style, persona, length))), err);
+  const done = videos.filter((v) => v.video);
+  app.replaceChildren(
+    el("div", { class: "compose" }, el("h1", {}, "Turn a question into a video worth watching."), el("p", { class: "lede" }, "It researches the story, writes it, finds the real images, draws on them, and checks its own work. Every fact shows its source."), form),
+    done.length ? el("div", {}, el("h2", {}, "Made so far"), el("div", { class: "gallery" }, done.map(tile))) : "");
+  prompt.focus({ preventScroll: true });
+}
+
+function stages(v) {
+  const now = STAGES.findIndex(([k]) => k === v.stage);
+  return el("ol", { class: "stages" }, STAGES.map(([k, label], i) => {
+    const has = v.stages.includes(k);
+    const state = v.running ? (k === v.stage ? "now" : has && i < (now < 0 ? 99 : now) ? "done" : "") : has ? "done" : v.error && i === v.stages.length ? "bad" : "";
+    return el("li", { class: state }, label);
+  }));
+}
+
+function wishes(p) {
+  const list = [...(p?.story ?? []), p?.tone && `Tone: ${p.tone}`, ...(p?.visuals ?? []), ...(p?.sound ?? []), p?.seconds && `About ${minutes(p.seconds)}`].filter(Boolean);
+  return el("section", {}, el("h3", {}, "What I understood"),
+    el("p", {}, el("b", {}, p.topic)),
+    list.length ? el("ul", { class: "wishes" }, list.map((w) => el("li", {}, w))) : el("p", { class: "asked" }, "You left the rest to me."));
+}
+
+function render(v) {
+  const keep = app.querySelector("video");
+  const screen = v.video ? keep ?? el("video", { src: `/videos/${v.id}.mp4`, controls: "", playsinline: "", "aria-label": v.title })
+    : v.error ? v.error : v.running ? (STAGES.find(([k]) => k === v.stage)?.[1] ?? "Working") + "..." : "This one did not finish.";
+  const parts = [
+    el("h1", {}, v.title),
+    el("p", { class: "asked" }, v.takeaway ?? v.prompt),
+    v.video && !v.running && el("div", { class: "tools" }, el("button", { type: "button", onclick: () => replay(v) }, "Replay how it was made"), v.captions && el("button", { type: "button", onclick: (e) => editCaptions(v, e.target) }, "Edit captions")),
+    v.plan && wishes(v.plan),
+    el("section", {}, el("h3", {}, v.video && !v.running ? "How it was made" : "Making it"), stages(v)),
+    v.shots && el("section", { class: "facts" }, [[v.facts?.claims, "sourced facts"], [v.shots, "shots"], [v.real, "real images"], [v.generated, "generated"], [v.marks, "drawn marks"], [`$${v.usd.toFixed(2)}`, "cost"]].filter(([n]) => n !== undefined).map(([n, t]) => el("div", {}, el("b", {}, String(n)), t))),
+    v.narration && el("section", { class: "script" }, el("h3", {}, "The script"), v.narration.split(/\n\s*\n/).map((p) => el("p", {}, p))),
+    v.critic && el("section", {}, el("h3", {}, "What the critic said"), el("p", {}, v.critic.verdict), v.critic.tickets.map((t) => el("p", { class: "ticket" }, el("b", {}, "Fixed: "), t.note))),
+    v.facts?.sources.length ? el("section", {}, el("h3", {}, "Sources"), el("ul", { class: "sources" }, v.facts.sources.map((s) => el("li", {}, el("a", { href: s.url, target: "_blank", rel: "noreferrer" }, s.title))))) : null,
+  ];
+  const box = el("div", { class: "screen" + (v.video ? " playing" : "") }, screen);
+  const links = v.video ? el("div", { class: "after" }, el("a", { href: `/videos/${v.id}.mp4`, download: `${v.id}.mp4` }, "Download"), el("a", { href: "#" }, "Make another")) : el("div", { class: "after" }, el("a", { href: "#" }, "Back"));
+  const top = app.querySelector(".stick");
+  if (top && keep && v.video) app.querySelector(".story").replaceChildren(...parts.filter(Boolean));
+  else app.replaceChildren(el("div", { class: "run" }, el("div", { class: "stick" }, box, links), el("div", { class: "story" }, parts.filter(Boolean))));
+}
+
+// Replay: walks through a finished run with no model calls, for when the budget or a rate limit stops new videos.
+function replay(v) {
+  clearTimeout(timer);
+  const say = { plan: "plan", research: "facts", writer: "narration", director: "shots", critic: "critic" };
+  const step = (i) => {
+    if (i >= STAGES.length) return route();
+    const reached = STAGES.slice(0, i + 1).map(([k]) => k);
+    const shown = { ...v, video: false, running: true, stage: STAGES[i][0], stages: reached.slice(0, -1), error: undefined };
+    for (const [stage, field] of Object.entries(say)) if (!reached.slice(0, -1).includes(stage)) shown[field] = undefined;
+    if (shown.shots === undefined) shown.real = shown.generated = shown.marks = undefined;
+    render(shown);
+    timer = setTimeout(() => step(i + 1), 1300);
+  };
+  app.replaceChildren();
+  step(0);
+}
+
+function editCaptions(v, button) {
+  if (app.querySelector(".edit")) return;
+  const boxes = v.captions.map((c, i) => el("input", { value: c, "aria-label": `Caption ${i + 1}`, maxlength: 60 }));
+  const err = el("div", { class: "error", role: "alert" });
+  const save = el("button", { class: "make", type: "submit" }, "Save and re-render");
+  const form = el("form", { class: "edit", onsubmit: async (e) => {
+    e.preventDefault();
+    save.disabled = true;
+    err.textContent = "";
+    try {
+      await api(`/api/videos/${v.id}/captions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ captions: boxes.map((b) => b.value) }) });
+      app.replaceChildren();
+      show(v.id);
+    } catch (e) { err.textContent = e.message; save.disabled = false; }
+  } }, el("h3", {}, "Captions"), boxes, save, err);
+  button.closest(".tools").after(form);
+  boxes[0]?.focus();
+}
+
+async function show(id) {
+  clearTimeout(timer);
+  try {
+    const v = await api(`/api/videos/${id}`);
+    misses = 0;
+    render(v);
+    if (v.running) timer = setTimeout(() => show(id), 2000);
+  } catch (e) {
+    // The project file can be mid-write during a run, so try again before giving up.
+    if (++misses < 6) {
+      timer = setTimeout(() => show(id), 1500);
+      return;
+    }
+    app.replaceChildren(el("div", { class: "compose" }, el("h1", {}, "That video was not found."), el("a", { href: "#" }, "Back to the start")));
+  }
+}
+
+function route() {
+  clearTimeout(timer);
+  const id = location.hash.slice(1);
+  id ? show(id) : home();
+}
+addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

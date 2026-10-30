@@ -35,7 +35,7 @@ export function placeEffects(clips: Clip[], fps: number): Hit[] {
 function graph(nHits: number, hits: Hit[], seconds: number, master: string): string {
   const fmt = "aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo";
   const parts = [
-    `[0:a]${fmt},asplit=2[vox][sc]`,
+    `[0:a]${fmt},apad=whole_dur=${seconds.toFixed(2)},asplit=2[vox][sc]`, // padded, or the ducked bed stops when the voice does
     `[1:a]${fmt},atrim=0:${seconds.toFixed(2)},afade=t=in:d=0.6,afade=t=out:st=${(seconds - FADE_OUT).toFixed(2)}:d=${FADE_OUT}[bed]`,
     // Duck the bed under speech: fast attack so the first syllable is clear, ~0.5 s release (research/voice-audio.md).
     `[bed][sc]sidechaincompress=threshold=0.03:ratio=8:attack=15:release=500[duck]`,

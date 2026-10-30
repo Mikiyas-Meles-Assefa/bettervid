@@ -8,7 +8,8 @@
   "scripts": {
     "spike": "node --env-file=.env --experimental-strip-types",
     "typecheck": "tsc --noEmit",
-    "pipeline": "node --env-file=.env --experimental-strip-types pipeline/run.ts"
+    "pipeline": "node --env-file=.env --experimental-strip-types pipeline/run.ts",
+    "app": "node --env-file=.env --experimental-strip-types app/server.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

@@ -3,6 +3,7 @@
 import React from "react";
 import { AbsoluteFill, Audio, Img, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Timeline } from "../schemas/project.ts";
+import { Board } from "./Board.tsx";
 import { SHOTS } from "./shots.tsx";
 
 const Caption: React.FC<{ words: { text: string; highlight: boolean }[]; color: string; font: string }> = ({ words, color, font }) => {
@@ -39,18 +40,25 @@ const Caption: React.FC<{ words: { text: string; highlight: boolean }[]; color: 
 
 export const Video: React.FC<{ timeline: Timeline }> = ({ timeline: t }) => {
   const frame = useCurrentFrame();
+  const board = t.style.motion === "board";
+  const story = t.clips.filter((c) => c.type !== "credits");
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
-      {t.clips.map((c, i) => {
-        const Shot = SHOTS[c.type];
-        return (
-          <Sequence key={c.shotId} from={c.from} durationInFrames={c.frames} layout="none">
-            <AbsoluteFill>
-              <Shot clip={c} style={t.style} index={i} />
-            </AbsoluteFill>
-          </Sequence>
-        );
-      })}
+      <AbsoluteFill style={{ filter: t.style.surface?.filter }}>
+        {board && <Board clips={story} style={t.style} />}
+        {(board ? t.clips.filter((c) => c.type === "credits") : t.clips).map((c, i) => {
+          const Shot = SHOTS[c.type];
+          return (
+            <Sequence key={c.shotId} from={c.from} durationInFrames={c.frames} layout="none">
+              <AbsoluteFill>
+                <Shot clip={c} style={t.style} index={i} />
+                {c.credit && !board && <div style={{ position: "absolute", top: 72, right: 60, maxWidth: 760, textAlign: "right", fontFamily: t.style.fonts.body, fontSize: 24, color: "white", opacity: 0.8, textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>{c.credit}</div>}
+              </AbsoluteFill>
+            </Sequence>
+          );
+        })}
+      </AbsoluteFill>
+      {!!t.style.surface?.paper && <Img src={staticFile("paper.png")} style={{ position: "absolute", width: "100%", height: "100%", mixBlendMode: "multiply", opacity: t.style.surface.paper }} />}
       {t.captions.map((c, i) => (
         <Sequence key={i} from={c.startFrame} durationInFrames={Math.max(1, c.endFrame - c.startFrame)} layout="none">
           <Caption words={c.words} color={t.style.palette.highlight} font={t.style.fonts.caption} />

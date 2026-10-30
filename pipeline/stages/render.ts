@@ -5,6 +5,8 @@ import { renderMedia, selectComposition } from "@remotion/renderer";
 import type { Project } from "../../schemas/project.ts";
 import { dir, stage } from "../lib/project.ts";
 
+// H.264 quality: 18 (the default) made a 5:40 video 378 MB. 23 is the usual choice for video on the web.
+const CRF = Number(process.env.RENDER_CRF ?? 23);
 // Spike S7: 4 workers was fastest on the M4 (performance cores); more is slower.
 const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? 4);
 
@@ -20,6 +22,7 @@ export async function render(p: Project, force = false) {
       composition,
       inputProps,
       codec: "h264",
+      crf: CRF,
       imageFormat: "jpeg",
       concurrency: CONCURRENCY,
       outputLocation: join(dir(p), "video.mp4"),

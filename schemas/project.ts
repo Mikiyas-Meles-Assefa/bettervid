@@ -1,7 +1,7 @@
 // The Project JSON: one file per run. Each pipeline stage reads earlier fields and writes its own.
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
 
-export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "assets" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
@@ -16,6 +16,7 @@ export type Project = {
   assets?: Asset[];
   timeline?: Timeline;
   render?: { path: string; ms: number };
+  critic?: { verdict: string; tickets: { shotId: string; action: string; note: string }[] };
   // Cache: the hash of each stage's inputs when it last ran, so unchanged stages are skipped.
   stages: Partial<Record<StageName, { hash: string; at: string; ms: number }>>;
   costs: Cost[];
@@ -70,7 +71,7 @@ export type Word = { text: string; start: number; end: number; beatId: string };
 export type Narration = { audio: string; voiceId: string; model: string; seconds: number; words: Word[] };
 
 // Stage 4: director (shot types are the build order in docs/PLAN.md section 5)
-export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title";
+export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits";
 export type Shot = {
   id: string;
   beatId: string;
@@ -83,7 +84,13 @@ export type Shot = {
 };
 // `focus`: the part of the image the narration is talking about ("the brewery"); the shot zooms to it and circles it.
 // `mustBeReal`: a real document, map, person or place (or the user asked for real images only), so no generated stand-in.
-export type AssetRequest = { kind: "real" | "generated"; query: string; broadQuery?: string; prompt: string; subject?: string; focus?: string; mustBeReal?: boolean };
+// `idea`: an honest illustration of the idea behind a must-be-real shot, with no likeness or fake document, for when the real thing cannot be found.
+export type ImageType = "scene" | "object" | "diagram";
+export type AssetRequest = { kind: "real" | "generated"; query: string; broadQuery?: string; prompt: string; idea?: string; imageType?: ImageType; subject?: string; focus?: string; mustBeReal?: boolean };
+// A drawn mark. Points are fractions of the image; `word` is the index of the spoken word it starts on.
+export type MarkTool = "ring" | "box" | "underline" | "arrow" | "line" | "dots" | "label" | "path";
+export type Mark = { tool: MarkTool; points: [number, number][]; word: number; text?: string; color?: "accent" | "highlight" };
+export type TimedMark = Mark & { frame: number }; // frame inside its clip
 export type Box = { x: number; y: number; w: number; h: number }; // fractions of the image size
 
 // Stages 5a to 5c: assets
@@ -97,7 +104,10 @@ export type Asset = {
   cutout?: string; // PNG with outline and shadow baked in
   missing?: boolean; // no honest image could be found or made; the timeline holds the previous shot instead
   size?: [number, number]; // image width and height in pixels
-  focus?: Box; // where `AssetRequest.focus` is in the image
+  look?: string; // what the viewer should look at here, for the annotate stage
+  focus?: Box; // where that is in the image
+  zoom?: boolean; // whether the camera moves in on the focus, or the whole image stays in view
+  marks?: Mark[];
   title?: string;
   source?: string;
   license?: string;
@@ -117,7 +127,9 @@ export type Timeline = {
   captions: { words: { text: string; highlight: boolean }[]; startFrame: number; endFrame: number }[];
 };
 // `punch` marks a clip that reuses the previous clip's image, so it zooms in harder instead of repeating.
-export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box };
+export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits };
+// The end card: every source the facts rest on, and who made each image.
+export type Credits = { sources: string[]; images: string[] };
 
 // personas/*.json: the narrator. Separate from the visual style so either can change on its own.
 export type Persona = {
@@ -134,7 +146,12 @@ export type StyleFile = {
   label: string;
   palette: { paper: string; ink: string; accent: string; highlight: string };
   fonts: { caption: string; title: string; body: string };
-  artPrefix: string; // prepended to every Muse Image prompt
+  // How generated images are drawn, by what they show. The subject stays clear; texture belongs to `surface`.
+  art: Record<ImageType, string>;
+  // Added by the video, over real and generated images alike, so the look never eats the subject.
+  surface?: { filter?: string; paper?: number }; // a CSS filter, and the opacity of the paper texture
+  motion?: "cuts" | "board"; // how shots connect: hard cuts, or one big board with a moving camera
+  hand?: { wobble: number; weight: number }; // how marks are drawn: wobble in pixels, and a line weight multiplier
   // "prefer": real archival images wherever they exist (documentary collage).
   // "proof": real images only for proof (real people, documents, events); everything else is generated in the style.
   realAssets: "prefer" | "proof";

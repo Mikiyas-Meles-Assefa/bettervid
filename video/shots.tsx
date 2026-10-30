@@ -2,6 +2,7 @@
 import React from "react";
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Clip, StyleFile } from "../schemas/project.ts";
+import { Marks } from "./marks.tsx";
 
 type ShotProps = { clip: Clip; style: StyleFile; index: number };
 
@@ -34,12 +35,12 @@ const GuidedZoom: React.FC<ShotProps> = ({ clip, style }) => {
   const [iw, ih] = clip.size!;
   const f = clip.focus!;
   const box = { x: f.x * iw, y: f.y * ih, w: f.w * iw, h: f.h * ih };
-  // Start covering the frame; end with the focus plus some context filling it. Archival scans hold up to about 2.6x
-  // the cover scale before they look soft.
+  // Start covering the frame. With a zoom, end with the focus plus some context filling it (archival scans hold up to
+  // about 2.6x the cover scale before they look soft); without one, only pan so the focus is in view.
   const cover = Math.max(W / iw, H / ih);
   const region = { w: Math.max(box.w * 2.4, iw * 0.3), h: Math.max(box.h * 2.4, ih * 0.2) };
-  const end = Math.min(Math.max(Math.min(W / region.w, H / region.h), cover * 1.2), cover * 2.6);
-  // The zoom takes up to 2.2 s and lands before the clip is half over, then keeps drifting in slowly.
+  const end = clip.zoom ? Math.min(Math.max(Math.min(W / region.w, H / region.h), cover * 1.2), cover * 2.6) : cover * 1.06;
+  // The move takes up to 2.2 s and lands before the clip is half over, then keeps drifting in slowly.
   const land = Math.min(clip.frames * 0.5, 2.2 * fps);
   const e = interpolate(frame, [0, land], [0, 1], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
   const after = Math.max(0, frame - land) / fps;
@@ -49,36 +50,10 @@ const GuidedZoom: React.FC<ShotProps> = ({ clip, style }) => {
   // Aim the focus a little above center, clear of the captions, without showing past the image's edges.
   const tx = Math.min(0, Math.max(W - iw * s, W / 2 - cx * s));
   const ty = Math.min(0, Math.max(H - ih * s, H * 0.4 - cy * s));
-  // A hand-drawn ring around the focus once the zoom lands, only when the whole ring fits on screen: a ring around
-  // something as big as the frame points at nothing.
-  const rx = (box.w * s) / 2 + 40;
-  const ry = (box.h * s) / 2 + 40;
-  const rcx = tx + (box.x + box.w / 2) * s;
-  const rcy = ty + (box.y + box.h / 2) * s;
-  const fits = rcx - rx > 24 && rcx + rx < W - 24 && rcy - ry > 24 && rcy + ry < H - 24 && rx < W * 0.4;
-  const ring = fits ? interpolate(frame, [land, land + 0.5 * fps], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
   return (
     <AbsoluteFill style={{ backgroundColor: "#111", overflow: "hidden" }}>
       <Img src={staticFile(clip.image!)} style={{ position: "absolute", left: 0, top: 0, width: iw, height: ih, maxWidth: "none", transformOrigin: "0 0", transform: `translate(${tx}px, ${ty}px) scale(${s})` }} />
-      {ring > 0 && (
-        <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
-          <ellipse
-            cx={rcx}
-            cy={rcy}
-            rx={rx}
-            ry={ry}
-            transform={`rotate(-4 ${rcx} ${rcy})`}
-            fill="none"
-            stroke={style.palette.accent}
-            strokeWidth={10}
-            strokeLinecap="round"
-            pathLength={1}
-            strokeDasharray={1}
-            strokeDashoffset={1 - ring}
-            style={{ filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.45))" }}
-          />
-        </svg>
-      )}
+      {!!clip.marks?.length && <Marks marks={clip.marks} view={{ tx, ty, s, iw, ih }} style={style} />}
     </AbsoluteFill>
   );
 };
@@ -152,9 +127,13 @@ export const KineticTitle: React.FC<ShotProps> = ({ clip, style }) => {
   const { fps } = useVideoConfig();
   const words = (clip.text ?? "").split(/\s+/).filter(Boolean);
   const per = Math.max(4, Math.floor(Math.min(clip.frames * 0.6, fps * 1.2) / Math.max(1, words.length)));
+  // The longest word must fit the width; on a board the title is written on the board itself, not on a dark card.
+  const board = style.motion === "board";
+  const longest = Math.max(1, ...words.map((w) => w.length));
+  const size = Math.min(words.length > 4 ? 120 : 160, 1480 / longest);
   return (
-    <AbsoluteFill style={{ backgroundColor: style.palette.ink, alignItems: "center", justifyContent: "center" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px 28px", padding: "0 70px", marginBottom: 300 }}>
+    <AbsoluteFill style={{ backgroundColor: board ? style.palette.paper : style.palette.ink, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px 28px", padding: "0 70px", marginBottom: board ? 0 : 300 }}>
         {words.map((w, i) => {
           const f = frame - i * per;
           const s = spring({ frame: f, fps, config: { damping: 9, stiffness: 220 } });
@@ -165,10 +144,10 @@ export const KineticTitle: React.FC<ShotProps> = ({ clip, style }) => {
               style={{
                 fontFamily: style.fonts.title,
                 fontWeight: 900,
-                fontSize: words.length > 4 ? 120 : 160,
+                fontSize: size,
                 lineHeight: 1.05,
                 textTransform: "uppercase",
-                color: i === words.length - 1 ? style.palette.highlight : style.palette.paper,
+                color: i === words.length - 1 ? (board ? style.palette.accent : style.palette.highlight) : board ? style.palette.ink : style.palette.paper,
                 opacity: f >= 0 ? 1 : 0,
                 transform: `scale(${interpolate(s, [0, 1], [2.2, 1])}) translateX(${shake}px)`,
                 display: "inline-block",
@@ -183,4 +162,30 @@ export const KineticTitle: React.FC<ShotProps> = ({ clip, style }) => {
   );
 };
 
-export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle };
+// The end card: where the facts came from and who made the images. Long lists use smaller type, so all of it fits.
+export const CreditsCard: React.FC<ShotProps> = ({ clip, style }) => {
+  const frame = useCurrentFrame();
+  const { sources, images } = clip.credits!;
+  const size = Math.max(22, Math.min(36, 760 / (sources.length + images.length + 4)));
+  const fade = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
+  const list = (title: string, items: string[]) => (
+    <div style={{ marginBottom: 56 }}>
+      <div style={{ fontFamily: style.fonts.title, fontWeight: 700, fontSize: 52, color: style.palette.accent, marginBottom: 18 }}>{title}</div>
+      {items.map((t, i) => (
+        <div key={i} style={{ fontFamily: style.fonts.body, fontSize: size, lineHeight: 1.35, color: style.palette.ink }}>
+          {t}
+        </div>
+      ))}
+    </div>
+  );
+  return (
+    <Paper style={style}>
+      <AbsoluteFill style={{ padding: "200px 90px", opacity: fade }}>
+        {!!sources.length && list("Sources", sources)}
+        {!!images.length && list("Images", images)}
+      </AbsoluteFill>
+    </Paper>
+  );
+};
+
+export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard };

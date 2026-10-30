@@ -12,12 +12,24 @@
     "title": "Georgia",
     "body": "Georgia"
   },
-  "artPrefix": "Documentary paper collage: aged paper, halftone print texture, torn edges, muted archival color, film grain. Absolutely no text, letters, numbers or captions anywhere.",
+  "art": {
+    "scene": "Documentary still: realistic, natural light, muted archival color, the subject sharp and instantly recognizable.",
+    "object": "A single object shown whole and in sharp focus against a plain pale background, realistic, muted color.",
+    "diagram": "A clean educational illustration: simple clear shapes, strong contrast, plain pale background, one idea only."
+  },
   "realAssets": "prefer",
-  "grain": 0.5,
+  "grain": 0,
   "vignette": 0.55,
   "voice": {
     "id": "JBFqnCBsd6RMkjVDRZzb",
     "model": "eleven_v4"
+  },
+  "surface": {
+    "filter": "sepia(0.22) saturate(0.82) contrast(1.05)",
+    "paper": 0.6
+  },
+  "hand": {
+    "wobble": 2.5,
+    "weight": 1
   }
 }
