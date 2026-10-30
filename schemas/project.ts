@@ -1,7 +1,7 @@
 // The Project JSON: one file per run. Each pipeline stage reads earlier fields and writes its own.
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
 
-export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "board" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
@@ -13,6 +13,7 @@ export type Project = {
   script?: Script;
   narration?: Narration;
   shots?: Shot[];
+  board?: BoardPlan;
   assets?: Asset[];
   timeline?: Timeline;
   render?: { path: string; ms: number };
@@ -71,7 +72,7 @@ export type Word = { text: string; start: number; end: number; beatId: string };
 export type Narration = { audio: string; voiceId: string; model: string; seconds: number; words: Word[] };
 
 // Stage 4: director (shot types are the build order in docs/PLAN.md section 5)
-export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits";
+export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits" | "board";
 export type Shot = {
   id: string;
   beatId: string;
@@ -89,7 +90,7 @@ export type ImageType = "scene" | "object" | "diagram";
 export type AssetRequest = { kind: "real" | "generated"; query: string; broadQuery?: string; prompt: string; idea?: string; imageType?: ImageType; subject?: string; focus?: string; mustBeReal?: boolean };
 // A drawn mark. Points are fractions of the image; `word` is the index of the spoken word it starts on.
 export type MarkTool = "ring" | "box" | "underline" | "arrow" | "line" | "dots" | "label" | "path";
-export type Mark = { tool: MarkTool; points: [number, number][]; word: number; text?: string; color?: "accent" | "highlight" };
+export type Mark = { tool: MarkTool; points: [number, number][]; word: number; text?: string; color?: "accent" | "highlight" | "ink" };
 export type TimedMark = Mark & { frame: number }; // frame inside its clip
 export type Box = { x: number; y: number; w: number; h: number }; // fractions of the image size
 
@@ -127,7 +128,12 @@ export type Timeline = {
   captions: { words: { text: string; highlight: boolean }[]; startFrame: number; endFrame: number }[];
 };
 // `punch` marks a clip that reuses the previous clip's image, so it zooms in harder instead of repeating.
-export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits };
+export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits; board?: { elements: TimedElement[]; camera: BoardCamera[] } };
+// A live whiteboard: everything is placed in board pixels and starts on a spoken word.
+export type BoardElement = { kind: MarkTool | "text" | "image"; word: number; x: number; y: number; w: number; h: number; points: [number, number][]; text?: string; size?: number; color?: "ink" | "accent" | "highlight"; prompt?: string; image?: string };
+export type BoardPlan = { elements: BoardElement[]; camera: { word: number; x: number; y: number; w: number }[] };
+export type TimedElement = BoardElement & { frame: number };
+export type BoardCamera = { frame: number; x: number; y: number; w: number; hold?: number }; // hold: seconds the move takes
 // The end card: every source the facts rest on, and who made each image.
 export type Credits = { sources: string[]; images: string[] };
 

@@ -50,6 +50,12 @@ Fixes and ideas the user raised while reviewing test videos. All are open unless
 
 22. **Not built yet.** A real hosted deploy (the `Dockerfile` is unbuilt), style switching from the page, and simulations with a frame review.
 
+23. **Whiteboard: live board rebuilt.** Empty at first, words written and drawings sketched as they are said, a camera following the thinking. Spark plans scenes and layouts; code does the layout (`pipeline/stages/board.ts`). The user said to make it far better; the latest version needs their review. Drawings now explain better (the moon video). Still weak: arrows in the "cycle" layout cross labels, and a scene can look thin just after the camera arrives.
+
+24. **Generated faces of real people.** Director and critic rules added. On the Taytu re-run the critic caught the Menelik face and the frames now show his real portrait; keep watching for it.
+
+25. **The paper overlay covers photos.** The blotches were a bug and are fixed, but the user questions any layer over photos. Waiting on their call to remove it from images.
+
 ## Done (Oct 30)
 
 - Default length is story-led (1). Annotation and the drawing toolset on any image (2, 3). Board format and whiteboard motion (4), first version. Clear look by image type (6). Accuracy in the review (7). Picker stricter on kind of thing, models and loose matches, with no second chance for a rejected image (8, 16, 20). Fake writing checked and redone (11). Reuse capped per image, honest illustrations for gaps (9, 12, 17). Compression (15). Paper and grain softened (18). Duplicate titles (19).

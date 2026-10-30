@@ -30,7 +30,7 @@ function dims(path: string): [number, number] {
 
 // Normalizes any image to a JPEG at most 2048 px tall, which is all a 1920 px frame needs.
 function toJpeg(input: string, out: string) {
-  execFileSync("ffmpeg", ["-y", "-v", "error", "-i", input, "-vf", "scale='min(iw,2048*iw/ih)':'min(ih,2048)':flags=lanczos", "-q:v", "3", out]);
+  execFileSync("ffmpeg", ["-y", "-v", "error", "-i", input, "-vf", "scale='min(iw,2048*iw/ih)':'min(ih,2048)':flags=lanczos", "-frames:v", "1", "-update", "1", "-q:v", "3", out]); // one frame: some archive files are animated
 }
 
 // Shots of the same document share a query, so each query is searched once per run.
@@ -84,7 +84,7 @@ async function pickReal(p: Project, shot: Shot, query: string, seen: Set<string>
 
 // Muse Image refuses some prompts (content policy), e.g. disease scenes with bodies. Retry once with the
 // neutral archive query; the caller turns the shot into a title card if that is refused too.
-async function generate(shot: Shot, s: StyleFile, spend: Spend): Promise<Uint8Array | null> {
+export async function generate(shot: Shot, s: StyleFile, spend: Spend): Promise<Uint8Array | null> {
   const look = s.art[shot.asset!.imageType ?? "scene"];
   for (const scene of [shot.asset!.prompt, shot.asset!.query].filter(Boolean)) {
     try {
@@ -198,7 +198,10 @@ async function make(p: Project, shot: Shot, s: StyleFile, spend: Spend, folder: 
       pick = await pickReal(p, shot, query, seen, spend).catch((e) => (spend.notes.push(`${shot.id} archive error: ${e.message}`), null));
       if (pick) break;
     }
-    const raw = pick && (await write(join(folder, `${shot.id}.src`), await download(pick.cand.full)));
+    // Archives sometimes refuse the full file after serving the preview; that image is simply unavailable.
+    const full = pick && (await download(pick.cand.full).catch((e) => (spend.notes.push(`${shot.id} download failed: ${e.message}`), null)));
+    if (pick && !full) pick = null;
+    const raw = pick && full && (await write(join(folder, `${shot.id}.src`), full));
     const [w, h] = raw ? dims(raw) : [0, 0];
     if (pick && Math.min(w, h) < MIN_SIDE) spend.notes.push(`${shot.id} archive pick "${pick.cand.title}" is only ${w}x${h}, generating instead`);
     if (pick && raw && Math.min(w, h) >= MIN_SIDE) {

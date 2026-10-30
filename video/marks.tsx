@@ -25,7 +25,20 @@ function rough(points: Pt[], wobble: number): string {
       }
     }
   });
-  return out.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  return curve(out);
+}
+
+// A smooth line through the points, so a hand-drawn shape reads as a curve and not a polygon.
+function curve(p: Pt[]): string {
+  if (p.length < 3) return p.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  let d = `M${p[0]![0].toFixed(1)} ${p[0]![1].toFixed(1)}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const [x, y] = p[i]!;
+    const [nx, ny] = p[i + 1]!;
+    d += ` Q${x.toFixed(1)} ${y.toFixed(1)} ${((x + nx) / 2).toFixed(1)} ${((y + ny) / 2).toFixed(1)}`;
+  }
+  const [lx, ly] = p.at(-1)!;
+  return `${d} L${lx.toFixed(1)} ${ly.toFixed(1)}`;
 }
 
 function ellipse(a: Pt, b: Pt, pad: number): Pt[] {

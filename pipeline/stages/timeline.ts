@@ -17,7 +17,7 @@ function credits(p: Project, used: Asset[]): Credits {
   const ids = new Set(p.factSheet!.claims.filter((c) => claims.has(c.id)).flatMap((c) => c.sourceIds));
   const sources = p.factSheet!.sources.filter((s) => ids.has(s.id)).map((s) => s.publisher || s.title);
   const images = used.filter((a) => a.kind === "real").map(line);
-  const made = used.some((a) => a.kind === "generated") ? ["Illustrations made with Muse Image"] : [];
+  const made = used.some((a) => a.kind === "generated") || p.board?.elements.some((e) => e.image) ? ["Illustrations made with Muse Image"] : [];
   return { sources: [...new Set(sources)], images: [...new Set(images), ...made] };
 }
 
@@ -56,7 +56,7 @@ function captions(p: Project, titles: [number, number][]): Timeline["captions"] 
 
 export async function timeline(p: Project, force = false) {
   const s = style(p.input.style);
-  await stage(p, "timeline", [p.shots, p.assets, p.narration, s], 0, async () => {
+  await stage(p, "timeline", [p.shots, p.assets, p.board, p.narration, s], 0, async () => {
     const grain = join(dir(p), "grain.png");
     if (!existsSync(grain)) execFileSync("python3", ["-I", "pipeline/tools/make_grain.py", grain]);
     const paper = join(dir(p), "paper.png");
@@ -64,6 +64,24 @@ export async function timeline(p: Project, force = false) {
     const assets = new Map((p.assets ?? []).map((a) => [a.shotId, a]));
     const story = Math.ceil((p.narration!.seconds + TAIL) * FPS);
     const frames = story + CREDITS * FPS;
+    if (p.board) {
+      const at = (word: number) => Math.round((p.narration!.words[word]?.start ?? 0) * FPS);
+      const elements = p.board.elements.map((e) => ({ ...e, frame: at(e.word) }));
+      // The last stop pulls back to the whole board and holds there.
+      const boxes = p.board.camera.map((c) => [c.x, c.y, c.x + c.w, c.y + c.w * 1.5] as const);
+      const [x0, y0, x1, y1] = [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
+      const w = Math.max(x1 - x0, (y1 - y0) / 1.5) * 1.04;
+      const camera = [
+        ...p.board.camera.map((c) => ({ ...c, frame: at(c.word) })),
+        { frame: story - 3.2 * FPS, x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - (w * 1.5) / 2, w, hold: 1.8 },
+      ];
+      const clips: Clip[] = [
+        { shotId: "board", type: "board", from: 0, frames: story, board: { elements, camera } },
+        { shotId: "credits", type: "credits", from: story, frames: CREDITS * FPS, credits: credits(p, []) },
+      ];
+      p.timeline = { fps: FPS, width: 1080, height: 1920, frames, audio: p.narration!.audio, style: s, clips, captions: captions(p, []) };
+      return;
+    }
     const planned = p.shots!.map((shot, i) => {
       const from = Math.round(shot.start * FPS);
       const to = i + 1 < p.shots!.length ? Math.round(p.shots![i + 1]!.start * FPS) : story;

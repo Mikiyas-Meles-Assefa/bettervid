@@ -2,10 +2,11 @@
 // New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 0, 0 = as long as the story needs; a length in the prompt wins] [--until voice]
 // Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>] [--only <stage>]
 import type { Project, StageName } from "../schemas/project.ts";
-import { load, save, spent } from "./lib/project.ts";
+import { load, save, spent, style } from "./lib/project.ts";
 import { hash } from "./lib/util.ts";
 import { annotate } from "./stages/annotate.ts";
 import { assets } from "./stages/assets.ts";
+import { board } from "./stages/board.ts";
 import { critic } from "./stages/critic.ts";
 import { director } from "./stages/director.ts";
 import { mix } from "./stages/mix.ts";
@@ -22,6 +23,7 @@ const ORDER: [StageName, (p: Project, force: boolean) => Promise<void>][] = [
   ["writer", writer],
   ["voice", voice],
   ["director", director],
+  ["board", board],
   ["assets", assets],
   ["annotate", annotate],
   ["timeline", timeline],
@@ -54,11 +56,14 @@ if (args[0] === "new") {
   p = load(args[0]!);
 }
 
+// A board style plans one live whiteboard instead of shots and images.
+const boardStyle = style(p.input.style).motion === "board";
+const skip = (name: StageName) => (boardStyle ? ["director", "assets", "annotate"].includes(name) : name === "board");
 const until = flag("until") as StageName | undefined;
 const force = flag("force") as StageName | undefined;
 const only = flag("only") as StageName | undefined;
 for (const [name, run] of ORDER) {
-  if (only && only !== name) continue;
+  if ((only && only !== name) || skip(name)) continue;
   await run(p, force === name);
   if (until === name) break;
 }

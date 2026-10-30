@@ -26,7 +26,7 @@
   },
   "surface": {
     "filter": "sepia(0.22) saturate(0.82) contrast(1.05)",
-    "paper": 0.6
+    "paper": 0.4
   },
   "hand": {
     "wobble": 2.5,

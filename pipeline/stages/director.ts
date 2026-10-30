@@ -65,7 +65,7 @@ export async function director(p: Project, force = false) {
   }, force);
 }
 
-const MIN_SECONDS: Record<ShotType, number> = { receipt: 3.5, kinetic_title: 1.5, photo_kenburns: 1.2, cutout_on_paper: 1.2, credits: 0 };
+const MIN_SECONDS: Record<ShotType, number> = { receipt: 3.5, kinetic_title: 1.5, photo_kenburns: 1.2, cutout_on_paper: 1.2, credits: 0, board: 0 };
 
 // Sorts and clamps start words, drops shots that would cut the one before too short, then times each shot from its first word to the next shot.
 export function toShots(p: Project, planned: Planned[]): Shot[] {

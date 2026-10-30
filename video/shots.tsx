@@ -2,6 +2,7 @@
 import React from "react";
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Clip, StyleFile } from "../schemas/project.ts";
+import { BoardShot } from "./Board.tsx";
 import { Marks } from "./marks.tsx";
 
 type ShotProps = { clip: Clip; style: StyleFile; index: number };
@@ -127,13 +128,12 @@ export const KineticTitle: React.FC<ShotProps> = ({ clip, style }) => {
   const { fps } = useVideoConfig();
   const words = (clip.text ?? "").split(/\s+/).filter(Boolean);
   const per = Math.max(4, Math.floor(Math.min(clip.frames * 0.6, fps * 1.2) / Math.max(1, words.length)));
-  // The longest word must fit the width; on a board the title is written on the board itself, not on a dark card.
-  const board = style.motion === "board";
+  // The longest word must fit the width.
   const longest = Math.max(1, ...words.map((w) => w.length));
   const size = Math.min(words.length > 4 ? 120 : 160, 1480 / longest);
   return (
-    <AbsoluteFill style={{ backgroundColor: board ? style.palette.paper : style.palette.ink, alignItems: "center", justifyContent: "center" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px 28px", padding: "0 70px", marginBottom: board ? 0 : 300 }}>
+    <AbsoluteFill style={{ backgroundColor: style.palette.ink, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px 28px", padding: "0 70px", marginBottom: 300 }}>
         {words.map((w, i) => {
           const f = frame - i * per;
           const s = spring({ frame: f, fps, config: { damping: 9, stiffness: 220 } });
@@ -147,7 +147,7 @@ export const KineticTitle: React.FC<ShotProps> = ({ clip, style }) => {
                 fontSize: size,
                 lineHeight: 1.05,
                 textTransform: "uppercase",
-                color: i === words.length - 1 ? (board ? style.palette.accent : style.palette.highlight) : board ? style.palette.ink : style.palette.paper,
+                color: i === words.length - 1 ? style.palette.highlight : style.palette.paper,
                 opacity: f >= 0 ? 1 : 0,
                 transform: `scale(${interpolate(s, [0, 1], [2.2, 1])}) translateX(${shake}px)`,
                 display: "inline-block",
@@ -188,4 +188,4 @@ export const CreditsCard: React.FC<ShotProps> = ({ clip, style }) => {
   );
 };
 
-export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard };
+export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard, board: BoardShot };

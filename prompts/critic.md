@@ -4,6 +4,7 @@ File a ticket only for a real problem in that shot, a fault a good human editor 
 - The image does not show what is being said, or only loosely relates to it.
 - The image is misleading or silly here: the wrong era, place or kind of thing, a toy or model passed off as the real thing, a real person shown as someone else.
 - Fake writing: gibberish letters or script-like marks in a generated image.
+- A generated image showing the face of a real, named person from the narration: that is a made-up likeness.
 - A drawn mark points at the wrong thing, or adds nothing.
 - The subject is unreadable: too dark, too small, or hidden.
 
