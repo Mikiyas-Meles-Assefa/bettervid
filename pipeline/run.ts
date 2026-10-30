@@ -1,5 +1,5 @@
 // CLI: create or resume a project and run stages in order. Cached stages are skipped.
-// New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 60, 0 = as long as the story needs] [--until voice]
+// New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 60, 0 = as long as the story needs; a length in the prompt wins] [--until voice]
 // Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>]
 import type { Project, StageName } from "../schemas/project.ts";
 import { load, save, spent } from "./lib/project.ts";
@@ -7,6 +7,7 @@ import { hash } from "./lib/util.ts";
 import { assets } from "./stages/assets.ts";
 import { director } from "./stages/director.ts";
 import { mix } from "./stages/mix.ts";
+import { plan } from "./stages/plan.ts";
 import { render } from "./stages/render.ts";
 import { research } from "./stages/research.ts";
 import { timeline } from "./stages/timeline.ts";
@@ -14,6 +15,7 @@ import { voice } from "./stages/voice.ts";
 import { writer } from "./stages/writer.ts";
 
 const ORDER: [StageName, (p: Project, force: boolean) => Promise<void>][] = [
+  ["plan", plan],
   ["research", research],
   ["writer", writer],
   ["voice", voice],

@@ -4,6 +4,8 @@ A good short is not the long version squeezed. Squeezing turns a story into a li
 
 Narrator: {{persona}}
 
+If the user asked for something on purpose (what to cover, how to open, what to reveal when, how to end), the short keeps it.
+
 Keep the narrator's voice and the draft's best lines. Every fact must still come from the research. Plain spoken narration, one paragraph per moment, full sentences, no dashes.
 
 Reply in exactly this format:

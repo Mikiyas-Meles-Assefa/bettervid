@@ -2,13 +2,17 @@
 import type { FactSheet, Project } from "../../schemas/project.ts";
 import { factSheetSchema } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
-import { charge, prompt, stage } from "../lib/project.ts";
+import { asked, charge, prompt, stage, topic } from "../lib/project.ts";
 
 export async function research(p: Project, force = false) {
-  await stage(p, "research", [p.input.prompt, prompt("research")], 0.5, async () => {
+  const notes = p.plan?.material
+    ? `The user's own notes for this video. Treat them as leads: verify them, use what holds up, and say in the story where they are wrong:\n"""\n${p.plan.material}\n"""`
+    : "";
+  const user = [`Topic for the video: ${topic(p)}`, asked(p.plan?.story ?? []), notes].filter(Boolean).join("\n\n");
+  await stage(p, "research", [user, prompt("research")], 0.5, async () => {
     const r = await json<FactSheet>({
       system: prompt("research"),
-      user: `Topic for the video: ${p.input.prompt}`,
+      user,
       schema: factSheetSchema,
       schemaName: "fact_sheet",
       webSearch: true,

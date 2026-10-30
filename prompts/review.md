@@ -4,7 +4,9 @@ Narrator: {{persona}}
 Length: {{length}}
 {{thread}}
 
-List every place where that viewer would get lost or stop caring: someone or something mentioned before it is explained, a phrase nobody would say out loud, a jump where the connection is missing, a fact that is mentioned but never made to matter, a conclusion far from its evidence, or anything not supported by the research.
+List every place where that viewer would get lost or stop caring: the subject itself (the disease, the event, the thing being explained) never named or explained, someone or something mentioned before it is explained, a phrase nobody would say out loud, a jump where the connection is missing, a fact that is mentioned but never made to matter, a conclusion far from its evidence, or anything not supported by the research.
+
+Anything the user asked for on purpose is not a problem, even if it breaks a usual rule (a reveal held back, an unusual opening): keep it, and fix only what gets in its way.
 
 Then rewrite the narration to fix them, keeping the narrator's voice, the thread and the length (within 10%). If something needs more room, drop a lesser detail rather than squeeze sentences. If there is nothing to fix, return it unchanged.
 

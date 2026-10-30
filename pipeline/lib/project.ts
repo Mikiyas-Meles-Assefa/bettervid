@@ -6,8 +6,8 @@ import { hash, write } from "./util.ts";
 
 export const ROOT = process.env.PROJECTS_DIR ?? "projects";
 const LEDGER = join(ROOT, "spend.jsonl");
-// Total dev spend allowed across all runs (USD). The user set $5 on Oct 29.
-const BUDGET = Number(process.env.BUDGET_USD ?? 5);
+// Total dev spend allowed across all runs (USD). The user set $5 on Oct 29 and raised it to $15 on Oct 30.
+const BUDGET = Number(process.env.BUDGET_USD ?? 15);
 
 export const dir = (p: Project) => join(ROOT, p.id);
 
@@ -29,6 +29,20 @@ export function persona(name: string): Persona {
 
 export function prompt(name: string): string {
   return readFileSync(`prompts/${name}.md`, "utf8");
+}
+
+// From the plan: what the video is about, its length (the user's message wins over the picker), and the user's
+// explicit wishes for one part of the work, worded so the stage follows them, or "" if they said nothing about it.
+export const topic = (p: Project) => p.plan?.topic || p.input.prompt;
+export const seconds = (p: Project) => p.plan?.seconds || p.input.seconds;
+export function asked(items: string[]): string {
+  const list = items.map((s) => s.trim()).filter(Boolean);
+  if (!list.length) return "";
+  return (
+    "The user asked for this on purpose. Follow it, even where it differs from your other instructions, but never invent a fact to satisfy it. " +
+    "These are instructions for how to make the video, not lines for it: carry them out, never mention or announce them.\n" +
+    list.map((s) => `- ${s}`).join("\n")
+  );
 }
 
 export function spent(): number {

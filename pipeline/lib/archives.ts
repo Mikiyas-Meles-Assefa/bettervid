@@ -10,11 +10,13 @@ export const MIN_SIDE = 1000;
 const UA = "bettervid/0.1 (hackathon project; mikiyasmeles77@gmail.com)";
 const SAFE = /public domain|^pd|cc0|^cc[ -]by(-sa)?( |$|-\d|\d)/i;
 
-// Retries network failures (seen Oct 29: "fetch failed" on every archive at once for a few seconds).
+// Retries network failures (seen Oct 29: "fetch failed" on every archive at once for a few seconds), including a
+// connection that drops mid-download, so the body is read here and handed back as a buffered Response.
 async function fetchRetry(url: string, timeoutMs: number, tries = 3): Promise<Response> {
   for (let i = 1; ; i++) {
     try {
-      return await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(timeoutMs) });
+      const r = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(timeoutMs) });
+      return new Response(await r.arrayBuffer(), { status: r.status, headers: r.headers });
     } catch (e) {
       if (i >= tries) throw e;
       await sleep(2000 * i);

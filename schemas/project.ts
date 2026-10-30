@@ -1,12 +1,13 @@
 // The Project JSON: one file per run. Each pipeline stage reads earlier fields and writes its own.
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
 
-export type StageName = "research" | "writer" | "voice" | "director" | "assets" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "assets" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
   createdAt: string;
   input: Input;
+  plan?: Plan;
   factSheet?: FactSheet;
   writing?: WritingStep[]; // the writer's prose at each step (draft, cut, review), kept for the trail
   script?: Script;
@@ -26,6 +27,18 @@ export type Input = {
   persona: string; // a file in personas/: who narrates, in what voice; "auto" lets the writer choose
   mode: "explain" | "history" | "math" | "story";
   seconds: number; // target length; 0 means as long as the story needs
+};
+
+// Stage 0: plan. What the user explicitly asked for in their message, sorted by which part of the work it concerns.
+// Empty fields mean the user said nothing about it and each stage decides the usual way.
+export type Plan = {
+  topic: string;
+  seconds: number; // 0 = not said; when set, it wins over input.seconds
+  story: string[]; // content and structure: what to cover or skip, how to open, what to reveal when, how to end, who it is for
+  tone: string;
+  visuals: string[];
+  sound: string[];
+  material: string; // notes, facts or sources the user supplied, verbatim
 };
 
 export type Cost = { stage: StageName; usd: number; detail: string; at: string };
@@ -50,7 +63,7 @@ export type Beat = {
 };
 export type Script = { title: string; takeaway: string; beats: Beat[] };
 // `notes`: for a cut, the thread and what was left out; for a review, the issues it fixed.
-export type WritingStep = { step: "draft" | "cut" | "review"; title: string; takeaway: string; narration: string; notes: string[] };
+export type WritingStep = { step: "draft" | "cut" | "review"; title: string; takeaway: string; narration: string; notes: string[]; key?: string }; // key: hash of the writer inputs, for resuming
 
 // Stage 3: voice
 export type Word = { text: string; start: number; end: number; beatId: string };
@@ -68,7 +81,10 @@ export type Shot = {
   text?: string; // kinetic_title words, receipt quote
   receipt?: { outlet: string; date?: string; url: string; quote: string };
 };
-export type AssetRequest = { kind: "real" | "generated"; query: string; prompt: string; subject?: string };
+// `focus`: the part of the image the narration is talking about ("the brewery"); the shot zooms to it and circles it.
+// `mustBeReal`: a real document, map, person or place (or the user asked for real images only), so no generated stand-in.
+export type AssetRequest = { kind: "real" | "generated"; query: string; broadQuery?: string; prompt: string; subject?: string; focus?: string; mustBeReal?: boolean };
+export type Box = { x: number; y: number; w: number; h: number }; // fractions of the image size
 
 // Stages 5a to 5c: assets
 // The asset stage never edits the director's shots. When a shot can't be made as planned (no cutout, a refused
@@ -79,6 +95,9 @@ export type Asset = {
   path?: string;
   override?: { type: ShotType; text?: string };
   cutout?: string; // PNG with outline and shadow baked in
+  missing?: boolean; // no honest image could be found or made; the timeline holds the previous shot instead
+  size?: [number, number]; // image width and height in pixels
+  focus?: Box; // where `AssetRequest.focus` is in the image
   title?: string;
   source?: string;
   license?: string;
@@ -98,7 +117,7 @@ export type Timeline = {
   captions: { words: { text: string; highlight: boolean }[]; startFrame: number; endFrame: number }[];
 };
 // `punch` marks a clip that reuses the previous clip's image, so it zooms in harder instead of repeating.
-export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean };
+export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box };
 
 // personas/*.json: the narrator. Separate from the visual style so either can change on its own.
 export type Persona = {
@@ -127,6 +146,13 @@ export type StyleFile = {
 // JSON Schemas for structured output (no recursion, depth under 10, per Meta's limits).
 const str = { type: "string" } as const;
 const strArr = { type: "array", items: str } as const;
+
+export const planSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["topic", "seconds", "story", "tone", "visuals", "sound", "material"],
+  properties: { topic: str, seconds: { type: "integer" }, story: strArr, tone: str, visuals: strArr, sound: strArr, material: str },
+} as const;
 
 export const factSheetSchema = {
   type: "object",

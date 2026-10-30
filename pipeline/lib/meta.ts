@@ -1,9 +1,12 @@
 // Meta API client for the pipeline: Responses calls with retries, structured output, and cost per call.
-import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
+import { setDefaultResultOrder } from "node:dns";
+import { setDefaultAutoSelectFamily } from "node:net";
 import { env, sleep } from "./util.ts";
 
-// IPv6 is unreachable from the dev machine and IPv4 to api.meta.ai can take over Node's 250 ms default (spike S10).
-setDefaultAutoSelectFamilyAttemptTimeout(2000);
+// IPv6 is unreachable from the dev machine, and connecting to api.meta.ai over IPv4 sometimes takes 2 to 7 s, longer than
+// Node gives each address when it races IPv4 against IPv6. So connect over IPv4 only, with the normal OS timeout.
+setDefaultResultOrder("ipv4first");
+setDefaultAutoSelectFamily(false);
 
 const BASE = process.env.META_BASE_URL ?? "https://api.meta.ai/v1";
 
@@ -29,6 +32,7 @@ export function tokenCost(model: keyof typeof PRICE, u: Usage = {}, searches = 0
 export async function post(path: string, body: unknown, tries = 5): Promise<any> {
   for (let i = 1; ; i++) {
     let res: Response | undefined;
+    let text = "";
     try {
       res = await fetch(`${BASE}${path}`, {
         method: "POST",
@@ -36,13 +40,14 @@ export async function post(path: string, body: unknown, tries = 5): Promise<any>
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(10 * 60_000),
       });
+      // Read the body inside the try: on this network a connection can drop mid-response ("terminated", read ETIMEDOUT).
+      text = await res.text();
     } catch (e: any) {
       if (i >= tries) throw e;
       console.error(`  meta ${path}: ${e?.cause?.code ?? e.message}, retry ${i}`);
-      await sleep(2000 * i);
+      await sleep(5000 * i);
       continue;
     }
-    const text = await res.text();
     if (res.ok) return JSON.parse(text);
     if ((res.status === 429 || res.status >= 500) && i < tries) {
       const wait = Number(res.headers.get("retry-after")) * 1000 || 3000 * 2 ** (i - 1);

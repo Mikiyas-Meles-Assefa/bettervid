@@ -1,6 +1,6 @@
 // Shot types 1, 2, 4 and 9 from docs/PLAN.md section 5. Each fills the frame for its clip's duration.
 import React from "react";
-import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Clip, StyleFile } from "../schemas/project.ts";
 
 type ShotProps = { clip: Clip; style: StyleFile; index: number };
@@ -13,7 +13,10 @@ const Paper: React.FC<{ style: StyleFile; children?: React.ReactNode }> = ({ sty
 );
 
 // 1. photo_kenburns: full-bleed still with a slow push-in and drift, direction alternating per shot.
-export const PhotoKenBurns: React.FC<ShotProps> = ({ clip, index }) => {
+// With a focus, it becomes a guided zoom: from the whole image into the part the narration is talking about, then circles it.
+export const PhotoKenBurns: React.FC<ShotProps> = (props) => (props.clip.focus && props.clip.size ? <GuidedZoom {...props} /> : <PushIn {...props} />);
+
+const PushIn: React.FC<ShotProps> = ({ clip, index }) => {
   const frame = useCurrentFrame();
   const t = frame / clip.frames;
   const scale = clip.punch ? interpolate(t, [0, 1], [1.45, 1.6]) : interpolate(t, [0, 1], [1.04, 1.16]);
@@ -21,6 +24,61 @@ export const PhotoKenBurns: React.FC<ShotProps> = ({ clip, index }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "#111" }}>
       <Img src={staticFile(clip.image!)} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${scale}) translateX(${dx}px)` }} />
+    </AbsoluteFill>
+  );
+};
+
+const GuidedZoom: React.FC<ShotProps> = ({ clip, style }) => {
+  const frame = useCurrentFrame();
+  const { fps, width: W, height: H } = useVideoConfig();
+  const [iw, ih] = clip.size!;
+  const f = clip.focus!;
+  const box = { x: f.x * iw, y: f.y * ih, w: f.w * iw, h: f.h * ih };
+  // Start covering the frame; end with the focus plus some context filling it. Archival scans hold up to about 2.6x
+  // the cover scale before they look soft.
+  const cover = Math.max(W / iw, H / ih);
+  const region = { w: Math.max(box.w * 2.4, iw * 0.3), h: Math.max(box.h * 2.4, ih * 0.2) };
+  const end = Math.min(Math.max(Math.min(W / region.w, H / region.h), cover * 1.2), cover * 2.6);
+  // The zoom takes up to 2.2 s and lands before the clip is half over, then keeps drifting in slowly.
+  const land = Math.min(clip.frames * 0.5, 2.2 * fps);
+  const e = interpolate(frame, [0, land], [0, 1], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+  const after = Math.max(0, frame - land) / fps;
+  const s = (cover * 1.02 + (end - cover * 1.02) * e) * (1 + 0.012 * after);
+  const cx = interpolate(e, [0, 1], [iw / 2, box.x + box.w / 2]);
+  const cy = interpolate(e, [0, 1], [ih / 2, box.y + box.h / 2]);
+  // Aim the focus a little above center, clear of the captions, without showing past the image's edges.
+  const tx = Math.min(0, Math.max(W - iw * s, W / 2 - cx * s));
+  const ty = Math.min(0, Math.max(H - ih * s, H * 0.4 - cy * s));
+  // A hand-drawn ring around the focus once the zoom lands, only when the whole ring fits on screen: a ring around
+  // something as big as the frame points at nothing.
+  const rx = (box.w * s) / 2 + 40;
+  const ry = (box.h * s) / 2 + 40;
+  const rcx = tx + (box.x + box.w / 2) * s;
+  const rcy = ty + (box.y + box.h / 2) * s;
+  const fits = rcx - rx > 24 && rcx + rx < W - 24 && rcy - ry > 24 && rcy + ry < H - 24 && rx < W * 0.4;
+  const ring = fits ? interpolate(frame, [land, land + 0.5 * fps], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#111", overflow: "hidden" }}>
+      <Img src={staticFile(clip.image!)} style={{ position: "absolute", left: 0, top: 0, width: iw, height: ih, maxWidth: "none", transformOrigin: "0 0", transform: `translate(${tx}px, ${ty}px) scale(${s})` }} />
+      {ring > 0 && (
+        <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
+          <ellipse
+            cx={rcx}
+            cy={rcy}
+            rx={rx}
+            ry={ry}
+            transform={`rotate(-4 ${rcx} ${rcy})`}
+            fill="none"
+            stroke={style.palette.accent}
+            strokeWidth={10}
+            strokeLinecap="round"
+            pathLength={1}
+            strokeDasharray={1}
+            strokeDashoffset={1 - ring}
+            style={{ filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.45))" }}
+          />
+        </svg>
+      )}
     </AbsoluteFill>
   );
 };
