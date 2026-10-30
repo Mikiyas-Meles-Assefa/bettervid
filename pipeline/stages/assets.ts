@@ -12,7 +12,7 @@ import { hash, write } from "../lib/util.ts";
 
 const PARALLEL = 5;
 // Bump when picking or cutout rules change, so cached shots are redone under the new rules.
-const RULES_VERSION = 7;
+const RULES_VERSION = 8;
 
 // A shot with no image holds the previous one, but only so far: past this, the viewer is looking at something
 // unrelated to what they are hearing.
@@ -53,6 +53,7 @@ async function pickReal(p: Project, shot: Shot, query: string, spend: Spend): Pr
       "You pick real archival images for a documentary-style explainer video. Be strict: a loosely related or wrong subject is not usable; a different but accurate image of the same thing is fine. " +
       "Read any visible text, labels and titles: reject an image whose label names a different event, mission, date, place or person than the narration (for example a diagram labeled for a different mission). " +
       "Reject anything from the wrong era: a building, vehicle, street or photograph that did not exist yet at the time the narration describes (for example a bridge built decades later). " +
+      "Reject images made mostly of small text, such as infographics, posters and web pages, unless the narration is about that very page: they cannot be read on a phone. " +
       "Reject tiny, blurry or heavily cropped images. Prefer clear, high-contrast images that work full screen in a vertical video.",
     user: [
       ...ok.flatMap(({ c, b64 }, k) => [
@@ -75,9 +76,23 @@ async function pickReal(p: Project, shot: Shot, query: string, spend: Spend): Pr
   return v.usable && v.pick != null && ok[v.pick] ? { cand: ok[v.pick]!.c, reason: v.reason } : null;
 }
 
-// Finds the part of the image the narration is talking about, so the shot can zoom to it (Oct 30 test: Spark read the
-// labels on Snow's map and boxed the workhouse and the cluster of deaths correctly).
-async function locate(image: string, target: string, spend: Spend): Promise<Box | undefined> {
+// Finds the part of the image the narration is talking about, so the shot can zoom to it. Small errors in the whole
+// image become obvious once zoomed in, so a small target gets a second look at a crop around the first answer.
+export async function locate(image: string, target: string, spend: Spend): Promise<Box | undefined> {
+  const first = await findBox(image, target, spend);
+  if (!first) return undefined;
+  const cw = Math.max(first.w * 3, 0.3);
+  const ch = Math.max(first.h * 3, 0.3);
+  if (cw >= 1 || ch >= 1) return first;
+  const cx = Math.min(Math.max(first.x + first.w / 2 - cw / 2, 0), 1 - cw);
+  const cy = Math.min(Math.max(first.y + first.h / 2 - ch / 2, 0), 1 - ch);
+  const crop = `${image}.crop.jpg`;
+  execFileSync("ffmpeg", ["-y", "-v", "error", "-i", image, "-vf", `crop=iw*${cw}:ih*${ch}:iw*${cx}:ih*${cy},scale=1024:-2:flags=lanczos`, "-q:v", "3", crop]);
+  const b = await findBox(crop, target, spend);
+  return b ? { x: cx + b.x * cw, y: cy + b.y * ch, w: b.w * cw, h: b.h * ch } : first;
+}
+
+async function findBox(image: string, target: string, spend: Spend): Promise<Box | undefined> {
   const small = `${image}.locate.jpg`;
   execFileSync("ffmpeg", ["-y", "-v", "error", "-i", image, "-vf", "scale='min(iw,1024)':-2", "-q:v", "3", small]);
   const r = await json<Box & { found: boolean }>({
