@@ -4,7 +4,7 @@
   "palette": {
     "paper": "#ffffff",
     "ink": "#1b1b1b",
-    "accent": "#2b6cd4",
+    "accent": "#2463c8",
     "highlight": "#ffd93d"
   },
   "fonts": {
@@ -30,10 +30,241 @@
   },
   "motion": "board",
   "render": {
-    "line": { "pen": "marker", "weight": 1.2 },
-    "fill": { "kind": "hatch", "spacing": 15, "angle": 52, "base": 0.82 },
-    "surface": { "kind": "board" },
-    "type": { "title": "\"Marker Felt\", Noteworthy, \"Comic Sans MS\", \"Liberation Sans\", sans-serif", "body": "\"Marker Felt\", Noteworthy, \"Comic Sans MS\", \"Liberation Sans\", sans-serif", "jitter": 0.3 },
-    "motion": { "feel": "steady" }
+    "line": {
+      "pen": "marker",
+      "weight": 1.2
+    },
+    "fill": {
+      "kind": "hatch",
+      "spacing": 15,
+      "angle": 52,
+      "base": 0.9
+    },
+    "surface": {
+      "kind": "board"
+    },
+    "type": {
+      "title": "\"Marker Felt\", Noteworthy, \"Comic Sans MS\", \"Liberation Sans\", sans-serif",
+      "body": "\"Marker Felt\", Noteworthy, \"Comic Sans MS\", \"Liberation Sans\", sans-serif",
+      "jitter": 0.3,
+      "mono": "\"PT Mono\", Menlo, \"Liberation Mono\", monospace"
+    },
+    "motion": {
+      "feel": "steady"
+    }
+  },
+  "design": {
+    "colors": {
+      "red": "#d0352b",
+      "green": "#1d7f45",
+      "ghost": "#76808f",
+      "pencil": "#545d6a",
+      "pane": "#f2f5f9",
+      "blueDeep": "#1f57b3"
+    },
+    "scale": {
+      "base": 0.046,
+      "ratio": 1.25
+    },
+    "roles": {
+      "title": {
+        "color": "ink",
+        "step": 4,
+        "weight": 400,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "heading": {
+        "color": "accent",
+        "step": 1,
+        "weight": 400,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "body": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "label": {
+        "color": "ink",
+        "step": -1,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "note": {
+        "color": "pencil",
+        "step": -1,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "key": {
+        "color": "accent",
+        "step": 1,
+        "weight": 700,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "answer": {
+        "color": "green",
+        "step": 2,
+        "weight": 700,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "muted": {
+        "color": "ghost",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "wrong": {
+        "color": "red",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "code": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "mono",
+        "case": "asis",
+        "glow": 0
+      },
+      "caption": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0,
+        "back": "paper"
+      },
+      "panel": {
+        "color": "ink",
+        "back": "pane",
+        "stroke": 1
+      },
+      "pointer": {
+        "color": "red",
+        "stroke": 1.1,
+        "glow": 0
+      }
+    },
+    "surfaces": {
+      "paper": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "caption",
+          "pointer"
+        ]
+      },
+      "pane": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "caption"
+        ]
+      },
+      "accent": {
+        "text": "paper",
+        "roles": []
+      },
+      "highlight": {
+        "text": "ink",
+        "roles": []
+      }
+    },
+    "elements": {
+      "panel": {
+        "radius": 0.03,
+        "edge": "ink",
+        "edgeWidth": 4,
+        "shadow": 0,
+        "rotate": 0,
+        "pad": 0.8
+      },
+      "caption": {
+        "rotate": -1,
+        "pad": 0.45,
+        "rule": "none",
+        "ruleWidth": 0,
+        "edge": "ink"
+      },
+      "label": {
+        "back": "paper",
+        "leader": "ink",
+        "leaderWidth": 4
+      },
+      "table": {
+        "lines": "grid",
+        "rule": "ink",
+        "ruleWidth": 3,
+        "header": "heading",
+        "zebra": "none"
+      },
+      "pointer": {
+        "head": "open",
+        "ring": "hand",
+        "width": 7
+      },
+      "highlight": {
+        "kind": "ring",
+        "color": "red",
+        "opacity": 1
+      },
+      "dim": {
+        "amount": 0.45,
+        "keepHue": false,
+        "glow": 0,
+        "stroke": 0.8
+      }
+    },
+    "picture": {
+      "saturation": 1,
+      "contrast": 1.02,
+      "brightness": 1.0,
+      "tint": "paper",
+      "tintAmount": 0,
+      "border": "paper",
+      "borderWidth": 16,
+      "shadow": 0.25,
+      "rotate": 1.5
+    }
   }
 }

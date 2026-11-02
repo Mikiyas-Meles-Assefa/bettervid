@@ -2,15 +2,15 @@
   "name": "blueprint",
   "label": "Blueprint",
   "palette": {
-    "paper": "#14457f",
+    "paper": "#103a6c",
     "ink": "#eaf3ff",
-    "accent": "#ffd257",
-    "highlight": "#8fd3ff"
+    "accent": "#ffda70",
+    "highlight": "#b5e3ff"
   },
   "fonts": {
-    "caption": "Arial Black",
-    "title": "Courier New",
-    "body": "Courier New"
+    "caption": "DIN Condensed",
+    "title": "DIN Condensed",
+    "body": "DIN Alternate"
   },
   "art": {
     "scene": "Technical blueprint drawing: precise thin white lines on deep blue paper, measured construction lines, one yellow accent, the subject sharp and instantly recognizable.",
@@ -29,11 +29,249 @@
     "weight": 0.7
   },
   "render": {
-    "line": { "pen": "drafting" },
-    "fill": { "kind": "hatch", "spacing": 9, "angle": -45, "base": 0.86 },
-    "surface": { "kind": "blueprint" },
-    "type": { "title": "\"Courier New\", Menlo, \"Liberation Mono\", monospace", "body": "\"Courier New\", Menlo, \"Liberation Mono\", monospace", "tracking": 0.04, "case": "upper" },
-    "motion": { "feel": "steady", "frames": 14, "ease": "linear" },
-    "read": { "text": 0.032, "dim": 0.5 }
+    "line": {
+      "pen": "drafting"
+    },
+    "fill": {
+      "kind": "hatch",
+      "spacing": 9,
+      "angle": -45,
+      "base": 0.86
+    },
+    "surface": {
+      "kind": "blueprint",
+      "light": 0.1
+    },
+    "type": {
+      "title": "\"DIN Condensed\", \"Avenir Next Condensed\", \"Liberation Sans Narrow\", sans-serif",
+      "body": "\"DIN Alternate\", \"Avenir Next\", \"Liberation Sans\", sans-serif",
+      "tracking": 0.05,
+      "case": "upper",
+      "mono": "\"PT Mono\", \"Courier New\", \"Liberation Mono\", monospace"
+    },
+    "motion": {
+      "feel": "steady",
+      "frames": 14,
+      "ease": "linear"
+    },
+    "read": {
+      "text": 0.032,
+      "dim": 0.5
+    }
+  },
+  "design": {
+    "colors": {
+      "deep": "#0a2b52",
+      "faint": "#adc6e4",
+      "pale": "#dbe8f8",
+      "red": "#ffb19f"
+    },
+    "scale": {
+      "base": 0.046,
+      "ratio": 1.333
+    },
+    "roles": {
+      "title": {
+        "color": "ink",
+        "step": 3,
+        "weight": 700,
+        "font": "title",
+        "case": "upper",
+        "glow": 0
+      },
+      "heading": {
+        "color": "accent",
+        "step": 0,
+        "weight": 700,
+        "font": "title",
+        "case": "upper",
+        "glow": 0
+      },
+      "body": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "label": {
+        "color": "ink",
+        "step": -1,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "note": {
+        "color": "pale",
+        "step": -1,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "key": {
+        "color": "accent",
+        "step": 1,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "answer": {
+        "color": "accent",
+        "step": 2,
+        "weight": 700,
+        "font": "title",
+        "case": "upper",
+        "glow": 0
+      },
+      "muted": {
+        "color": "faint",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "wrong": {
+        "color": "red",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "code": {
+        "color": "highlight",
+        "step": 0,
+        "weight": 400,
+        "font": "mono",
+        "case": "asis",
+        "glow": 0
+      },
+      "caption": {
+        "color": "ink",
+        "step": 0,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0,
+        "back": "deep"
+      },
+      "panel": {
+        "color": "ink",
+        "back": "deep",
+        "stroke": 0.6
+      },
+      "pointer": {
+        "color": "accent",
+        "stroke": 1,
+        "glow": 0
+      }
+    },
+    "surfaces": {
+      "paper": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "pointer"
+        ]
+      },
+      "deep": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "caption"
+        ]
+      },
+      "accent": {
+        "text": "paper",
+        "roles": []
+      },
+      "highlight": {
+        "text": "paper",
+        "roles": []
+      },
+      "ink": {
+        "text": "paper",
+        "roles": []
+      }
+    },
+    "elements": {
+      "panel": {
+        "radius": 0,
+        "edge": "ink",
+        "edgeWidth": 2,
+        "shadow": 0,
+        "rotate": 0,
+        "pad": 0.7
+      },
+      "caption": {
+        "rotate": 0,
+        "pad": 0.45,
+        "rule": "accent",
+        "ruleWidth": 6,
+        "edge": "ink"
+      },
+      "label": {
+        "back": "deep",
+        "leader": "ink",
+        "leaderWidth": 2
+      },
+      "table": {
+        "lines": "grid",
+        "rule": "faint",
+        "ruleWidth": 1.5,
+        "header": "heading",
+        "zebra": "none"
+      },
+      "pointer": {
+        "head": "open",
+        "ring": "clean",
+        "width": 4
+      },
+      "highlight": {
+        "kind": "box",
+        "color": "accent",
+        "opacity": 1
+      },
+      "dim": {
+        "amount": 0.32,
+        "keepHue": false,
+        "glow": 0,
+        "stroke": 0.7
+      }
+    },
+    "picture": {
+      "saturation": 0.35,
+      "contrast": 1.1,
+      "brightness": 1.0,
+      "tint": "highlight",
+      "tintAmount": 0.35,
+      "border": "ink",
+      "borderWidth": 3,
+      "shadow": 0,
+      "rotate": 0
+    }
   }
 }

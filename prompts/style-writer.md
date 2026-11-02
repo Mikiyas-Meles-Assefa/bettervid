@@ -17,6 +17,7 @@ One JSON object, with nothing before or after it:
 - `grain`: 0 to 1, film grain over the whole video. `vignette`: 0 to 1, darkened corners.
 - `hand`: `wobble` (0 to 12 pixels) and `weight` (0.3 to 3), how marks drawn on pictures look.
 - `render`: how the engine draws everything else, described below.
+- `design`: the style's design system: how every role looks, what may sit on what, what panels, captions, labels, tables, pointers, highlights and dimming look like, and how pictures are treated. Described below. A style without a complete, readable design is refused.
 
 # The render block
 
@@ -35,6 +36,21 @@ What the settings do, so you can reach for the right one:
 The full range of each number, so a strong effect is written as strong (the canvas is 1080 by 1920 pixels, so distances such as `shadow`, `offset`, `spacing` and `wobble` are in pixels):
 
 {{ranges}}
+
+# The design layer
+
+Scenes never choose colors, sizes, glows or cards. They say what a thing is: a `title`, a `heading`, `body` words, a `label`, a quiet `note`, the `key` thing to look at now, the `answer`, `muted` context, something `wrong`, `code`, a `panel` that groups things, a `caption` over a picture, a `pointer`. Your design decides how each looks in this style. Design it the way a good studio would, not the way a template would:
+
+- A real type scale. Pick a body size and a ratio (1.2 to 1.333 is usual) and put every role on a step of it. Titles are big and few; labels and notes are small but never below the readable floor. Use weight, case and font to separate roles as much as size does.
+- Color with a job. The accent marks what matters (key, answer, pointers), one more color at most marks a second meaning (wrong, code). Everything else is ink. Color is never decoration.
+- Surfaces that belong to the look. A panel is made of the style's own material: a darker board inside a chalkboard, a strip of kraft paper in a collage, a tinted glass box in neon, a title block in a blueprint. Never a pale card on a dark style, and never rounded cards with soft shadows everywhere.
+- Words over pictures always sit on a designed backing: a strip, a tag, a plate, a lower-third bar. Never bare text on a photo.
+- Words on a filled shape take that fill's own ink: dark ink on a bright fill, light ink on a dark one. In a glowing style, words on a bright fill do not glow.
+- Muted and dimmed things step back in the style's own way: neon lowers the tube's light and keeps its hue (`keepHue: true`), chalk goes faint like rubbed chalk, ink thins and fades toward the paper. Never plain grey, and never so far that they cannot be read.
+- One picture treatment for every picture, so archival photos and generated ones look like one piece: a shared saturation, contrast and tint, and the same border and shadow (a print border in a collage, a hairline in a blueprint, nothing in a flat style).
+- Restraint. Glow, shadow, rotation and texture are each used where the look needs them, not everywhere.
+
+Every pairing you allow in `design.surfaces` is measured by the engine against the surface as it is really drawn (its light, smudge, grain, grid and fill texture). If one does not read, the engine tells you exactly which role on which surface and by how much; fix the color, the surface or the list.
 
 Font stacks in `render.type` start with the installed family you chose and end with a Liberation family and a generic family, so a server with fewer fonts still draws something close.
 

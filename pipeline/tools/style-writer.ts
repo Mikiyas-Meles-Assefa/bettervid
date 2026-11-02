@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { preview, previewStill, PREVIEWS } from "../../app/preview.ts";
-import { resolveStyle, STYLE_GUIDE } from "../../engine/style/format.ts";
+import { checkStyleFile, resolveStyle, STYLE_GUIDE } from "../../engine/style/format.ts";
 import { json, text } from "../lib/meta.ts";
 import { checkBudget, prompt, ROOT, style } from "../lib/project.ts";
 import { hash } from "../lib/util.ts";
@@ -18,7 +18,7 @@ const WRITE_ROUNDS = 4; // tries to get a file the engine accepts
 const LOOK_ROUNDS = 3; // times Spark looks at the rendered preview
 const MAX_DESCRIPTION = 400;
 const GENERIC = new Set(["serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui", "ui-serif", "ui-sans-serif", "ui-monospace", "ui-rounded"]);
-const KEYS = ["name", "label", "palette", "fonts", "art", "realAssets", "surface", "grain", "vignette", "hand", "render", "voice", "description"];
+const KEYS = ["name", "label", "palette", "fonts", "art", "realAssets", "surface", "grain", "vignette", "hand", "render", "design", "voice", "description"];
 
 type Raw = Record<string, any>;
 export type Written = { name: string; label: string; file: Raw; still: string; loop: string; usd: number; notes: string[] };
@@ -39,8 +39,9 @@ const families = (stack: string) => stack.split(",").map((f) => f.trim().replace
 // Everything wrong with a file, as plain sentences Spark can act on. Empty means the engine and pipeline can use it.
 export function problems(file: Raw, fonts: Set<string>): string[] {
   const out: string[] = [];
+  // The render block and the whole design layer: every role, every pairing measured against the drawn surface.
   try {
-    resolveStyle(file);
+    checkStyleFile(file);
   } catch (e: any) {
     out.push(e.message);
   }
@@ -132,11 +133,11 @@ function examples(description: string): string {
   }).join("\n\n");
 }
 
-const LOOK = `You check a style for explainer videos. You get the person's description, the style file, and a still from a test scene drawn in it: a title, three labeled shapes joined by arrows with a tag, a small weighted graph, and a line of math, with the accent on what matters.
+const LOOK = `You check a style for explainer videos. You get the person's description, the style file, and a still of the style's specimen page drawn with its own design layer: a kicker and a title, a table in a panel with two dimmed rows, a highlighted value and an emphasized answer beside a struck-out wrong one, a note, three filled shapes with words inside joined by pointers with a ring, a label and a muted line, then an archival photo and a generated picture treated by the style, with a caption and a label over them.
 
-Judge two things. First, does it look like the description? Think about what someone who wrote those words pictured, and whether this still would make them say "yes, that". Clean and readable but generic is not a match: if the still could belong to many descriptions, say what would make it unmistakably this one, using what the style file can change. Second, can everything be read at a glance on a phone: words on the surface, labels inside filled shapes, lines against the background, the accent standing out.
+Judge three things. First, does it look like the description? Think about what someone who wrote those words pictured, and whether this still would make them say "yes, that". Clean and readable but generic is not a match: if the still could belong to many descriptions, say what would make it unmistakably this one, using what the style file can change. Second, does it look designed rather than generated: a clear type hierarchy from a real scale, color that means something rather than decorates, panels and captions that belong to the look (not rounded cards with shadows, not glow on everything), dimmed rows that still belong to the style, and the two pictures looking like one piece. Third, can everything be read at a glance on a phone. The engine has already measured every color pairing, so look for what numbers miss: crowding, weak hierarchy, a font that fights the look.
 
-The test scene's layout and words are fixed, so judge only the look: colors, type, lines, fills, surface, texture, motion settings. The "art" sentences are prompts for pictures an image model makes later. Those pictures never contain writing, by design, because every word on screen is drawn by the engine; leave that part of them alone.
+The page's layout and words are fixed, so judge only the look: palette, design colors, roles, surfaces, elements, the picture treatment, type, lines, fills, surface, texture, motion settings. The "art" sentences are prompts for pictures an image model makes later. Those pictures never contain writing, by design, because every word on screen is drawn by the engine; leave that part of them alone.
 
 If anything should change, return the whole corrected style file in "file" as a JSON string, keeping what already works. If it is right, return "file" as "" and "problems" as [].`;
 

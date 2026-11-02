@@ -4,7 +4,7 @@
   "palette": {
     "paper": "#f3ecdc",
     "ink": "#1c1a17",
-    "accent": "#b5361f",
+    "accent": "#a93119",
     "highlight": "#d9a441"
   },
   "fonts": {
@@ -29,10 +29,247 @@
     "weight": 1
   },
   "render": {
-    "line": { "pen": "ink", "weight": 1.05 },
-    "fill": { "kind": "hatch", "spacing": 10, "angle": 38, "cross": 1, "base": 0.8 },
-    "surface": { "kind": "paper" },
-    "type": { "title": "Baskerville, \"Hoefler Text\", Georgia, \"Liberation Serif\", serif", "body": "Baskerville, \"Hoefler Text\", Georgia, \"Liberation Serif\", serif", "jitter": 0.2 },
-    "motion": { "feel": "calm" }
+    "line": {
+      "pen": "ink",
+      "weight": 1.05
+    },
+    "fill": {
+      "kind": "hatch",
+      "spacing": 10,
+      "angle": 38,
+      "cross": 1,
+      "base": 0.86
+    },
+    "surface": {
+      "kind": "paper"
+    },
+    "type": {
+      "title": "Baskerville, \"Hoefler Text\", Georgia, \"Liberation Serif\", serif",
+      "body": "Baskerville, \"Hoefler Text\", Georgia, \"Liberation Serif\", serif",
+      "jitter": 0.2,
+      "mono": "\"PT Mono\", Menlo, \"Liberation Mono\", monospace"
+    },
+    "motion": {
+      "feel": "calm"
+    }
+  },
+  "design": {
+    "colors": {
+      "card": "#faf5e8",
+      "wash": "#82776a",
+      "sepia": "#4a4136",
+      "ochre": "#ecd39b"
+    },
+    "scale": {
+      "base": 0.046,
+      "ratio": 1.333
+    },
+    "roles": {
+      "title": {
+        "color": "ink",
+        "step": 3,
+        "weight": 400,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "heading": {
+        "color": "ink",
+        "step": 0,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "body": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "label": {
+        "color": "ink",
+        "step": -1,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "note": {
+        "color": "sepia",
+        "step": -1,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "key": {
+        "color": "accent",
+        "step": 1,
+        "weight": 700,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "answer": {
+        "color": "ink",
+        "step": 2,
+        "weight": 700,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "muted": {
+        "color": "wash",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "wrong": {
+        "color": "wash",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "code": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "mono",
+        "case": "asis",
+        "glow": 0
+      },
+      "caption": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "asis",
+        "glow": 0,
+        "back": "card"
+      },
+      "panel": {
+        "color": "ink",
+        "back": "card",
+        "stroke": 0.6
+      },
+      "pointer": {
+        "color": "accent",
+        "stroke": 0.9,
+        "glow": 0
+      }
+    },
+    "surfaces": {
+      "paper": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "pointer"
+        ]
+      },
+      "card": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "caption"
+        ]
+      },
+      "ochre": {
+        "text": "ink",
+        "roles": [
+          "key",
+          "body",
+          "answer"
+        ]
+      },
+      "highlight": {
+        "text": "ink",
+        "roles": []
+      },
+      "accent": {
+        "text": "card",
+        "roles": []
+      }
+    },
+    "elements": {
+      "panel": {
+        "radius": 0,
+        "edge": "ink",
+        "edgeWidth": 2,
+        "shadow": 0,
+        "rotate": 0,
+        "pad": 0.8
+      },
+      "caption": {
+        "rotate": 0,
+        "pad": 0.4,
+        "rule": "none",
+        "ruleWidth": 0,
+        "edge": "ink"
+      },
+      "label": {
+        "back": "card",
+        "leader": "ink",
+        "leaderWidth": 2
+      },
+      "table": {
+        "lines": "rows",
+        "rule": "ink",
+        "ruleWidth": 1.5,
+        "header": "heading",
+        "zebra": "none"
+      },
+      "pointer": {
+        "head": "open",
+        "ring": "hand",
+        "width": 5
+      },
+      "highlight": {
+        "kind": "underline",
+        "color": "accent",
+        "opacity": 1
+      },
+      "dim": {
+        "amount": 0.45,
+        "keepHue": false,
+        "glow": 0,
+        "stroke": 0.6
+      }
+    },
+    "picture": {
+      "saturation": 0.55,
+      "contrast": 1.05,
+      "brightness": 1.0,
+      "tint": "card",
+      "tintAmount": 0.2,
+      "border": "card",
+      "borderWidth": 12,
+      "shadow": 0.15,
+      "rotate": 0
+    }
   }
 }
