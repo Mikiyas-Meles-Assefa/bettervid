@@ -397,7 +397,7 @@ mark underline c3 "under"
 mark cross c4
 mark brace e1,e2 "both"
 tag c5 "tag" side=bottom color=accent
-light a p color=highlight
+light a p color=accent
 dim x
 set c1 rotate=5 opacity=0.9
 do pulse c1 size=1.1 frames=10

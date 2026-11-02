@@ -7,7 +7,9 @@ import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
 import { graphKit } from "../kits/graph.ts";
 import { truthSteps } from "../kits/steps.ts";
-import { estimate, graphPositions, layout, readableOn, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
+import { estimate, graphPositions, layout, MIN_CONTRAST, readableOn, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
+import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
+import { contrast } from "../style/color.ts";
 import type { LibraryEntry } from "./library.ts";
 import { checkOutput } from "./program.ts";
 import { runProgram, type RunResult } from "./sandbox.ts";
@@ -42,6 +44,12 @@ const SHAPE_PROP = new Set(["fill", "stroke", "strokeWidth", "drawn", "closed", 
 const REFUSED_SET = new Set(["src", "href", "font", "points", "constructor", "prototype"]);
 const RESERVED_RUN = new Set(["w", "h", "until", "on", "seed", "at", "into", "before", "after"]);
 const MARK_PAD = 14;
+// What a property goes back to when nothing sets it any more. Others keep their last value.
+const AT_REST: Record<string, number> = { opacity: 1, scaleX: 1, scaleY: 1, rotate: 0, skew: 0, z: 0, layer: 0, glow: 0, blur: 0, brightness: 1, saturation: 1, contrast: 1, hue: 0, tintAmount: 0, shadowX: 0, shadowY: 0, shadowBlur: 0, shadowOpacity: 0 };
+// Words made only of emoji and symbols, with no letters or digits: a picture in the system's emoji font, not words.
+const EMOJI_ONLY = /^[\p{Extended_Pictographic}\p{So}\u2190-\u21FF\u2B00-\u2BFF\uFE0F\u200D\s]+$/u;
+// A box on screen that the camera and the collision checks care about.
+type Seen = { id: string; box: Box; line: number; what: string; text?: string; item?: string; laid: boolean; slot?: string; back?: string; holder?: string; chip?: boolean };
 const same = (a: Value | undefined, b: Value | undefined) => (typeof a === "number" && typeof b === "number" ? Math.abs(a - b) < 0.05 : JSON.stringify(a) === JSON.stringify(b));
 const number = (s: string) => (s !== "" && Number.isFinite(Number(s)) ? Number(s) : null);
 const round = (v: number) => Math.round(v * 10) / 10;
@@ -110,7 +118,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   if (problems.length) return { problems, stats };
 
   const behaviors = new Set([...Object.keys(BEHAVIORS), ...allKits.flatMap((k) => Object.keys(k.behaviors ?? {}))]);
-  const report = (line: number, message: string) => problems.length < 40 && problems.push({ line, message });
+  let quiet = false; // while sizes are worked out ahead, problems wait for the real pass
+  const report = (line: number, message: string) => !quiet && problems.length < 40 && problems.push({ line, message });
   const colors = new Set(Object.keys(ctx.theme.colors));
   const colorOk = (v: string | undefined, line: number) => {
     if (v !== undefined && v !== "none" && !colors.has(v)) report(line, `"${v}" is not a color here. Use one of: ${[...colors].join(", ")}.${suggest(v, colors)}`);
@@ -139,11 +148,23 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const readable = (p: Part, k: number): Part => (p.kind === "text" && typeof p.props.size === "number" && p.props.size * k < minText ? { ...p, props: { ...p.props, size: round(minText / k) } } : p);
 
   const safe = safeArea(ctx.width, ctx.height);
-  const expansions = new Map<string, { nodes: NodeSpec[]; box: ReturnType<typeof bounds> }>();
+  // One context for expanding kits and for compiling, so a kit that registers its parts while it expands (for become,
+  // each and swell) is found again by its behaviors.
+  const kitsMade: Kit = { name: "programs", behaviors: {} };
+  const kitCtx: CompileContext = { ...ctx, kits: [...allKits, kitsMade] };
+  const expansions = new Map<string, { nodes: NodeSpec[]; box: ReturnType<typeof bounds>; errors: { line: number; message: string }[] }>();
 
   const expandKit = (item: Item) => {
     const known = expansions.get(item.id);
-    if (known) return known;
+    if (known) {
+      for (const e of known.errors) report(e.line, e.message);
+      return known;
+    }
+    const errors: { line: number; message: string }[] = [];
+    const fail = (line: number, message: string) => {
+      errors.push({ line, message });
+      report(line, message);
+    };
     let spec: NodeSpec;
     if (item.kind === "graph") {
       const ids = [...new Set([...item.edges!.flatMap((e) => [e.from, e.to]), ...item.loose!])];
@@ -155,23 +176,24 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       for (const [k, v] of Object.entries(item.attrs)) {
         if (["at", "into", "before", "after"].includes(k)) continue;
         try {
-          data[k] = /^[{[]/.test(v) ? JSON.parse(v) : (number(v) ?? v);
+          // A lone backslash is kept as written, so math such as \frac needs no doubling; a doubled one still works.
+          data[k] = /^[{[]/.test(v) ? JSON.parse(v.replace(/\\\\|\\(?!["/])/g, (m) => (m.length === 2 ? m : "\\\\"))) : (number(v) ?? v);
         } catch {
-          report(item.line, `The setting ${k} of ${item.id} is not valid JSON.`);
+          fail(item.line, `The setting ${k} of ${item.id} is not valid JSON.`);
         }
       }
       spec = { id: item.id, kind: item.kind, data };
     }
-    const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, ctx) ?? []).flatMap(expand));
+    const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, kitCtx) ?? []).flatMap(expand));
     let nodes: NodeSpec[] = [];
     try {
       nodes = expand(spec);
     } catch (e) {
-      report(item.line, `${item.kind} ${item.id} failed: ${(e as Error).message}`);
+      fail(item.line, `${item.kind} ${item.id} failed: ${(e as Error).message}`);
     }
     if (!nodes.some((n) => n.id === item.id)) nodes = [{ id: item.id, kind: "group" }, ...nodes.map((n) => ({ ...n, parent: n.parent ?? item.id }))];
     nodes.sort((a, b) => Number(b.id === item.id) - Number(a.id === item.id));
-    const made = { nodes, box: bounds(nodes) };
+    const made = { nodes, box: bounds(nodes), errors };
     expansions.set(item.id, made);
     return made;
   };
@@ -200,12 +222,32 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const programTracks: Track[] = [];
   const motion = new Map<string, Track["keys"]>(); // program motion by target and property, for finding moving parts
   const steps: Step[] = [];
-  let lastScale = Infinity;
   // The camera: where it lands after each change. At rest it shows the frame as laid out.
   type View = { panX: number; panY: number; zoom: number };
   const REST: View = { panX: ctx.width / 2, panY: ctx.height / 2, zoom: 1 };
   let view: View = REST;
   const shots: { at: number; frames: number; ease: Ease; view: View; drift: number; line: number }[] = [];
+  // What a view shows, in the scene's own coordinates: the whole frame, and the part of it words may use (inside the
+  // edges and above the captions).
+  const EDGE = 4;
+  const frameIn = (v: View): Box => ({ x: v.panX, y: v.panY, w: ctx.width / v.zoom, h: ctx.height / v.zoom });
+  const allowedIn = (v: View): Box => {
+    const [l, r, t, d] = [EDGE, ctx.width - EDGE, EDGE, safe.y + safe.h / 2];
+    const at = (sx: number, sy: number) => ({ x: v.panX + (sx - ctx.width / 2) / v.zoom, y: v.panY + (sy - ctx.height / 2) / v.zoom });
+    const [a, b] = [at(l, t), at(r, d)];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w: b.x - a.x, h: b.y - a.y };
+  };
+  // Things partly in the frame, or in it but under the captions: they would be seen cut.
+  const cutBy = (v: View, list: Seen[]) => {
+    const f = frameIn(v);
+    const a = allowedIn(v);
+    return list.filter((w) => {
+      const [l, r, t, d] = [w.box.x - w.box.w / 2, w.box.x + w.box.w / 2, w.box.y - w.box.h / 2, w.box.y + w.box.h / 2];
+      const seen = r > f.x - f.w / 2 + 1 && l < f.x + f.w / 2 - 1 && d > f.y - f.h / 2 + 1 && t < f.y + f.h / 2 - 1;
+      const whole = l >= a.x - a.w / 2 - 1 && r <= a.x + a.w / 2 + 1 && t >= a.y - a.h / 2 - 1 && d <= a.y + a.h / 2 + 1;
+      return seen && !whole;
+    });
+  };
 
   const walkAll = (list: Item[], fn: (i: Item, siblings: Item[]) => void) => {
     for (const i of [...list]) {
@@ -351,12 +393,34 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   // A program that failed has already been reported. Its parts being missing is not a second problem.
   const failed = new Set<string>();
   const fromFailed = (id: string) => [...failed].some((m) => id === m || id.startsWith(`${m}.`));
-  const kitsMade: Kit = { name: "programs", behaviors: {} };
   let laterPlay: NonNullable<Step["play"]> = []; // program motion, played once its parts exist
+
+  // Steady sizes: a plain state and the keep states after it are one stretch, laid out at one scale, the one that fits
+  // the fullest of them. Adding a row or an answer then never shrinks what is already there; only the camera zooms.
+  quiet = true;
+  const fits = doc.states.map((st) => {
+    applyState(st);
+    return layout(board, env).scale;
+  });
+  board = [];
+  attached = [];
+  quiet = false;
+  const stretchScale: number[] = [];
+  for (let i = 0; i < doc.states.length; ) {
+    let j = i + 1;
+    while (j < doc.states.length && doc.states[j]!.keep) j++;
+    const least = Math.min(...fits.slice(i, j));
+    for (let k = i; k < j; k++) stretchScale[k] = least;
+    i = j;
+  }
+  // What was on screen in the state before, for leaving things that would cross entering ones, and the words and marks
+  // of every state, for the camera's drift.
+  let before = new Map<string, Box>();
+  const seenAt: { at: number; list: Seen[] }[] = [];
 
   for (let index = 0; index < doc.states.length; index++) {
     const s = doc.states[index]!;
-    const before = problems.length;
+    const already = problems.length;
     const at = momentOf(s.at, s.line);
     if (s.attrs.enter && !STATE_ENTERS.includes(s.attrs.enter)) report(s.line, `A state's enter must be one of ${STATE_ENTERS.join(", ")}. Give one thing its own enter= for ${ENTERS.filter((e) => !STATE_ENTERS.includes(e)).join(", ")}.`);
     if (s.attrs.ease && !(s.attrs.ease in EASES)) report(s.line, `ease must be one of ${Object.keys(EASES).join(", ")}.`);
@@ -377,8 +441,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (i.kind === "image" && !opts.assets?.[i.attrs.asset ?? ""]) report(i.line, `The image ${i.id} needs asset=NAME with a name from the assets list.${opts.assets ? ` Available: ${Object.keys(opts.assets).join(", ") || "none"}.` : " This scene has no assets."}`);
     });
 
-    const laid = layout(board, env, s.keep && Number.isFinite(lastScale) ? lastScale : undefined);
-    lastScale = laid.scale;
+    const laid = layout(board, env, stretchScale[index]);
     problems.push(...laid.problems.slice(0, 6).map((p) => ({ ...p, line: p.line || s.line })));
 
     // Parts for this state: laid-out parts, then kits and programs in their slots, then everything attached to them.
@@ -438,7 +501,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         return { x: x + ((l + r) / 2) * k, y: y + ((t + d) / 2) * k, w: Math.max(4, (r - l) * k), h: Math.max(4, (d - t) * k) };
       }
       const size = Number(p.props.size ?? 60) * k;
-      return { x, y, w: env.measure(String(p.props.text ?? ""), size), h: size * 1.2 };
+      // Text grows from its anchor: to the right of x, to the left of it, or around it.
+      const w = env.measure(String(p.props.text ?? ""), size, typeof p.props.font === "string" && /mono|menlo|courier/i.test(p.props.font) ? "mono" : undefined);
+      return { x: p.props.anchor === "start" ? x + w / 2 : p.props.anchor === "end" ? x - w / 2 : x, y, w, h: size * 1.2 };
     };
     const needBox = (id: string, line: number): Box | undefined => {
       const b = boxOf(id);
@@ -476,6 +541,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     if (cams.length > 1) report(cams[1]!.line, `A state can move the camera once. Use another state for the next move.`);
     const cam = cams[0];
     let next: View | undefined;
+    let region: Box | undefined; // what the camera frames this state
     const clampView = (v: View): View => {
       let { panX, panY, zoom } = v;
       const b = fillers.at(-1);
@@ -499,6 +565,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         const corners = atList(cam.attrs.at, cam.line, 4);
         if (b && corners !== null) {
           const r = corners ? spanOf(pointsIn(b, corners)) : b;
+          region = r;
           const fit = Math.min(safe.w / Math.max(1, r.w), safe.h / Math.max(1, r.h));
           const z = Math.max(fit, ...fillers.slice(-1).map((f) => Math.max(ctx.width / f.w, ctx.height / f.h))) * (zoomBy ?? 1);
           next = clampView({ panX: r.x, panY: r.y - (safe.y - ctx.height / 2) / z, zoom: z });
@@ -517,6 +584,14 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const drawn: Part[] = [];
     const popped = new Map<string, string>(); // things that pop on, by group: the dots of one mark pop one after another
     const placedLabels: { box: Box; line: number; id: string }[] = [];
+    const drawnWords: Seen[] = []; // attached words as they land, in the frame's coordinates
+    // Words that kits and programs drew, where they really are now.
+    const slotWords: Seen[] = [...parts.values()].filter((p) => p.kind === "text" && laid.slots.some((x) => p.id.startsWith(`${x.item.id}.`))).flatMap((p) => {
+      const b = slotPartBox(p.id);
+      const slot = laid.slots.find((x) => p.id.startsWith(`${x.item.id}.`))!.item.id;
+      return b ? [{ id: p.id, box: b, line: p.line, what: "text", text: String(p.props.text ?? ""), laid: false, slot }] : [];
+    });
+    const laidWords: Seen[] = laid.texts.map((t) => ({ id: t.id, box: t.box, line: t.line, what: "text", text: t.text, item: t.item, laid: true, ...(t.back ? { back: t.back } : {}) }));
     // Everything a label must keep clear of: all text and every solid shape, including the parts of kits and programs.
     // What sits behind everything (a picture or color filling the frame, a panel) is not in the way.
     const obstacles: Box[] = [...parts.values()].filter((p) => (p.kind === "text" || p.props.closed) && !(Number(p.props.z) < 0) && !(p.parent && Number(parts.get(p.parent)?.props.z) < 0)).flatMap((p) => {
@@ -526,30 +601,50 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     });
     // Words over a picture sit on a small card, so they read on any photo. `back=` picks its color, `back=none` drops it.
     const onPicture = (b: Box) => images.some((i) => hits(b, i) > 0.2 * b.w * b.h);
-    const chipOf = (b: Box, attrs: Attrs) => (attrs.back === "none" ? undefined : attrs.back ?? (onPicture(b) ? "paper" : undefined));
+    // An attached thing's role, if it names one; marks and arrows take the style's pointer look when it has one.
+    const roleOf = (attrs: Attrs, pointer = false) => (isRole(attrs.role) ? roleLook(ctx.theme, attrs.role) : pointer && styleHas(ctx.theme, "pointer") ? roleLook(ctx.theme, "pointer") : undefined);
+    const captionBack = roleLook(ctx.theme, "caption").back ?? "paper";
+    const chipOf = (b: Box, attrs: Attrs) => (attrs.back === "none" ? undefined : attrs.back ?? roleOf(attrs)?.back ?? (onPicture(b) ? captionBack : undefined));
     const words = (id: string, line: number, text: string, at: { x: number; y: number }, size: number, attrs: Attrs, chip: string | undefined, parent?: string) => {
+      // A pointer is drawn, not typed: an emoji comes out small, in the system's emoji font, and off the style.
+      if (EMOJI_ONLY.test(text)) report(line, `"${text}" is only emoji or symbols. To point at something use mark pointer ID side=top (or an arrow); attached words are for words. If a picture of an emoji is really wanted, give it its own line of text at size big or larger.`);
+      const look = roleOf(attrs);
       const w = env.measure(text, size);
       if (chip) {
         const [pw, ph] = [w + size * 0.9, size * 1.55];
         drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { x: round(at.x), y: round(at.y), points: roundedBox(pw, ph, ph * 0.18).map(round), closed: 1, fill: chip, stroke: "none", rotate: -1.5, shadowY: round(size * 0.08), shadowBlur: round(size * 0.25), shadowOpacity: 0.35, shadowColor: "#000000" } });
       }
-      const color = attrs.color ?? (chip ? readableOn(chip, ctx.theme) : "ink");
-      drawn.push({ id, kind: "text", line, ...(parent ? { parent } : {}), props: { x: round(at.x), y: round(at.y), text, size: round(size), color, weight: 700, ...(chip ? { rotate: -1.5 } : {}) } });
+      const own = look?.color && (!chip || readability(ctx.theme, look.color, chip) >= MIN_CONTRAST) ? look.color : undefined;
+      const color = attrs.color ?? own ?? (chip ? readableOn(chip, ctx.theme) : "ink");
+      const font: Props = look?.font === "title" ? { font: ctx.theme.fonts.title } : look?.font === "mono" ? { font: ctx.theme.fonts.mono ?? "Menlo, monospace" } : {};
+      const shown = look?.case === "upper" ? text.toUpperCase() : text;
+      drawn.push({ id, kind: "text", line, ...(parent ? { parent } : {}), props: { x: round(at.x), y: round(at.y), text: shown, size: round(size), color, weight: look?.weight ?? 700, ...font, ...(chip ? { rotate: -1.5 } : {}) } });
+      const holder = parent ? boxOf(parent) : undefined;
+      const abs = holder ? { x: holder.x + at.x, y: holder.y + at.y } : at;
+      drawnWords.push({ id, box: { x: abs.x, y: abs.y, w, h: size * 1.15 }, line, what: "text", text, laid: false, ...(chip ? { back: chip, chip: true } : {}), ...(parent ? { holder: parent } : {}) });
     };
     const label = (id: string, line: number, text: string, want: { x: number; y: number }[], attrs: Attrs, size = labelSize) => {
-      const w = env.measure(text, size);
-      const h = size * 1.2;
-      const box = (p: { x: number; y: number }) => ({ x: Math.max(w / 2 + 10, Math.min(ctx.width - w / 2 - 10, p.x)), y: Math.max(h, Math.min(ctx.height - h, p.y)), w, h });
-      const cost = (b: Box) => [...obstacles, ...placedLabels.map((l) => l.box)].reduce((sum, o) => sum + hits(b, o), 0);
+      // Room for the card the words may sit on, so nothing near them is covered by it either.
+      const w = env.measure(text, size) + size * 0.9;
+      const h = size * 1.55;
+      // Attached words stay in the safe area, clear of the captions, however far out their target is.
+      const box = (p: { x: number; y: number }) => ({ x: Math.max(w / 2 + 10, Math.min(ctx.width - w / 2 - 10, p.x)), y: Math.max(safe.y - safe.h / 2 + h / 2, Math.min(safe.y + safe.h / 2 - h / 2, p.y)), w, h });
+      const inWords = (b: Box) => [...laidWords, ...slotWords].reduce((sum, o) => sum + hits(b, o.box), 0);
+      // Covering words costs most, since then neither can be read; covering a shape costs less, as words can sit on a card.
+      const cost = (b: Box) => [...obstacles, ...placedLabels.map((l) => l.box)].reduce((sum, o) => sum + hits(b, o), 0) + inWords(b) * 2;
       // A spot pushed back onto the canvas is no longer beside its target, so it counts against that spot.
-      const ranked = want.map((p) => ({ b: box(p), p })).map(({ b, p }, i) => ({ b, over: cost(b), c: cost(b) + (Math.abs(b.x - p.x) > 2 ? w * h * 0.25 : 0), i })).sort((a, b) => a.c - b.c || a.i - b.i);
+      const ranked = want.map((p) => ({ b: box(p), p })).map(({ b, p }, i) => ({ b, over: cost(b), c: cost(b) + (Math.abs(b.x - p.x) > 2 || Math.abs(b.y - p.y) > 2 ? w * h * 0.25 : 0), i })).sort((a, b) => a.c - b.c || a.i - b.i);
       const best = ranked[0]!;
-      // With no free place, the words sit on a card over what they cover, so they still read. Only words on top of other
+      // With no free place, the words sit on a card over what they cover, so they still read. Words on top of other
       // words are a problem, because then neither can be read.
       const onLabels = placedLabels.reduce((sum, l) => sum + hits(best.b, l.box), 0);
       if (onLabels > 0.3 * w * h) report(line, `"${text}" would sit on top of other attached words, because everything around what it points to is full. Shorten it, drop an earlier tag or mark label, or give that thing room with space, a row or a stack.`);
+      else if (inWords(best.b) > 0.08 * w * h) {
+        const under = [...laidWords, ...slotWords].sort((a, b) => hits(best.b, b.box) - hits(best.b, a.box))[0];
+        report(line, `"${text}" would sit on top of the words "${under?.text ?? ""}", because everything around what it points to is full. Shorten it, attach it to the other side with side=, drop something, or give that thing room with space, a row or a stack.`);
+      }
       const crowded = best.over > 0.3 * w * h && attrs.back !== "none";
-      words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs) ?? (crowded ? "paper" : undefined));
+      words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs) ?? (crowded ? captionBack : undefined));
       placedLabels.push({ box: best.b, line, id });
     };
     const addLink = (id: string, a: Box, b: Box, line: number, head: boolean, attrs: Attrs, text?: string) => {
@@ -560,8 +655,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           const t = ((200 + (i / 30) * 280) * Math.PI) / 180;
           return [round(a.x + Math.cos(t) * rx), round(a.y + Math.sin(t) * ry)];
         }).flat();
-        const color = attrs.color ?? "ink";
-        const width = number(attrs.strokeWidth ?? "") ?? 6;
+        const color = attrs.color ?? roleOf(attrs, true)?.color ?? "ink";
+        const width = (number(attrs.strokeWidth ?? "") ?? 6) * (roleOf(attrs, true)?.stroke ?? 1);
         drawn.push({ id, kind: "path", line, props: { points: pts, stroke: color, strokeWidth: width, smooth: 1 } });
         if (head) {
           const [px, py, qx, qy] = pts.slice(-4) as [number, number, number, number];
@@ -600,8 +695,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const bends = attrs.bend !== undefined ? [number(attrs.bend) ?? 0] : [0, 0.2, -0.2, 0.4, -0.4, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6];
       const offCanvas = (pts: number[]) => pts.some((v, i) => (i % 2 ? false : v < 20 || v > ctx.width - 20));
       const points = bends.map((x) => curve(x)).map((pts, i) => ({ pts, i, c: crossings(pts) + (offCanvas(pts) ? 0.5 : 0) })).sort((x, y) => x.c - y.c || x.i - y.i)[0]!.pts;
-      const color = attrs.color ?? "ink";
-      const width = number(attrs.strokeWidth ?? "") ?? 6;
+      const color = attrs.color ?? roleOf(attrs, true)?.color ?? "ink";
+      const width = (number(attrs.strokeWidth ?? "") ?? 6) * (roleOf(attrs, true)?.stroke ?? 1);
       drawn.push({ id, kind: "path", line, props: { points, stroke: color, strokeWidth: width } });
       const tip = (px: number, py: number, qx: number, qy: number, name: string) => {
         const a2 = (Math.atan2(qy - py, qx - px) * 180) / Math.PI;
@@ -649,8 +744,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         const b = pts ? (pts.length >= 4 ? spanOf(pts) : { x: pts[0]!, y: pts[1]!, w: 0, h: 0 }) : whole;
         const pad = at ? (holder ? 22 / z : 18) : MARK_PAD;
         const [l, r, t, d] = [b.x - b.w / 2 - pad, b.x + b.w / 2 + pad, b.y - b.h / 2 - pad, b.y + b.h / 2 + pad];
-        const color = c.attrs.color ?? (c.shape === "highlight" ? "highlight" : "accent");
-        const width = (number(c.attrs.strokeWidth ?? "") ?? (holder ? 9 : 7)) / (holder ? z : 1);
+        const role = roleOf(c.attrs, c.shape !== "highlight");
+        const color = c.attrs.color ?? role?.color ?? (c.shape === "highlight" ? "highlight" : "accent");
+        const width = ((number(c.attrs.strokeWidth ?? "") ?? (holder ? 9 : 7)) * (role?.stroke ?? 1)) / (holder ? z : 1);
         const shade: Props = holder ? { shadowY: round(2 / z), shadowBlur: round(5 / z), shadowOpacity: 0.45, shadowColor: "#000000" } : {};
         const [ox, oy] = holder ? [whole.x, whole.y] : [0, 0];
         const local = (list: number[]) => list.map((v, i) => round(v - (i % 2 ? oy : ox)));
@@ -688,6 +784,33 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
             });
           } else add(id, { points: [l, b.y, r, b.y].map(round), strokeWidth: round(Math.max(b.h + pad, 12)), lineCap: "butt", strokeOpacity: 0.45 });
         }
+        if (c.shape === "pointer") {
+          // A short arrow from one side, pointing at the thing: on the side asked for, else the side with the most room.
+          const len = Math.max(minText * 2.4, 110) / z;
+          const gap = 16 / z;
+          const tipOf = (side: string): [number, number] => (side === "top" ? [b.x, t - gap] : side === "bottom" ? [b.x, d + gap] : side === "left" ? [l - gap, b.y] : [r + gap, b.y]);
+          const tailOf = (side: string, [x, y]: [number, number]): [number, number] => (side === "top" ? [x, y - len] : side === "bottom" ? [x, y + len] : side === "left" ? [x - len, y] : [x + len, y]);
+          const sides = c.attrs.side ? [c.attrs.side] : ["top", "bottom", "left", "right"];
+          const ranked = sides.map((side, i) => {
+            const tip = tipOf(side);
+            const tail = tailOf(side, tip);
+            const span = spanOf([...tip, ...tail]);
+            const lane = { ...span, w: Math.max(span.w, 30 / z), h: Math.max(span.h, 30 / z) };
+            const off = tail[0] < 10 || tail[0] > ctx.width - 10 || tail[1] < safe.y - safe.h / 2 || tail[1] > safe.y + safe.h / 2;
+            return { side, tip, tail, i, c: [...obstacles, ...placedLabels.map((p) => p.box)].reduce((sum, o) => sum + hits(lane, o), 0) + (off ? 1e9 : 0) };
+          }).sort((x, y) => x.c - y.c || x.i - y.i);
+          const { side, tip, tail } = ranked[0]!;
+          const k = 1 / z;
+          add(id, { points: [...tail, ...tip].map(round), strokeWidth: Math.max(width, 8 / z) });
+          add(`${id}.head`, { x: tip[0], y: tip[1], rotate: round((Math.atan2(tip[1] - tail[1], tip[0] - tail[0]) * 180) / Math.PI), points: [-32 * k, -22 * k, 0, 0, -32 * k, 22 * k].map(round), strokeWidth: Math.max(width, 8 / z) });
+          placedLabels.push({ box: { ...spanOf([...tip, ...tail]), w: Math.max(30 / z, Math.abs(tip[0] - tail[0])), h: Math.max(30 / z, Math.abs(tip[1] - tail[1])) }, line: c.line, id });
+          if (c.text) {
+            const away = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] }[side as "top"]!;
+            const w = env.measure(c.text, labelSize);
+            label(`${id}.label`, c.line, c.text, [{ x: tail[0] + away[0]! * (w / 2 + 12), y: tail[1] + away[1]! * labelSize * 0.8 }], { color });
+          }
+          continue;
+        }
         if (c.shape === "cross") {
           add(id, { points: [l, t, r, d].map(round) });
           add(`${id}.2`, { points: [l, d, r, t].map(round) });
@@ -708,7 +831,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         if (!b) continue;
         colorOk(c.attrs.color, c.line);
         if (c.attrs.back && c.attrs.back !== "none") colorOk(c.attrs.back, c.line);
-        const size = Math.max(minText / z, number(c.attrs.size ?? "") ?? labelSize);
+        const own = roleOf(c.attrs)?.size;
+        const size = Math.max(minText / z, number(c.attrs.size ?? "") ?? (own ? (own * Math.min(ctx.width, ctx.height)) / z : labelSize));
         const id = attachedId(c);
         const at = atList(c.attrs.at, c.line, 2);
         if (at === null) continue;
@@ -735,10 +859,66 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           continue;
         }
         const further = [70, 120].flatMap((d) => (["right", "left", "top", "bottom"] as const).map((k) => beside(d)[k]!));
-        label(id, c.line, c.text, [...(c.attrs.side ? [options[c.attrs.side]!] : []), ...order.map((k) => options[k]!), ...further], { ...c.attrs, color: c.attrs.color ?? "ink" }, size);
+        label(id, c.line, c.text, [...(c.attrs.side ? [options[c.attrs.side]!] : []), ...order.map((k) => options[k]!), ...further], c.attrs, size);
       }
     }
     for (const p of drawn) parts.set(p.id, p);
+
+    // What is behind words: their panel or shape, else a picture or a field of color under them, else the surface.
+    const surface = doc.background ?? "paper";
+    const behind = (w: Seen): string => {
+      if (w.back) return w.back;
+      const area = Math.max(1, w.box.w * w.box.h);
+      const under = laid.fields.filter((f) => hits(w.box, f.box) > 0.3 * area);
+      const f = under.filter((x) => x.picture && !x.frame).at(-1) ?? under.at(-1);
+      return f?.picture ? `picture:${f.id}` : f?.fill ?? surface;
+    };
+    const wordsById = new Map([...laidWords, ...drawnWords].map((w) => [w.id, w]));
+
+    // The camera keeps words whole: words partly in the frame, or under the captions, are cut. A camera that moves in
+    // this state shifts as little as it must so each cut thing is wholly in or wholly out, keeping what it frames.
+    const keyWords = [...laidWords, ...slotWords, ...drawnWords].filter((w) => Number(parts.get(w.id)?.props.opacity ?? 1) > 0.05);
+    let cut = cutBy(view, keyWords);
+    // Words tagged at a point slide along, as far as the point stays under them, to sit whole inside the view.
+    for (const w of cut) {
+      if (w.laid || w.slot || placedLabels.some((l) => l.id === w.id)) continue;
+      const a = allowedIn(view);
+      const dx = Math.min(Math.max(0, a.x - a.w / 2 - (w.box.x - w.box.w / 2)), w.box.w * 0.45) || -Math.min(Math.max(0, w.box.x + w.box.w / 2 - (a.x + a.w / 2)), w.box.w * 0.45);
+      const dy = Math.min(Math.max(0, a.y - a.h / 2 - (w.box.y - w.box.h / 2)), w.box.h * 0.45) || -Math.min(Math.max(0, w.box.y + w.box.h / 2 - (a.y + a.h / 2)), w.box.h * 0.45);
+      const moved = { ...w.box, x: w.box.x + dx, y: w.box.y + dy };
+      if (cutBy(view, [{ ...w, box: moved }]).length) continue;
+      for (const id of [w.id, `${w.id}.back`]) {
+        const p = parts.get(id);
+        if (p) parts.set(id, { ...p, props: { ...p.props, x: round(Number(p.props.x ?? 0) + dx), y: round(Number(p.props.y ?? 0) + dy) } });
+      }
+      w.box = moved;
+    }
+    cut = cutBy(view, keyWords);
+    if (cut.length && cam && next && region) {
+      let v = view;
+      const cover = (x: View) => hits(region, allowedIn(x)) / Math.max(1, region.w * region.h);
+      const want = cover(v);
+      for (let round = 0; round < 8 && cut.length; round++) {
+        const f = frameIn(v);
+        const a = allowedIn(v);
+        const options: [number, number][] = [];
+        for (const w of cut) {
+          const [l, r, t, d] = [w.box.x - w.box.w / 2, w.box.x + w.box.w / 2, w.box.y - w.box.h / 2, w.box.y + w.box.h / 2];
+          if (r - l <= a.w && d - t <= a.h) options.push([l < a.x - a.w / 2 ? l - (a.x - a.w / 2) : r > a.x + a.w / 2 ? r - (a.x + a.w / 2) : 0, t < a.y - a.h / 2 ? t - (a.y - a.h / 2) : d > a.y + a.h / 2 ? d - (a.y + a.h / 2) : 0]);
+          options.push([r - (f.x - f.w / 2) + 1, 0], [l - (f.x + f.w / 2) - 1, 0], [0, d - (f.y - f.h / 2) + 1], [0, t - (f.y + f.h / 2) - 1]);
+        }
+        const tried = options.map(([dx, dy]) => clampView({ ...v, panX: v.panX + dx, panY: v.panY + dy })).filter((x) => cover(x) >= want * 0.85).map((x) => ({ x, left: cutBy(x, keyWords).length, move: Math.hypot(x.panX - v.panX, x.panY - v.panY) })).filter((o) => o.left < cut.length).sort((p, q) => p.left - q.left || p.move - q.move);
+        if (!tried.length) break;
+        v = tried[0]!.x;
+        cut = cutBy(v, keyWords);
+      }
+      if (v !== view) {
+        view = v;
+        shots.at(-1)!.view = v;
+      }
+    }
+    for (const w of cut) report(w.line, `With the camera where it is at this state, "${w.text}" is cut off at the edge of the frame or sits under the captions. Frame a place that holds it whole or leaves it out, or move or drop it.`);
+    seenAt.push({ at, list: keyWords });
 
     // Anything addressed by id: a part, a whole row or container, or everything under a prefix.
     const expandTarget = (id: string, line: number): string[] => {
@@ -762,19 +942,47 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const effects = new Map<string, Props>();
     const effect = (id: string, props: Props) => effects.set(id, { ...effects.get(id), ...props });
     const kept = new Set<string>();
-    const lightUp = (id: string, color: string) => {
+    // Light with no color takes the style's key color, or whichever strong color reads on what is behind the words.
+    const key = roleLook(ctx.theme, "key").color ?? "accent";
+    const lightOn = (id: string): string => {
+      const w = wordsById.get(id);
+      const back = w ? behind(w) : surface;
+      if (back.startsWith("picture:")) return key;
+      return [key, "accent", "highlight"].find((x) => ctx.theme.colors[x] && readability(ctx.theme, x, back) >= MIN_CONTRAST) ?? bestOn(ctx.theme, back, ["accent", "highlight", "ink", "paper"]);
+    };
+    // Lighting a whole thing colors its lines; words inside it that the color would not read on keep their color and
+    // only grow bold. Words lit by their own id take the color as asked, and build checks it.
+    const lightUp = (id: string, asked: string | undefined, target = id) => {
       const p = parts.get(id);
-      if (p?.kind === "text") effect(id, { color, weight: 700 });
+      const color = asked ?? (p?.kind === "text" ? lightOn(id) : key);
+      const back = wordsById.get(id)?.back;
+      if (p?.kind === "text" && asked && target !== id && back && readability(ctx.theme, asked, back) < MIN_CONTRAST) effect(id, { weight: 700 });
+      else if (p?.kind === "text") effect(id, { color, weight: 700 });
       if (p?.kind === "path") effect(id, p.props.stroke && p.props.stroke !== "none" ? { stroke: color, strokeWidth: Number(p.props.strokeWidth ?? 6) * 1.5 } : { fill: color });
+    };
+    // Stepping back: the style's muted look where it has one (its color and how far it fades), else a plain fade.
+    const muted = styleHas(ctx.theme, "muted") ? roleLook(ctx.theme, "muted") : undefined;
+    const stepped = new Set<string>();
+    const inside = (id: string): string[] => [...parts.values()].filter((q) => q.parent === id).flatMap((q) => [q.id, ...inside(q.id)]);
+    const stepBack = (id: string, amount: string | undefined) => {
+      const fade = muted?.opacity !== undefined && amount === undefined ? Math.min(1, Math.max(readDim, muted.opacity)) : muted?.color && amount === undefined ? undefined : dimTo(amount);
+      if (fade !== undefined) effect(id, { opacity: fade });
+      if (!muted?.color) return;
+      for (const q of [id, ...inside(id)]) {
+        const p = parts.get(q);
+        if (p?.kind === "text") effect(q, { color: muted.color });
+        else if (p?.kind === "path" && p.props.stroke && p.props.stroke !== "none") effect(q, { stroke: muted.color });
+        stepped.add(q);
+      }
     };
     const play: NonNullable<Step["play"]> = [];
     const emit: NonNullable<Step["emit"]> = [];
     for (const c of s.commands) {
       if (c.do === "light") {
         colorOk(c.attrs.color, c.line);
-        for (const t of c.targets) for (const id of expandTarget(t, c.line)) lightUp(id, c.attrs.color ?? "accent");
+        for (const t of c.targets) for (const id of expandTarget(t, c.line)) lightUp(id, c.attrs.color, t);
       }
-      if (c.do === "dim") for (const t of c.targets) for (const id of expandTarget(t, c.line)) if (!parts.get(id)?.parent) effect(id, { opacity: dimTo(c.attrs.amount) });
+      if (c.do === "dim") for (const t of c.targets) for (const id of expandTarget(t, c.line)) if (!parts.get(id)?.parent) stepBack(id, c.attrs.amount);
       if (c.do === "focus") {
         colorOk(c.attrs.color, c.line);
         const lit = new Set(c.targets.flatMap((t) => expandTarget(t, c.line)));
@@ -787,8 +995,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           for (const id of parts.keys()) if (id === name || id.startsWith(`${name}.`)) kept.add(id);
         }
         for (const [id, p] of parts) {
-          if (lit.has(id)) lightUp(id, c.attrs.color ?? "accent");
-          else if (!stays(id) && !kept.has(id) && !(p.parent && !stays(p.parent))) effect(id, { opacity: dimTo(c.attrs.amount) });
+          if (lit.has(id)) lightUp(id, c.attrs.color, c.targets.includes(id) ? id : "");
+          else if (!stays(id) && !kept.has(id) && !(p.parent && !stays(p.parent))) stepBack(id, c.attrs.amount);
         }
       }
       if (c.do === "set") {
@@ -824,7 +1032,68 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (c.do === "emit") emit.push({ name: c.name, data: { ...c.attrs } });
     }
 
-    if (problems.length > before) {
+    // Readable: every word against what is really behind it, in the color it has now (a style's muted look aside).
+    const opacityOf = (id: string): number => {
+      const p = parts.get(id);
+      if (!p) return 1;
+      return Number(overrides.get(id)?.opacity ?? p.props.opacity ?? 1) * (p.parent ? opacityOf(p.parent) : 1);
+    };
+    // A label fades together with the shape it sits on, so only its own fade counts.
+    const ownFade = (id: string) => {
+      const p = parts.get(id);
+      return p?.parent && parts.has(`${p.parent}.shape`) ? Number(overrides.get(id)?.opacity ?? p.props.opacity ?? 1) * (parts.get(p.parent)?.parent ? opacityOf(parts.get(p.parent)!.parent!) : 1) : opacityOf(id);
+    };
+    // One report for each thing, not one for each of its lines.
+    const told = new Set<string>();
+    const once = (w: Seen) => {
+      const key = w.item ?? w.id;
+      if (told.has(key)) return false;
+      told.add(key);
+      return true;
+    };
+    for (const w of [...laidWords, ...drawnWords]) {
+      const part = parts.get(w.id);
+      const opacity = opacityOf(w.id);
+      if (!part || opacity <= 0.05 || told.has(w.item ?? w.id)) continue;
+      const back = behind(w);
+      if (back.startsWith("picture:")) {
+        // Laid-out words over a placed picture are a crowding problem, reported below with what to do about it.
+        if (w.laid && laid.fields.some((f) => `picture:${f.id}` === back && !f.frame)) continue;
+        if (once(w)) report(w.line, `"${w.text}" sits straight on the picture ${back.slice(8)} with nothing behind it, so it cannot read on every part of a photo. Put it on a panel (a stack with role=panel or back=COLOR), give it role=caption, or move it off the picture.`);
+        continue;
+      }
+      const color = String((stepped.has(w.id) ? undefined : effects.get(w.id)?.color) ?? overrides.get(w.id)?.color ?? part.props.color ?? "ink");
+      const [fg, bg] = [colorOf(ctx.theme, color)!, colorOf(ctx.theme, back)!];
+      if (!/^#[0-9a-f]{3,6}$/i.test(fg) || !/^#[0-9a-f]{3,6}$/i.test(bg)) continue; // a gradient: not judged here
+      // A fade the scene asks for is judged against the style's floor, like dim; the color itself must read.
+      const fade = ownFade(w.id);
+      if (fade < readDim - 0.01 && once(w)) report(w.line, `"${w.text}" is faded to ${Math.round(fade * 100)}%, below ${Math.round(readDim * 100)}%, where words stop reading. Fade it less (dim and focus already stop at the right level), or drop it.`);
+      const ratio = contrast(fg, bg);
+      if (ratio < MIN_CONTRAST && once(w)) report(w.line, `"${w.text}" is ${color} on ${back}, a contrast of only ${ratio.toFixed(1)} to 1; words need ${MIN_CONTRAST} to 1. Leave the color out and give it a role, which picks a color that reads there, or choose another color or back.`);
+    }
+    // Nothing covers words, and words and pictures each have their own room.
+    const shownWords = [...laidWords, ...slotWords, ...drawnWords.filter((w) => !placedLabels.some((l) => l.id === w.id))].filter((w) => opacityOf(w.id) > 0.05);
+    for (let i = 0; i < shownWords.length; i++) {
+      for (let j = i + 1; j < shownWords.length; j++) {
+        const [a, b] = [shownWords[i]!, shownWords[j]!];
+        if ((!a.laid && !b.laid && (!a.slot || a.slot === b.slot)) || (a.item && a.item === b.item)) continue;
+        const least = Math.min(a.box.w * a.box.h, b.box.w * b.box.h);
+        if (hits(a.box, b.box) > 0.2 * least) report(Math.max(a.line, b.line), `"${a.text}" and "${b.text}" overlap on screen, so neither reads. Give each its own room: put them in one stack or row, move one, or drop one.`);
+      }
+    }
+    for (const w of laidWords) {
+      for (const f of laid.fields) {
+        if (f.picture && !f.frame && hits(w.box, f.box) > 0.2 * w.box.w * w.box.h && once(w)) report(w.line, `"${w.text}" lies over the picture ${f.id}. Words and pictures each need their own room: put them side by side or one above the other, or attach the words to the picture with tag ${f.id} "words" at=X,Y.`);
+      }
+    }
+    for (const [item, members] of laid.members) {
+      const panel = parts.get(`${item}.back`);
+      const box = laid.boxes.get(item);
+      if (!panel || !box) continue;
+      for (const f of laid.fields) if (f.picture && !f.frame && !members.includes(f.id) && hits(box, f.box) > 0.1 * f.box.w * f.box.h) report(panel.line, `The panel ${item} covers part of the picture ${f.id}. Give the picture its own room, or put it inside the panel.`);
+    }
+
+    if (problems.length > already) {
       // Keep going to find more problems in later states, but this state cannot become steps.
       for (const [id, p] of parts) if (!live.has(id)) live.set(id, { kind: p.kind, parent: p.parent, props: p.props, alive: true, line: p.line });
       continue;
@@ -855,6 +1124,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const remove: string[] = [];
     const drawnIds = new Set(drawn.map((p) => p.id));
     const fresh = new Set([...parts.keys()].filter((id) => !live.has(id)));
+    const comeBack: NonNullable<Step["set"]> = {};
+    const returning = new Set<string>();
     const MOVING = ["slide", "slide-left", "rise", "slam"];
     for (const [id, part] of parts) {
       const props: Props = { ...part.props, ...overrides.get(id), ...effects.get(id) };
@@ -862,16 +1133,16 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const own = part.parent ? parts.get(`${part.parent}.shape`) : undefined;
       if (own && part.kind === "text" && effects.get(id)?.color === undefined && overrides.get(id)?.color === undefined && !boardColor.has(part.parent!)) {
         const fill = overrides.get(own.id)?.fill ?? effects.get(own.id)?.fill ?? own.props.fill;
-        if (typeof fill === "string") props.color = readableOn(fill, ctx.theme);
+        if (typeof fill === "string" && readability(ctx.theme, String(props.color ?? "ink"), fill) < MIN_CONTRAST) props.color = readableOn(fill, ctx.theme);
       }
       const was = live.get(id);
       if (was?.alive) {
         for (const [k, v] of Object.entries(props)) {
           if (!same(was.props[k], v)) (set[id] ??= {})[k] = v;
         }
-        // A light or dim that ended: go back to the part's own value.
+        // A light, dim or look that ended: go back to rest (a picture once behind everything comes forward again).
         for (const [k, v] of Object.entries(was.props)) {
-          if (props[k] === undefined && typeof v === "number" && k !== "drawn") (set[id] ??= {})[k] = k === "opacity" ? 1 : v;
+          if (props[k] === undefined && typeof v === "number" && k !== "drawn") (set[id] ??= {})[k] = AT_REST[k] ?? v;
         }
         was.props = props;
         continue;
@@ -879,7 +1150,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (was) {
         // Back on the board: it moves while unseen, then appears.
         for (const [k, v] of Object.entries(props)) if (!same(was.props[k], v) && k !== "opacity") (preset[id] ??= {})[k] = v;
-        if (!part.parent) (set[id] ??= {}).opacity = typeof props.opacity === "number" ? props.opacity : 1;
+        for (const [k, v] of Object.entries(was.props)) if (props[k] === undefined && typeof v === "number" && k !== "opacity" && k !== "drawn" && AT_REST[k] !== undefined && v !== AT_REST[k]) (preset[id] ??= {})[k] = AT_REST[k]!;
+        if (!part.parent) (comeBack[id] ??= {}).opacity = typeof props.opacity === "number" ? props.opacity : 1;
+        returning.add(id);
         was.props = props;
         was.alive = true;
         continue;
@@ -916,38 +1189,53 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (!(l.parent && !parts.has(l.parent))) remove.push(id);
       overrides.delete(id);
     }
+    // Leaving things that sit where entering things arrive go first, quickly, so old words never fade out under new ones.
+    const now = new Map<string, Box>();
+    for (const w of [...laidWords, ...drawnWords]) now.set(w.id, w.box);
+    for (const f of laid.fields) if (!f.frame) now.set(f.id, f.box);
+    const goneBoxes = [...before].filter(([id]) => !parts.has(id)).map(([, b]) => b);
+    const comingBoxes = [...now].filter(([id]) => fresh.has(id) || returning.has(id)).map(([, b]) => b);
+    const crossing = !s.cut && goneBoxes.some((g) => comingBoxes.some((c) => hits(g, c) > 0.1 * Math.min(g.w * g.h, c.w * c.h)));
+    // Never past the next state, which may already change what arrives here.
+    const nextAt = index + 1 < doc.states.length ? when(doc.states[index + 1]!.at, ctx) : Infinity;
+    const delay = crossing ? Math.max(0, Math.min(Math.max(4, Math.round(ctx.fps * 0.25)), nextAt - at - 2)) : 0;
+    const enterAt = at + delay;
+    before = now;
+
     // Everything arrives first, so anything in this state can act on anything new in it. A cut changes everything at
     // once: what leaves is gone and what moves is in place on the frame the cut lands.
     if (Object.keys(preset).length) steps.push({ at: Math.max(0, at - 1), move: { frames: 1 }, set: preset });
     const moved = s.cut ? { move: { frames: 1 } } : Object.keys(move).length ? { move } : {};
     // Something that simply appears is still hidden until its moment: it fades in over the single frame before it.
-    const appear = (add: NodeSpec[]) => steps.push({ at: at - 1, move: { frames: 1 }, enter: "fade", add });
+    const appear = (add: NodeSpec[]) => steps.push({ at: enterAt - 1, move: { frames: 1 }, enter: "fade", add });
     const mainEnter = s.attrs.enter ?? (s.cut ? "none" : undefined);
     if (addScaled.length) {
       if (s.attrs.enter === "none" || s.cut) appear(addScaled);
-      else steps.push({ at, enter: "fade", add: addScaled });
+      else steps.push({ at: enterAt, enter: "fade", add: addScaled });
     }
     if (addMain.length) {
       if (mainEnter === "none") appear(addMain);
-      else steps.push({ at, ...moved, ...(mainEnter ? { enter: mainEnter as Step["enter"] } : {}), add: addMain });
+      else steps.push({ at: enterAt, ...moved, ...(mainEnter ? { enter: mainEnter as Step["enter"] } : {}), add: addMain });
     }
     for (const [enter, list] of addOwn) {
       if (enter === "none") appear(list);
-      else steps.push({ at, ...ownMove, enter: enter as Step["enter"], add: list });
+      else steps.push({ at: enterAt, ...ownMove, enter: enter as Step["enter"], add: list });
     }
     if (arrive.length) appear(arrive);
-    if (addDraw.length) steps.push({ at, move: drawMove, enter: "draw", add: addDraw });
-    for (const [k, list] of pops) steps.push({ at, move: { frames: Math.max(ctx.theme.moveFrames, 10), ease: "spring", ...(k ? { stagger: Math.round(ctx.fps * 0.09) } : {}) }, enter: "pop", add: list });
-    if (addQuiet.length) steps.push({ at, enter: "none", add: addQuiet });
+    if (addDraw.length) steps.push({ at: enterAt, move: drawMove, enter: "draw", add: addDraw });
+    for (const [k, list] of pops) steps.push({ at: enterAt, move: { frames: Math.max(ctx.theme.moveFrames, 10), ease: "spring", ...(k ? { stagger: Math.round(ctx.fps * 0.09) } : {}) }, enter: "pop", add: list });
+    if (addQuiet.length) steps.push({ at: enterAt, enter: "none", add: addQuiet });
     const change: Step = { at: s.cut ? at - 1 : at, ...moved };
     if (Object.keys(set).length) change.set = set;
-    if (remove.length) change.remove = remove;
+    if (remove.length && !delay) change.remove = remove;
     if (change.set || change.remove) steps.push(change);
-    const acts: Step = { at, ...moved };
+    if (remove.length && delay) steps.push({ at, move: { frames: delay }, remove });
+    if (Object.keys(comeBack).length) steps.push({ at: s.cut ? at - 1 : enterAt, ...moved, set: comeBack });
+    const acts: Step = { at: enterAt, ...moved };
     if (play.length || arrivals.length) acts.play = [...arrivals, ...play];
     if (emit.length) acts.emit = emit;
     if (acts.play || acts.emit) steps.push(acts);
-    if (laterPlay.length) steps.push({ at, play: laterPlay });
+    if (laterPlay.length) steps.push({ at: enterAt, play: laterPlay });
     laterPlay = [];
   }
 
@@ -958,7 +1246,21 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     steps.push({ at: c.at, move: { frames: c.frames, ease: c.ease }, set: { camera: { ...c.view } } });
     const land = c.at + c.frames;
     const end = shots[i + 1]?.at ?? ctx.frames - 1;
-    if (c.drift && end > land + 1) steps.push({ at: land, move: { frames: end - land, ease: "linear" }, set: { camera: { zoom: Math.round(c.view.zoom * Math.max(0.1, 1 + (c.drift * (end - land)) / ctx.fps) * 10000) / 10000 } } });
+    if (!c.drift || end <= land + 1) return;
+    // The drift pushes in only as far as it can without cutting words that were whole when it landed.
+    const lists = seenAt.filter((x) => x.at >= c.at && x.at < end).map((x) => x.list);
+    const worse = (zoom: number) => lists.some((list) => cutBy({ ...c.view, zoom }, list).length > cutBy(c.view, list).length);
+    let zoom = c.view.zoom * Math.max(0.1, 1 + (c.drift * (end - land)) / ctx.fps);
+    if (c.drift > 0 && worse(zoom)) {
+      let [lo, hi] = [c.view.zoom, zoom];
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) / 2;
+        if (worse(mid)) hi = mid;
+        else lo = mid;
+      }
+      zoom = lo;
+    }
+    if (Math.abs(zoom - c.view.zoom) > 1e-4) steps.push({ at: land, move: { frames: end - land, ease: "linear" }, set: { camera: { zoom: Math.round(zoom * 10000) / 10000 } } });
   });
   // Program motion joins through the normal way behaviors do, so the core stays the only thing that writes a scene.
   const byMount = new Map<string, Track[]>();
@@ -970,7 +1272,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
 
   const sceneDoc: SceneDoc = { background: doc.background ?? "paper", steps };
   try {
-    const scene = settle(compile(sceneDoc, { ...ctx, kits: [...allKits, kitsMade] }));
+    const scene = settle(compile(sceneDoc, kitCtx));
     for (const f of [0, Math.floor(ctx.frames / 2), ctx.frames - 1]) evaluate(scene, f);
     stats.parts = scene.nodes.length;
     const truth = [...expansions.entries()].flatMap(([id, e]) => {
@@ -985,7 +1287,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     });
     return { problems: [], doc: sceneDoc, scene, ...(truth.length ? { truth } : {}), stats };
   } catch (e) {
-    return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], stats };
+    return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }
 }
 

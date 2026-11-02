@@ -1,3 +1,5 @@
+import { ROLES } from "../core/types.ts";
+
 // Reads the scene language into a plain tree. It never throws: every mistake becomes a problem with a line number and a
 // message exact enough for a model to fix it, and all of them are found in one pass.
 
@@ -41,28 +43,28 @@ export type Document = { background?: string; read?: Attrs; programs: ProgramDef
 
 export const SIZES = ["huge", "big", "normal", "small", "note"];
 export const SHAPES = ["box", "circle", "pill", "diamond", "dot", "tri"];
-export const MARKS = ["ring", "box", "underline", "cross", "brace", "highlight", "line", "arrow", "dots", "path"];
+export const MARKS = ["ring", "box", "underline", "cross", "brace", "highlight", "line", "arrow", "dots", "path", "pointer"];
 export const ENTERS = ["fade", "draw", "pop", "none", "slide", "slide-left", "rise", "slam"];
 const CONTAINERS = ["row", "stack", "grid", "ring", "chain", "free"];
 const PLACING = ["at", "into", "before", "after"];
 const LOOK = ["color", "fill", "stroke", "weight", "opacity", "rotate", "strokeWidth"];
 const ATTRS: Record<string, string[]> = {
-  row: ["gap", "align", "back", "enter", ...PLACING],
-  stack: ["gap", "align", "back", "enter", ...PLACING],
-  grid: ["cols", "gap", "back", "enter", ...PLACING],
-  ring: ["size", "arrows", "enter", ...PLACING],
-  chain: ["dir", "gap", "enter", ...PLACING],
-  free: ["w", "h", "enter", ...PLACING],
-  atoms: ["gap", "enter", ...PLACING, ...LOOK],
-  text: ["size", "w", "font", "align", "enter", ...PLACING, ...LOOK],
-  code: ["size", "enter", ...PLACING],
+  row: ["gap", "align", "back", "role", "enter", ...PLACING],
+  stack: ["gap", "align", "back", "role", "enter", ...PLACING],
+  grid: ["cols", "gap", "back", "role", "enter", ...PLACING],
+  ring: ["size", "arrows", "role", "enter", ...PLACING],
+  chain: ["dir", "gap", "role", "enter", ...PLACING],
+  free: ["w", "h", "role", "enter", ...PLACING],
+  atoms: ["gap", "role", "enter", ...PLACING, ...LOOK],
+  text: ["size", "w", "font", "align", "role", "enter", ...PLACING, ...LOOK],
+  code: ["size", "role", "enter", ...PLACING],
   image: ["asset", "w", "h", "frame", "enter", "rotate", ...PLACING, "opacity"],
   graph: ["w", "h", "radius", ...PLACING],
-  shape: ["w", "h", "size", "frame", "enter", ...PLACING, ...LOOK],
+  shape: ["w", "h", "size", "frame", "role", "enter", ...PLACING, ...LOOK],
   space: ["h", ...PLACING],
-  arrow: ["id", "bend", "color", "strokeWidth", "both"],
-  mark: ["id", "color", "strokeWidth", "side", "at"],
-  tag: ["id", "side", "color", "size", "at", "back"],
+  arrow: ["id", "bend", "color", "strokeWidth", "both", "role"],
+  mark: ["id", "color", "strokeWidth", "side", "at", "role"],
+  tag: ["id", "side", "color", "size", "at", "back", "role"],
   camera: ["at", "zoom", "frames", "ease", "drift"],
   light: ["color"],
   dim: ["amount"],
@@ -144,6 +146,7 @@ function split(toks: string[], allowed: string[] | null, what: string, fail: Fai
       continue;
     }
     if (allowed && !allowed.includes(p[0])) fail(`${what} has no setting "${p[0]}".${suggest(p[0], allowed)} It takes: ${allowed.join(", ")}.`);
+    else if (p[0] === "role" && !(ROLES as readonly string[]).includes(p[1])) fail(`role=${p[1]} is not a role.${suggest(p[1], ROLES)} Roles: ${ROLES.join(", ")}.`);
     attrs[p[0]] = p[1];
   }
   return { plain, attrs };
@@ -432,6 +435,8 @@ function command(head: string, toks: string[], line: number, fail: Fail, state: 
     const targets = targetList(words.slice(1), fail);
     if (!targets.length) fail(`mark ${shape} needs something to mark, as in mark ${shape} a1`);
     if (attrs.at !== undefined && targets.length !== 1) fail(`mark with at= marks a place inside one thing, so it takes one id, as in mark ${shape} photo at=0.2,0.3,0.4,0.5`);
+    if (shape === "pointer" && attrs.at !== undefined) fail(`mark pointer points at a whole thing from one side, as in mark pointer a side=top; for a place inside a picture use mark arrow photo at=...`);
+    if (attrs.side !== undefined && !["top", "bottom", "left", "right"].includes(attrs.side)) fail(`side must be top, bottom, left or right.`);
     if (attrs.at === undefined && ["line", "arrow", "dots", "path"].includes(shape)) fail(`mark ${shape} needs at= with points inside the thing, as in mark ${shape} photo at=0.2,0.3,0.6,0.5`);
     const label = plain.find(isQuoted);
     return { do: "mark", line, shape, targets, attrs, ...(label ? { text: unquote(label) } : {}) };

@@ -156,13 +156,13 @@ test("a thing left over picture after picture is noted, and one that leaves with
   const ctx = { fps: 30, width: 1080, height: 1920, frames: 700, theme: themeFrom("whiteboard"), words };
   const assets = { a: "/a.png", b: "/b.png", c: "/c.png" };
   const opts = { ctx, words: words.map((w) => w.text), assets };
-  const stuck = `@0\nimage p1 asset=a w=1152 h=2048 frame=fill\ntext list "three reasons"\n@10 keep\ndrop p1\nimage p2 asset=b w=1152 h=2048 frame=fill\n@20 keep\ndrop p2\nimage p3 asset=c w=1152 h=2048 frame=fill\n`;
+  const stuck = `@0\nimage p1 asset=a w=1152 h=2048 frame=fill\ntext list "three reasons" role=caption\n@10 keep\ndrop p1\nimage p2 asset=b w=1152 h=2048 frame=fill\n@20 keep\ndrop p2\nimage p3 asset=c w=1152 h=2048 frame=fill\n`;
   const r = await build(stuck, opts);
   assert.deepEqual(r.problems, []);
   const notes = overPictures(stuck, r.scene!, 0, 600);
   assert.equal(notes.length, 1);
   assert.match(notes[0]!, /^list \(line 3\) stays over the full-frame pictures for \d+ s, across p1, p2, p3/);
-  const clean = `@0\nimage p1 asset=a w=1152 h=2048 frame=fill\ntext list "three reasons"\n@10\nimage p2 asset=b w=1152 h=2048 frame=fill\ntext about "about this one"\n@20\nimage p3 asset=c w=1152 h=2048 frame=fill\n`;
+  const clean = `@0\nimage p1 asset=a w=1152 h=2048 frame=fill\ntext list "three reasons" role=caption\n@10\nimage p2 asset=b w=1152 h=2048 frame=fill\ntext about "about this one" role=caption\n@20\nimage p3 asset=c w=1152 h=2048 frame=fill\n`;
   const r2 = await build(clean, opts);
   assert.deepEqual(r2.problems, []);
   assert.deepEqual(overPictures(clean, r2.scene!, 0, 600), []);

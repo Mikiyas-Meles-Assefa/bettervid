@@ -116,6 +116,7 @@ These find their own place and follow what they touch.
     mark cross a
     mark brace a,b "label"
     tag a "words" side=right
+    mark pointer a side=top                     a short arrow pointing at it, from the side with room
 
 An arrow from a thing to itself (`arrow a -> a "turns"`) circles around it.
 
@@ -163,7 +164,7 @@ The camera starts at rest, showing the frame as laid out. It keeps its view thro
 
 # Readable
 
-Nothing the engine places (tags, labels, the words of a graph or a program) is drawn smaller than the style's readable size; laid-out text that would come out smaller is reported, so put less on screen. `dim` and `focus` never fade the rest below a level that stays readable. A scene can change both for itself with a line before its first state: `read text=0.04 dim=0.5` (text is the smallest text as a share of the frame's width; dim is the lowest opacity).
+Nothing the engine places (tags, labels, the words of a graph or a program) is drawn smaller than the style's readable size; laid-out text that would come out smaller is reported, so put less on screen. `dim` and `focus` never fade the rest below a level that stays readable. A scene can change both for itself with a line before its first state: `read text=0.04 dim=0.5` (text is the smallest text as a share of the frame's width; dim is the lowest opacity). Every word is checked against what is behind it: a color that does not stand out from its panel, shape or the surface is reported (with no color, the engine picks one that reads), words straight on a photo need a card, words never sit on other words or on pictures, and a camera that would cut words at the frame's edge or put them under the captions is reported. Sizes stay the same from a plain state through the keep states after it, so a growing table never shrinks; the state is laid out at the size that fits its fullest moment, and the free height is shared out so the frame is filled.
 
 # Programs
 
