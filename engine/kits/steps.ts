@@ -140,10 +140,22 @@ export function stepList(steps: StoryStep[]): string {
   return shown.length > 40 ? `${shown.slice(0, 36).join("; ")}; ... ${shown.slice(-3).join("; ")}` : shown.join("; ");
 }
 
+// How fast a stretch of steps plays. `each` is the time a step gets when nothing else says; `least` is the shortest
+// time in which a step at that pace can still be watched, so a stretch squeezed below it is refused; `move` is how long
+// one change takes. In seconds.
+export const PACES = {
+  slow: { each: 1.8, least: 1.1, move: 0.8 },
+  normal: { each: 0.8, least: 0.4, move: 0.45 },
+  fast: { each: 0.3, least: 0.12, move: 0.22 },
+} as const;
+export type Pace = keyof typeof PACES;
+
 // Plays a story, or part of it. Steps count from 1.
 //   at=@12,@15,...   one spoken moment per step played
 //   until=@40        spread the steps evenly from now until then
 //   each=20          frames between steps (the default)
+//   pace=slow        slow, normal or fast: the time each step gets, unless at= or until= place them; with them, the
+//                    least time a step may have, so a stretch that cannot fit its steps at that pace is an error
 //   from=3 to=5      only these steps; from=3 first jumps, in no time, to how things stand after step 2
 //   frames=24        the longest any one change takes
 export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
@@ -159,22 +171,39 @@ export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
   const done = Number(tools.value(target, "played", start) ?? 0);
   if (from <= done) throw new Error(`${target} already played steps 1 to ${done} before this moment, so this play must start at from=${done + 1}${done < n ? "" : ", but there are no steps left"}. Its steps: ${stepList(steps)}`);
   const count = to - from + 1;
-  const longest = Number(args.frames ?? Math.round(ctx.theme.moveFrames * 1.2));
+  const paceName = args.pace === undefined ? undefined : String(args.pace);
+  if (paceName !== undefined && !(paceName in PACES)) throw new Error(`pace must be slow, normal or fast, not ${paceName}`);
+  const pace = paceName ? PACES[paceName as Pace] : undefined;
+  const longest = Number(args.frames ?? (pace ? Math.max(4, Math.round(pace.move * ctx.fps)) : Math.round(ctx.theme.moveFrames * 1.2)));
+  const least = pace ? Math.max(2, Math.round(pace.least * ctx.fps)) : 2;
+  const seconds = (f: number) => `${(f / ctx.fps).toFixed(1)} s`;
+  // A stretch too short for its steps is refused with what would fit, so a writer can play fewer, go faster, or say that
+  // the time it was given is too short.
+  const tooShort = (room: number, where: string) => {
+    const fit = Math.max(0, Math.floor(room / least));
+    const faster = paceName === "slow" ? " or pace=normal" : paceName === "normal" ? " or pace=fast" : "";
+    return new Error(`${target} plays ${count} steps (${from} to ${to})${paceName ? ` at pace=${paceName}` : ""}, which needs at least ${least} frames a step (${seconds(least * count)} in all), but ${where} leaves ${room} frames (${seconds(room)}). ${fit ? `At this pace ${fit} step${fit > 1 ? "s" : ""} fit${fit > 1 ? "" : "s"} (to=${from + fit - 1}); play the rest in a later stretch${faster}` : `Not one step fits; give these steps a longer stretch${faster}`}. If the time is a hold the direction gave and the steps must play there at this pace, the hold is too short: keep what fits and write a line \`# needs HOLD ${Math.ceil((least * count) / ctx.fps)}s: why\` so the hold can be made longer.`);
+  };
   let times: number[];
   if (args.at !== undefined) {
     times = moments(args.at, ctx);
     if (times.length !== count) throw new Error(`${target} plays ${count} steps (${from} to ${to}) but at= gives ${times.length} moments. Give one per step, or use until=@N to spread them. Its steps: ${stepList(steps)}`);
     if (times.some((t, i) => i > 0 && t < times[i - 1]!)) throw new Error(`the moments in at= must not go back in time`);
     if (times[0]! < start) throw new Error(`the first moment in at= comes before the state that plays it`);
+    const tight = times.findIndex((t, i) => i > 0 && t - times[i - 1]! < least);
+    if (pace && tight > 0) throw new Error(`${target} plays step ${from + tight - 1} at frame ${times[tight - 1]} and step ${from + tight} at frame ${times[tight]}, only ${times[tight]! - times[tight - 1]!} frames apart, but pace=${paceName} needs at least ${least} frames a step. Space those moments further apart, or choose a faster pace.`);
   } else if (args.until !== undefined) {
     const end = Number(args.until);
     if (!(end > start)) throw new Error(`until= must come after the state that plays the steps`);
+    if ((end - start) / count < least) throw tooShort(end - start, "until=");
     const gap = (end - start) / count;
     times = Array.from({ length: count }, (_, i) => Math.round(start + gap * i));
   } else {
-    const each = Number(args.each ?? Math.round(ctx.theme.moveFrames * 1.5));
+    const each = Number(args.each ?? (pace ? Math.round(pace.each * ctx.fps) : Math.round(ctx.theme.moveFrames * 1.5)));
     if (!(each >= 1)) throw new Error(`each= must be at least 1 frame`);
+    if (pace && each < least) throw new Error(`each=${each} is quicker than pace=${paceName} allows (${least} frames a step). Give each= at least ${least}, or a faster pace.`);
     times = Array.from({ length: count }, (_, i) => start + Math.round(each * i));
+    if (times.at(-1)! >= ctx.frames) throw tooShort(Math.max(0, ctx.frames - start), "the end of the video");
   }
 
   const tracks: Track[] = [];
@@ -214,7 +243,7 @@ export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
 };
 
 // The one behavior every truth kit adds, with the one line that teaches it.
-export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. A tall one such as trace fills more of the screen with `h=1400`";
+export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. `pace=slow|normal|fast` sets how long each step takes and how long its moves last; with `until=` or `at=` it is the least time a step may have, and a stretch too short for its steps at that pace is an error that says how many fit. A demonstration in phases is one `do steps` per phase: `do steps s from=1 to=2 pace=slow until=@h1`, then `do steps s from=3 to=9 pace=fast until=@40`. To show the same process again (a replay, or the same input run beside it), make a second thing with `replay=ID`, which takes the first one's input, and play its steps. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. A tall one such as trace fills more of the screen with `h=1400`";
 
 // ---------- Layout helpers shared by the kits ----------
 

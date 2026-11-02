@@ -8,6 +8,8 @@ You never give pixel positions. You say what is on screen and how it is arranged
 
 A scene is a list of states. `@N` starts a state at spoken word N. `@N+5` is 5 frames after that word, `@N-5` is 5 frames before it. The video runs at {{fps}} frames a second on a {{width}} by {{height}} canvas.
 
+Where the voice falls silent for a hold, the hold has a name, and its start and end are moments too: `@h2` is when the silence begins, `@h2.end` when the voice comes back, and `@h2+30` or `@h2.end-10` count frames from them. They work wherever a moment does: a state, `until=`, `at=`.
+
 There is no limit on states: a scene can have hundreds, and change on any word. Below `@N`, list what is on screen, top to bottom.
 
 - A plain state is the whole screen at that moment. Whatever you do not list leaves.
@@ -15,6 +17,8 @@ There is no limit on states: a scene can have hundreds, and change on any word. 
 - A thing keeps its id across states. Same id means the viewer sees that same thing travel, resize or change. A new id means something new. Ids are short: letters, digits, `_`, `-`.
 
 State settings: `enter=fade|draw|pop|none` for how new things arrive, `move=FRAMES` for how long changes take, `ease={{eases}}`. Example: `@30 keep enter=pop move=20 ease=spring`
+
+`withhold a,b until=@N`, on a line of its own anywhere in the scene, keeps those things off screen until that moment: the build refuses any frame that shows them, or anything inside them, earlier. `withhold none until=@N` says the scene shows nothing of what is held back.
 
 `@N cut` changes everything on that frame, as a film cuts: what leaves is gone, what arrives is there, with no fades. It works with `keep` too.
 
@@ -231,6 +235,12 @@ What the language can do is above. This is what tends to make it work on a phone
 **One frame, one thought.** A phone screen holds the main thing and about three short lines of words. More sentences than that are not read while the voice goes on; give each its own state as the words reach it, and drop what the words have left. An ending is one takeaway, said large, not a summary of everything. The opposite fails too: one small thing in an empty frame looks unfinished, so make the main thing big enough to fill its space.
 
 **Tempo follows understanding.** The first time a process happens, give each step its own state on the words that say it, slow enough to watch. When the words say it happens again the same way, let it run faster, several steps under one phrase, and then show the whole. Build a table, list or diagram as the words reach each part (a column, a row, a branch) rather than all at once, and keep it in view while later steps use it. Show a result after the work that produces it, not before.
+
+**A silence is for looking.** When the voice stops for a hold, the viewer's whole attention moves to the picture, so the picture has to keep working: a step plays, a part lights, a question waits on screen for the answer. An empty pause teaches nothing, and a busy one teaches nothing either: during a hold nothing else moves, arrives or lights up, so the one thing the hold is about has the eye to itself. A prediction hold shows what the viewer is asked to guess and withholds the answer until the voice gives it.
+
+**One thing moves.** The eye goes to what moves, lights up or changes, before it reads anything. At each moment the thing the words are about should be the only thing that moves or lights; anything else that pulses, drifts or arrives at the same time competes with it and wins as often as it loses.
+
+**Let the computed thing show the process.** A demonstration of something that can be computed is clearest when the thing that computes it plays it: each step is right, its parts are where the words point, and what it shows is true at every moment. Writing state words beside hand-drawn copies (that a list is done, that two halves are ready, that a value is the answer) risks a label that says one thing while the picture shows another, and the viewer believes the picture. Point at the computed parts with light, tags and marks, and attach a word of state only once the step that makes it true has played. Slow first steps, a hold that plays one step, fast later steps and a replay beside the finished result are all the same thing played in phases.
 
 # Example of the form, on an unrelated topic
 

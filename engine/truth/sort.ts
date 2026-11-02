@@ -10,13 +10,16 @@ export type SortEvent =
   | TruthEvent<{ type: "swap"; i: number; j: number }>
   | TruthEvent<{ type: "pivot"; i: number }> // quick: the value everything in this range is compared with
   | TruthEvent<{ type: "min"; i: number }> // selection: the smallest seen so far in this pass
+  | TruthEvent<{ type: "divide"; lo: number; mid: number; hi: number }> // merge: a run is cut in two, lo..mid and mid+1..hi, before either is sorted
   | TruthEvent<{ type: "split"; lo: number; mid: number; hi: number }> // merge: two sorted runs about to be merged
   | TruthEvent<{ type: "take"; from: number; to: number }> // merge: the value at `from` goes to slot `to` of the merged run, below
   | TruthEvent<{ type: "lift"; lo: number; hi: number }> // merge: the merged run goes back up in place
   | TruthEvent<{ type: "sorted"; i: number[] }> // these places hold their final value
   | TruthEvent<{ type: "done"; order: number[]; values: number[] }>; // order[k] is the id at position k
 
-export function sort(values: number[], algo: SortName): SortEvent[] {
+// `levels` (merge only): every run is cut first, level by level, and then the runs are merged level by level from the
+// smallest, which is the same merges as the recursion makes, in the order a person working by hand would do them.
+export function sort(values: number[], algo: SortName, order: "calls" | "levels" = "calls"): SortEvent[] {
   if (!values.length) throw new Error("there is nothing to sort");
   if (values.some((v) => typeof v !== "number" || !Number.isFinite(v))) throw new Error(`sort data must be numbers, as in [5,2,8,1]`);
   const a = [...values];
@@ -89,11 +92,7 @@ export function sort(values: number[], algo: SortName): SortEvent[] {
     };
     quick(0, n - 1);
   } else if (algo === "merge") {
-    const merge = (lo: number, hi: number) => {
-      if (lo >= hi) return;
-      const mid = Math.floor((lo + hi) / 2);
-      merge(lo, mid);
-      merge(mid + 1, hi);
+    const join = (lo: number, mid: number, hi: number) => {
       log.push({ type: "split", lo, mid, hi });
       const [va, vi] = [a.slice(lo, hi + 1), ids.slice(lo, hi + 1)];
       const out: number[] = [];
@@ -113,7 +112,25 @@ export function sort(values: number[], algo: SortName): SortEvent[] {
       });
       log.push({ type: "lift", lo, hi });
     };
-    merge(0, n - 1);
+    const merge = (lo: number, hi: number) => {
+      if (lo >= hi) return;
+      const mid = Math.floor((lo + hi) / 2);
+      log.push({ type: "divide", lo, mid, hi });
+      merge(lo, mid);
+      merge(mid + 1, hi);
+      join(lo, mid, hi);
+    };
+    if (order === "levels") {
+      const levels: [number, number, number][][] = [];
+      for (let level = [[0, n - 1]] as [number, number][]; level.length; ) {
+        const runs = level.filter(([lo, hi]) => lo < hi).map(([lo, hi]) => [lo, Math.floor((lo + hi) / 2), hi] as [number, number, number]);
+        if (!runs.length) break;
+        levels.push(runs);
+        level = runs.flatMap(([lo, mid, hi]) => [[lo, mid], [mid + 1, hi]] as [number, number][]);
+      }
+      for (const runs of levels) for (const [lo, mid, hi] of runs) log.push({ type: "divide", lo, mid, hi });
+      for (const runs of [...levels].reverse()) for (const [lo, mid, hi] of runs) join(lo, mid, hi);
+    } else merge(0, n - 1);
     log.push({ type: "sorted", i: ids.map((_, k) => k) });
   } else throw new Error(`algo must be one of ${SORTS.join(", ")}, not ${algo}`);
   log.push({ type: "done", order: [...ids], values: [...a] });

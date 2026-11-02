@@ -130,7 +130,8 @@ test("a sort ends with every value in its sorted place", async () => {
     const order = data.map((v, i) => ({ v, x: xs[i]! })).sort((a, b) => a.x - b.x).map((o) => o.v);
     assert.deepEqual(order, [1, 2, 5, 8, 9], algo);
     for (let i = 1; i <= data.length; i++) assert.equal(at(s, end(s), sortPart.item("s", i)).y, 0, `${algo} back in the row`);
-    assert.equal(at(s, end(s), sortPart.shape("s", 1)).fill, "#ffff00", `${algo} marks finished places`);
+    assert.equal(at(s, end(s), sortPart.shape("s", 1)).stroke, "#ffff00", `${algo} marks finished places`);
+    assert.equal(at(s, end(s), sortPart.value("s", 1)).color, "#ffff00", `${algo} keeps finished values readable`);
   }
 });
 
