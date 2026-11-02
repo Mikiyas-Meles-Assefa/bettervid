@@ -7,7 +7,8 @@ import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
 import type { Resolved } from "../core/types.ts";
 import { graphKit } from "../kits/graph.ts";
-import { storyOf, truthSteps } from "../kits/steps.ts";
+import { stepSchedule, storyOf, truthSteps } from "../kits/steps.ts";
+import { stepAreas, textSize, wordsAfter, type Area } from "./follow.ts";
 import { estimate, graphPositions, layout, TEXT_SIZE, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
 import { contrast } from "../style/color.ts";
@@ -209,7 +210,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
         attrs = { ...input, ...own };
       }
       for (const [k, v] of Object.entries(attrs)) {
-        if (["at", "into", "before", "after"].includes(k)) continue;
+        if (["at", "into", "before", "after", "follow"].includes(k)) continue;
         try {
           // A lone backslash is kept as written, so math such as \frac needs no doubling; a doubled one still works.
           // Kits take the same size words as text, so `size=small` means what it means everywhere else.
@@ -500,6 +501,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   const labelsBefore = new Map<string, { box: Box; away: boolean; near?: Box }>();
   const seenAt: { at: number; list: Seen[] }[] = [];
   const heldAt: NonNullable<Scene["held"]> = [];
+  // For the camera that follows computed work: every `do steps` play, and the words and tags on screen in each state.
+  const follows: { at: number; target: string; args: Record<string, Value>; still: boolean; root: Props; line: number }[] = [];
+  const stateWords: { at: number; words: Seen[]; tags: Set<string> }[] = [];
 
   for (let index = 0; index < doc.states.length; index++) {
     const s = doc.states[index]!;
@@ -1667,11 +1671,110 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     if (play.length || arrivals.length) acts.play = [...arrivals, ...play];
     if (emit.length) acts.emit = emit;
     if (acts.play || acts.emit) steps.push(acts);
+    // A scene that moves the camera itself, or keeps it moved, keeps it: the camera only follows from rest.
+    for (const p of play) if (p.behavior === "steps" && typeof parts.get(p.target)?.props.truth === "string") follows.push({ at: enterAt, target: p.target, args: p.args ?? {}, still: !!cam || view !== REST, root: parts.get(p.target)!.props, line: s.line });
+    // Tags, and words that arrive in this state (a question put during a hold), must stay in view whatever it follows.
+    stateWords.push({ at, words: keyWords, tags: new Set([...drawnWords.map((w) => w.id), ...newWords]) });
     if (laterPlay.length) steps.push({ at: enterAt, play: laterPlay });
     laterPlay = [];
   }
 
   if (problems.length) return { problems: dedupe(problems), stats };
+
+  // The camera follows computed work that would read small. A demonstration whose values come out smaller than about a
+  // tenth of the frame's width is shown whole when it starts, then the camera moves in on what its steps work on: on
+  // each step at pace=slow (a close look, which a hold gets too), and on all that a quicker stretch of steps works on,
+  // which is wider; once a stretch of steps ends, and at the end of the story, it pulls back to the whole. It never
+  // moves while the scene has moved the camera itself, and stops where the scene moves it next. Any view it takes holds
+  // every tag on screen whole and every line of words whole or wholly out of view; where that cannot be, it goes wider.
+  const sceneShots = shots.map((x) => x.at);
+  const FOLLOW_SPAN: Record<string, number> = { slow: 0, normal: 1.2, fast: 1.8 };
+  const autoShots: typeof shots = [];
+  const lead = Math.round(ctx.fps * 0.15);
+  const glide = Math.max(ctx.theme.moveFrames, Math.round(ctx.fps * 0.5));
+  const frameView = (v: View): View => {
+    const [hw, hh] = [ctx.width / (2 * v.zoom), ctx.height / (2 * v.zoom)];
+    return { panX: round(Math.min(Math.max(v.panX, hw), ctx.width - hw)), panY: round(Math.min(Math.max(v.panY, hh), ctx.height - hh)), zoom: Math.round(v.zoom * 10000) / 10000 };
+  };
+  const inside = (b: Box, v: View) => {
+    const a = allowedIn(v);
+    return b.x - b.w / 2 >= a.x - a.w / 2 - 1 && b.x + b.w / 2 <= a.x + a.w / 2 + 1 && b.y - b.h / 2 >= a.y - a.h / 2 - 1 && b.y + b.h / 2 <= a.y + a.h / 2 + 1;
+  };
+  // The closest view, up to `most`, that shows the region whole, with the tags and the words just arrived, and leaves
+  // every other line of words whole or wholly out of view: centered on them, or moved just enough to clear a cut line.
+  const viewOn = (area: Box, most: number, from: number, to: number, own: Seen[] = []): View | undefined => {
+    const seen = stateWords.filter((w, i) => w.at < to && (stateWords[i + 1]?.at ?? Infinity) > from);
+    const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => w.tags.has(x.id)).map((x) => x.box))]);
+    // The kit's own words where its steps put them, too: a value half out of view is as unreadable as a cut line.
+    const cuts = (v: View) => [...seen.flatMap((w) => cutFrom(v, w.words, w.tags)), ...cutFrom(v, own)];
+    for (let z = Math.min(most, 0.94 * Math.min(safe.w / Math.max(1, r.w), safe.h / Math.max(1, r.h))); z >= 1.12; z *= 0.93) {
+      const base = frameView({ panX: r.x, panY: r.y - (safe.y - ctx.height / 2) / z, zoom: z });
+      // The view centered on them, else the nearest one around it whose edges fall between things rather than through them.
+      const f = frameIn(base);
+      const tries = Array.from({ length: 17 * 17 }, (_, i) => [((i % 17) - 8) / 16, (Math.floor(i / 17) - 8) / 16] as const)
+        .sort((p, q) => Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]))
+        .map(([dx, dy]) => frameView({ ...base, panX: base.panX + dx * f.w, panY: base.panY + dy * f.h }));
+      const v = tries.find((x) => inside(r, x) && !cuts(x).length);
+      if (v) return v;
+    }
+  };
+  for (let i = 0; i < follows.length; i++) {
+    const f = follows[i]!;
+    const item = kitItems.get(f.target);
+    const made = expansions.get(f.target);
+    if (f.still || !item || !made || item.attrs.follow === "no" || typeof f.root.truth !== "string" || typeof f.root.spec !== "string") continue;
+    const k = Number(f.root.scaleX ?? 1);
+    const font = (textSize(made.nodes) ?? 0) * k;
+    // Large enough already: about a tenth of the frame's width, the size of a title.
+    const target = ctx.width * 0.09;
+    if (!font || font >= target * 0.9) continue;
+    let board: ReturnType<typeof storyOf>;
+    try {
+      board = storyOf(f.root.truth, f.target, f.root.spec, kitCtx);
+    } catch {
+      continue;
+    }
+    const plan = stepSchedule(f.args, f.at, board.steps.length, ctx);
+    if (!plan.times.length) continue;
+    const toScene = (a: Area): Box => ({ x: Number(f.root.x ?? 0) + a.x * k, y: Number(f.root.y ?? 0) + a.y * k, w: a.w * k, h: a.h * k });
+    const areas = stepAreas(board, made.nodes, plan.from, plan.to).map((a) => (a ? toScene(a) : undefined));
+    const stop = Math.min(...sceneShots.filter((t) => t > f.at), Infinity);
+    const end = plan.times.at(-1)! + plan.longest;
+    const most = Math.min(3, target / font);
+    const views: { at: number; view: View; until: number }[] = [];
+    // Steps are taken together in spans of at least this long, so the camera moves at a pace a viewer can follow: every
+    // step when slow, a few at a time when quicker, which also frames them wider.
+    const span = (FOLLOW_SPAN[plan.pace ?? "normal"] ?? 1.2) * ctx.fps;
+    const groups: number[][] = [];
+    plan.times.forEach((t, j) => {
+      const g = groups.at(-1);
+      if (g && t - plan.times[g[0]!]! < span) g.push(j);
+      else groups.push([j]);
+    });
+    groups.forEach((g, n) => {
+      const list = g.map((j) => areas[j]).filter((a): a is Box => !!a);
+      const at = plan.times[g[0]!]!;
+      const until = groups[n + 1] ? plan.times[groups[n + 1]![0]!]! : end;
+      const own = [plan.from + g[0]! - 1, plan.from + g.at(-1)!].flatMap((step) => wordsAfter(board, made.nodes, step)).map((w): Seen => ({ id: w.id, box: toScene(w.box), line: f.line, what: "text", text: w.text, laid: false, slot: f.target }));
+      const v = list.length ? viewOn(union(list), most, at, until, own) : undefined;
+      views.push({ at: Math.max(f.at, at - lead), view: v ?? REST, until });
+    });
+    if (!views.some((v) => v.view !== REST)) continue;
+    for (const v of views) {
+      if (v.at >= stop) break;
+      const last = autoShots.at(-1);
+      if (!last && v.view === REST) continue;
+      if (last && Math.abs(last.view.zoom - v.view.zoom) < 0.01 && Math.abs(last.view.panX - v.view.panX) < 4 && Math.abs(last.view.panY - v.view.panY) < 4) continue;
+      autoShots.push({ at: v.at, frames: Math.max(4, Math.min(glide, v.until - v.at)), ease: "smooth", view: v.view, drift: 0, line: f.line, zoomBy: 1 });
+    }
+    // Back to the whole when this stretch of steps is over, unless more steps follow straight on.
+    const back = end + Math.round(ctx.fps * 0.3);
+    const next = follows[i + 1];
+    const onward = next && !next.still && next.target === f.target && next.at <= back + ctx.fps;
+    if (!onward && back < stop && back < ctx.frames - 1) autoShots.push({ at: back, frames: glide, ease: "smooth", view: REST, drift: 0, line: f.line, zoomBy: 1 });
+  }
+  shots.push(...autoShots);
+  shots.sort((a, b) => a.at - b.at);
 
   // The camera's moves. After it lands it may keep drifting closer until its next move, as a slow push-in.
   shots.forEach((c, i) => {

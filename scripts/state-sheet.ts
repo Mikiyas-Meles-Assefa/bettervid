@@ -30,7 +30,9 @@ const ctx = opts.ctx;
 const starts = parse(plainMoments(source, opts), kitKinds()).doc.states.map((s) => when(s.at, ctx));
 const first = Math.min(...starts);
 const end = Math.max(...starts) + ctx.fps * 3;
-const frames = lookFrames(starts, first, Math.min(ctx.frames - 1, end), ctx.fps, 40).filter((m) => m.why === "settled").map((m) => m.frame);
+// EVERY=seconds shows a frame that often instead, to see what moves within states (the camera following steps).
+const every = Number(process.env.EVERY ?? 0) * ctx.fps;
+const frames = every > 0 ? Array.from({ length: Math.floor((Math.min(ctx.frames - 1, end) - first) / every) + 1 }, (_, i) => Math.round(first + i * every)) : lookFrames(starts, first, Math.min(ctx.frames - 1, end), ctx.fps, 40).filter((m) => m.why === "settled").map((m) => m.frame);
 const files = await renderStills(r.scene, ctx.theme, frames, resolve(out), 0.3);
 await closeRenderer();
 const read = readOf(ctx.theme);

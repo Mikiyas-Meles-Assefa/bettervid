@@ -150,6 +150,25 @@ export const PACES = {
 } as const;
 export type Pace = keyof typeof PACES;
 
+// When the steps of one `do steps` play, as playSteps places them (it also checks them; this does not): which steps,
+// the frame each begins, and the longest one change takes. For the camera, which follows what the steps work on.
+export function stepSchedule(args: Record<string, Value>, start: number, n: number, ctx: CompileContext): { from: number; to: number; times: number[]; longest: number; pace?: Pace } {
+  const from = typeof args.from === "number" ? args.from : 1;
+  const to = typeof args.to === "number" ? args.to : n;
+  const count = Math.max(0, to - from + 1);
+  const paceName = args.pace === undefined ? undefined : String(args.pace);
+  const pace = paceName && paceName in PACES ? PACES[paceName as Pace] : undefined;
+  const longest = Number(args.frames ?? (pace ? Math.max(4, Math.round(pace.move * ctx.fps)) : Math.round(ctx.theme.moveFrames * 1.2)));
+  let times: number[];
+  if (args.at !== undefined) times = moments(args.at, ctx);
+  else if (args.until !== undefined) times = Array.from({ length: count }, (_, i) => Math.round(start + ((Number(args.until) - start) / count) * i));
+  else {
+    const each = Number(args.each ?? (pace ? Math.round(pace.each * ctx.fps) : Math.round(ctx.theme.moveFrames * 1.5)));
+    times = Array.from({ length: count }, (_, i) => start + Math.round(each * i));
+  }
+  return { from, to, times, longest, ...(pace ? { pace: paceName as Pace } : {}) };
+}
+
 // Plays a story, or part of it. Steps count from 1.
 //   at=@12,@15,...   one spoken moment per step played
 //   until=@40        spread the steps evenly from now until then
