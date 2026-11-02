@@ -6,6 +6,7 @@ import type { CompileContext, Ease, Kit, NodeSpec, Props, Scene, SceneDoc, Step,
 import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
 import { graphKit } from "../kits/graph.ts";
+import { truthSteps } from "../kits/steps.ts";
 import { estimate, graphPositions, layout, readableOn, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import type { LibraryEntry } from "./library.ts";
 import { checkOutput } from "./program.ts";
@@ -21,7 +22,8 @@ export type BuildOptions = {
   seed?: number;
   measure?: Measure;
 };
-export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; stats: { states: number; parts: number; programs: number; programMs: number } };
+// `truth`: each thing a truth kit computed, with its numbered steps, so a writer can bind steps to the words that speak them.
+export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; truth?: { id: string; kind: string; steps: string[] }[]; stats: { states: number; parts: number; programs: number; programMs: number } };
 type Live = { kind: string; parent?: string; props: Props; alive: boolean; line: number };
 
 const STATE_ENTERS = ["fade", "draw", "pop", "none"];
@@ -86,8 +88,10 @@ function bounds(nodes: NodeSpec[]): { x: number; y: number; w: number; h: number
     if (Array.isArray(p)) p.forEach((v, i) => (i % 2 ? ys : xs).push(v + (i % 2 ? y : x)));
     else if (n.kind === "text") {
       const size = Number(n.props?.size ?? 60);
-      const w = estimate(String(n.props?.text ?? ""), size);
-      xs.push(x - w / 2, x + w / 2);
+      const w = estimate(String(n.props?.text ?? ""), size, n.props?.font && /mono|courier|menlo/i.test(String(n.props.font)) ? "mono" : undefined);
+      // Text grows from where its anchor says: from its x to the right, to the left of it, or around it.
+      const from = n.props?.anchor === "start" ? x : n.props?.anchor === "end" ? x - w : x - w / 2;
+      xs.push(from, from + w);
       ys.push(y - size / 2, y + size / 2);
     }
   }
@@ -969,7 +973,17 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const scene = settle(compile(sceneDoc, { ...ctx, kits: [...allKits, kitsMade] }));
     for (const f of [0, Math.floor(ctx.frames / 2), ctx.frames - 1]) evaluate(scene, f);
     stats.parts = scene.nodes.length;
-    return { problems: [], doc: sceneDoc, scene, stats };
+    const truth = [...expansions.entries()].flatMap(([id, e]) => {
+      const root = e.nodes.find((n) => n.id === id);
+      const kind = root?.props?.truth;
+      if (typeof kind !== "string" || typeof root?.props?.spec !== "string") return [];
+      try {
+        return [{ id, kind, steps: truthSteps(kind, id, JSON.parse(root.props.spec), ctx) }];
+      } catch {
+        return [];
+      }
+    });
+    return { problems: [], doc: sceneDoc, scene, ...(truth.length ? { truth } : {}), stats };
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], stats };
   }

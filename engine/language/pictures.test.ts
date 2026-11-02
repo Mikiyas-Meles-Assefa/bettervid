@@ -5,6 +5,8 @@ import { test } from "node:test";
 import { evaluate } from "../core/evaluate.ts";
 import type { CompileContext, Resolved, Scene } from "../core/types.ts";
 import { build, formatProblems } from "./build.ts";
+import { author } from "./author.ts";
+import { KITS } from "../kits/index.ts";
 
 const words = Array.from({ length: 60 }, (_, i) => ({ start: i * 0.5 }));
 const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: 900, words, theme: { colors: { ink: "#111111", accent: "#ff0000", paper: "#ffffff", highlight: "#ffff00" }, fonts: { title: "a", body: "b" }, moveFrames: 10, ease: "linear" } };
@@ -86,4 +88,18 @@ test("an arrow from a thing to itself turns around it", async () => {
   const s = await ok(`@0\ncircle m "moon"\narrow m -> m "spin"\n`);
   const pts = at(s, 60, "arrow.m.m")!.props.points as number[];
   assert.ok(Math.max(...pts.filter((_, i) => i % 2 === 0)) > (at(s, 60, "m")!.props.x as number) + 50);
+});
+
+test("a build lists the steps each truth thing computed, and authoring sends them back once to bind them", async () => {
+  const kctx = { ...ctx, kits: KITS };
+  const scene = `@0\nsort s data=[3,1,2]\n@2 keep\ndo steps s until=@20\n`;
+  const r = await build(scene, { ctx: kctx });
+  assert.deepEqual(r.problems, [], formatProblems(r.problems));
+  assert.equal(r.truth?.[0]?.id, "s");
+  assert.ok(r.truth![0]!.steps.length > 1);
+  const asked: string[] = [];
+  const out = await author({ topic: "x", words: words.map((w, i) => ({ text: `w${i}`, start: w.start })) }, { ctx: kctx, ask: async (_s, user) => (asked.push(user), { value: scene, usd: 0 }) });
+  assert.ok(out.ok);
+  assert.equal(asked.length, 2);
+  assert.match(asked[1]!, /really compute/);
 });
