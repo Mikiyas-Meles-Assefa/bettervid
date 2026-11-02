@@ -7,9 +7,10 @@ import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
 import { graphKit } from "../kits/graph.ts";
 import { truthSteps } from "../kits/steps.ts";
-import { estimate, graphPositions, layout, MIN_CONTRAST, readableOn, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
+import { estimate, graphPositions, layout, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
 import { contrast } from "../style/color.ts";
+import { dimColor } from "../style/design.ts";
 import type { LibraryEntry } from "./library.ts";
 import { checkOutput } from "./program.ts";
 import { runProgram, type RunResult } from "./sandbox.ts";
@@ -45,7 +46,7 @@ const REFUSED_SET = new Set(["src", "href", "font", "points", "constructor", "pr
 const RESERVED_RUN = new Set(["w", "h", "until", "on", "seed", "at", "into", "before", "after"]);
 const MARK_PAD = 14;
 // What a property goes back to when nothing sets it any more. Others keep their last value.
-const AT_REST: Record<string, number> = { opacity: 1, scaleX: 1, scaleY: 1, rotate: 0, skew: 0, z: 0, layer: 0, glow: 0, blur: 0, brightness: 1, saturation: 1, contrast: 1, hue: 0, tintAmount: 0, shadowX: 0, shadowY: 0, shadowBlur: 0, shadowOpacity: 0 };
+const AT_REST: Record<string, number> = { glowLevel: 1, strokeWidth: 6, opacity: 1, scaleX: 1, scaleY: 1, rotate: 0, skew: 0, z: 0, layer: 0, glow: 0, blur: 0, brightness: 1, saturation: 1, contrast: 1, hue: 0, tintAmount: 0, shadowX: 0, shadowY: 0, shadowBlur: 0, shadowOpacity: 0 };
 // Words made only of emoji and symbols, with no letters or digits: a picture in the system's emoji font, not words.
 const EMOJI_ONLY = /^[\p{Extended_Pictographic}\p{So}\u2190-\u21FF\u2B00-\u2BFF\uFE0F\u200D\s]+$/u;
 // A box on screen that the camera and the collision checks care about.
@@ -125,6 +126,13 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     if (v !== undefined && v !== "none" && !colors.has(v)) report(line, `"${v}" is not a color here. Use one of: ${[...colors].join(", ")}.${suggest(v, colors)}`);
   };
   colorOk(doc.background, 1);
+  // With a design layer, words may only sit on the surfaces the style lists, so a card of another color is refused
+  // with what to use instead. back=paper is the style's panel.
+  const design = ctx.theme.design;
+  const backOk = (v: string | undefined, line: number) => {
+    if (!design || v === undefined || v === "none" || v === "paper" || !colors.has(v) || design.surfaces[v]) return;
+    report(line, `back=${v} is not a surface words sit on in this style. Use role=panel for a card (or role=caption for words over a picture), and the style draws it; or back= one of: ${Object.keys(design.surfaces).join(", ")}.`);
+  };
   const words = ctx.words ?? [];
   const momentOf = (t: { word: number; offset: number }, line: number) => {
     if (t.word >= words.length) {
@@ -437,6 +445,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     });
     walkAll(board, (i) => {
       for (const k of ["color", "fill", "stroke", "back"]) colorOk(i.attrs[k], i.line);
+      backOk(i.attrs.back, i.line);
       if (i.attrs.enter && !ENTERS.includes(i.attrs.enter)) report(i.line, `enter must be one of ${ENTERS.join(", ")}.${suggest(i.attrs.enter, ENTERS)}`);
       if (i.kind === "image" && !opts.assets?.[i.attrs.asset ?? ""]) report(i.line, `The image ${i.id} needs asset=NAME with a name from the assets list.${opts.assets ? ` Available: ${Object.keys(opts.assets).join(", ") || "none"}.` : " This scene has no assets."}`);
     });
@@ -445,7 +454,14 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     problems.push(...laid.problems.slice(0, 6).map((p) => ({ ...p, line: p.line || s.line })));
 
     // Parts for this state: laid-out parts, then kits and programs in their slots, then everything attached to them.
-    const parts = new Map<string, Part>(laid.parts.map((p) => [p.id, p.kind === "image" ? { ...p, props: { ...p.props, src: opts.assets?.[String(p.props.src)] ?? "" } } : p]));
+    // A picture that may be see-through (a PNG, such as a cut-out) gets no mat: a border would fill in around its shape.
+    const seeThrough = (src: string) => /\.png($|\?)|^data:image\/png/i.test(src);
+    const parts = new Map<string, Part>(laid.parts.map((p) => {
+      if (p.kind !== "image") return [p.id, p];
+      const src = opts.assets?.[String(p.props.src)] ?? "";
+      const { border: _, borderWidth: __, ...rest } = p.props;
+      return [p.id, { ...p, props: { ...(seeThrough(src) ? rest : p.props), src } }];
+    }));
     const newPrograms: string[] = [];
     for (const slot of laid.slots) {
       const { item, box, scale } = slot;
@@ -603,22 +619,44 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const onPicture = (b: Box) => images.some((i) => hits(b, i) > 0.2 * b.w * b.h);
     // An attached thing's role, if it names one; marks and arrows take the style's pointer look when it has one.
     const roleOf = (attrs: Attrs, pointer = false) => (isRole(attrs.role) ? roleLook(ctx.theme, attrs.role) : pointer && styleHas(ctx.theme, "pointer") ? roleLook(ctx.theme, "pointer") : undefined);
-    const captionBack = roleLook(ctx.theme, "caption").back ?? "paper";
+    // The card under words that need one: the style's label card (design.elements.label.back), else the caption back.
+    const captionBack = design ? design.elements.label.back : roleLook(ctx.theme, "caption").back ?? "paper";
     const chipOf = (b: Box, attrs: Attrs) => (attrs.back === "none" ? undefined : attrs.back ?? roleOf(attrs)?.back ?? (onPicture(b) ? captionBack : undefined));
     const words = (id: string, line: number, text: string, at: { x: number; y: number }, size: number, attrs: Attrs, chip: string | undefined, parent?: string) => {
       // A pointer is drawn, not typed: an emoji comes out small, in the system's emoji font, and off the style.
       if (EMOJI_ONLY.test(text)) report(line, `"${text}" is only emoji or symbols. To point at something use mark pointer ID side=top (or an arrow); attached words are for words. If a picture of an emoji is really wanted, give it its own line of text at size big or larger.`);
-      const look = roleOf(attrs);
-      const w = env.measure(text, size);
-      if (chip) {
+      // Attached words are labels unless they name a role; with a design layer they take the role's look on the card.
+      const role = isRole(attrs.role) && attrs.role !== "panel" && attrs.role !== "pointer" ? attrs.role : "label";
+      const look = design ? roleLook(ctx.theme, role, chip) : roleOf(attrs);
+      const shown = look?.case === "upper" ? text.toUpperCase() : text;
+      const w = env.measure(shown, size);
+      const where = { x: round(at.x), y: round(at.y) };
+      let lean = chip ? -1.5 : 0;
+      let shift = 0;
+      if (chip && design && role === "caption" && !attrs.back) {
+        // A caption: the style's strip, with its rule, padding and lean.
+        const e = design.elements.caption;
+        const ruled = e.rule !== "none" && e.ruleWidth > 0;
+        const [pw, ph] = [w + size * e.pad * 2 + (ruled ? e.ruleWidth : 0), size * (1 + e.pad * 2)];
+        lean = e.rotate;
+        drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, rotate: lean, points: rect(pw, ph), closed: 1, fill: chip, stroke: e.edge === "none" ? "none" : e.edge, strokeWidth: 3, glowLevel: 0 } });
+        if (ruled) drawn.push({ id: `${id}.rule`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, rotate: lean, points: rect(e.ruleWidth, ph, -pw / 2 + e.ruleWidth / 2), closed: 1, fill: e.rule, stroke: "none" } });
+        shift = ruled ? e.ruleWidth / 2 : 0;
+      } else if (chip && design) {
+        // A label card: the style's label back, square and flat, as the style's specimen draws it.
+        drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, points: rect(w + size, size * 1.6), closed: 1, fill: chip, stroke: "none", glowLevel: 0 } });
+        lean = 0;
+      } else if (chip) {
         const [pw, ph] = [w + size * 0.9, size * 1.55];
-        drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { x: round(at.x), y: round(at.y), points: roundedBox(pw, ph, ph * 0.18).map(round), closed: 1, fill: chip, stroke: "none", rotate: -1.5, shadowY: round(size * 0.08), shadowBlur: round(size * 0.25), shadowOpacity: 0.35, shadowColor: "#000000" } });
+        drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, points: roundedBox(pw, ph, ph * 0.18).map(round), closed: 1, fill: chip, stroke: "none", rotate: -1.5, shadowY: round(size * 0.08), shadowBlur: round(size * 0.25), shadowOpacity: 0.35, shadowColor: "#000000" } });
       }
       const own = look?.color && (!chip || readability(ctx.theme, look.color, chip) >= MIN_CONTRAST) ? look.color : undefined;
       const color = attrs.color ?? own ?? (chip ? readableOn(chip, ctx.theme) : "ink");
       const font: Props = look?.font === "title" ? { font: ctx.theme.fonts.title } : look?.font === "mono" ? { font: ctx.theme.fonts.mono ?? "Menlo, monospace" } : {};
-      const shown = look?.case === "upper" ? text.toUpperCase() : text;
-      drawn.push({ id, kind: "text", line, ...(parent ? { parent } : {}), props: { x: round(at.x), y: round(at.y), text: shown, size: round(size), color, weight: look?.weight ?? 700, ...font, ...(chip ? { rotate: -1.5 } : {}) } });
+      const glow: Props = design ? { glowLevel: look?.glow ?? 0 } : {};
+      // A turned card turns its words with it, about the card's middle.
+      const [tx, ty] = [at.x + shift * Math.cos((lean * Math.PI) / 180), at.y + shift * Math.sin((lean * Math.PI) / 180)];
+      drawn.push({ id, kind: "text", line, ...(parent ? { parent } : {}), props: { x: round(tx), y: round(ty), text: shown, size: round(size), color, weight: look?.weight ?? 700, ...font, ...glow, ...(lean ? { rotate: lean } : {}) } });
       const holder = parent ? boxOf(parent) : undefined;
       const abs = holder ? { x: holder.x + at.x, y: holder.y + at.y } : at;
       drawnWords.push({ id, box: { x: abs.x, y: abs.y, w, h: size * 1.15 }, line, what: "text", text, laid: false, ...(chip ? { back: chip, chip: true } : {}), ...(parent ? { holder: parent } : {}) });
@@ -647,6 +685,18 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs) ?? (crowded ? captionBack : undefined));
       placedLabels.push({ box: best.b, line, id });
     };
+    // How arrows and marks are drawn: the pointer look (or the role named), at the style's pointer width, with its glow.
+    const pen = (attrs: Attrs, base?: number) => {
+      const look = roleOf(attrs, true);
+      return { color: attrs.color ?? look?.color ?? "ink", width: round((number(attrs.strokeWidth ?? "") ?? base ?? (design ? design.elements.pointer.width : 6)) * (look?.stroke ?? 1)), glow: (design ? { glowLevel: look?.glow ?? 0 } : {}) as Props };
+    };
+    // An arrowhead the style's way: open, solid, or none. `k` scales it, `color` fills a solid one.
+    const headOf = (color: string, k = 1): Props | undefined => {
+      const kind = design?.elements.pointer.head ?? "open";
+      if (kind === "none") return undefined;
+      const pts = [-26 * k, -16 * k, 0, 0, -26 * k, 16 * k].map(round);
+      return kind === "solid" ? { points: [...pts, pts[0]!, pts[1]!], closed: 1, fill: color } : { points: pts };
+    };
     const addLink = (id: string, a: Box, b: Box, line: number, head: boolean, attrs: Attrs, text?: string) => {
       if (a === b || (Math.abs(a.x - b.x) < 1 && Math.abs(a.y - b.y) < 1 && Math.abs(a.w - b.w) < 1)) {
         // From a thing to itself: a turn around it, as for something spinning or returning to where it began.
@@ -655,12 +705,12 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           const t = ((200 + (i / 30) * 280) * Math.PI) / 180;
           return [round(a.x + Math.cos(t) * rx), round(a.y + Math.sin(t) * ry)];
         }).flat();
-        const color = attrs.color ?? roleOf(attrs, true)?.color ?? "ink";
-        const width = (number(attrs.strokeWidth ?? "") ?? 6) * (roleOf(attrs, true)?.stroke ?? 1);
-        drawn.push({ id, kind: "path", line, props: { points: pts, stroke: color, strokeWidth: width, smooth: 1 } });
-        if (head) {
+        const { color, width, glow } = pen(attrs);
+        drawn.push({ id, kind: "path", line, props: { points: pts, stroke: color, strokeWidth: width, smooth: 1, ...glow } });
+        const shape = headOf(color);
+        if (head && shape) {
           const [px, py, qx, qy] = pts.slice(-4) as [number, number, number, number];
-          drawn.push({ id: `${id}.head`, kind: "path", line, props: { x: qx, y: qy, rotate: round((Math.atan2(qy - py, qx - px) * 180) / Math.PI), points: [-26, -16, 0, 0, -26, 16], stroke: color, strokeWidth: width } });
+          drawn.push({ id: `${id}.head`, kind: "path", line, props: { x: qx, y: qy, rotate: round((Math.atan2(qy - py, qx - px) * 180) / Math.PI), ...shape, stroke: color, strokeWidth: width, ...glow } });
         }
         if (text) label(`${id}.label`, line, text, [{ x: a.x, y: a.y - ry - 40 }, { x: a.x + rx + 120, y: a.y }, { x: a.x, y: a.y + ry + 40 }, { x: a.x - rx - 120, y: a.y }], attrs);
         return;
@@ -695,12 +745,12 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const bends = attrs.bend !== undefined ? [number(attrs.bend) ?? 0] : [0, 0.2, -0.2, 0.4, -0.4, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6];
       const offCanvas = (pts: number[]) => pts.some((v, i) => (i % 2 ? false : v < 20 || v > ctx.width - 20));
       const points = bends.map((x) => curve(x)).map((pts, i) => ({ pts, i, c: crossings(pts) + (offCanvas(pts) ? 0.5 : 0) })).sort((x, y) => x.c - y.c || x.i - y.i)[0]!.pts;
-      const color = attrs.color ?? roleOf(attrs, true)?.color ?? "ink";
-      const width = (number(attrs.strokeWidth ?? "") ?? 6) * (roleOf(attrs, true)?.stroke ?? 1);
-      drawn.push({ id, kind: "path", line, props: { points, stroke: color, strokeWidth: width } });
+      const { color, width, glow } = pen(attrs);
+      drawn.push({ id, kind: "path", line, props: { points, stroke: color, strokeWidth: width, ...glow } });
       const tip = (px: number, py: number, qx: number, qy: number, name: string) => {
         const a2 = (Math.atan2(qy - py, qx - px) * 180) / Math.PI;
-        drawn.push({ id: name, kind: "path", line, props: { x: round(qx), y: round(qy), rotate: round(a2), points: [-26, -16, 0, 0, -26, 16], stroke: color, strokeWidth: width } });
+        const shape = headOf(color);
+        if (shape) drawn.push({ id: name, kind: "path", line, props: { x: round(qx), y: round(qy), rotate: round(a2), ...shape, stroke: color, strokeWidth: width, ...glow } });
       };
       if (head) tip(points.at(-4)!, points.at(-3)!, points.at(-2)!, points.at(-1)!, `${id}.head`);
       if (head && attrs.both) tip(points[2]!, points[3]!, points[0]!, points[1]!, `${id}.tail`);
@@ -745,24 +795,36 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         const pad = at ? (holder ? 22 / z : 18) : MARK_PAD;
         const [l, r, t, d] = [b.x - b.w / 2 - pad, b.x + b.w / 2 + pad, b.y - b.h / 2 - pad, b.y + b.h / 2 + pad];
         const role = roleOf(c.attrs, c.shape !== "highlight");
-        const color = c.attrs.color ?? role?.color ?? (c.shape === "highlight" ? "highlight" : "accent");
-        const width = ((number(c.attrs.strokeWidth ?? "") ?? (holder ? 9 : 7)) * (role?.stroke ?? 1)) / (holder ? z : 1);
+        // A highlight is the style's highlight, unless the scene names a color or a role for it.
+        const hl = design && c.shape === "highlight" && !c.attrs.color && !role ? design.elements.highlight : undefined;
+        const color = c.attrs.color ?? role?.color ?? hl?.color ?? (c.shape === "highlight" ? "highlight" : "accent");
+        const base = design ? design.elements.pointer.width * (holder ? 1.3 : 1) : holder ? 9 : 7;
+        const width = ((number(c.attrs.strokeWidth ?? "") ?? base) * (role?.stroke ?? 1)) / (holder ? z : 1);
         const shade: Props = holder ? { shadowY: round(2 / z), shadowBlur: round(5 / z), shadowOpacity: 0.45, shadowColor: "#000000" } : {};
+        const glow: Props = design ? { glowLevel: role?.glow ?? (hl ? 1 : 0) } : {};
         const [ox, oy] = holder ? [whole.x, whole.y] : [0, 0];
         const local = (list: number[]) => list.map((v, i) => round(v - (i % 2 ? oy : ox)));
-        const add = (pid: string, props: Props) => drawn.push({ id: pid, kind: "path", line: c.line, ...(holder ? { parent: holder } : {}), props: { stroke: color, strokeWidth: width, ...shade, ...props, ...(props.x !== undefined ? { x: round(Number(props.x) - ox), y: round(Number(props.y) - oy) } : {}), ...(props.points && props.x === undefined ? { points: local(props.points as number[]) } : {}) } });
+        const add = (pid: string, props: Props) => drawn.push({ id: pid, kind: "path", line: c.line, ...(holder ? { parent: holder } : {}), props: { stroke: color, strokeWidth: width, ...shade, ...glow, ...props, ...(props.x !== undefined ? { x: round(Number(props.x) - ox), y: round(Number(props.y) - oy) } : {}), ...(props.points && props.x === undefined ? { points: local(props.points as number[]) } : {}) } });
         const rw = at ? (r - l) / 2 : (r - l) * 0.62;
         const rh = at ? (d - t) / 2 : (d - t) * 0.72;
-        // A ring runs a little past a full turn, the way a hand closes a circle.
-        if (c.shape === "ring") add(id, { x: b.x, y: b.y, points: Array.from({ length: 53 }, (_, i) => [Math.cos((i / 48) * Math.PI * 2 - 2) * rw * (1 + i * 0.0008), Math.sin((i / 48) * Math.PI * 2 - 2) * rh]).flat().map(round) });
-        if (c.shape === "box") add(id, { points: [l, t, r, t, r, d, l, d, l, t].map(round) });
-        if (c.shape === "underline") add(id, { points: (pts && pts.length >= 4 ? pts : [l, d, r, d]).map(round) });
+        // A ring runs a little past a full turn, the way a hand closes a circle; a clean ring closes exactly.
+        const ringAt = (pid: string) =>
+          design?.elements.pointer.ring === "clean"
+            ? add(pid, { x: b.x, y: b.y, points: Array.from({ length: 49 }, (_, i) => [Math.cos((i / 48) * Math.PI * 2) * rw, Math.sin((i / 48) * Math.PI * 2) * rh]).flat().map(round), closed: 1 })
+            : add(pid, { x: b.x, y: b.y, points: Array.from({ length: 53 }, (_, i) => [Math.cos((i / 48) * Math.PI * 2 - 2) * rw * (1 + i * 0.0008), Math.sin((i / 48) * Math.PI * 2 - 2) * rh]).flat().map(round) });
+        if (c.shape === "ring" || hl?.kind === "ring") ringAt(id);
+        if (c.shape === "box" || hl?.kind === "box") add(id, { points: [l, t, r, t, r, d, l, d, l, t].map(round) });
+        if (c.shape === "underline" || hl?.kind === "underline") add(id, { points: (pts && pts.length >= 4 ? pts : [l, d, r, d]).map(round) });
         if (c.shape === "line" || c.shape === "path") add(id, { points: pts!.map(round), ...(c.shape === "path" ? { smooth: 1 } : {}) });
         if (c.shape === "arrow" && pts!.length >= 4) {
           add(id, { points: pts!.map(round) });
           const [px, py, qx, qy] = pts!.slice(-4) as [number, number, number, number];
-          const k = 1 / (holder ? z : 1);
-          add(`${id}.head`, { x: qx, y: qy, rotate: round((Math.atan2(qy - py, qx - px) * 180) / Math.PI), points: [-34 * k, -22 * k, 0, 0, -34 * k, 22 * k].map(round) });
+          const shape = headOf(color, 1.3 / (holder ? z : 1));
+          if (shape) add(`${id}.head`, { x: qx, y: qy, rotate: round((Math.atan2(qy - py, qx - px) * 180) / Math.PI), ...shape });
+        }
+        if (hl?.kind === "glow") {
+          // A glow highlight lights the words themselves, in the highlight color at the style's full light.
+          for (const p of [...parts.values()].filter((q) => q.kind === "text" && (q.id === c.targets[0] || q.parent === c.targets[0]))) parts.set(p.id, { ...p, props: { ...p.props, color, glowLevel: 1 } });
         }
         if (c.shape === "dots") {
           const rad = 14 / (holder ? z : 1);
@@ -772,15 +834,17 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
             popped.set(did, id);
           }
         }
-        if (c.shape === "highlight") {
-          // On words, a band of color is swept under each line; elsewhere it lies across the place, see-through.
+        if (c.shape === "highlight" && (!hl || hl.kind === "marker")) {
+          // On words, a band of color is swept under each line; elsewhere it lies across the place, see-through. Words
+          // on the band take the style's ink for it when their own color would not read there.
           const lines = !at ? [...parts.values()].filter((p) => p.kind === "text" && p.parent === c.targets[0] && c.targets.length === 1) : [];
           if (lines.length) {
             lines.forEach((p, i) => {
               const size = Number(p.props.size ?? 60);
               const w = env.measure(String(p.props.text ?? ""), size);
               const x0 = Number(p.props.x ?? 0) - (p.props.anchor === "start" ? 0 : p.props.anchor === "end" ? w : w / 2);
-              drawn.push({ id: i ? `${id}.${i + 1}` : id, kind: "path", line: c.line, parent: c.targets[0]!, props: { points: [x0 - size * 0.15, Number(p.props.y ?? 0), x0 + w + size * 0.15, Number(p.props.y ?? 0)].map(round), stroke: color, strokeWidth: round(size * 0.82), lineCap: "butt", strokeOpacity: 0.85, z: -1 } });
+              drawn.push({ id: i ? `${id}.${i + 1}` : id, kind: "path", line: c.line, parent: c.targets[0]!, props: { points: [x0 - size * 0.15, Number(p.props.y ?? 0), x0 + w + size * 0.15, Number(p.props.y ?? 0)].map(round), stroke: color, strokeWidth: round(size * 0.82), lineCap: "butt", strokeOpacity: hl?.opacity ?? 0.85, z: -1, ...glow } });
+              if (design && readability(ctx.theme, String(p.props.color ?? "ink"), color) < MIN_CONTRAST) parts.set(p.id, { ...p, props: { ...p.props, color: readableOn(color, ctx.theme), glowLevel: 0 } });
             });
           } else add(id, { points: [l, b.y, r, b.y].map(round), strokeWidth: round(Math.max(b.h + pad, 12)), lineCap: "butt", strokeOpacity: 0.45 });
         }
@@ -800,9 +864,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
             return { side, tip, tail, i, c: [...obstacles, ...placedLabels.map((p) => p.box)].reduce((sum, o) => sum + hits(lane, o), 0) + (off ? 1e9 : 0) };
           }).sort((x, y) => x.c - y.c || x.i - y.i);
           const { side, tip, tail } = ranked[0]!;
-          const k = 1 / z;
           add(id, { points: [...tail, ...tip].map(round), strokeWidth: Math.max(width, 8 / z) });
-          add(`${id}.head`, { x: tip[0], y: tip[1], rotate: round((Math.atan2(tip[1] - tail[1], tip[0] - tail[0]) * 180) / Math.PI), points: [-32 * k, -22 * k, 0, 0, -32 * k, 22 * k].map(round), strokeWidth: Math.max(width, 8 / z) });
+          const shape = headOf(color, 1.3 / z);
+          if (shape) add(`${id}.head`, { x: tip[0], y: tip[1], rotate: round((Math.atan2(tip[1] - tail[1], tip[0] - tail[0]) * 180) / Math.PI), ...shape, strokeWidth: Math.max(width, 8 / z) });
           placedLabels.push({ box: { ...spanOf([...tip, ...tail]), w: Math.max(30 / z, Math.abs(tip[0] - tail[0])), h: Math.max(30 / z, Math.abs(tip[1] - tail[1])) }, line: c.line, id });
           if (c.text) {
             const away = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] }[side as "top"]!;
@@ -830,7 +894,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         const b = needBox(c.target, c.line);
         if (!b) continue;
         colorOk(c.attrs.color, c.line);
-        if (c.attrs.back && c.attrs.back !== "none") colorOk(c.attrs.back, c.line);
+        if (c.attrs.back && c.attrs.back !== "none") { colorOk(c.attrs.back, c.line); backOk(c.attrs.back, c.line); }
         const own = roleOf(c.attrs)?.size;
         const size = Math.max(minText / z, number(c.attrs.size ?? "") ?? (own ? (own * Math.min(ctx.width, ctx.height)) / z : labelSize));
         const id = attachedId(c);
@@ -840,9 +904,12 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           // At a point inside the thing. Inside a picture it belongs to the picture, and sits on a card unless told not to.
           const [x, y] = pointsIn(b, at) as [number, number];
           const holder = parts.get(c.target)?.kind === "image" ? c.target : undefined;
-          const chip = c.attrs.back === "none" ? undefined : c.attrs.back ?? (holder || onPicture({ x, y, w: 1, h: 1 }) ? "paper" : undefined);
+          const chip = c.attrs.back === "none" ? undefined : c.attrs.back ?? (design ? roleOf(c.attrs)?.back : undefined) ?? (holder || onPicture({ x, y, w: 1, h: 1 }) ? (design ? captionBack : "paper") : undefined);
           words(id, c.line, c.text, holder ? { x: x - b.x, y: y - b.y } : { x, y }, size, c.attrs, chip, holder);
-          if (holder) popped.set(id, "").set(`${id}.back`, "");
+          if (holder) popped.set(id, "").set(`${id}.back`, "").set(`${id}.rule`, "");
+          // Words on a picture belong to it but are never covered by what lies beside it: a caption that runs past
+          // the picture's edge stays over its neighbor, as a strip laid across two prints does.
+          if (holder && design) for (const p of drawn) if (p.id === id || p.id === `${id}.back` || p.id === `${id}.rule`) p.props.layer = 1;
           continue;
         }
         const w = env.measure(c.text, size);
@@ -887,7 +954,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const dy = Math.min(Math.max(0, a.y - a.h / 2 - (w.box.y - w.box.h / 2)), w.box.h * 0.45) || -Math.min(Math.max(0, w.box.y + w.box.h / 2 - (a.y + a.h / 2)), w.box.h * 0.45);
       const moved = { ...w.box, x: w.box.x + dx, y: w.box.y + dy };
       if (cutBy(view, [{ ...w, box: moved }]).length) continue;
-      for (const id of [w.id, `${w.id}.back`]) {
+      for (const id of [w.id, `${w.id}.back`, `${w.id}.rule`]) {
         const p = parts.get(id);
         if (p) parts.set(id, { ...p, props: { ...p.props, x: round(Number(p.props.x ?? 0) + dx), y: round(Number(p.props.y ?? 0) + dy) } });
       }
@@ -944,6 +1011,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const kept = new Set<string>();
     // Light with no color takes the style's key color, or whichever strong color reads on what is behind the words.
     const key = roleLook(ctx.theme, "key").color ?? "accent";
+    const keyGlow = roleLook(ctx.theme, "key").glow ?? 0;
     const lightOn = (id: string): string => {
       const w = wordsById.get(id);
       const back = w ? behind(w) : surface;
@@ -957,14 +1025,59 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const color = asked ?? (p?.kind === "text" ? lightOn(id) : key);
       const back = wordsById.get(id)?.back;
       if (p?.kind === "text" && asked && target !== id && back && readability(ctx.theme, asked, back) < MIN_CONTRAST) effect(id, { weight: 700 });
-      else if (p?.kind === "text") effect(id, { color, weight: 700 });
-      if (p?.kind === "path") effect(id, p.props.stroke && p.props.stroke !== "none" ? { stroke: color, strokeWidth: Number(p.props.strokeWidth ?? 6) * 1.5 } : { fill: color });
+      else if (p?.kind === "text") effect(id, { color, weight: 700, ...(design ? { glowLevel: Math.max(keyGlow, Number(p.props.glowLevel ?? 0)) } : {}) });
+      if (p?.kind === "path") effect(id, { ...(p.props.stroke && p.props.stroke !== "none" ? { stroke: color, strokeWidth: Number(p.props.strokeWidth ?? 6) * 1.5 } : { fill: color }), ...(design ? { glowLevel: Math.max(keyGlow, Number(p.props.glowLevel ?? 0)) } : {}) });
     };
     // Stepping back: the style's muted look where it has one (its color and how far it fades), else a plain fade.
     const muted = styleHas(ctx.theme, "muted") ? roleLook(ctx.theme, "muted") : undefined;
     const stepped = new Set<string>();
     const inside = (id: string): string[] => [...parts.values()].filter((q) => q.parent === id).flatMap((q) => [q.id, ...inside(q.id)]);
+    // With a design layer, stepping back is the style's dim: each color moves the style's way (toward the page, or
+    // down in lightness keeping its hue), its light drops to the dim glow and its lines thin, at full opacity. A
+    // picture fades instead. An `amount` may only dim less than the style does, never past what it checked.
+    const dimmed = (paint: string | number | number[] | undefined, d: NonNullable<typeof design>): string | undefined => {
+      const hex = typeof paint === "string" ? colorOf(ctx.theme, paint) : undefined;
+      return hex && /^#[0-9a-f]{6}$/i.test(hex) ? dimColor(hex, d, ctx.theme.colors) : undefined;
+    };
+    const stepBackDesigned = (id: string, amount: string | undefined, d: NonNullable<typeof design>) => {
+      const by = amount === undefined ? d : { ...d, elements: { ...d.elements, dim: { ...d.elements.dim, amount: Math.min(d.elements.dim.amount, 1 - dimTo(amount)) } } };
+      for (const q of [id, ...inside(id)]) {
+        const p = parts.get(q);
+        if (!p) continue;
+        const now = { ...p.props, ...overrides.get(q), ...effects.get(q) };
+        if (p.kind === "image") effect(q, { opacity: Math.max(readDim, 1 - by.elements.dim.amount) });
+        if (p.kind === "text") {
+          // Words step back only as far as they still read on what is behind them: the style checked its dim on the
+          // page, and this keeps it true on panels, shapes and lit colors too.
+          const w = wordsById.get(q);
+          const back = w ? behind(w) : surface;
+          let c = dimmed(now.color ?? "ink", by);
+          if (c && !back.startsWith("picture:") && readability(ctx.theme, c, back) < MIN_CONTRAST) {
+            const [lo0, hi0] = [0, by.elements.dim.amount];
+            let [lo, hi] = [lo0, hi0];
+            for (let i = 0; i < 12; i++) {
+              const mid = (lo + hi) / 2;
+              const t = dimmed(now.color ?? "ink", { ...d, elements: { ...d.elements, dim: { ...d.elements.dim, amount: mid } } })!;
+              if (readability(ctx.theme, t, back) >= MIN_CONTRAST + 0.05) lo = mid;
+              else hi = mid;
+            }
+            c = lo > 0.02 ? dimmed(now.color ?? "ink", { ...d, elements: { ...d.elements, dim: { ...d.elements.dim, amount: lo } } }) : undefined;
+          }
+          effect(q, { ...(c ? { color: c } : {}), glowLevel: d.elements.dim.glow });
+        }
+        if (p.kind === "path") {
+          const out: Props = { glowLevel: d.elements.dim.glow };
+          const stroke = now.stroke && now.stroke !== "none" ? dimmed(now.stroke, by) : undefined;
+          const fill = now.fill && now.fill !== "none" ? dimmed(now.fill, by) : undefined;
+          if (stroke) Object.assign(out, { stroke, strokeWidth: round(Number(now.strokeWidth ?? 6) * d.elements.dim.stroke) });
+          if (fill) out.fill = fill;
+          effect(q, out);
+        }
+        stepped.add(q);
+      }
+    };
     const stepBack = (id: string, amount: string | undefined) => {
+      if (design) return stepBackDesigned(id, amount, design);
       const fade = muted?.opacity !== undefined && amount === undefined ? Math.min(1, Math.max(readDim, muted.opacity)) : muted?.color && amount === undefined ? undefined : dimTo(amount);
       if (fade !== undefined) effect(id, { opacity: fade });
       if (!muted?.color) return;
@@ -1062,7 +1175,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         if (once(w)) report(w.line, `"${w.text}" sits straight on the picture ${back.slice(8)} with nothing behind it, so it cannot read on every part of a photo. Put it on a panel (a stack with role=panel or back=COLOR), give it role=caption, or move it off the picture.`);
         continue;
       }
-      const color = String((stepped.has(w.id) ? undefined : effects.get(w.id)?.color) ?? overrides.get(w.id)?.color ?? part.props.color ?? "ink");
+      const color = String((stepped.has(w.id) && !design ? undefined : effects.get(w.id)?.color) ?? overrides.get(w.id)?.color ?? part.props.color ?? "ink");
       const [fg, bg] = [colorOf(ctx.theme, color)!, colorOf(ctx.theme, back)!];
       if (!/^#[0-9a-f]{3,6}$/i.test(fg) || !/^#[0-9a-f]{3,6}$/i.test(bg)) continue; // a gradient: not judged here
       // A fade the scene asks for is judged against the style's floor, like dim; the color itself must read.

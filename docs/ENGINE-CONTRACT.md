@@ -47,6 +47,9 @@ All of this is plain properties on the four primitives (`RenderProps` in `engine
 | Shape | `d` (raw path data, which allows holes, but does not morph), `fillRule`, `fillOpacity` | paths |
 | Text | `stroke`, `strokeWidth`, `tracking` | text |
 | Crop | `crop` (`[x, y, w, h]` as fractions, so moving it pans and zooms), `srcW` and `srcH` for the true shape, `fit` (`contain`, `cover`, `fill`) | images |
+| Border | `border` (a theme color), `borderWidth`: a mat around the picture, outside its box | images |
+| Style light | `glowLevel` (0 to 1, default 1): how much of the style's own glow a part carries (its pen's line, fill and type glow). A dimmed neon tube keeps its hue and loses its light. Roles set it from their `glow` | paths, text |
+| Role | `role` (a name from `ROLES`): the part takes that role's look for anything it did not set itself: color, weight, font, size, capitals, glow level, opacity, and for a pointer its stroke and width | paths, text |
 | Shader | `shader` (a name from `engine/render/shaders.ts`, or GLSL defining `vec4 shade(vec2 uv)`), `params` (up to 8 numbers), `colorA` to `colorC`, `density`, `time` (defaults to the frame's time). It has no clock or randomness of its own, so frames stay pure | images |
 | Order | `z` among siblings, `layer` (not 0) lifts a part out of its group to draw over or under the whole scene. A lifted part keeps its position and fade but leaves its group's clip, matte, filter and blend | anything |
 
@@ -91,6 +94,17 @@ The first three engine videos are reviewed in `docs/reviews/2026-11-02-three-vid
 | Picture choice | `pipeline/stages/assets.ts`, `pipeline/stages/director.ts`, `prompts/director.md`, picker prompts |
 | Scene writing | `prompts/engine-language.md` (all but the syntax reference lines), `prompts/scene.md`, `prompts/scene-cast.md`, `prompts/engine-repair.md`, `engine/language/author.ts`, `pipeline/stages/scene.ts` except the look step |
 | Checking | `pipeline/lib/look.ts` (new), the look step inside `pipeline/stages/scene.ts`, `prompts/scene-look.md`, `pipeline/stages/critic.ts`, `prompts/critic.md`, `engine/review/*` |
+
+### How the design layer reaches the drawing
+
+A theme from `themeFrom` carries `design` (`Theme.design`, `engine/style/design.ts`). With it, any scene in any style gets the designed look; without it (a test theme), `engine/core/roles.ts` works looks out from the palette as before.
+
+- **Words.** `roleLook(theme, role, on)` in `engine/core/roles.ts` gives a role's look sitting on a surface: size on the style's scale (a share of the shorter side, used when the scene names the role), color, weight, font, capitals and glow (drawn as `glowLevel`). On a surface the style lists, words take that surface's ink unless the role keeps its own color there; on any other fill, a color that would not read gives way to the ink that does. Words with no role are `body`; words in a shape are `label`.
+- **Panels.** `role=panel` and `back=` draw `elements.panel` (corner, edge, hard shadow, lean, padding) in the panel role's back. `back=paper` is the style's panel. A `back=` the style does not list in `design.surfaces` is reported. A shape with no fill is made of the panel.
+- **Captions and labels.** `role=caption` words, and tags with `role=caption`, sit on `elements.caption`: a strip in the caption back with its rule, padding and lean. Other words on pictures sit on `elements.label.back`. Words tagged inside a picture are drawn on `layer: 1`, so a neighbor never covers them.
+- **Dim and focus.** Colors move with `dimColor` (toward the page, or down in lightness keeping hue), `glowLevel` drops to `dim.glow`, lines thin by `dim.stroke`, at full opacity; pictures fade. Words never dim past 3 to 1 on what is behind them. `amount=` can only dim less than the style does.
+- **Pictures.** Every image takes `design.picture` (saturation, contrast, brightness, tint). A picture placed on the page also gets its border, shadow and an alternating lean up to `rotate`; one shown whole (`frame=fit`) gets the border and shadow; one filling the frame only the color. The blurred copy behind a picture shown whole (`pipeline/lib/shots-scene.ts`) uses `elements.backdrop`, which a style file may give and which is otherwise worked out from its page and picture treatment (`backdropOf`).
+- **Tables, highlights, pointers.** A grid of words is a table: its first row takes `elements.table.header`, with rules (`lines`, `rule`, `ruleWidth`) and stripes (`zebra`). `mark highlight` draws `elements.highlight` (a marker band whose words take its ink, an underline, ring, box, or a glow on the words). Arrows and marks use `elements.pointer` (width, open, solid or no heads, hand or clean rings) and the pointer role's color, stroke and glow.
 
 ## Not yet decided
 

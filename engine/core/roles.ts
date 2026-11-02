@@ -1,6 +1,8 @@
-// What a role looks like in a theme. A style defines its roles in Theme.roles; until it does, each role gets a look
-// worked out from the palette, so a scene that names roles always draws and always reads.
+// What a role looks like in a theme. A style with a design layer (theme.design, engine/style/design.ts) says exactly
+// how each role looks on each surface; a theme without one gets looks worked out from the palette, so a scene that
+// names roles always draws and always reads.
 import { contrast } from "../style/color.ts";
+import { roleLook as designLook } from "../style/design.ts";
 import { ROLES, type Role, type RoleLook, type Theme } from "./types.ts";
 
 export const isRole = (v: string | undefined): v is Role => !!v && (ROLES as readonly string[]).includes(v);
@@ -42,20 +44,44 @@ function fallback(theme: Theme): Record<Role, RoleLook> {
   };
 }
 
-// A role's look: the style's own where it has one, the palette's otherwise. Colors that name nothing in the theme are
-// dropped, so a style written for another palette cannot break a scene.
-export function roleLook(theme: Theme, role: Role): RoleLook {
-  const look: RoleLook = { ...fallback(theme)[role], ...theme.roles?.[role] };
+// The least contrast a role's words keep with what they sit on; below it they take the surface's ink instead.
+const READS = 3;
+
+// The ink for words on a surface: the style's rule for that surface where it has one, else whichever of the style's
+// inks reads best there.
+export function inkOn(theme: Theme, on: string): string {
+  const d = theme.design;
+  if (d?.surfaces[on]) return d.surfaces[on]!.text;
+  const inks = [...new Set([...(d ? Object.values(d.surfaces).map((s) => s.text) : []), "ink", "paper"])];
+  return bestOn(theme, on, inks);
+}
+
+// A role's look sitting on `on` (a color name: the page when left out, or a panel, a shape, a card). With a design
+// layer it is exactly the style's: on a surface the style lists, words take that surface's ink unless the role keeps
+// its own color there. On anything else (a shape filled with any color), a color that would not read gives way to the
+// ink that does. Colors that name nothing in the theme are dropped, so a style written for another palette cannot
+// break a scene.
+export function roleLook(theme: Theme, role: Role, on?: string): RoleLook {
+  const d = theme.design;
+  let look: RoleLook;
+  if (d) look = designLook(d, role, on && d.surfaces[on] ? on : "paper");
+  else look = { ...fallback(theme)[role], ...theme.roles?.[role] };
   for (const k of ["color", "back"] as const) if (look[k] !== undefined && !theme.colors[look[k]!]) delete look[k];
+  const here = look.back ?? on;
+  if (here && here !== "paper" && role !== "panel" && role !== "pointer" && (!d || !d.surfaces[here])) {
+    if (!look.color || readability(theme, look.color, here) < READS) look.color = inkOn(theme, here);
+  }
   return look;
 }
 
 // Whether the style itself says how this role looks (not the palette fallback).
-export const styleHas = (theme: Theme, role: Role) => !!theme.roles?.[role];
+export const styleHas = (theme: Theme, role: Role) => !!theme.design || !!theme.roles?.[role];
 
 // What a role adds to a drawn part that did not set these itself, for parts that carry a `role` prop (a kit or program
-// can name a role and leave the look to the style). Colors come back as real colors, ready to draw.
-export function roleProps(theme: Theme, role: string, kind: string, props: Record<string, unknown>): Record<string, string | number> {
+// can name a role and leave the look to the style). Colors come back as real colors, ready to draw. `short` is the
+// frame's shorter side, for a role's size; without it sizes are left alone. With a design layer a role's glow is the
+// part's `glowLevel` (how much of the style's own light it carries); without one it is a plain glow.
+export function roleProps(theme: Theme, role: string, kind: string, props: Record<string, unknown>, short?: number): Record<string, string | number> {
   if (!isRole(role)) return {};
   const look = roleLook(theme, role);
   const out: Record<string, string | number> = {};
@@ -64,10 +90,14 @@ export function roleProps(theme: Theme, role: string, kind: string, props: Recor
     if (props.color === undefined && color) out.color = color;
     if (props.weight === undefined && look.weight !== undefined) out.weight = look.weight;
     if (props.font === undefined && look.font) out.font = look.font === "mono" ? (theme.fonts.mono ?? "Menlo, monospace") : theme.fonts[look.font];
+    if (props.size === undefined && look.size !== undefined && short) out.size = Math.round(look.size * short);
     if (look.case === "upper" && typeof props.text === "string") out.text = props.text.toUpperCase();
   }
   if (kind === "path" && props.stroke === undefined && color) out.stroke = color;
-  if (props.glow === undefined && look.glow && color) Object.assign(out, { glow: look.glow * 12, glowColor: color });
+  if (kind === "path" && role === "pointer" && props.strokeWidth === undefined && theme.design) out.strokeWidth = theme.design.elements.pointer.width * (look.stroke ?? 1);
+  if (theme.design) {
+    if (props.glowLevel === undefined && props.glow === undefined) out.glowLevel = look.glow ?? 0;
+  } else if (props.glow === undefined && look.glow && color) Object.assign(out, { glow: look.glow * 12, glowColor: color });
   if (props.opacity === undefined && look.opacity !== undefined) out.opacity = look.opacity;
   return out;
 }

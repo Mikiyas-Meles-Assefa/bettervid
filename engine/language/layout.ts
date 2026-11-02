@@ -2,8 +2,8 @@
 // nothing is laid out blind. Everything is pure, so positions are known for every state and things can travel between them.
 import type { Problem } from "./syntax.ts";
 import type { Atom, Item } from "./syntax.ts";
-import type { NodeSpec, Props, RoleLook, Theme } from "../core/types.ts";
-import { bestOn, isRole, readability, roleLook } from "../core/roles.ts";
+import type { NodeSpec, Props, Role, RoleLook, Theme } from "../core/types.ts";
+import { bestOn, colorOf, inkOn, isRole, readability, roleLook } from "../core/roles.ts";
 import { circle } from "../kits/shapes.ts";
 
 export type Box = { x: number; y: number; w: number; h: number }; // x and y are the center
@@ -94,10 +94,33 @@ function shapePoints(kind: string, w: number, h: number): number[] {
   return roundedBox(w, h, Math.min(w, h) * 0.1);
 }
 
-// Whichever of ink and paper reads best on a fill, so a label never disappears into its own shape.
+// The ink for words on a fill, so a label never disappears into its own shape: the style's ink for that surface where
+// its design names one, else whichever of ink and paper reads best.
 export function readableOn(fill: string, theme: Theme): string {
   if (!theme.colors.ink || !theme.colors.paper) return "ink";
+  if (theme.design) return inkOn(theme, fill);
   return bestOn(theme, theme.colors[fill] ? fill : "paper");
+}
+
+// A rectangle's outline, centered on 0,0.
+export const rect = (w: number, h: number, x = 0): number[] => [x - w / 2, -h / 2, x + w / 2, -h / 2, x + w / 2, h / 2, x - w / 2, h / 2, x - w / 2, -h / 2].map(round);
+
+// A stable turn of -1 or 1 for a thing, so pictures laid side by side lean alternately and keep their lean in every state.
+export const leanOf = (id: string) => ([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7) & 1 ? 1 : -1);
+
+// The style's picture treatment, so real and generated pictures look like one piece: color, and for a picture placed
+// on the page (not filling the frame) its border, shadow and an alternating lean. A lean or fade the scene gave wins.
+export function pictureLook(theme: Theme, id: string, placed: "page" | "fit" | "fill", own: Props = {}): Props {
+  const d = theme.design;
+  if (!d) return {};
+  const p = d.picture;
+  const out: Props = { saturation: p.saturation, contrast: p.contrast, brightness: p.brightness };
+  if (p.tintAmount > 0) Object.assign(out, { tint: colorOf(theme, p.tint)!, tintAmount: p.tintAmount });
+  if (placed === "fill") return out;
+  if (p.border !== "none" && p.borderWidth > 0) Object.assign(out, { border: colorOf(theme, p.border)!, borderWidth: p.borderWidth });
+  if (p.shadow > 0) Object.assign(out, { shadowY: round(10 * p.shadow), shadowBlur: round(24 * p.shadow), shadowOpacity: p.shadow, shadowColor: "#000000" });
+  if (placed === "page" && p.rotate > 0 && own.rotate === undefined) out.rotate = leanOf(id) * p.rotate;
+  return out;
 }
 
 export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
@@ -110,32 +133,53 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   // Roles: the scene says what a thing is for, and the style decides how it looks. An arrangement's role is the role
   // of everything inside it that does not name its own, except a panel, which is only the surface itself.
   const lookOf = (item: Item): RoleLook | undefined => (isRole(item.attrs.role) ? roleLook(theme, item.attrs.role) : undefined);
+  const design = theme.design;
+  // The role a thing's words are drawn in. A panel or pointer role is a surface or a mark, so its words are body; words
+  // in a shape name it, so they are a label. With a design layer, words that name no role are body, the style's
+  // ordinary words; without one they keep the plain defaults.
+  const wordRole = (item: Item): Role | undefined => {
+    const r = item.attrs.role;
+    if (isRole(r) && r !== "panel" && r !== "pointer") return r;
+    if (!design) return undefined;
+    return SHAPE_KINDS.includes(item.kind) ? "label" : "body";
+  };
+  const wordLook = (item: Item, on?: string): RoleLook | undefined => {
+    const r = wordRole(item);
+    return r ? roleLook(theme, r, on) : undefined;
+  };
+  // A size from the role only when the scene named the role; otherwise the size words or the defaults.
   const fontSize = (item: Item, fallback: number) => {
     if (item.attrs.size !== undefined) return TEXT_SIZE[item.attrs.size] ?? n(item.attrs.size, fallback);
-    const size = lookOf(item)?.size;
+    const size = isRole(item.attrs.role) ? wordLook(item)?.size : undefined;
     return size ? size * short : fallback;
   };
-  const fontOf = (item: Item) => item.attrs.font ?? lookOf(item)?.font;
+  const fontOf = (item: Item) => item.attrs.font ?? wordLook(item)?.font;
   const mono = (item: Item) => (fontOf(item) === "mono" ? "mono" : undefined);
   const textLines = (item: Item) => wrap(item.text ?? "", fontSize(item, TEXT_SIZE.normal!), n(item.attrs.w, env.safe.w), measure, mono(item));
   const textSize = (item: Item) => (item.kind === "atoms" ? TEXT_SIZE[item.size!]! : fontSize(item, TEXT_SIZE.normal!));
   // The surface a thing brings with it: a panel's back, or the back of a role such as caption.
+  // With a design layer a panel is the style's panel: back=paper (a card the color of the page) is the panel, and a
+  // panel never falls back to the page color. build reports a back= the style does not list as a surface.
+  const panelBack = design ? roleLook(theme, "panel").back : undefined;
   const backOf = (item: Item): string | undefined => {
     if (item.attrs.back === "none") return undefined;
-    if (item.attrs.back) return item.attrs.back;
+    if (item.attrs.back) return item.attrs.back === "paper" && panelBack ? panelBack : item.attrs.back;
     const look = lookOf(item);
     if (item.attrs.role === "panel" && (CONTAINER_KINDS.includes(item.kind) || item.kind === "text" || item.kind === "atoms")) return look?.back ?? "paper";
     if (look?.back && (item.kind === "text" || item.kind === "atoms")) return look.back;
     return undefined;
   };
-  // How words look: their own color if they give one, else their role's, else ink; on a panel, a role's or the default
-  // color gives way to one that reads on it. An explicit color that does not read is reported by build.
+  // Words over a picture that carry the caption look: a strip with the style's rule, rotation and padding.
+  const isCaption = (item: Item) => !!design && item.attrs.role === "caption" && (item.kind === "text" || item.kind === "atoms") && item.attrs.back !== "none" && !item.attrs.back;
+  // How words look: their own color if they give one, else their role's on what they sit on (the style's ink for that
+  // surface), else ink. An explicit color that does not read is reported by build. With a design layer a role's glow
+  // is its `glowLevel`, the share of the style's own light it carries; without one it is a plain glow.
   const textLook = (item: Item, back: string | undefined, fs: number): Props => {
-    const look = lookOf(item);
+    const look = wordLook(item, back);
     const out: Props = {};
     const explicit = item.attrs.color;
     let color = explicit ?? look?.color;
-    if (!explicit && back && (!color || readability(theme, color, back) < MIN_CONTRAST)) color = bestOn(theme, back);
+    if (!explicit && back && (!color || readability(theme, color, back) < MIN_CONTRAST)) color = readableOn(back, theme);
     if (color) out.color = color;
     const weight = item.attrs.weight !== undefined ? n(item.attrs.weight, 400) : look?.weight;
     if (weight !== undefined) out.weight = weight;
@@ -144,7 +188,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     if (font === "mono") out.font = theme.fonts.mono ?? "Menlo, monospace";
     const opacity = item.attrs.opacity !== undefined ? n(item.attrs.opacity, 1) : look?.opacity;
     if (opacity !== undefined) out.opacity = opacity;
-    if (look?.glow) Object.assign(out, { glow: round(look.glow * fs * 0.3), glowColor: color ?? "ink" });
+    if (design) out.glowLevel = look?.glow ?? 0;
+    else if (look?.glow) Object.assign(out, { glow: round(look.glow * fs * 0.3), glowColor: color ?? "ink" });
     return out;
   };
 
@@ -161,12 +206,23 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     return { w, h, label, size };
   };
 
-  // A thing with a back sits on a panel of that color, with room around its contents.
-  const padOf = (item: Item, s: number) => (!backOf(item) ? 0 : item.kind === "text" || item.kind === "atoms" ? textSize(item) * 0.4 * s : 48 * s);
+  // A thing with a back sits on a panel of that color, with room around its contents: across and down. A caption's
+  // room is the style's caption padding plus its rule; a panel's is scaled by the style's panel padding.
+  const panelPad = design ? design.elements.panel.pad / 0.8 : 1;
+  const padOf = (item: Item, s: number): [number, number] => {
+    if (!backOf(item)) return [0, 0];
+    if (isCaption(item)) {
+      const e = design!.elements.caption;
+      const fs = textSize(item) * s;
+      return [fs * e.pad + (e.rule !== "none" ? e.ruleWidth / 2 : 0), fs * e.pad];
+    }
+    const p = (item.kind === "text" || item.kind === "atoms" ? textSize(item) * 0.4 * s : 48 * s) * panelPad;
+    return [p, p];
+  };
   const sizeOf = (item: Item, s: number): { w: number; h: number } => {
     const inner = innerSize(item, s);
-    const pad = padOf(item, s);
-    return pad ? { w: inner.w + pad * 2, h: inner.h + pad * 2 } : inner;
+    const [px, py] = padOf(item, s);
+    return px || py ? { w: inner.w + px * 2, h: inner.h + py * 2 } : inner;
   };
   const innerSize = (item: Item, s: number): { w: number; h: number } => {
     const gap = n(item.attrs.gap, 44) * s;
@@ -258,14 +314,20 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   // Things that fill the frame take no room in the arrangement. They sit behind it, centered on the frame. Roles pass
   // down here, and a role that writes in capitals changes the words before anything is measured.
   const framed: Item[] = [];
+  // A grid of words is a table, and with a design layer it is drawn the style's way: a header row, rules, stripes.
+  const cols = (item: Item) => Math.max(1, n(item.attrs.cols, 2));
+  const isTable = (item: Item) => !!design && item.kind === "grid" && item.children.length > cols(item) && item.children.every((c) => (c.kind === "text" || c.kind === "atoms") && !c.attrs.back);
   const upper = (a: Atom): Atom => ({ ...a, text: a.text.toUpperCase() });
   const pull = (list: Item[], role?: string): Item[] =>
     list.flatMap((i) => {
       const attrs = { ...i.attrs };
       if (!attrs.role && role) attrs.role = role;
       const pass = attrs.role && attrs.role !== "panel" ? attrs.role : undefined;
-      const copy: Item = { ...i, attrs, children: pull(i.children, pass) };
-      if (isRole(attrs.role) && roleLook(theme, attrs.role).case === "upper") {
+      // A table's first row is its header, in the style's header role, unless a cell names its own.
+      const kids = isTable(i) ? i.children.map((c, k) => (k < cols(i) && !c.attrs.role ? { ...c, attrs: { ...c.attrs, role: design!.elements.table.header } } : c)) : i.children;
+      const copy: Item = { ...i, attrs, children: pull(kids, pass) };
+      const wr = wordRole(copy);
+      if (wr && roleLook(theme, wr).case === "upper") {
         if (copy.text !== undefined) copy.text = copy.text.toUpperCase();
         if (copy.parts) copy.parts = copy.parts.map((p) => (p.type === "text" ? { type: "text", atom: upper(p.atom) } : p.type === "frac" ? { ...p, num: p.num.map(upper), den: p.den.map(upper) } : { ...p, rows: p.rows.map((r) => r.map(upper)) }));
       }
@@ -325,15 +387,34 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   const place = (item: Item, cx: number, cy: number, s: number, behind?: string) => {
     const outer = sizeOf(item, s);
     out.boxes.set(item.id, { x: cx, y: cy, w: outer.w, h: outer.h });
-    const pad = padOf(item, s);
+    const [padX, padY] = padOf(item, s);
+    const pad = padX || padY;
     const own = backOf(item);
-    if (pad && own) {
+    // How far a caption's words sit right of center, clear of its rule, and how far it leans.
+    let shiftX = 0;
+    let lean: number | undefined;
+    if (pad && own && design && isCaption(item)) {
+      const e = design.elements.caption;
+      const ruled = e.rule !== "none" && e.ruleWidth > 0;
+      lean = e.rotate || undefined;
+      const turn: Props = lean ? { rotate: lean } : {};
+      out.parts.push({ id: `${item.id}.back`, kind: "path", line: item.line, props: { x: round(cx), y: round(cy), ...turn, points: rect(outer.w, outer.h), closed: 1, fill: own, stroke: e.edge === "none" ? "none" : e.edge, strokeWidth: 3, glowLevel: 0, z: -1 } });
+      if (ruled) out.parts.push({ id: `${item.id}.rule`, kind: "path", line: item.line, props: { x: round(cx), y: round(cy), ...turn, points: rect(e.ruleWidth, outer.h, -outer.w / 2 + e.ruleWidth / 2), closed: 1, fill: e.rule, stroke: "none", z: -1 } });
+      shiftX = ruled ? e.ruleWidth / 2 : 0;
+    } else if (pad && own && design) {
+      // The style's panel: its surface, corner, edge, shadow and lean.
+      const p = design.elements.panel;
+      const look = roleLook(theme, "panel");
+      const edge: Props = p.edge === "none" || p.edgeWidth <= 0 ? { stroke: "none" } : { stroke: p.edge, strokeWidth: round(p.edgeWidth * (look.stroke ?? 1)) };
+      const shadow: Props = p.shadow ? { shadowX: round(7 * p.shadow), shadowY: round(9 * p.shadow), shadowBlur: 0, shadowOpacity: p.shadow, shadowColor: colorOf(theme, "ink")! } : {};
+      out.parts.push({ id: `${item.id}.back`, kind: "path", line: item.line, props: { x: round(cx), y: round(cy), ...(p.rotate ? { rotate: p.rotate } : {}), points: roundedBox(outer.w, outer.h, Math.max(0.5, Math.min(outer.w, outer.h) * p.radius)).map(round), closed: 1, fill: own, ...edge, glowLevel: look.glow ?? 0, z: -1, ...shadow } });
+    } else if (pad && own) {
       const look = lookOf(item);
       const outline: Props = item.attrs.role === "panel" && look?.stroke ? { stroke: look.color ?? "ink", strokeWidth: round(4 * look.stroke * s) } : { stroke: "none" };
       out.parts.push({ id: `${item.id}.back`, kind: "path", line: item.line, props: { x: round(cx), y: round(cy), points: roundedBox(outer.w, outer.h, Math.min(outer.w, outer.h) * (item.kind === "text" || item.kind === "atoms" ? 0.18 : 0.06)).map(round), closed: 1, fill: own, ...outline, z: -1, shadowY: round(14 * s), shadowBlur: round(36 * s), shadowOpacity: 0.3, shadowColor: "#000000" } });
     }
     const back = own ?? behind;
-    const size = pad ? innerSize(item, s) : outer;
+    const size = pad ? { w: outer.w - padX * 2, h: outer.h - padY * 2 } : outer;
     const gap = n(item.attrs.gap, 44) * s;
     const members = (ids: string[]) => out.members.set(item.id, ids);
     switch (item.kind) {
@@ -349,7 +430,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
           out.boxes.set(a.id, { x: x + w / 2, y, w, h: fs * 1.15 });
         };
         const space = n(item.attrs.gap, 0.26) * fs;
-        let x = cx - size.w / 2;
+        let x = cx - size.w / 2 + shiftX;
         for (const p of item.parts!) {
           if (p.type === "text") {
             put(p.atom, x, cy);
@@ -401,9 +482,9 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         const lines = textLines(item);
         const left = item.attrs.align === "left";
         const extra: Props = { ...textLook(item, back, fs), ...(left ? { anchor: "start" } : {}) };
-        const dx = left ? -size.w / 2 : 0;
+        const dx = (left ? -size.w / 2 : 0) + shiftX;
         // Always a group with one part per line, so a text can grow or shrink a line without changing what it is.
-        out.parts.push({ id: item.id, kind: "group", line: item.line, props: { x: round(cx), y: round(cy), ...look(item, ["rotate"]) } });
+        out.parts.push({ id: item.id, kind: "group", line: item.line, props: { x: round(cx), y: round(cy), ...(lean ? { rotate: lean } : {}), ...look(item, ["rotate"]) } });
         lines.forEach((l, i) => text(`${item.id}.l${i + 1}`, item, l, dx, (i - (lines.length - 1) / 2) * fs * 1.25, fs, extra, item.id, { x: cx, y: cy }, back));
         return;
       }
@@ -423,7 +504,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       }
       case "image":
         // Always in front of the panel it sits on, whatever it was before, so a card never covers its own picture.
-        out.parts.push({ id: item.id, kind: "image", line: item.line, props: { x: round(cx), y: round(cy), w: round(size.w), h: round(size.h), src: item.attrs.asset ?? "", z: 0, ...look(item, ["opacity", "rotate"]) } });
+        out.parts.push({ id: item.id, kind: "image", line: item.line, props: { x: round(cx), y: round(cy), w: round(size.w), h: round(size.h), src: item.attrs.asset ?? "", z: 0, ...pictureLook(theme, item.id, "page", look(item, ["rotate"])), ...look(item, ["opacity", "rotate"]) } });
         out.fields.push({ id: item.id, box: { x: cx, y: cy, w: size.w, h: size.h }, line: item.line, picture: true, frame: false });
         return;
       case "space":
@@ -472,6 +553,21 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
           const y = cy - size.h / 2 + heights.slice(0, row).reduce((a, b) => a + b + gap, 0) + heights[row]! / 2;
           place(c, x, y, s, back);
         });
+        if (isTable(item)) {
+          // The style's table: a rule under the header, under every row, or between every cell, and stripes on
+          // alternate rows, all behind the words.
+          const t = design!.elements.table;
+          const [l, r, top] = [cx - size.w / 2 - gap / 2, cx + size.w / 2 + gap / 2, cy - size.h / 2];
+          const below = (row: number) => top + heights.slice(0, row + 1).reduce((a, b) => a + b + gap, 0) - gap / 2;
+          const line = (id: string, pts: number[], w: number) => out.parts.push({ id, kind: "path", line: item.line, props: { points: pts.map(round), stroke: t.rule, strokeWidth: round(w), glowLevel: 0.3, z: -1 } });
+          if (t.zebra !== "none") for (let row = 2; row < heights.length; row += 2) out.parts.push({ id: `${item.id}.zebra${row}`, kind: "path", line: item.line, props: { x: round(cx), y: round(below(row) - (heights[row]! + gap) / 2), points: rect(r - l, heights[row]! + gap), closed: 1, fill: t.zebra, stroke: "none", z: -1 } });
+          if (t.lines !== "none") line(`${item.id}.rule0`, [l, below(0), r, below(0)], t.ruleWidth * 1.5);
+          if (t.lines === "rows" || t.lines === "grid") for (let row = 1; row < heights.length; row++) line(`${item.id}.rule${row}`, [l, below(row), r, below(row)], t.ruleWidth);
+          if (t.lines === "grid") for (let col = 1; col < widths.length; col++) {
+            const x = cx - size.w / 2 + widths.slice(0, col).reduce((a, b) => a + b + gap, 0) - gap / 2;
+            line(`${item.id}.col${col}`, [x, top - gap / 2, x, cy + size.h / 2 + gap / 2], t.ruleWidth);
+          }
+        }
         return;
       }
       case "ring": {
@@ -498,14 +594,15 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       default: {
         if (SHAPE_KINDS.includes(item.kind)) {
           const b = shapeSize(item, s);
-          const role = lookOf(item);
+          // With a design layer a shape that names no look is made of the style's panel: its surface and its edge.
+          const role = lookOf(item) ?? (design && item.kind !== "dot" ? roleLook(theme, "panel") : undefined);
           const fill = item.attrs.fill ?? role?.back ?? (item.kind === "dot" ? "ink" : "paper");
           // Everything placed has a size a viewer can see, like words have a size they can read.
           const least = env.minText * 0.75;
           if (Math.max(b.w, b.h) < least) out.problems.push({ line: item.line, message: `${item.id} comes out only ${Math.round(b.w)} by ${Math.round(b.h)} pixels, too small to see; a shape or mark needs at least ${Math.round(least)} pixels across. Give it a bigger w and h, or put less on screen at once.` });
           const opacity: Props = item.attrs.opacity === undefined && role?.opacity !== undefined ? { opacity: role.opacity } : {};
           out.parts.push({ id: item.id, kind: "group", line: item.line, props: { x: round(cx), y: round(cy), ...look(item, ["opacity", "rotate"]), ...opacity } });
-          out.parts.push({ id: `${item.id}.shape`, kind: "path", parent: item.id, line: item.line, props: { points: shapePoints(item.kind, b.w, b.h).map(round), closed: 1, fill, stroke: item.attrs.stroke ?? (item.kind === "dot" ? "none" : role?.color ?? "ink"), strokeWidth: round(n(item.attrs.strokeWidth, 6) * (role?.stroke ?? 1)) } });
+          out.parts.push({ id: `${item.id}.shape`, kind: "path", parent: item.id, line: item.line, props: { points: shapePoints(item.kind, b.w, b.h).map(round), closed: 1, fill, stroke: item.attrs.stroke ?? (item.kind === "dot" ? "none" : role?.color ?? "ink"), strokeWidth: round(n(item.attrs.strokeWidth, 6) * (role?.stroke ?? 1)), ...(design ? { glowLevel: role?.glow ?? 0.6 } : {}) } });
           const { opacity: _, glow: __, glowColor: ___, ...tone } = textLook(item, fill, b.size);
           b.label.forEach((l, i) => text(i ? `${item.id}.label${i + 1}` : `${item.id}.label`, item, l, 0, (i - (b.label.length - 1) / 2) * b.size * 1.2, b.size, { ...tone, ...look(item, ["weight"]) }, item.id, { x: cx, y: cy }, fill));
           return;
@@ -531,7 +628,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     const [cx, cy] = [env.W / 2, env.H / 2];
     out.boxes.set(f.id, { x: cx, y: cy, w, h });
     if (f.kind === "image") {
-      out.parts.push({ id: f.id, kind: "image", line: f.line, props: { x: cx, y: cy, w: round(w), h: round(h), src: f.attrs.asset ?? "", z: -2, ...look(f, ["opacity", "rotate"]) } });
+      out.parts.push({ id: f.id, kind: "image", line: f.line, props: { x: cx, y: cy, w: round(w), h: round(h), src: f.attrs.asset ?? "", z: -2, ...pictureLook(theme, f.id, mode === "fill" ? "fill" : "fit"), ...look(f, ["opacity", "rotate"]) } });
       out.fields.push({ id: f.id, box: { x: cx, y: cy, w, h }, line: f.line, picture: true, frame: true });
     } else {
       const fill = f.attrs.fill ?? lookOf(f)?.back ?? "paper";

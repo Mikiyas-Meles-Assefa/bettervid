@@ -13,7 +13,7 @@ import { roleProps } from "../core/roles.ts";
 const WIDE = { x: -20000, y: -20000, width: 40000, height: 40000 };
 
 type Place = { r: Resolved; parent?: Place };
-type Ctx = { surface: string; theme: Theme; time: number; prefix: string; places: Map<string, Place>; away: Set<string>; depth: number };
+type Ctx = { surface: string; theme: Theme; time: number; prefix: string; places: Map<string, Place>; away: Set<string>; depth: number; short: number };
 
 const inOrder = (list: Resolved[]) => (list.some((r) => n(r.props.z) !== 0) ? [...list].sort((a, b) => n(a.props.z) - n(b.props.z)) : list);
 
@@ -59,15 +59,21 @@ function imageBody(a: Props, ctx: Ctx, id: string) {
   if (typeof a.src !== "string") throw new Error(`image ${id} needs a src or a shader`);
   const crop = list(a.crop);
   const aspect = a.fit === "cover" ? "xMidYMid slice" : a.fit === "fill" ? "none" : "xMidYMid meet";
-  if (!crop) return <image href={a.src} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio={aspect} />;
+  // A border is a mat around the picture, outside its box, in a color of the theme: the way a print sits on a page.
+  const bw = n(a.borderWidth);
+  const border = typeof a.border === "string" && a.border !== "none" && bw > 0 ? <rect x={-w / 2 - bw} y={-h / 2 - bw} width={w + bw * 2} height={h + bw * 2} fill={ctx.theme.colors[a.border] ?? a.border} /> : null;
+  if (!crop) return <>{border}<image href={a.src} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio={aspect} /></>;
   if (crop.length !== 4) throw new Error(`crop on ${id} needs [x, y, w, h] as fractions of the image`);
   // The crop is a window onto the whole image, so moving or shrinking it pans and zooms. srcW and srcH keep the
   // image's true shape; without them the image is taken to have the shape of its box.
   const [W, H] = [n(a.srcW, w), n(a.srcH, h)];
   return (
-    <svg x={-w / 2} y={-h / 2} width={w} height={h} viewBox={`${crop[0]! * W} ${crop[1]! * H} ${Math.max(crop[2]!, 1e-4) * W} ${Math.max(crop[3]!, 1e-4) * H}`} preserveAspectRatio={aspect}>
-      <image href={a.src} width={W} height={H} preserveAspectRatio="none" />
-    </svg>
+    <>
+      {border}
+      <svg x={-w / 2} y={-h / 2} width={w} height={h} viewBox={`${crop[0]! * W} ${crop[1]! * H} ${Math.max(crop[2]!, 1e-4) * W} ${Math.max(crop[3]!, 1e-4) * H}`} preserveAspectRatio={aspect}>
+        <image href={a.src} width={W} height={H} preserveAspectRatio="none" />
+      </svg>
+    </>
   );
 }
 
@@ -158,7 +164,7 @@ function Clip({ a, id, children }: { a: Props; id: string; children: React.React
 const Item: React.FC<{ r: Resolved; ctx: Ctx; direct?: boolean }> = ({ r: given, ctx, direct }) => {
   if (!direct && ctx.away.has(given.id)) return null;
   // A part that names a role and leaves its look open takes the look from the style's roles.
-  const r = typeof given.props.role === "string" ? { ...given, props: { ...given.props, ...roleProps(ctx.theme, given.props.role, given.kind, given.props) } } : given;
+  const r = typeof given.props.role === "string" ? { ...given, props: { ...given.props, ...roleProps(ctx.theme, given.props.role, given.kind, given.props, ctx.short) } } : given;
   const a = r.props;
   const opacity = n(a.opacity, 1);
   // Hidden parts are not drawn. Players keep every picture decoded for the life of the tab, so a picture that comes
@@ -235,7 +241,7 @@ export const SceneView: React.FC<{ scene: Scene; theme: Theme; frame: number }> 
   const painted = themed(scene, theme);
   const roots = evaluate(painted, frame);
   const { places, away, lifted } = survey(roots);
-  const ctx: Ctx = { theme, time: frame / scene.fps, prefix, places, away, depth: 0, surface: String(painted.background) };
+  const ctx: Ctx = { theme, time: frame / scene.fps, prefix, places, away, depth: 0, surface: String(painted.background), short: Math.min(scene.width, scene.height) };
   const box = { x: 0, y: 0, w: scene.width, h: scene.height };
   const back = paintOf(painted.background, painted.background, `${prefix}background`, box);
   const show = (p: Place) => <Lifted key={p.r.id} place={p} ctx={ctx} />;

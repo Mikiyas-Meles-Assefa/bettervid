@@ -3,6 +3,8 @@
 // A scene is a tree of nodes whose properties change over time. Kits expand rich things (a graph, a matrix, a photo)
 // into four primitives, so anything a kit makes can be animated, styled and blended like anything else.
 
+import type { Design } from "../style/design.ts";
+
 export type Value = number | string | number[];
 export type Props = Record<string, Value>;
 
@@ -76,6 +78,7 @@ export type Theme = {
   enter?: "fade" | "draw" | "pop"; // how things arrive when a step does not say
   style?: StyleSpec; // how this style draws. Without it, things are drawn plainly
   roles?: Partial<Record<Role, RoleLook>>; // how this style shows each role; a scene names the role, the style decides the look
+  design?: Design; // the style's design layer (engine/style/design.ts): surfaces, panels, captions, tables, dimming, pictures
 };
 
 // What a thing is for, so a scene says the meaning and the style decides the look. Spark picks a role; it does not

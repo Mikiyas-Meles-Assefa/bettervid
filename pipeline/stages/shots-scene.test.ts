@@ -5,7 +5,8 @@ import { evaluate } from "../../engine/core/evaluate.ts";
 import type { CompileContext, Resolved, Scene } from "../../engine/core/types.ts";
 import { build, formatProblems } from "../../engine/language/build.ts";
 import type { Asset, Project } from "../../schemas/project.ts";
-import { cameraFor, fitMark, frame, laid, seen, shotsToScene, viewAt } from "../lib/shots-scene.ts";
+import { backdropOf, cameraFor, fitMark, frame, laid, seen, shotsToScene, viewAt } from "../lib/shots-scene.ts";
+import { themeFrom } from "../../engine/render/theme.ts";
 import { agreed, clean } from "./annotate.ts";
 
 const FPS = 30;
@@ -135,6 +136,25 @@ test("the draft builds, the engine shows each subject, and an off-crop mark is l
   }
   assert.match(draft.source, /image s3bk asset=plane .* frame=fill/);
   assert.match(draft.source, /image s3 asset=plane .* frame=fit/);
+});
+
+test("the blurred copy behind a picture shown whole follows the style's backdrop look", async () => {
+  for (const style of ["collage", "neon"]) {
+    const p = { ...project(), input: { ...project().input, style } };
+    const draft = shotsToScene(p);
+    const b = themeFrom(style).design.elements.backdrop;
+    assert.ok(draft.source.includes(`set s3bk ${backdropOf(style)}`), draft.source);
+    assert.match(backdropOf(style), new RegExp(`brightness=${b.brightness} saturation=${b.saturation} contrast=${b.contrast}`));
+    // It builds and draws in the style itself, where the picture also takes the style's treatment.
+    const theme = themeFrom(style);
+    const ctx: CompileContext = { fps: FPS, width: 1080, height: 1920, frames: 17 * FPS, words: p.narration!.words, theme };
+    const r = await build(draft.source, { ctx, assets: { wide: "/a.jpg", plane: "/b.jpg" }, words: p.narration!.words.map((w) => w.text) });
+    assert.deepEqual(r.problems, [], formatProblems(r.problems));
+    const back = find(evaluate(r.scene!, 12 * FPS), "s3bk")!.props;
+    assert.equal(back.brightness, b.brightness);
+    assert.equal(back.blur, b.blur);
+  }
+  assert.notEqual(backdropOf("collage"), backdropOf("neon"));
 });
 
 test("the camera mirror agrees with the engine", async () => {

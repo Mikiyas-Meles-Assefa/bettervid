@@ -29,7 +29,12 @@ export type Elements = {
   pointer: { head: "open" | "solid" | "none"; ring: "hand" | "clean"; width: number };
   highlight: { kind: "marker" | "underline" | "ring" | "box" | "glow"; color: string; opacity: number };
   dim: { amount: number; keepHue: boolean; glow: number; stroke: number };
+  // A picture's own copy blown up behind it when it is shown whole: out of focus, and pulled toward the page so the
+  // picture in front reads as the subject. Optional in a style file; worked out from the page and the picture
+  // treatment when left out (see backdropOf).
+  backdrop: Backdrop;
 };
+export type Backdrop = { blur: number; brightness: number; saturation: number; contrast: number; tint: string; tintAmount: number };
 export type Picture = { saturation: number; contrast: number; brightness: number; tint: string; tintAmount: number; border: string; borderWidth: number; shadow: number; rotate: number };
 export type Design = {
   colors: Record<string, string>;
@@ -236,7 +241,7 @@ export function resolveDesign(file: { palette?: Palette; design?: Raw }, style: 
 
   const el: Raw = raw.elements ?? {};
   const need = ["panel", "caption", "label", "table", "pointer", "highlight", "dim"];
-  only("design.elements", el, need);
+  only("design.elements", el, [...need, "backdrop"]);
   for (const k of need) if (!el[k]) throw new Error(`style design.elements.${k} is missing`);
   const e = (k: string, keys: string[]) => {
     only(`design.elements.${k}`, el[k], keys);
@@ -259,6 +264,7 @@ export function resolveDesign(file: { palette?: Palette; design?: Raw }, style: 
     pointer: { head: pick("design.elements.pointer.head", po.head, ["open", "solid", "none"] as const), ring: pick("design.elements.pointer.ring", po.ring, ["hand", "clean"] as const), width: range("design.elements.pointer.width", po.width, 2, 16) },
     highlight: { kind: pick("design.elements.highlight.kind", h.kind, ["marker", "underline", "ring", "box", "glow"] as const), color: color("design.elements.highlight.color", h.color), opacity: range("design.elements.highlight.opacity", h.opacity, 0.2, 1) },
     dim: { amount: range("design.elements.dim.amount", dm.amount, 0.1, 0.8), keepHue: dm.keepHue, glow: range("design.elements.dim.glow", dm.glow, 0, 1), stroke: range("design.elements.dim.stroke", dm.stroke, 0.4, 1) },
+    backdrop: { blur: 0, brightness: 1, saturation: 1, contrast: 1, tint: "paper", tintAmount: 0 }, // set below, once the picture treatment is known
   };
 
   const pic: Raw = raw.picture;
@@ -278,6 +284,11 @@ export function resolveDesign(file: { palette?: Palette; design?: Raw }, style: 
     rotate: range("design.picture.rotate", pic.rotate, 0, 4),
   };
 
+  if (el.backdrop === undefined) elements.backdrop = backdropOf(colors.paper!, picture);
+  else {
+    const b = e("backdrop", ["blur", "brightness", "saturation", "contrast", "tint", "tintAmount"]);
+    elements.backdrop = { blur: range("design.elements.backdrop.blur", b.blur, 0, 80), brightness: range("design.elements.backdrop.brightness", b.brightness, 0.2, 1.2), saturation: range("design.elements.backdrop.saturation", b.saturation, 0, 1.6), contrast: range("design.elements.backdrop.contrast", b.contrast, 0.6, 1.4), tint: color("design.elements.backdrop.tint", b.tint), tintAmount: range("design.elements.backdrop.tintAmount", b.tintAmount, 0, 0.8) };
+  }
   const design: Design = { colors: extra, scale, roles, surfaces, elements, picture };
 
   // The table rule and the highlight are marks on the page; a highlight drawn behind words is a surface for them.
@@ -298,6 +309,14 @@ export function resolveDesign(file: { palette?: Palette; design?: Raw }, style: 
     throw new Error(`style design: unreadable pairings, measured against the surface as drawn (texture and light included): ${bad.map((b) => `${b.role === "text" ? `the ink for words (${b.color})` : b.role === "dimmed" ? `dimmed body words (${b.color})` : `${b.role} (${b.color})`} on ${b.on} reads at ${b.contrast.toFixed(2)}, needs ${b.need}`).join("; ")}`);
   }
   return design;
+}
+
+// The backdrop a style gets when its file does not give one: the picture's own treatment, blurred, and stepped toward
+// the page, darker on a dark page and paler on a light one, so the picture shown whole in front stands out in any style.
+export function backdropOf(paper: string, p: Picture): Backdrop {
+  const dark = contrast(paper, "#ffffff") > contrast(paper, "#000000");
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  return { blur: 40, brightness: r2(p.brightness * (dark ? 0.42 : 0.82)), saturation: r2(p.saturation * 0.85), contrast: dark ? 1.1 : 0.9, tint: "paper", tintAmount: dark ? 0.25 : 0.45 };
 }
 
 // What the renderer asks: how this role looks here, sitting on `on` (a surface name; the page when left out).

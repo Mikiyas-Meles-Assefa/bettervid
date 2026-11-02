@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Asset, Box, Mark, Project, Shot, ShotType } from "../../schemas/project.ts";
 import { safeArea } from "../../engine/language/layout.ts";
+import { themeFrom } from "../../engine/render/theme.ts";
 import type { Framing } from "../stages/annotate.ts";
 import { dir } from "./project.ts";
 
@@ -22,9 +23,14 @@ const H = 1920;
 const SAFE = safeArea(W, H);
 // Scans hold up to about this many times the covering size before they look soft.
 const SHARP = 2.6;
-// The look of a picture's own copy behind it: out of focus and darker, so the picture in front reads as the subject.
-// Style-neutral today; once styles define a backdrop look, this becomes a role.
-const BACKDROP = "blur=40 brightness=0.38 saturation=0.9 contrast=1.15 scaleX=1.5 scaleY=1.5";
+// The look of a picture's own copy behind it: out of focus and stepped toward the page, so the picture in front reads
+// as the subject. Each style says how (design.elements.backdrop, engine/style/design.ts).
+export function backdropOf(style: string): string {
+  const theme = themeFrom(style);
+  const b = theme.design.elements.backdrop;
+  const tint = b.tintAmount > 0 ? ` tint=${b.tint} tintAmount=${b.tintAmount}` : "";
+  return `blur=${b.blur} brightness=${b.brightness} saturation=${b.saturation} contrast=${b.contrast}${tint} scaleX=1.5 scaleY=1.5`;
+}
 // Words over a picture name their role, so the style gives them a designed backing. The language accepts `role=` once
 // the layout workstream merges it; until then the engine's own card under words on pictures does this job.
 const ROLES_READY = true;
@@ -295,6 +301,7 @@ export function shotsToScene(p: Project): { source: string; assets: Record<strin
   const words = p.narration?.words ?? [];
   const shots = [...(p.shots ?? [])].sort((a, b) => a.start - b.start);
   if (!words.length || !shots.length) throw new Error(`shotsToScene needs narration and shots (project ${p.id})`);
+  const BACKDROP = backdropOf(p.input.style);
   const byShot = new Map((p.assets ?? []).map((a) => [a.shotId, a as Asset & Framing]));
   const assets: Record<string, string> = {};
   const notes: string[] = [];
