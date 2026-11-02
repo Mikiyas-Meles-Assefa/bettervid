@@ -10,6 +10,7 @@ import { annotate } from "./stages/annotate.ts";
 import { assets } from "./stages/assets.ts";
 import { board } from "./stages/board.ts";
 import { critic } from "./stages/critic.ts";
+import { direction } from "./stages/direction.ts";
 import { director } from "./stages/director.ts";
 import { mix } from "./stages/mix.ts";
 import { plan } from "./stages/plan.ts";
@@ -38,10 +39,12 @@ const LEGACY: Run = [
   ["critic", critic],
 ];
 // Director, assets and annotate still make pictures when the video needs them; the scene stage then builds on them.
+// Direction walks the script as the viewer and plans holds, cues and demonstrations before the voice is recorded.
 const ENGINE: Run = [
   ["plan", plan],
   ["research", research],
   ["writer", writer],
+  ["direction", direction],
   ["voice", voice],
   ["director", director],
   ["assets", assets],

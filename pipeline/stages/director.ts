@@ -58,12 +58,31 @@ export async function director(p: Project, force = false) {
   const words = n.words.map((w, i) => `${i} ${w.start.toFixed(2)}s ${w.text}`).join("\n");
   const user =
     `Topic: ${topic(p)}\n\n${asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])])}\n\nScript beats:\n${JSON.stringify(p.script!.beats, null, 1)}\n\n` +
-    `Fact sheet claims:\n${JSON.stringify(p.factSheet!.claims, null, 1)}\n\nWords (index, start time, word):\n${words}`;
+    `Fact sheet claims:\n${JSON.stringify(p.factSheet!.claims, null, 1)}\n\n${events(p)}Words (index, start time, word):\n${words}`;
   await stage(p, "director", [system, user], 0.2, async () => {
     const r = await json<{ shots: Planned[] }>({ system, user, schema, schemaName: "shot_list", effort: "medium" });
     charge(p, "director", r.usd, `${r.raw.usage?.input_tokens} in, ${r.raw.usage?.output_tokens} out`);
     p.shots = toShots(p, r.value.shots);
   }, force);
+}
+
+// The direction's events, so each picture shows what its moment's eye should be on and nothing withheld turns up early.
+// Only when the plan counts the same words the voice timed; a plan for an older script would point at the wrong words.
+export function events(p: Project): string {
+  const d = p.direction;
+  const last = d?.events.at(-1)?.lastWord;
+  if (!d || last === undefined || last + 1 !== p.narration?.words.length) return "";
+  const first = new Map(d.events.map((e) => [e.id, e.firstWord]));
+  const lines = d.events.map((e) => {
+    const parts = [`words ${e.firstWord} to ${e.lastWord}: ${e.job}`, `look: ${e.look}`, `feel: ${e.feel}`];
+    if (e.camera) parts.push(`camera: ${e.camera}`);
+    if (e.reveal) parts.push(`reveals at word ${e.reveal.word}: ${e.reveal.what}`);
+    // Withheld until this very event means until its reveal, when it has one.
+    const until = e.withhold?.until === e.id && e.reveal ? e.reveal.word : first.get(e.withhold?.until ?? "");
+    if (e.withhold) parts.push(`WITHHOLD "${e.withhold.what}" from every picture before word ${until ?? e.firstWord}`);
+    return `- ${e.id}, ${parts.join("; ")}`;
+  });
+  return `The video's events, from the direction (what each moment is for and where the viewer's eye should be):\n${lines.join("\n")}\n\n`;
 }
 
 const MIN_SECONDS: Record<ShotType, number> = { receipt: 3.5, kinetic_title: 1.5, photo_kenburns: 1.2, cutout_on_paper: 1.2, credits: 0, board: 0, stage: 0, engine: 0 };
