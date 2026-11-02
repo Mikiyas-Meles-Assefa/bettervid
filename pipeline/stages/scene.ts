@@ -597,6 +597,7 @@ async function look(job: Job, start: Written, log: string[]): Promise<{ w: Writt
       job.log(`  ${job.range.id} look ${round}: design ${j.judged.design}/5, ${j.judged.designNote.slice(0, 140)}`);
     }
     const issues = issuesFrom(judged, seen.measured);
+    mkdirSync(join(job.folder, `look${round}`), { recursive: true }); // a second round reuses the recheck frames, so its folder may not exist
     writeFileSync(join(job.folder, `look${round}`, "issues.json"), JSON.stringify(issues, null, 1));
     if (!issues.length) {
       job.log(`  ${job.range.id} look ${round}: fine`);
