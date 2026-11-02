@@ -3,7 +3,7 @@
 import { compile, when } from "../core/compile.ts";
 import type { CompileContext, Ease, Kit, NodeSpec, Props, Scene, SceneDoc, Step, Track, Value } from "../core/types.ts";
 import { EASES } from "../core/ease.ts";
-import { evaluate } from "../core/evaluate.ts";
+import { evaluate, sample } from "../core/evaluate.ts";
 import { graphKit } from "../kits/graph.ts";
 import { estimate, graphPositions, layout, readableOn, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import type { LibraryEntry } from "./library.ts";
@@ -175,6 +175,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const overrides = new Map<string, Props>();
   const mounted = new Map<string, { parts: Part[]; first: Box; scale: number; ends: Map<string, number> }>();
   const programTracks: Track[] = [];
+  const motion = new Map<string, Track["keys"]>(); // program motion by target and property, for finding moving parts
   const steps: Step[] = [];
   let lastScale = Infinity;
 
@@ -316,6 +317,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const parts: Part[] = checked.parts.map((p) => ({ ...p, line: slotItem.line }));
     mounted.set(slotItem.id, { parts, first: area, scale: s, ends: new Map(checked.tracks.map((t) => [`${t.target}\u0000${t.prop}`, t.keys.at(-1)!.at])) });
     programTracks.push(...checked.tracks);
+    for (const t of checked.tracks) motion.set(`${t.target}\u0000${t.prop}`, t.keys);
     for (const e of checked.events) steps.push({ at: e.at, emit: [{ name: e.name, ...(e.data ? { data: e.data } : {}) }] });
     if (checked.tracks.length) laterPlay.push({ behavior: `program.${slotItem.id}`, target: slotItem.id });
   };
@@ -382,14 +384,23 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const list = m?.map((x) => laid.boxes.get(x)).filter((b): b is Box => !!b);
       return list?.length ? union(list) : undefined;
     })() ?? slotPartBox(id);
-    // A part of a kit or program: find it through its parent slot.
+    // A part of a kit or program: where it really is at this moment, following its parents and any program motion.
+    const valueAt = (id: string, prop: string) => {
+      const keys = motion.get(`${id}\u0000${prop}`);
+      return Number(keys ? sample(keys, at) : (parts.get(id)?.props[prop] ?? 0));
+    };
     const slotPartBox = (id: string): Box | undefined => {
       const p = parts.get(id);
       if (!p) return undefined;
-      const parent = p.parent ? parts.get(p.parent) : undefined;
-      const k = Number(parent?.props.scaleX ?? 1);
-      const [ox, oy] = [Number(parent?.props.x ?? 0), Number(parent?.props.y ?? 0)];
-      const [x, y] = [ox + Number(p.props.x ?? 0) * k, oy + Number(p.props.y ?? 0) * k];
+      if (p.kind === "group") {
+        const inner = [...parts.values()].filter((q) => q.parent === id).map((q) => slotPartBox(q.id)).filter((b): b is Box => !!b);
+        return inner.length ? union(inner) : undefined;
+      }
+      let [x, y, k] = [valueAt(id, "x"), valueAt(id, "y"), 1];
+      for (let up = p.parent ? parts.get(p.parent) : undefined; up; up = up.parent ? parts.get(up.parent) : undefined) {
+        const scale = Number(up.props.scaleX ?? 1);
+        [x, y, k] = [valueAt(up.id, "x") + x * scale, valueAt(up.id, "y") + y * scale, k * scale];
+      }
       const pts = p.props.points;
       if (Array.isArray(pts)) {
         const xs = pts.filter((_, i) => i % 2 === 0);
@@ -543,6 +554,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const expandTarget = (id: string, line: number): string[] => {
       const hit = laid.members.get(id) ?? [];
       const under = [...parts.keys()].filter((k) => k === id || k.startsWith(`${id}.`));
+      for (const k of [...under]) for (const q of parts.values()) if (q.parent === k && !under.includes(q.id)) under.push(q.id); // a group a program made
       const out = [...new Set([...hit.flatMap((m) => [...parts.keys()].filter((k) => k === m || k.startsWith(`${m}.`))), ...under])];
       if (!out.length && !fromFailed(id)) report(line, `"${id}" is not on the board at this state.${suggest(id, [...parts.keys(), ...laid.members.keys()])}`);
       return out;
@@ -725,6 +737,16 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
 // Behaviors and state changes can both touch a property, and either may run past the other. Put keys in time order, and
 // where two land on one frame, the later write wins.
 function settle(scene: Scene): Scene {
+  // A line waiting to be drawn has a length of zero, and a round cap would still show that as a dot. Keep it hidden.
+  for (const t of [...scene.tracks]) {
+    if (t.prop !== "drawn" || t.keys[0]?.value !== 0) continue;
+    const start = t.keys.filter((k) => k.value === 0).at(-1)!.at;
+    const shown = Number(scene.nodes.find((n) => n.id === t.target)?.props.opacity ?? 1);
+    const opacity = scene.tracks.find((x) => x.target === t.target && x.prop === "opacity");
+    const held = [{ at: 0, value: 0 }, { at: start, value: 0 }, { at: start + 1, value: shown, ease: "step" as const }];
+    if (opacity) opacity.keys = [...held, ...opacity.keys.filter((k) => k.at > start + 1)];
+    else scene.tracks.push({ target: t.target, prop: "opacity", keys: held });
+  }
   for (const t of scene.tracks) {
     const keys = t.keys.map((k, i) => ({ k, i })).sort((a, b) => a.k.at - b.k.at || a.i - b.i).map((x) => x.k);
     t.keys = keys.filter((k, i) => k.at !== keys[i + 1]?.at);

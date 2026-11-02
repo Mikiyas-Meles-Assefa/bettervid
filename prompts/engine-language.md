@@ -8,7 +8,7 @@ You never give pixel positions. You say what is on screen and how it is arranged
 
 A scene is a list of states. `@N` starts a state at spoken word N. `@N+5` is 5 frames after that word, `@N-5` is 5 frames before it. The video runs at {{fps}} frames a second on a {{width}} by {{height}} canvas.
 
-Below `@N`, list what is on screen, top to bottom.
+There is no limit on states: a scene can have hundreds, and change on any word. Below `@N`, list what is on screen, top to bottom.
 
 - A plain state is the whole screen at that moment. Whatever you do not list leaves.
 - `@N keep` holds everything and only says what changes. New things join, `drop id` removes things, and `drop` also clears arrows, marks and tags that touch that id. A line or item you repeat with an id already on screen replaces it where it stands. An atom you mention in a new line moves there.

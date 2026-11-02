@@ -159,8 +159,22 @@ test("a flow leaves no mark on its line before it starts", async () => {
   assert.ok((at(s, 125, "g.edge.AB")!.props.pulse as number) > 0);
 });
 
+test("a line waiting to be drawn is not on screen yet", async () => {
+  const s = await ok(`@0\nrow r\n  box a "x"\n  box b "y"\n@4 keep\narrow a -> b\n`);
+  assert.equal(at(s, 30, "arrow.a.b")!.props.opacity, 0);
+  assert.equal(at(s, 100, "arrow.a.b")!.props.opacity, 1);
+  assert.equal(at(s, 100, "arrow.a.b")!.props.drawn, 1);
+});
+
+test("an arrow finds a program's part where it is at that moment", async () => {
+  const s = await ok(`program mover\ngroup("m", { x: 100, y: 100 });\npath("m.dot", { parent: "m", points: circle(0, 0, 20), fill: "ink" });\nanim("m", "x", T0, T1, (t) => 100 + t * 600, 5);\nend\n@0\nrun mover p1 w=800 h=400 until=@10\ntext t "here"\n@10 keep\narrow t -> p1.m\n`);
+  const end = (at(s, 200, "arrow.t.p1.m")!.props.points as number[]).slice(-2);
+  const p1 = at(s, 200, "p1")!.props;
+  assert.ok(Math.abs(end[0]! - ((p1.x as number) + 700)) < 40, `${end} vs ${p1.x}`);
+});
+
 test("a line bends around what lies between its ends, unless told how", async () => {
-  const s = await ok(`@0\nbox a "one"\ntext m "in the middle here"\nbox b "two"\narrow a -> b\n@2 keep\narrow a -> b bend=0\n`);
+  const s = await ok(`@0\nbox a "one"\ntext m "mid"\nbox b "two"\narrow a -> b\n@2 keep\narrow a -> b bend=0\n`);
   const bent = at(s, 20, "arrow.a.b")!.props.points as number[];
   const straight = at(s, 100, "arrow.a.b")!.props.points as number[];
   assert.notEqual(bent[16], bent[0]);
