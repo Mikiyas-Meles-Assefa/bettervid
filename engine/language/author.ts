@@ -6,9 +6,10 @@ import { fileURLToPath } from "node:url";
 import { text } from "../../pipeline/lib/meta.ts";
 import { BEHAVIORS } from "../core/behaviors.ts";
 import { EASES } from "../core/ease.ts";
-import type { CompileContext } from "../core/types.ts";
+import { ROLES, type CompileContext, type Kit } from "../core/types.ts";
 import { build, formatProblems, type BuildOptions, type BuildResult } from "./build.ts";
 import { LIMITS } from "./sandbox.ts";
+import { parse, type Item, type State } from "./syntax.ts";
 
 const PROMPTS = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "prompts");
 const read = (name: string) => readFileSync(join(PROMPTS, name), "utf8");
@@ -42,6 +43,35 @@ export function motionDocs(): Record<string, string> {
   return (motionCache = out);
 }
 
+// What each role is for, read from the comments beside `ROLES` in engine/core/types.ts, so the guide follows the contract.
+let roleCache: { name: string; doc: string }[] | undefined;
+export function roleDocs(): { name: string; doc: string }[] {
+  if (roleCache) return roleCache;
+  const docs = new Map<string, string>();
+  try {
+    const src = readFileSync(join(PROMPTS, "..", "engine", "core", "types.ts"), "utf8");
+    const block = /export const ROLES = \[([\s\S]*?)\] as const/.exec(src)?.[1] ?? "";
+    for (const m of block.matchAll(/"(\w+)",\s*\/\/\s*(.+)/g)) docs.set(m[1]!, m[2]!.trim());
+  } catch {
+    // the names alone still teach the roles
+  }
+  return (roleCache = ROLES.map((name) => ({ name, doc: docs.get(name) ?? "" })));
+}
+
+// Whether the language takes `role=` yet. The guide teaches roles once it does, and plain looks until then, so a guide
+// never teaches a word the engine would refuse.
+export function rolesSupported(kitKinds: Iterable<string> = []): boolean {
+  return !parse(`@0\ntext a "x" role=title\nrow r role=panel\n  box b "y" role=key\n`, kitKinds).problems.length;
+}
+
+// Fills `[[roles]]...[[/roles]]` and `[[looks]]...[[/looks]]` blocks, keeping the one this engine supports, and
+// `{{as ROLE|ATTRS}}`, which becomes ` role=ROLE` or ` ATTRS`.
+export function withLooks(text: string, roles: boolean): string {
+  return text
+    .replace(/\[\[(roles|looks)\]\]\n?([\s\S]*?)\[\[\/\1\]\]\n?/g, (_, kind: string, body: string) => ((kind === "roles") === roles ? body : ""))
+    .replace(/\{\{as (\w+)\|([^}]*)\}\}/g, (_, role: string, attrs: string) => (roles ? ` role=${role}` : attrs ? ` ${attrs}` : ""));
+}
+
 // The language guide, filled in with what this engine can really do right now, so new abilities reach Spark by themselves.
 export function languagePrompt(opts: BuildOptions): string {
   const { ctx } = opts;
@@ -62,8 +92,121 @@ export function languagePrompt(opts: BuildOptions): string {
     assets: assets.length ? `Assets: ${assets.join(", ")}\n` : "",
     cpu: String(LIMITS.cpuMs),
     nodes: String(LIMITS.nodes),
+    roles: roleDocs().map((r) => `- \`${r.name}\`${r.doc ? `: ${r.doc}` : ""}`).join("\n"),
+    truthKinds: truthKinds(kits).map((k) => `\`${k}\``).join(", ") || "none in this engine",
   };
-  return read("engine-language.md").replace(/\{\{(\w+)\}\}/g, (_, k: string) => fill[k] ?? "");
+  const roles = rolesSupported(kinds.map((k) => k.name));
+  return withLooks(read("engine-language.md"), roles).replace(/\{\{(\w+)\}\}/g, (_, k: string) => fill[k] ?? "");
+}
+
+// Kinds whose kit plays computed steps: the things that work a process out for real.
+export function truthKinds(kits: Kit[]): string[] {
+  return kits.filter((k) => k.behaviors?.steps).flatMap((k) => Object.keys(k.kinds ?? {}));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Craft notes: what code can see in a scene that builds but may not show its subject at its best. They are feedback the
+// writer weighs, never errors: the writer keeps a choice that serves the words.
+
+const FORMULA = /[̀-ͯ√∑Σ∫∏²³⁴⁵⁶⁷⁸⁹⁰¹ⁿ₀₁₂₃₄₅₆₇₈₉ᵢⱼ]|\\(?:frac|sqrt|bar|sum|hat)\b|\w\^[\w(]|\w_\{?\w/;
+const NUMBER = /^[−-]?\d+(?:[.,]\d+)?$/;
+// A formula, not a sentence with a symbol in passing: formula signs, and few words around them.
+const isFormula = (t: string) => FORMULA.test(t) && (t.match(/\p{L}{3,}/gu) ?? []).length <= 3;
+
+type Shown = { line: number; text: string };
+
+// Every piece of words a scene writes itself, by line: texts, shape labels, atom lines and tags.
+function writtenText(items: Item[], out: Shown[] = []): Shown[] {
+  for (const i of items) {
+    if (i.kind === "atoms") {
+      const atoms = (i.parts ?? []).flatMap((p) => (p.type === "text" ? [p.atom] : p.type === "frac" ? [...p.num, ...p.den] : p.rows.flat()));
+      out.push({ line: i.line, text: atoms.map((a) => a.text).join(" ") });
+    } else if (i.text && i.kind !== "code") out.push({ line: i.line, text: i.text });
+    writtenText(i.children, out);
+  }
+  return out;
+}
+
+// Numbers a scene writes as things of their own, by id: shape labels, texts and atoms that are only a number.
+type Value = { id: string; value: string };
+function ownValue(i: Item): Value[] {
+  if (i.kind === "atoms") return (i.parts ?? []).flatMap((p) => (p.type === "text" && NUMBER.test(p.atom.text.trim()) ? [{ id: p.atom.id, value: p.atom.text.trim() }] : []));
+  return i.kind !== "code" && i.text !== undefined && NUMBER.test(i.text.trim()) ? [{ id: i.id, value: i.text.trim() }] : [];
+}
+// Every number in reading order.
+const allValues = (items: Item[]): Value[] => items.flatMap((i) => [...ownValue(i), ...allValues(i.children)]);
+// Numbers that sit side by side: the children of one arrangement, or the atoms of one line.
+function valueGroups(items: Item[], out: { line: number; values: Value[] }[] = []): { line: number; values: Value[] }[] {
+  for (const i of items) {
+    const values = i.kind === "atoms" ? ownValue(i) : i.children.flatMap(ownValue);
+    if (values.length >= 2) out.push({ line: i.line, values });
+    valueGroups(i.children, out);
+  }
+  return out;
+}
+
+// Whether a scene puts numbers it showed into a new order by hand, either moving the same things or writing the same
+// values again as new things. Returns the two lines that show it.
+function reordered(states: State[]): { first: number; then: number; before: string[]; after: string[] } | undefined {
+  for (let a = 0; a < states.length; a++) {
+    if (states[a]!.keep) continue;
+    const base = allValues(states[a]!.items);
+    if (base.length < 3) continue;
+    const ids = base.map((v) => v.id);
+    const values = base.map((v) => v.value);
+    for (const s of states.slice(a + 1)) {
+      for (const g of valueGroups(s.items)) {
+        const same = g.values.every((v) => ids.includes(v.id));
+        // New things carrying shown values count only when each value names one thing: in a table, repeated small
+        // numbers are new results, not copies.
+        const once = (v: Value) => values.filter((x) => x === v.value).length === 1 && g.values.filter((x) => x.value === v.value).length === 1;
+        const fresh = g.values.every((v) => !ids.includes(v.id) && once(v));
+        const order = g.values.map((v) => (same ? ids.indexOf(v.id) : values.indexOf(v.value)));
+        if ((same || fresh) && order.some((x, k) => k > 0 && x < order[k - 1]!)) return { first: states[a]!.line, then: g.line, before: values, after: g.values.map((v) => v.value) };
+      }
+    }
+  }
+  return undefined;
+}
+
+export function craftNotes(source: string, opts: { kitKinds?: string[]; truthKinds?: string[]; math?: boolean } = {}): string[] {
+  const { doc } = parse(source, opts.kitKinds ?? []);
+  const notes: string[] = [];
+  const kinds = new Set(doc.states.flatMap((s) => s.items).flatMap(function all(i: Item): string[] {
+    return [i.kind, ...i.children.flatMap(all)];
+  }));
+  // Formulas typed as characters, when real typesetting is there.
+  if (opts.math) {
+    const typed = new Map<string, number>();
+    for (const s of doc.states) {
+      for (const t of writtenText(s.items)) if (isFormula(t.text) && !typed.has(t.text)) typed.set(t.text, t.line);
+      for (const c of s.commands) if (c.do === "tag" && isFormula(c.text) && !typed.has(c.text)) typed.set(c.text, c.line);
+    }
+    if (typed.size) {
+      const shown = [...typed].slice(0, 4).map(([text, line]) => `line ${line}: "${text}"`).join("; ");
+      notes.push(`These are formulas typed as characters: ${shown}. Typed marks such as a bar over a letter or a root over a fraction can drop out or sit wrong, and the symbols cannot be pointed at one by one. \`math id latex="..."\` typesets them for real. Keep characters only where it is plain words with a symbol in passing.`);
+    }
+  }
+  // Values put in a new order by hand, when a kit can work the process out.
+  const truth = (opts.truthKinds ?? []).filter((k) => !kinds.has(k));
+  const moved = truth.length && truth.length === (opts.truthKinds ?? []).length ? reordered(doc.states) : undefined;
+  if (moved) notes.push(`The state at line ${moved.first} shows ${moved.before.join(", ")}, and line ${moved.then} puts ${moved.after.join(", ")} in a new order by hand. If a kit in your guide works this process out (${truth.map((k) => `\`${k}\``).join(", ")}), let it: every step is then right, each part can be pointed at, and \`do steps\` ties each step to the words that say it, slowly the first time and faster after. Keep the hand-made version only if no kit does what the words describe.`);
+  return notes;
+}
+
+// Lines that type numbers a truth thing computes, so the writer can point at the computed parts instead.
+export function typedResults(source: string, truth: NonNullable<BuildResult["truth"]>, kitKinds: string[] = []): string[] {
+  const computed = new Set(truth.flatMap((t) => t.steps.join(" ").match(/[−-]?\d+(?:[.,]\d+)?/g) ?? []));
+  const { doc } = parse(source, kitKinds);
+  const out = new Map<number, string>();
+  for (const s of doc.states) {
+    const texts = [...writtenText(s.items), ...s.commands.flatMap((c) => (c.do === "tag" ? [{ line: c.line, text: c.text }] : []))];
+    for (const t of texts) {
+      const nums = t.text.match(/[−-]?\d+(?:[.,]\d+)?/g) ?? [];
+      if (nums.length >= 2 && nums.every((n) => computed.has(n))) out.set(t.line, t.text);
+    }
+  }
+  return [...out].map(([line, text]) => `line ${line}: "${text}"`);
 }
 
 const spark: Ask = async (system, user) => {
@@ -110,12 +253,14 @@ export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" 
     log(`  round ${round}: ${result.stats.states} states, ${result.stats.programs} programs, ${problems.length} problems, $${reply.usd.toFixed(3)}`);
     for (const p of problems.slice(0, 5)) log(`    ${p.slice(0, 180)}`);
     if (!problems.length) {
-      // Once, the steps that truth things really computed go back to the writer, numbered, so it can bind each step to
-      // the words that speak it and point at computed parts instead of typing results.
-      if (aligned || !result.truth?.length || round >= (opts.rounds ?? 4)) return { source, result, rounds, usd, ok: true };
+      // Once, what code can see about the built scene goes back to the writer: the steps truth things really computed,
+      // numbered, so it can bind each step to the words that speak it, and craft notes it can weigh.
+      const kinds = (opts.ctx.kits ?? []).flatMap((k) => Object.keys(k.kinds ?? {}));
+      const review = aligned ? "" : reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(opts.ctx.kits ?? []), math: kinds.includes("math") });
+      if (!review || round >= (opts.rounds ?? 4)) return { source, result, rounds, usd, ok: true };
       aligned = true;
       built = { source, result, rounds: [...rounds], usd, ok: true };
-      next = `${user}\n\nYour scene builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${truthText(result.truth)}`;
+      next = `${user}\n\nYour scene builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${review}`;
       continue;
     }
     next = `${user}\n\nYour scene, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${read("engine-repair.md")}\nProblems:\n${formatProblems(result.problems.slice(0, MAX_PROBLEMS))}`;
@@ -124,8 +269,22 @@ export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" 
   return { source, result, rounds, usd, ok: false };
 }
 
-// The numbered steps of every truth thing in a scene, for one alignment round.
-export function truthText(truth: NonNullable<BuildResult["truth"]>): string {
+// The numbered steps of every truth thing in a scene, for one alignment round. With the scene's source, lines that type
+// numbers the truth things compute are named, so the writer can point at the computed parts instead.
+export function truthText(truth: NonNullable<BuildResult["truth"]>, source?: string, kitKinds: string[] = []): string {
   const list = truth.map((t) => `${t.kind} ${t.id}:\n${t.steps.map((s, i) => `  ${i + 1}. ${s}`).join("\n")}`).join("\n");
-  return `These are the steps the truth things in your scene really compute, in order:\n${list}\n\nCheck that each \`do steps\` plays these steps on the spoken words that talk about them (at=, or from= and to= across states), and that tags, marks and lights point at the parts that show computed results rather than writing results as text yourself. Change only what needs it, and return the whole scene again, with no commentary.`;
+  const typed = source ? typedResults(source, truth, kitKinds) : [];
+  const typedNote = typed.length ? `\n\nThese lines type numbers that the truth things compute: ${typed.slice(0, 5).join("; ")}. A typed copy can disagree with what is computed and cannot follow the steps; where a line shows a result, point at the part that shows it (light, tag, mark) instead. A line that only quotes the narration's words can stay.` : "";
+  return `These are the steps the truth things in your scene really compute, in order:\n${list}\n\nCheck that each \`do steps\` plays these steps on the spoken words that talk about them (at=, or from= and to= across states), and that tags, marks and lights point at the parts that show computed results rather than writing results as text yourself.${typedNote}`;
+}
+
+// What goes back to the writer once a scene builds: computed steps to bind, craft notes to weigh, or both. Empty when
+// there is nothing to say. `extra` adds notes only the caller can see, such as how the part sits with its pictures.
+export function reviewText(source: string, result: BuildResult, opts: { kitKinds?: string[]; truthKinds?: string[]; math?: boolean; extra?: string[] } = {}): string {
+  const notes = [...craftNotes(source, opts), ...(opts.extra ?? [])];
+  const parts = [
+    result.truth?.length ? truthText(result.truth, source, opts.kitKinds) : "",
+    notes.length ? `Notes on how the scene reads. They are not errors: act on a note where it makes the scene serve its words better, and leave the scene as it is where your choice already does:\n${notes.map((n) => `- ${n}`).join("\n")}` : "",
+  ].filter(Boolean);
+  return parts.length ? `${parts.join("\n\n")}\n\nChange only what needs it, and return the whole scene again, with no commentary.` : "";
 }
