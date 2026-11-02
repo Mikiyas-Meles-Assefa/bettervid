@@ -88,11 +88,13 @@ A fast phase still needs time: about a second for each few steps it plays, under
 
 **Holds.** A hold is a silence of `seconds` that the voice leaves after a word, while the picture keeps working. Decide its length from what the picture has to do in it: how many steps play, how long it takes to read what is shown, about three seconds for a real question. Between {{holdMin}} and {{holdMax}} seconds. Each hold splits the voice recording at that point, so use a hold where it has a job and not elsewhere. Brisk stretches with no holds are part of the rhythm too. `does` says what the picture does during it; `shows` is a short on-screen prompt for a predict hold, or empty.
 
-**Cues.** A cue is a short line you add to the narration, spoken in the narrator's voice before a word: one that turns the eye or marks a change of pace or invites a guess, where the script has no line that does it ("Watch this one.", "Now the rest, faster.", "Which one comes next?"). At most {{cueWords}} words, placed before the first word of a sentence, never a new fact or number the script does not say, never repeating what the script says next. Most videos need few or none; add one only when the moment needs it.
+**Cues.** A cue is a short line you add to the narration, spoken in the narrator's voice before a word: one that turns the eye or marks a change of pace or invites a guess, where the script has no line that does it ("Watch this one.", "Now the rest, faster.", "Which one comes next?"). At most {{cueWords}} words, placed before the first word of a sentence, never a new fact or number the script does not say. Read the sentence a cue would precede: if it already turns the eye, announces the change or asks the question ("look", "watch", "now", "here is"), the cue only repeats it, so leave it out. A cue that asks a question gets a predict hold right after it, or the script answers before the viewer can think. Most videos need few or none.
 
-**Withhold.** Name what must not appear, in the picture or the words, before the event `until` (that event's id, this event or a later one). The pictures are chosen from your plan, so this is how a reveal stays a reveal. Leave both empty when nothing is withheld.
+**Withhold.** Name what must not appear, in the picture or the words, before the event `until` (that event's id, this event or a later one). The pictures are chosen from your plan, so this is how a reveal stays a reveal: the answer, the result, the turn, the face, the punchline, whatever a gap the viewer is holding would be spoiled by. Put it on the event where it is first at risk, once; leave both empty everywhere else.
 
-**Look.** The one thing the eye should be on during the event, concrete enough for the scene author to make it the only thing that moves or lights.
+**Look.** The one thing the eye should be on during the event, concrete enough for the scene author to make it the only thing that moves or lights. It is something the video can put on screen; there is no presenter on camera unless the request asks for one.
+
+**Demo** is for a process that runs: a computation, an algorithm, a mechanism moving, a procedure carried out, an experiment, a simulation. Labels appearing, a diagram being built or a picture being shown is not a demo; plan those through `look`, holds and camera.
 
 # Word numbers
 

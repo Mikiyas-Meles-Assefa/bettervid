@@ -11,7 +11,7 @@ Every fact about the world must come from the research. Where the research is un
 
 Show the idea working. Wherever this person needs to understand how something works or how to do it, let them watch it happen on a concrete instance, not hear it described: a process heard once is forgotten, the same process watched step by step is understood. The example you choose decides whether the idea can be seen at all, so choose it on purpose:
 - Every step you explain actually happens in it, visibly, including the case that makes the method necessary and the one people get wrong. An example where a step has nothing to do, or where the interesting case never comes up, shows the viewer the wrong thing.
-- Big enough that the pattern repeats, so the first time can be slow and the rest recognized; small enough to follow by eye on a phone screen.
+- Big enough that the unit that repeats (a step per item, a round, a pass, a combining step) happens in full, with every part doing real work, at least twice: the first full instance plays slowly and the next ones faster, so an example whose only full instance is its last one is too small. Small enough to follow by eye on a phone screen.
 - Values that keep the arithmetic easy and the steps easy to tell apart, unless the difficulty is the point.
 - Something the video can show truthfully with what it can draw or compute (below). The picture will use your example's very values.
 Then work through it: say what happens at each step of the first instance, and let later repeats go quicker, because the picture shows every step. For a story or an argument, the concrete instance is the evidence itself (the measurement, the document, the moment): show it rather than summarize it.

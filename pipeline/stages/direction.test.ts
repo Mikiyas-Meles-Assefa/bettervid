@@ -142,6 +142,7 @@ test("the checks catch broken plans", () => {
   has(plan([event("e1", 0, 13)], [{ id: "c1", beforeWord: 6, text: "Watch this one now and then that one too." }]), /at most 8/);
   has(plan([event("e1", 0, 13)], [{ id: "c1", beforeWord: 6, text: "Watch all 12." }]), /never adds a fact/);
   has(plan([event("e1", 0, 13)], [{ id: "c1", beforeWord: 15, text: "Done." }]), /does not exist/);
+  has(plan([event("e1", 0, 13)], [{ id: "c1", beforeWord: 6, text: "Which side first?" }]), /asks the viewer a question but no hold follows it/);
   has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 9, afterCue: "", seconds: 1, purpose: "look", does: "x", shows: "" }] }), event("e2", 6, 13)]), /outside its event/);
   has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 2, afterCue: "", seconds: 30, purpose: "look", does: "x", shows: "" }] }), event("e2", 6, 13)]), /lasts 30 s/);
   has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 2, afterCue: "", seconds: 1, purpose: "look", does: "", shows: "" }] }), event("e2", 6, 13)]), /empty pause/);
@@ -182,6 +183,8 @@ test("demonstrations are checked against the steps the kit really computes", () 
   // Data the kit refuses, and a kind the engine does not have, come back as problems for the model.
   const bad = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "sort", data: '{"data":[1]}' }, phases: [] } })]);
   assert.match(demoSteps(bad, ctx, kinds).problems[0]!, /refuses/);
+  const extra = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "sort", data: '{"data":[3,1,2],"id":"s"}' }, phases: [] } })]);
+  assert.match(demoSteps(extra, ctx, kinds).problems[0]!, /no setting "id"/);
   const unknown = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "teleport", data: "{}" }, phases: [] } })]);
   assert.match(demoSteps(unknown, ctx, kinds).problems[0]!, /does not have/);
 });

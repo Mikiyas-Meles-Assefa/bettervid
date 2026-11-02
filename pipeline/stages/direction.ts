@@ -160,6 +160,9 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
       continue;
     }
     try {
+      // Built through the kit itself, so settings it does not take are refused here as they would be in the scene.
+      const make = ctx.kits?.find((k) => k.kinds?.[kind])?.kinds?.[kind];
+      make?.({ id: "demo", kind, props: {}, data: data as Record<string, unknown> }, ctx);
       steps.set(key, truthSteps(kind, "demo", data as Record<string, unknown>, ctx));
     } catch (err) {
       problems.push(`event ${e.id}: the ${kind} kit refuses this data: ${(err as Error).message}`);
@@ -248,6 +251,10 @@ export function problems(raw: RawPlan, words: string[], steps: Map<string, strin
       }
     }
   });
+  // A question the viewer is asked needs time to think before the script answers it.
+  const waited = new Set(events.flatMap((e) => e.holds.map((h) => h.afterCue)));
+  for (const c of raw.cues)
+    if (/\?["'”’)]*$/.test(c.text.trim()) && !waited.has(c.id)) out.push(`cue ${c.id} ("${c.text}") asks the viewer a question but no hold follows it; give it a predict hold right after (afterCue "${c.id}") or make it a line that is not a question`);
   return out;
 }
 

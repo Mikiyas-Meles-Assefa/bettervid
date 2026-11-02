@@ -37,6 +37,10 @@ function parse(reply: string, step: WritingStep["step"]): WritingStep {
 
 // A check replies "VERDICT: shows|revise" and its notes. It changes no words, so it carries the narration it read.
 function parseCheck(reply: string, read: WritingStep): WritingStep {
+  for (const part of ["IDEAL", "WALK"]) {
+    const said = new RegExp(`${part}:\\s*([\\s\\S]*?)\\n\\s*(?:WALK|VERDICT):`, "i").exec(reply)?.[1]?.trim();
+    if (said) console.log(`    ${part.toLowerCase()}: ${said.replace(/\n+/g, "\n          ")}`);
+  }
   const verdict = /^VERDICT:\s*(\w+)/im.exec(reply)?.[1]?.toLowerCase() ?? "";
   const notes = (/NOTES:\s*\n?([\s\S]*)$/i.exec(reply)?.[1] ?? "").split("\n").map((l) => l.replace(/^\s*-\s*/, "").trim()).filter((l) => l && l.toLowerCase() !== "none");
   if (verdict !== "shows" && verdict !== "revise") throw new Error(`writer check: reply had no verdict:\n${reply.slice(0, 300)}`);
