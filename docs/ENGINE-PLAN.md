@@ -162,36 +162,6 @@ Targets: viewers understand more than from audio alone, zero factual errors on s
 
 Each workstream gets its own branch, a written contract, tests, and a demo video. A review pass checks each one before it merges. Two workstreams never change the same files.
 
-### Subagents and models
-
-No Sonnet. Fable is for the hardest open-ended work, Opus for well-defined building. At most about 6 run at once.
-
-| Wave | Work | Model |
-|---|---|---|
-| 1 | Foundation (the shared contract) | Fable |
-| 2 | Scene runtime | Fable |
-| 2 | Scene language and sandbox | Fable |
-| 2 | Reviewers and benchmark | Fable |
-| 2 | Motion | Opus |
-| 2 | Text and layout | Opus |
-| 2 | Styles | Opus |
-| 3 | Graphs and algorithms kit | Opus |
-| 3 | Code kit | Opus |
-| 3 | Math kit | Opus |
-| 4 | App connection and intent understanding | Fable |
-| 4 | Hosting | Opus |
-| 5 | Integrator: connects everything and runs the hard requests | Fable |
-
-Most testing should use saved plans and recorded voices, to protect the Meta budget.
-
-### Understanding intent
-
-The system assumes every request is a documentary: the writer, research and director prompts say so. The first step should instead work out why this person is asking, what they already know, and what success looks like for them, the way a good assistant does. Studying, exam prep, curiosity, a quick answer and entertainment then produce different videos. Spark judges this per request; there are no fixed formats, and "documentary" stops being the default.
-
-### Speed for judges
-
-A 1-minute video takes about 5 to 8 minutes today. Judges see the gallery and replay mode first, watch the research and script appear live, and get short videos by default. The new engine should play a live preview in the browser before the final render. Hosting needs a queue.
-
 ## 14. Hackathon cut (Wed Nov 4)
 
 Phases 0 and 1, the graphs and code kits, and math on the new engine are the goal. One Dijkstra video and one run-through of code, in two styles, would make the demo unforgettable. Everything else goes on the roadmap slide. Hosting must still happen, or judges cannot use it, so it runs as its own workstream.

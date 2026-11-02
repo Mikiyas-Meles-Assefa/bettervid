@@ -17,6 +17,7 @@
   "include": [
     "scripts",
     "app",
+    "engine",
     "pipeline",
     "schemas",
     "video"
