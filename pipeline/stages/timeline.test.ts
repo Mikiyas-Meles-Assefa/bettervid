@@ -34,9 +34,9 @@ test("sections join in word order, whatever order they arrive in", async () => {
   assert.deepEqual(used, []);
 });
 
-test("a scene that does not build throws, naming the section and its line", async () => {
+test("a scene that does not build throws, quoting the line", async () => {
   const p = project([section("a", 0, 3, `@0\ntext first "hello" size=big`), section("b", 4, 7, `@4\ntext second "x" color=purple`)]);
-  await assert.rejects(engineScene(p, 160), (e: Error) => /section b line 2/.test(e.message) && /purple/.test(e.message));
+  await assert.rejects(engineScene(p, 160), (e: Error) => /text second "x" color=purple/.test(e.message) && /"purple" is not a color/.test(e.message));
 });
 
 test("a scene asset that is not in the project folder throws", async () => {

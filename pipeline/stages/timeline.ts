@@ -3,12 +3,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Scene } from "../../engine/core/types.ts";
-import { KITS } from "../../engine/kits/index.ts";
 import { build } from "../../engine/language/build.ts";
-import { loadLibrary } from "../../engine/language/library.ts";
-import { themeFrom } from "../../engine/render/theme.ts";
 import type { Asset, Clip, Credits, Project, Timeline } from "../../schemas/project.ts";
 import { dir, stage, style, topic } from "../lib/project.ts";
+import { joinScene, sceneBuildOptions } from "./scene.ts";
 
 const FPS = 30;
 const TAIL = 0.6; // seconds of picture after the last word
@@ -144,34 +142,21 @@ export async function timeline(p: Project, force = false) {
 // not build stops the run with every problem, named by section, so the scene stage is fixed rather than papered over.
 export async function engineScene(p: Project, story: number) {
   const plan = p.scene!;
-  const sections = [...plan.sections].sort((a, b) => a.firstWord - b.firstWord);
-  if (!sections.length) throw new Error("timeline: the scene has no sections");
+  if (!plan.sections.length) throw new Error("timeline: the scene has no sections");
+  // Asset paths stay relative to the project folder, which is Remotion's public dir; the player serves them from there.
   for (const [name, file] of Object.entries(plan.assets)) {
     if (!existsSync(join(dir(p), file))) throw new Error(`timeline: scene asset ${name} points to ${file}, which is not in the project folder`);
   }
-  // Where each section starts in the joined source, so a problem's line number can name its section.
-  const starts: { id: string; line: number }[] = [];
-  let line = 1;
-  const source = sections
-    .map((x) => {
-      const text = x.source.replace(/\s+$/, "");
-      starts.push({ id: x.id, line });
-      line += text.split("\n").length;
-      return text;
-    })
-    .join("\n");
-  const words = p.narration!.words;
-  const theme = themeFrom(p.input.style);
-  const ctx = { fps: FPS, width: 1080, height: 1920, frames: story, theme, words, kits: KITS };
-  const r = await build(source, { ctx, library: loadLibrary(), seed: 11, words: words.map((w) => w.text), assets: plan.assets });
+  // The same document and options the scene stage checked, with the real length of the story.
+  const source = joinScene(plan);
+  const opts = sceneBuildOptions(p, plan.assets);
+  const r = await build(source, { ...opts, ctx: { ...opts.ctx, frames: story } });
   if (!r.scene) {
-    const where = (n: number) => {
-      const s = [...starts].reverse().find((x) => x.line <= n);
-      return n && s ? `section ${s.id} line ${n - s.line + 1}` : "scene";
-    };
+    const lines = source.split("\n");
+    const where = (n: number) => (n ? `line ${n} (${lines[n - 1]?.trim().slice(0, 80)})` : "scene");
     throw new Error(`timeline: the scene does not build in style ${p.input.style}:\n${r.problems.map((x) => `- ${where(x.line)}: ${x.message}`).join("\n")}`);
   }
-  return { scene: r.scene, theme, used: usedAssets(p, r.scene) };
+  return { scene: r.scene, theme: opts.ctx.theme, used: usedAssets(p, r.scene) };
 }
 
 // The image files a compiled scene shows, matched to their asset records for the credits. An image with no record
