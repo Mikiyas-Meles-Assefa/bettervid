@@ -312,7 +312,8 @@ export const partBehaviors: NonNullable<Kit["behaviors"]> = {
     const rise = num(args.rise, 0);
     return parts.flatMap((p, i): Track[] => {
       const at = start + i * stagger;
-      const out: Track[] = [{ target: p.id, prop: "opacity", keys: [{ at, value: 0 }, { at: at + frames, value: 1, ease: "smooth" }] }];
+      // Hidden from the start of the reveal, not only from its own turn.
+      const out: Track[] = [{ target: p.id, prop: "opacity", keys: [{ at: start, value: 0, ease: "step" }, ...(at > start ? [{ at, value: 0 }] : []), { at: at + frames, value: 1, ease: "smooth" }] }];
       if (rise) out.push({ target: p.id, prop: "y", keys: [{ at, value: p.y + rise }, { at: at + frames, value: p.y, ease: "out" }] });
       return out;
     });

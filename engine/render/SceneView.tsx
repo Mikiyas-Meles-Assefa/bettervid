@@ -6,12 +6,13 @@ import { evaluate, parseGradient } from "../core/evaluate.ts";
 import type { Props, Resolved, Scene, Theme, Value } from "../core/types.ts";
 import { blendOf, bounds, filterOf, gradientGeometry, IDENTITY, inverse, line, list, matrixOf, n, safeId, themed, times, tintMatrix, transformOf, type Box, type Matrix } from "./effects.ts";
 import { ShaderLayer } from "./ShaderLayer.tsx";
+import { StyleDefs, StyledPath, StyledText, Surface } from "../style/draw.tsx";
 
 // Masks and tints cover everything their part could touch. Browsers trim these to what is on screen.
 const WIDE = { x: -20000, y: -20000, width: 40000, height: 40000 };
 
 type Place = { r: Resolved; parent?: Place };
-type Ctx = { theme: Theme; time: number; prefix: string; places: Map<string, Place>; away: Set<string>; depth: number };
+type Ctx = { surface: string; theme: Theme; time: number; prefix: string; places: Map<string, Place>; away: Set<string>; depth: number };
 
 const inOrder = (list: Resolved[]) => (list.some((r) => n(r.props.z) !== 0) ? [...list].sort((a, b) => n(a.props.z) - n(b.props.z)) : list);
 
@@ -77,6 +78,17 @@ function pathBody(r: Resolved, ctx: Ctx, id: string, defs: React.ReactNode[]) {
   if (d === undefined) throw new Error(`path ${r.id} needs points or d`);
   const box = points ? bounds(points) : undefined;
   const width = n(a.strokeWidth, 6);
+  const pen = ctx.theme.style;
+  // The style draws plain lines and fills. A part with its own gradient or dash pattern keeps exactly what it asked for.
+  if (pen && points && !parseGradient(a.fill) && !parseGradient(a.stroke) && a.dash === undefined && a.trimStart === undefined && a.trimEnd === undefined) {
+    const p = n(a.pulse, -1);
+    return (
+      <>
+        <StyledPath id={r.id} a={a} style={pen} surface={ctx.surface} accent={ctx.theme.colors.accent ?? "#000000"} />
+        {p >= 0 && p <= 1 && <path d={d} fill="none" stroke={String(a.pulseColor ?? ctx.theme.colors.accent)} strokeWidth={width * 2.2} strokeLinecap="round" pathLength={1} strokeDasharray="0.14 1" strokeDashoffset={-p * 0.86} />}
+      </>
+    );
+  }
   const fill = paintOf(a.fill, "none", `${id}-f`, box);
   const stroke = paintOf(a.stroke, "none", `${id}-s`, box);
   defs.push(fill.def, stroke.def);
@@ -92,6 +104,7 @@ function pathBody(r: Resolved, ctx: Ctx, id: string, defs: React.ReactNode[]) {
 }
 
 function textBody(a: Props, ctx: Ctx, id: string, defs: React.ReactNode[]) {
+  if (ctx.theme.style && !parseGradient(a.color) && a.stroke === undefined) return <StyledText id={id} a={a} theme={ctx.theme} style={ctx.theme.style} surface={ctx.surface} />;
   const fill = paintOf(a.color, ctx.theme.colors.ink!, `${id}-f`);
   const stroke = paintOf(a.stroke, "none", `${id}-s`);
   defs.push(fill.def, stroke.def);
@@ -218,10 +231,24 @@ export const SceneView: React.FC<{ scene: Scene; theme: Theme; frame: number }> 
   const painted = themed(scene, theme);
   const roots = evaluate(painted, frame);
   const { places, away, lifted } = survey(roots);
-  const ctx: Ctx = { theme, time: frame / scene.fps, prefix, places, away, depth: 0 };
+  const ctx: Ctx = { theme, time: frame / scene.fps, prefix, places, away, depth: 0, surface: String(painted.background) };
   const box = { x: 0, y: 0, w: scene.width, h: scene.height };
   const back = paintOf(painted.background, painted.background, `${prefix}background`, box);
   const show = (p: Place) => <Lifted key={p.r.id} place={p} ctx={ctx} />;
+  const pen = theme.style;
+  if (pen) {
+    return (
+      <div style={{ position: "relative", width: scene.width, height: scene.height, overflow: "hidden" }}>
+        <Surface style={pen} color={String(painted.background)} theme={theme} width={scene.width} height={scene.height} />
+        <svg width={scene.width} height={scene.height} viewBox={`0 0 ${scene.width} ${scene.height}`} style={{ position: "absolute", left: 0, top: 0 }}>
+          <StyleDefs style={pen} />
+          {lifted.filter((p) => n(p.r.props.layer) < 0).map(show)}
+          {inOrder(roots).map((r) => <Item key={r.id} r={r} ctx={ctx} />)}
+          {lifted.filter((p) => n(p.r.props.layer) > 0).map(show)}
+        </svg>
+      </div>
+    );
+  }
   return (
     <svg width={scene.width} height={scene.height} viewBox={`0 0 ${scene.width} ${scene.height}`} style={{ display: "block", background: back.def ? undefined : back.paint }}>
       {back.def && <defs>{back.def}</defs>}

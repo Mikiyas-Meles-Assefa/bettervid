@@ -122,7 +122,7 @@ export function compile(doc: SceneDoc, ctx: CompileContext): Scene {
       for (const n of expand(spec)) {
         const props = paint({ ...DEFAULTS, ...n.props });
         place(n, props);
-        const enter = s.enter ?? "fade";
+        const enter = s.enter ?? ctx.theme.enter ?? "fade";
         if (enter === "none") continue;
         const final = enter === "draw" && n.kind === "path" ? "drawn" : "opacity";
         const end = props[final] as number;

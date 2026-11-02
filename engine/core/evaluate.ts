@@ -126,7 +126,10 @@ export function sample(keys: Key[], frame: number): Value {
   }
   if (lo === keys.length - 1) return keys[lo]!.value;
   const [a, b] = [keys[lo]!, keys[lo + 1]!];
-  return mix(a.value, b.value, EASES[b.ease ?? "smooth"]((frame - a.at) / (b.at - a.at)));
+  const raw = (frame - a.at) / (b.at - a.at);
+  // Words cannot blend, so they switch once. Eased progress can overshoot past 1 and back, which would flicker them.
+  const words = typeof a.value === "string" && !isColor(a.value) && !blendable(a.value);
+  return words ? (raw < 1 ? a.value : b.value) : mix(a.value, b.value, EASES[b.ease ?? "smooth"](raw));
 }
 
 // What a property means when a node never set it. A change to such a property starts here rather than jumping.
