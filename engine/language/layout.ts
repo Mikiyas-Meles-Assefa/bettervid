@@ -40,7 +40,7 @@ export const CHAR = 0.56; // average character width, in em
 // Capitals and digits are wider than the average letter and spaces narrower, so words in capitals are not underestimated.
 const charWidth = (c: string) => (/[A-Z0-9MW]/.test(c) ? 0.68 : c === " " ? 0.3 : CHAR);
 export const estimate: Measure = (text, size, font) => (font === "mono" ? Math.max(0.6, [...text].length) * size * 0.6 : Math.max(0.6 * CHAR, [...text].reduce((sum, c) => sum + charWidth(c), 0)) * size);
-const TEXT_SIZE: Record<string, number> = { huge: 136, big: 96, normal: 70, small: 50, note: 40 };
+export const TEXT_SIZE: Record<string, number> = { huge: 136, big: 96, normal: 70, small: 50, note: 40 };
 const CODE_SIZE = 40;
 const MAX_SCALE = 1.6;
 const MIN_SCALE = 0.4;

@@ -141,3 +141,12 @@ test("the renderer gives a part that names a role the style's look for what it l
   assert.equal(roleProps(styled, "title", "text", { text: "hi" }).font, "TitleFont");
   assert.deepEqual(roleProps(styled, "nonsense", "text", {}), {});
 });
+
+test("a kit takes size words like text, and nothing laid out beside it ends up with no position", async () => {
+  const kits = { ...ctx, kits: [mathKit] };
+  const s = await ok(`@0\ntext t "Title" size=big\nstack tb gap=32\n  math h latex="x - \\bar{x}" size=small\n  text r1 "1 | -2 | 4"\n`, {}, kits);
+  const finite = (r: Resolved[]): boolean => r.every((n) => Object.values(n.props).every((v) => typeof v !== "number" || Number.isFinite(v)) && finite(n.children));
+  assert.ok(finite(evaluate(s, 30)));
+  const r1 = find(evaluate(s, 30), "r1");
+  assert.ok(r1 && Number.isFinite(Number(r1.props.y)));
+});

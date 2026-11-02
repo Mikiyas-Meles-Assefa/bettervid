@@ -7,7 +7,7 @@ import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
 import { graphKit } from "../kits/graph.ts";
 import { truthSteps } from "../kits/steps.ts";
-import { estimate, graphPositions, layout, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
+import { estimate, graphPositions, layout, TEXT_SIZE, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
 import { contrast } from "../style/color.ts";
 import { dimColor } from "../style/design.ts";
@@ -185,7 +185,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         if (["at", "into", "before", "after"].includes(k)) continue;
         try {
           // A lone backslash is kept as written, so math such as \frac needs no doubling; a doubled one still works.
-          data[k] = /^[{[]/.test(v) ? JSON.parse(v.replace(/\\\\|\\(?!["/])/g, (m) => (m.length === 2 ? m : "\\\\"))) : (number(v) ?? v);
+          // Kits take the same size words as text, so `size=small` means what it means everywhere else.
+          data[k] = k === "size" && TEXT_SIZE[v] !== undefined ? TEXT_SIZE[v] : /^[{[]/.test(v) ? JSON.parse(v.replace(/\\\\|\\(?!["/])/g, (m) => (m.length === 2 ? m : "\\\\"))) : (number(v) ?? v);
         } catch {
           fail(item.line, `The setting ${k} of ${item.id} is not valid JSON.`);
         }
@@ -1387,6 +1388,14 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   try {
     const scene = settle(compile(sceneDoc, kitCtx));
     for (const f of [0, Math.floor(ctx.frames / 2), ctx.frames - 1]) evaluate(scene, f);
+    // A position or size that is not a number draws nothing where it should be and drags its neighbors with it. Say
+    // which thing it was, so it is repaired rather than shipped.
+    const broken = [...scene.nodes.filter((n) => Object.values(n.props).some((v) => typeof v === "number" && !Number.isFinite(v))).map((n) => n.id), ...scene.tracks.filter((t) => t.keys.some((k) => typeof k.value === "number" && !Number.isFinite(k.value))).map((t) => t.target)];
+    if (broken.length) {
+      const first = [...new Set(broken.map((id) => id.split(".")[0]!))].slice(0, 4);
+      report(0, `${first.join(", ")} came out with a position or size that is not a number, so it and what is laid out with it would not show. Check its settings (a size as a word on something that takes a number, a missing value), or give it plain settings.`);
+      return { problems, stats };
+    }
     stats.parts = scene.nodes.length;
     const truth = [...expansions.entries()].flatMap(([id, e]) => {
       const root = e.nodes.find((n) => n.id === id);
