@@ -19,7 +19,7 @@ export const Root: React.FC = () => (
   <Composition
     id="Bettervid"
     component={Video}
-    defaultProps={{ timeline: empty }}
+    defaultProps={{ timeline: empty, scenes: {} as Record<string, string> }}
     calculateMetadata={({ props }) => ({ durationInFrames: props.timeline.frames, fps: props.timeline.fps, width: props.timeline.width, height: props.timeline.height })}
     durationInFrames={30}
     fps={30}

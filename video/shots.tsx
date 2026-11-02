@@ -5,9 +5,10 @@ import type { Clip, StyleFile } from "../schemas/project.ts";
 import { BoardShot } from "./Board.tsx";
 import { StageShot } from "./Stage.tsx";
 import { Marks } from "./marks.tsx";
-import { SceneView } from "../engine/render/SceneView.tsx";
+import { EngineCredits, EngineShot } from "./Engine.tsx";
 
-type ShotProps = { clip: Clip; style: StyleFile; index: number };
+// `sceneFile`: for an engine clip whose scene was left out of the props, the JSON file in the project folder that holds it.
+type ShotProps = { clip: Clip; style: StyleFile; index: number; sceneFile?: string };
 
 const Paper: React.FC<{ style: StyleFile; children?: React.ReactNode }> = ({ style, children }) => (
   <AbsoluteFill style={{ backgroundColor: style.palette.paper }}>
@@ -190,7 +191,7 @@ export const CreditsCard: React.FC<ShotProps> = ({ clip, style }) => {
   );
 };
 
-// The engine: one compiled scene for the whole story. The player workstream fills in images, captions and polish.
-const EngineShot: React.FC<ShotProps> = ({ clip }) => <SceneView scene={clip.scene!} theme={clip.theme!} frame={useCurrentFrame()} />;
+// After an engine scene, the end card follows the scene's style.
+const Credits: React.FC<ShotProps> = (props) => (props.clip.theme ? <EngineCredits clip={props.clip} /> : <CreditsCard {...props} />);
 
-export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard, board: BoardShot, stage: StageShot, engine: EngineShot };
+export const SHOTS: Record<Clip["type"], React.FC<ShotProps>> = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: Credits, board: BoardShot, stage: StageShot, engine: EngineShot };

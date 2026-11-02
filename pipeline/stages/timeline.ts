@@ -2,6 +2,11 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Scene } from "../../engine/core/types.ts";
+import { KITS } from "../../engine/kits/index.ts";
+import { build } from "../../engine/language/build.ts";
+import { loadLibrary } from "../../engine/language/library.ts";
+import { themeFrom } from "../../engine/render/theme.ts";
 import type { Asset, Clip, Credits, Project, Timeline } from "../../schemas/project.ts";
 import { dir, stage, style, topic } from "../lib/project.ts";
 
@@ -12,12 +17,13 @@ const CREDITS = 4; // seconds of the end card
 const line = (a: Asset) => [a.credit?.replace(/^(.+?)\1$/, "$1"), a.source, a.license].filter(Boolean).join(", ");
 
 // Only what the video really uses: sources behind the facts in the script and on the source cards, and images that were shown.
-function credits(p: Project, used: Asset[]): Credits {
+// `board`: whether the board's drawings were shown. An engine scene lists every image it shows in `used` instead.
+export function credits(p: Project, used: Asset[], board = true): Credits {
   const claims = new Set(p.script!.beats.flatMap((b) => b.claimIds));
   const ids = new Set(p.factSheet!.claims.filter((c) => claims.has(c.id)).flatMap((c) => c.sourceIds));
   const sources = p.factSheet!.sources.filter((s) => ids.has(s.id)).map((s) => s.publisher || s.title);
   const images = used.filter((a) => a.kind === "real").map(line);
-  const made = used.some((a) => a.kind === "generated") || p.board?.elements.some((e) => e.image) ? ["Illustrations made with Muse Image"] : [];
+  const made = used.some((a) => a.kind === "generated") || (board && p.board?.elements.some((e) => e.image)) ?["Illustrations made with Muse Image"] : [];
   return { sources: [...new Set(sources)], images: [...new Set(images), ...made] };
 }
 
@@ -56,7 +62,7 @@ function captions(p: Project, titles: [number, number][]): Timeline["captions"] 
 
 export async function timeline(p: Project, force = false) {
   const s = style(p.input.style);
-  await stage(p, "timeline", [p.shots, p.assets, p.board, p.stagePlan, p.narration, s], 0, async () => {
+  await stage(p, "timeline", [p.shots, p.assets, p.board, p.stagePlan, p.scene, p.narration, s], 0, async () => {
     const grain = join(dir(p), "grain.png");
     if (!existsSync(grain)) execFileSync("python3", ["-I", "pipeline/tools/make_grain.py", grain]);
     const paper = join(dir(p), "paper.png");
@@ -64,6 +70,15 @@ export async function timeline(p: Project, force = false) {
     const assets = new Map((p.assets ?? []).map((a) => [a.shotId, a]));
     const story = Math.ceil((p.narration!.seconds + TAIL) * FPS);
     const frames = story + CREDITS * FPS;
+    if (p.scene) {
+      const { scene, theme, used } = await engineScene(p, story);
+      const clips: Clip[] = [
+        { shotId: "engine", type: "engine", from: 0, frames: story, scene, theme },
+        { shotId: "credits", type: "credits", from: story, frames: CREDITS * FPS, credits: credits(p, used, false), theme },
+      ];
+      p.timeline = { fps: FPS, width: 1080, height: 1920, frames, audio: p.narration!.audio, style: s, clips, captions: captions(p, []) };
+      return;
+    }
     if (p.stagePlan && p.plan?.notation) {
       const stage = p.stagePlan.states.map((s) => ({ ...s, frame: Math.round((p.narration!.words[s.word]?.start ?? 0) * FPS) }));
       const clips: Clip[] = [
@@ -123,4 +138,53 @@ export async function timeline(p: Project, force = false) {
     const titles = clips.filter((c) => c.type === "kinetic_title").map((c): [number, number] => [c.from, c.from + c.frames]);
     p.timeline = { fps: FPS, width: 1080, height: 1920, frames, audio: p.narration!.audio, style: s, clips, captions: captions(p, titles) };
   }, force);
+}
+
+// The engine scene: the sections join in word order into one document, built for the project's style. A scene that does
+// not build stops the run with every problem, named by section, so the scene stage is fixed rather than papered over.
+export async function engineScene(p: Project, story: number) {
+  const plan = p.scene!;
+  const sections = [...plan.sections].sort((a, b) => a.firstWord - b.firstWord);
+  if (!sections.length) throw new Error("timeline: the scene has no sections");
+  for (const [name, file] of Object.entries(plan.assets)) {
+    if (!existsSync(join(dir(p), file))) throw new Error(`timeline: scene asset ${name} points to ${file}, which is not in the project folder`);
+  }
+  // Where each section starts in the joined source, so a problem's line number can name its section.
+  const starts: { id: string; line: number }[] = [];
+  let line = 1;
+  const source = sections
+    .map((x) => {
+      const text = x.source.replace(/\s+$/, "");
+      starts.push({ id: x.id, line });
+      line += text.split("\n").length;
+      return text;
+    })
+    .join("\n");
+  const words = p.narration!.words;
+  const theme = themeFrom(p.input.style);
+  const ctx = { fps: FPS, width: 1080, height: 1920, frames: story, theme, words, kits: KITS };
+  const r = await build(source, { ctx, library: loadLibrary(), seed: 11, words: words.map((w) => w.text), assets: plan.assets });
+  if (!r.scene) {
+    const where = (n: number) => {
+      const s = [...starts].reverse().find((x) => x.line <= n);
+      return n && s ? `section ${s.id} line ${n - s.line + 1}` : "scene";
+    };
+    throw new Error(`timeline: the scene does not build in style ${p.input.style}:\n${r.problems.map((x) => `- ${where(x.line)}: ${x.message}`).join("\n")}`);
+  }
+  return { scene: r.scene, theme, used: usedAssets(p, r.scene) };
+}
+
+// The image files a compiled scene shows, matched to their asset records for the credits. An image with no record
+// cannot be credited, so it stops the run.
+export function usedAssets(p: Project, scene: Scene): Asset[] {
+  const files = new Set<string>();
+  for (const n of scene.nodes) if (n.kind === "image" && typeof n.props.src === "string" && n.props.src) files.add(n.props.src);
+  for (const t of scene.tracks) if (t.prop === "src") for (const k of t.keys) if (typeof k.value === "string" && k.value) files.add(k.value);
+  const generated = new Set((p.board?.elements ?? []).flatMap((e) => (e.image ? [e.image] : [])));
+  return [...files].map((file): Asset => {
+    const record = p.assets?.find((a) => a.path === file || a.cutout === file);
+    if (record) return record;
+    if (generated.has(file)) return { shotId: `scene:${file}`, kind: "generated", path: file };
+    throw new Error(`timeline: the scene shows ${file}, but no asset record says where it came from, so it cannot be credited`);
+  });
 }
