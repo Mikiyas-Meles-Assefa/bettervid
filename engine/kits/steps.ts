@@ -1,0 +1,244 @@
+// What every truth kit shares. A kit lays out all of its parts once, from the real result, and writes a story: an ordered
+// list of steps, each a few property changes on those parts. One behavior, `steps`, plays any story at spoken moments.
+//
+// Nothing is computed while playing: the story is rebuilt from the same input, so the frames are pure, and a part that a
+// step changes always exists from the start, which keeps every id addressable by the rest of the scene.
+import { when } from "../core/compile.ts";
+import type { Behavior, CompileContext, Ease, Kit, NodeSpec, Props, Track, Value } from "../core/types.ts";
+
+// `at` and `dur` are shares of the step's time, 0 to 1. `dur: 0` is an instant change at `at`.
+export type Change = { id: string; prop: string; value: Value; at: number; dur: number; ease?: Ease };
+export type Play = { id: string; behavior: string; args?: Record<string, Value>; at: number };
+export type StoryStep = { say: string; changes: Change[]; plays: Play[]; after: Map<string, Value> };
+export type Board = { parts: NodeSpec[]; steps: StoryStep[] };
+export type Maker = (id: string, data: Record<string, unknown>, ctx: CompileContext) => Board;
+
+const DEFAULTS: Props = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotate: 0, opacity: 1, drawn: 1 };
+const k = (id: string, prop: string) => `${id}\u0000${prop}`;
+
+// Writes a story while it is being worked out. `flash` changes last only until the next step begins.
+export class Story {
+  readonly steps: StoryStep[] = [];
+  private now = new Map<string, Value>();
+  private flashed = new Map<string, Value>(); // what each flashed property goes back to
+  private readonly known: Map<string, NodeSpec>;
+  readonly parts: NodeSpec[];
+  constructor(parts: NodeSpec[]) {
+    this.parts = parts;
+    this.known = new Map(parts.map((p) => [p.id, p]));
+  }
+  value(id: string, prop: string): Value | undefined {
+    return this.now.get(k(id, prop)) ?? this.known.get(id)?.props?.[prop] ?? DEFAULTS[prop];
+  }
+  step(say: string): this {
+    this.close();
+    this.steps.push({ say, changes: [], plays: [], after: new Map() });
+    for (const [key, value] of this.flashed) {
+      const [id, prop] = key.split("\u0000") as [string, string];
+      this.write(id, prop, value, 0, 0.3);
+    }
+    this.flashed.clear();
+    return this;
+  }
+  set(id: string, prop: string, value: Value, at = 0, dur = 0.5, ease?: Ease): this {
+    if (this.flashed.has(k(id, prop))) this.flashed.delete(k(id, prop));
+    this.write(id, prop, value, at, dur, ease);
+    return this;
+  }
+  flash(id: string, prop: string, value: Value, at = 0, dur = 0.3): this {
+    if (!this.flashed.has(k(id, prop))) this.flashed.set(k(id, prop), this.value(id, prop)!);
+    this.write(id, prop, value, at, dur);
+    return this;
+  }
+  play(id: string, behavior: string, at = 0, args?: Record<string, Value>): this {
+    this.need(id);
+    this.current().plays.push({ id, behavior, at, ...(args ? { args } : {}) });
+    return this;
+  }
+  // Ends the story: what each step leaves behind is recorded, so playing can begin at any step.
+  finish(): StoryStep[] {
+    this.close();
+    return this.steps;
+  }
+  private close() {
+    const s = this.steps.at(-1);
+    if (!s) return;
+    // What stays once flashes are over: the value under each flash.
+    const after = new Map(this.now);
+    for (const [key, value] of this.flashed) after.set(key, value);
+    s.after = after;
+  }
+  private current() {
+    const s = this.steps.at(-1);
+    if (!s) throw new Error("a change was written before the first step");
+    return s;
+  }
+  private need(id: string) {
+    if (!this.known.has(id)) throw new Error(`the story names ${id}, which was never made`);
+  }
+  private write(id: string, prop: string, value: Value, at: number, dur: number, ease?: Ease) {
+    this.need(id);
+    this.current().changes.push({ id, prop, value, at, dur, ...(ease ? { ease } : {}) });
+    this.now.set(k(id, prop), value);
+  }
+}
+
+// Every kind that tells a story, so the one `steps` behavior can find the story of any part it is given.
+const makers = new Map<string, Maker>();
+const boards = new Map<string, Board>();
+
+function boardFor(kind: string, id: string, spec: string, ctx: CompileContext): Board {
+  const key = `${kind}\u0000${id}\u0000${spec}\u0000${ctx.theme.fonts.mono ?? ""}\u0000${ctx.theme.fonts.body}`;
+  const known = boards.get(key);
+  if (known) return known;
+  const make = makers.get(kind);
+  if (!make) throw new Error(`no truth kit makes ${kind}`);
+  const board = make(id, JSON.parse(spec), ctx);
+  if (boards.size > 200) boards.clear();
+  boards.set(key, board);
+  return board;
+}
+
+// Turns a maker into a kind. The input rides on the root group, so playing later finds the very same story.
+export function truthKind(kind: string, make: Maker, allowed: string[]): NonNullable<Kit["kinds"]>[string] {
+  makers.set(kind, make);
+  const ok = new Set([...allowed, "w", "h"]);
+  return (n, ctx) => {
+    const data = { ...(n.data ?? {}) };
+    for (const key of Object.keys(data)) if (!ok.has(key)) throw new Error(`${kind} has no setting "${key}". It takes: ${allowed.join(", ")}`);
+    delete data.w;
+    delete data.h;
+    const spec = JSON.stringify(data);
+    const board = boardFor(kind, n.id, spec, ctx);
+    const [root, ...rest] = board.parts;
+    if (!root || root.id !== n.id || root.kind !== "group") throw new Error(`${kind} must start with its own group`);
+    return [{ ...root, parent: n.parent, props: { ...n.props, ...root.props, truth: kind, spec, played: 0 } }, ...rest];
+  };
+}
+
+// The moments `at=@12,@15,@20` arrive as one string, since the language only turns a single moment into a frame.
+function moments(raw: Value, ctx: CompileContext): number[] {
+  if (typeof raw === "number") return [raw];
+  if (Array.isArray(raw)) throw new Error(`at= takes spoken moments such as @12,@15, not plain numbers`);
+  return String(raw).split(",").filter(Boolean).map((tok) => {
+    const m = /^@(\d+)(?:([+-])(\d+))?$/.exec(tok.trim());
+    if (!m) throw new Error(`at= takes spoken moments such as @12,@15+4, and "${tok}" is not one`);
+    const word = Number(m[1]);
+    if (!ctx.words?.[word]) throw new Error(`at= names spoken word ${word}, which does not exist`);
+    return when({ word, offset: m[2] ? Number(`${m[2]}${m[3]}`) : 0 }, ctx);
+  });
+}
+
+const int = (v: Value | undefined, name: string): number | undefined => {
+  if (v === undefined) return undefined;
+  if (typeof v !== "number" || !Number.isInteger(v)) throw new Error(`${name}= must be a whole number, not ${JSON.stringify(v)}`);
+  return v;
+};
+
+export function stepList(steps: StoryStep[]): string {
+  const shown = steps.map((s, i) => `${i + 1} ${s.say}`);
+  return shown.length > 40 ? `${shown.slice(0, 36).join("; ")}; ... ${shown.slice(-3).join("; ")}` : shown.join("; ");
+}
+
+// Plays a story, or part of it. Steps count from 1.
+//   at=@12,@15,...   one spoken moment per step played
+//   until=@40        spread the steps evenly from now until then
+//   each=20          frames between steps (the default)
+//   from=3 to=5      only these steps; from=3 first jumps, in no time, to how things stand after step 2
+//   frames=24        the longest any one change takes
+export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
+  const props = tools.props(target);
+  if (typeof props.truth !== "string" || typeof props.spec !== "string") throw new Error(`steps plays a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), and ${target} is not one`);
+  const { steps } = boardFor(props.truth, target, props.spec, ctx);
+  const n = steps.length;
+  if (!n) throw new Error(`${target} has no steps to play; give it something to compute`);
+  const from = int(args.from, "from") ?? 1;
+  const to = int(args.to, "to") ?? n;
+  if (from < 1 || to > n || from > to) throw new Error(`${target} has steps 1 to ${n}, so from=${from} to=${to} does not fit. Its steps: ${stepList(steps)}`);
+  // Playing steps that already played would show the same work twice; a scene that wants more goes on from where it was.
+  const done = Number(tools.value(target, "played", start) ?? 0);
+  if (from <= done) throw new Error(`${target} already played steps 1 to ${done} before this moment, so this play must start at from=${done + 1}${done < n ? "" : ", but there are no steps left"}. Its steps: ${stepList(steps)}`);
+  const count = to - from + 1;
+  const longest = Number(args.frames ?? Math.round(ctx.theme.moveFrames * 1.2));
+  let times: number[];
+  if (args.at !== undefined) {
+    times = moments(args.at, ctx);
+    if (times.length !== count) throw new Error(`${target} plays ${count} steps (${from} to ${to}) but at= gives ${times.length} moments. Give one per step, or use until=@N to spread them. Its steps: ${stepList(steps)}`);
+    if (times.some((t, i) => i > 0 && t < times[i - 1]!)) throw new Error(`the moments in at= must not go back in time`);
+    if (times[0]! < start) throw new Error(`the first moment in at= comes before the state that plays it`);
+  } else if (args.until !== undefined) {
+    const end = Number(args.until);
+    if (!(end > start)) throw new Error(`until= must come after the state that plays the steps`);
+    const gap = (end - start) / count;
+    times = Array.from({ length: count }, (_, i) => Math.round(start + gap * i));
+  } else {
+    const each = Number(args.each ?? Math.round(ctx.theme.moveFrames * 1.5));
+    if (!(each >= 1)) throw new Error(`each= must be at least 1 frame`);
+    times = Array.from({ length: count }, (_, i) => start + Math.round(each * i));
+  }
+
+  const tracks: Track[] = [];
+  const valueAt = (id: string, prop: string, f: number): Value => tools.value(id, prop, f) ?? tools.props(id)[prop] ?? DEFAULTS[prop] ?? 0;
+  const put = (id: string, prop: string, value: Value, s: number, d: number, ease?: Ease) => {
+    const from = valueAt(id, prop, s);
+    const t: Track = d <= 0 ? { target: id, prop, keys: [{ at: s, value: from }, { at: s + 1, value, ease: "step" }] } : { target: id, prop, keys: [{ at: s, value: from }, { at: s + d, value, ease: ease ?? "smooth" }] };
+    tools.write(t);
+    tracks.push(t);
+  };
+  // Starting part way: everything earlier steps left behind is put in place at once. Where they already played this
+  // changes nothing.
+  if (from > 1) for (const [key, value] of steps[from - 2]!.after) {
+    const [id, prop] = key.split("\u0000") as [string, string];
+    put(id, prop, value, Math.max(0, start - 1), 0);
+  }
+  for (let i = 0; i < count; i++) {
+    const step = steps[from - 1 + i]!;
+    const t0 = times[i]!;
+    const room = i + 1 < count ? times[i + 1]! - t0 : longest;
+    const len = Math.max(2, Math.min(longest, room));
+    const changes = [...step.changes].sort((a, b) => a.at - b.at);
+    for (const c of changes) put(c.id, c.prop, c.value, Math.round(t0 + c.at * len), c.dur <= 0 ? 0 : Math.max(1, Math.round(c.dur * len)), c.ease);
+    for (const p of step.plays) tools.run(p.behavior, p.id, Math.round(t0 + p.at * len), p.args ?? {});
+  }
+  // Flashes on the last step played go back once its time is over, unless it ends the whole story.
+  if (to < n) {
+    const end = times.at(-1)! + longest;
+    for (const [key, value] of steps[to - 1]!.after) {
+      const [id, prop] = key.split("\u0000") as [string, string];
+      if (valueAt(id, prop, end) !== value) put(id, prop, value, end, Math.round(longest / 3));
+    }
+  }
+  tools.write({ target, prop: "played", keys: [{ at: start, value: to, ease: "step" }] });
+  tools.emit({ name: "steps", at: times[0], data: { target, from, to } });
+  return [];
+};
+
+// The one behavior every truth kit adds, with the one line that teaches it.
+export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. A tall one such as trace fills more of the screen with `h=1400`";
+
+// ---------- Layout helpers shared by the kits ----------
+
+export const CHAR = 0.56; // average character width in em, as the language estimates it
+export const MONO = 0.6;
+export const textWidth = (s: string, size: number, mono = false) => Math.max(0.6, [...s].length) * size * (mono ? MONO : CHAR);
+
+// A square bracket, open to the right (side -1) or the left (side 1).
+export function bracket(x: number, top: number, bottom: number, side: -1 | 1, lip = 18): number[] {
+  return [x - side * lip, top, x, top, x, bottom, x - side * lip, bottom];
+}
+
+// An invisible box around everything a kit may ever show, so it is fitted to its slot by its largest state.
+export function frame(id: string, parent: string, l: number, t: number, r: number, b: number): NodeSpec {
+  return { id, kind: "path", parent, props: { points: [l, t, r, t, r, b, l, b, l, t], stroke: "none", fill: "none", opacity: 0 } };
+}
+
+export function text(id: string, parent: string, x: number, y: number, value: string, size: number, more: Props = {}): NodeSpec {
+  return { id, kind: "text", parent, props: { x, y, text: value, size, color: "ink", ...more } };
+}
+
+// The steps a truth thing will play, in words, for a planner deciding which spoken moment each step belongs to.
+// Throws, as the kind does, on bad input.
+export function truthSteps(kind: string, id: string, data: Record<string, unknown>, ctx: CompileContext): string[] {
+  const { w: _w, h: _h, ...rest } = data;
+  return boardFor(kind, id, JSON.stringify(rest), ctx).steps.map((s) => s.say);
+}
