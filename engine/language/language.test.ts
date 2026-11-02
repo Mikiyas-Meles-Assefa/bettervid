@@ -174,6 +174,13 @@ test("an arrow finds a program's part where it is at that moment", async () => {
   assert.ok(Math.abs(end[0]! - ((p1.x as number) + 700)) < 40, `${end} vs ${p1.x}`);
 });
 
+test("marks, tags and arrows leave with what they touch", async () => {
+  const s = await ok(`@0\nrow r\n  box a "x"\n  box b "y"\narrow a -> b\nmark ring a\ntag b "note"\n@2 keep\ndrop b\n@6 keep\ntext t "later"\n`);
+  assert.equal(at(s, 200, "arrow.a.b")!.props.opacity, 0);
+  assert.equal(at(s, 200, "tag.b")!.props.opacity, 0);
+  assert.equal(at(s, 200, "mark.ring.a")!.props.opacity, 1);
+});
+
 test("a line bends around what lies between its ends, unless told how", async () => {
   const s = await ok(`@0\nbox a "one"\ntext m "mid"\nbox b "two"\narrow a -> b\n@2 keep\narrow a -> b bend=0\n`);
   const bent = at(s, 20, "arrow.a.b")!.props.points as number[];

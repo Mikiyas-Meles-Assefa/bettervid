@@ -487,6 +487,13 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         label(`${id}.label`, line, text, [...spots, ...around], attrs);
       }
     };
+    // Something attached in an earlier state leaves with the thing it touches.
+    const inherited = (c: Command) => c.line < s.line;
+    attached = attached.filter((c) => {
+      if (!inherited(c)) return true;
+      const ends = c.do === "arrow" ? [c.from, c.to] : c.do === "mark" ? c.targets : c.do === "tag" ? [c.target] : [];
+      return ends.every((id) => boxOf(id));
+    });
     laid.links.forEach((l) => {
       const [a, b] = [needBox(l.from, l.line), needBox(l.to, l.line)];
       if (a && b) addLink(`link.${l.from}.${l.to}`, a, b, l.line, true, {});
