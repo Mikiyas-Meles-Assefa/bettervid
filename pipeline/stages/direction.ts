@@ -107,6 +107,7 @@ export function stripCues(s: Script): Script {
 }
 
 const SENTENCE_END = /[.?!:]["'”’)\]]*$/;
+const CLAUSE_END = /[.?!:;,]["'”’)\]]*$/;
 export const sentenceStart = (words: string[], at: number) => at === 0 || at === words.length || SENTENCE_END.test(words[at - 1] ?? "");
 
 // Which event a cue belongs to: the one holding the word it comes before (a cue before an event's first word opens it),
@@ -217,6 +218,10 @@ export function problems(raw: RawPlan, words: string[], steps: Map<string, strin
         if (!raw.cues.some((c) => c.id === h.afterCue)) out.push(`hold ${h.id} comes after cue "${h.afterCue}", which is not a cue id`);
         else if (cueAt.get(h.afterCue) !== i) out.push(`hold ${h.id} comes after cue ${h.afterCue}, which belongs to another event; a hold sits inside its own event`);
       } else if (!inside(h.afterWord)) out.push(`hold ${h.id} comes after word ${h.afterWord}, outside its event ${e.id} (${span})`);
+      // A silence to take in what was just shown or said falls where a thought ends. Only a beat before an answer or a
+      // guess may cut a phrase.
+      else if (!CLAUSE_END.test(words[h.afterWord] ?? "") && (h.purpose === "look" || h.purpose === "settle" || h.purpose === "recap"))
+        out.push(`hold ${h.id} (${h.purpose}) comes after word ${h.afterWord} ("${words[h.afterWord]}"), in the middle of a phrase ("... ${words.slice(Math.max(0, h.afterWord - 3), h.afterWord + 3).join(" ")} ..."); a ${h.purpose} hold follows the word that ends a sentence or clause`);
       if (!(h.seconds >= HOLD_SECONDS[0] && h.seconds <= HOLD_SECONDS[1])) out.push(`hold ${h.id} lasts ${h.seconds} s; a hold lasts ${HOLD_SECONDS[0]} to ${HOLD_SECONDS[1]} s`);
       if (!h.does.trim()) out.push(`hold ${h.id} does not say what the picture does during it; an empty pause does nothing for a viewer`);
     }

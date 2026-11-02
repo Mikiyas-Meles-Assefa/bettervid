@@ -144,7 +144,10 @@ test("the checks catch broken plans", () => {
   has(plan([event("e1", 0, 13)], [{ id: "c1", beforeWord: 15, text: "Done." }]), /does not exist/);
   has(plan([event("e1", 0, 13)], [{ id: "c1", beforeWord: 6, text: "Which side first?" }]), /asks the viewer a question but no hold follows it/);
   has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 9, afterCue: "", seconds: 1, purpose: "look", does: "x", shows: "" }] }), event("e2", 6, 13)]), /outside its event/);
-  has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 2, afterCue: "", seconds: 30, purpose: "look", does: "x", shows: "" }] }), event("e2", 6, 13)]), /lasts 30 s/);
+  has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 3, afterCue: "", seconds: 30, purpose: "look", does: "x", shows: "" }] }), event("e2", 6, 13)]), /lasts 30 s/);
+  has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 2, afterCue: "", seconds: 1, purpose: "settle", does: "x", shows: "" }] }), event("e2", 6, 13)]), /in the middle of a phrase/);
+  // A beat before an answer may cut a phrase.
+  assert.deepEqual(problems(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 2, afterCue: "", seconds: 1, purpose: "reveal", does: "x", shows: "" }] }), event("e2", 6, 13)]), words), []);
   has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: 2, afterCue: "", seconds: 1, purpose: "look", does: "", shows: "" }] }), event("e2", 6, 13)]), /empty pause/);
   has(plan([event("e1", 0, 5, { holds: [{ id: "h1", afterWord: -1, afterCue: "c1", seconds: 1, purpose: "look", does: "x", shows: "" }] }), event("e2", 6, 13)], [{ id: "c1", beforeWord: 6, text: "Now." }]), /belongs to another event/);
   has(plan([event("e1", 0, 5), event("e2", 6, 13, { withhold: { what: "the answer", until: "e1" } })]), /an earlier event/);
