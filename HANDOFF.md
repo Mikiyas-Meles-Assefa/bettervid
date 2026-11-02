@@ -2,7 +2,11 @@
 
 For the next agent picking up bettervid. Read `AGENTS.md`, then `docs/PLAN.md` (v2, source of truth), then `research/DECISIONS.md`.
 
-## Latest state (Oct 30)
+## Latest state (Nov 2)
+**Next job: the universal engine.** Read `docs/ENGINE-PLAN.md`, then start with the foundation. `docs/FABLE-START.md` is the starting prompt. The user wants it as ambitious as possible and is fine with many parallel subagents. It sits on top of Remotion. The user dislikes the word "object" for what viewers see: on screen everything must feel like part of the video, with no boxes.
+
+Hackathon deadline: Wed Nov 4, 21:00 ET, code freeze noon ET, aim to submit by 18:00 ET. Dev budget: $25, with $20.47 on the ledger plus about $0.60 untracked; a higher cap is needed for this work. A Manim test is in progress in `scripts/manim/`; its report will be `research/spikes/S12-manim.md`. Manim is optional.
+
 Open items and the user's ideas live in `docs/FIXES.md`. Read it first.
 
 Pipeline order: plan, research, writer (draft, cut, review, structure), voice, director, assets, annotate, timeline, mix, render, critic. `--only <stage>` runs one stage, `--force <stage>` redoes one.
