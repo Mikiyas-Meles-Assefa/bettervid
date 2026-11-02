@@ -90,7 +90,8 @@ test("containers, shapes, fractions and matrices place without overlapping", asy
 });
 
 test("arrows follow what they connect", async () => {
-  const s = await ok(`@0\nrow r\n  box a "one"\n  box b "two"\narrow a -> b "goes"\n@2 keep\nbox z "new"\n`);
+  // Things only move when the scene moves them (a new thing finds room without shoving), so here the row swaps them.
+  const s = await ok(`@0\nrow r\n  box a "one"\n  box b "two"\narrow a -> b "goes"\n@2 keep\nrow r\n  box b "two"\n  box a "one"\n`);
   assert.ok(at(s, 20, "arrow.a.b"));
   assert.ok(at(s, 20, "arrow.a.b.label"));
   assert.notDeepEqual(at(s, 20, "arrow.a.b")!.props.points, at(s, 200, "arrow.a.b")!.props.points);

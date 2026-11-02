@@ -15,7 +15,9 @@ export type Env = {
   safe: Box; // where content may go
   theme: Theme;
   measure: Measure;
-  natural: (item: Item) => { w: number; h: number }; // size of a kit, graph or program before scaling
+  // Size of a kit, graph or program before scaling. `rest`: where the middle of what it shows at first sits, as a share
+  // of its height from the middle of its box (a kit's box also holds room for what its later steps show).
+  natural: (item: Item) => { w: number; h: number; rest?: number };
   minText: number; // the smallest readable text, in pixels
 };
 export type Slot = { item: Item; box: Box; scale: number };
@@ -24,7 +26,8 @@ export type Slot = { item: Item; box: Box; scale: number };
 export type Shown = { id: string; box: Box; line: number; text: string; size: number; item: string; back?: string };
 // What lies behind the arrangement: pictures (placed or filling the frame) and fields of color.
 export type Field = { id: string; box: Box; line: number; picture: boolean; frame: boolean; fill?: string };
-export type Laid = { parts: Part[]; boxes: Map<string, Box>; members: Map<string, string[]>; slots: Slot[]; links: { from: string; to: string; line: number }[]; problems: Problem[]; scale: number; smallest: number; texts: Shown[]; fields: Field[] };
+export type Laid = { parts: Part[]; boxes: Map<string, Box>; members: Map<string, string[]>; slots: Slot[]; links: { from: string; to: string; line: number }[]; problems: Problem[]; scale: number; smallest: number; texts: Shown[]; fields: Field[]; held: Box[] };
+// `held`: room kept for what a later state of the stretch shows, so tags and labels placed now leave it free.
 // The least contrast words may have with what is behind them, as a ratio. Words are large in a video, so 3 to 1.
 export const MIN_CONTRAST = 3;
 
@@ -48,8 +51,15 @@ const MIN_SCALE = 0.4;
 const n = (v: string | undefined, d: number) => (v === undefined || !Number.isFinite(Number(v)) ? d : Number(v));
 const SHAPE_KINDS = ["box", "circle", "pill", "diamond", "dot", "tri"];
 const CONTAINER_KINDS = ["row", "stack", "grid", "ring", "chain", "free"];
+const LEAF_KINDS = ["atoms", "text", "code", "space"];
 // How far the gaps of the outer stack may open to spread a state over the frame, as a share of the safe height.
 const SPREAD = 0.22;
+// The subject of a state (a kit, graph, program or picture in the main column) grows to use the frame, up to this many
+// times its natural size, leaving this share of the safe height for the room around things. Words around it may then
+// grow up to TEXT_GROW, which keeps them sized by role: the subject carries the idea, the words support it.
+const SUBJECT_MAX = 3;
+const BREATHE = 0.12;
+const TEXT_GROW = 1.25;
 const round = (v: number) => Math.round(v * 10) / 10;
 const NUMERIC = new Set(["weight", "opacity", "rotate", "strokeWidth"]);
 const look = (item: Item, keys: string[]): Props => Object.fromEntries(keys.filter((k) => item.attrs[k] !== undefined).map((k) => [k, NUMERIC.has(k) ? n(item.attrs[k], 0) : item.attrs[k]!]));
@@ -123,7 +133,10 @@ export function pictureLook(theme: Theme, id: string, placed: "page" | "fit" | "
   return out;
 }
 
-export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
+// `stretch` is the board of every state in this state's stretch (a plain state and the keep states after it), this one
+// included. The state is laid out over all of them: whatever any of them shows has its room in every one, so a thing
+// that stays keeps its place and size while others come and go around it.
+export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[][]): Laid {
   const { measure, theme } = env;
   const short = Math.min(env.W, env.H);
   const atomWidth = (a: Atom, size: number, font?: string) => measure(a.text, size, font);
@@ -221,11 +234,37 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     const p = (item.kind === "text" || item.kind === "atoms" ? textSize(item) * 0.4 * s : 48 * s) * panelPad;
     return [p, p];
   };
-  const sizeOf = (item: Item, s: number): { w: number; h: number } => {
+  // A thing's own size, and the room it holds: the largest of every version of it, or of what shares its place, in the
+  // stretch. Sizes are kept while nothing changes them, since containers ask for their children's sizes many times.
+  const ownSize = (item: Item, s: number): { w: number; h: number } => {
     const inner = innerSize(item, s);
     const [px, py] = padOf(item, s);
     return px || py ? { w: inner.w + px * 2, h: inner.h + py * 2 } : inner;
   };
+  const memo = new Map<Item, { s: number; k: number; b: { w: number; h: number } }>();
+  const sizeOf = (item: Item, s: number): { w: number; h: number } => {
+    const m = memo.get(item);
+    if (m && m.s === s && m.k === grow) return m.b;
+    let b = ownSize(item, s);
+    for (const o of alts.get(item) ?? []) {
+      const a = ownSize(o, s);
+      b = { w: Math.max(b.w, a.w), h: Math.max(b.h, a.h) };
+    }
+    memo.set(item, { s, k: grow, b });
+    return b;
+  };
+  // Pictures and programs come at the size they are given, but never larger than the safe width on either side, so a
+  // photo given at its pixel size does not shrink everything around it. Kits are fitted the same way by `natural`.
+  const sized = (w: number, h: number) => {
+    const f = Math.min(1, env.safe.w / Math.max(1, w), env.safe.w / Math.max(1, h));
+    return { w: w * f, h: h * f };
+  };
+  const overlay = (item: Item) => item.kind === "run" && !!item.attrs.on && !item.attrs.w && !item.attrs.h;
+  const isSubject = (item: Item) => !overlay(item) && (item.kind === "image" || (!SHAPE_KINDS.includes(item.kind) && !CONTAINER_KINDS.includes(item.kind) && !LEAF_KINDS.includes(item.kind)));
+  // The subjects' own scale once they have grown (0 until then: they follow the board's scale).
+  let grow = 0;
+  const grown = new Set<string>();
+  const scaleOf = (item: Item, s: number) => (grow && grown.has(item.id) ? grow : s);
   const innerSize = (item: Item, s: number): { w: number; h: number } => {
     const gap = n(item.attrs.gap, 44) * s;
     switch (item.kind) {
@@ -256,8 +295,10 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         const size = fontSize(item, CODE_SIZE) * s;
         return { w: Math.max(1, ...item.lines!.map((l) => measure(l, size, "mono"))), h: Math.max(1, item.lines!.length) * size * 1.45 };
       }
-      case "image":
-        return { w: n(item.attrs.w, 700) * s, h: n(item.attrs.h, 700) * s };
+      case "image": {
+        const b = sized(n(item.attrs.w, 700), n(item.attrs.h, 700));
+        return { w: b.w * scaleOf(item, s), h: b.h * scaleOf(item, s) };
+      }
       case "space":
         return { w: 1, h: n(item.attrs.h, 60) * s };
       case "row": {
@@ -288,12 +329,13 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       case "free":
         return { w: n(item.attrs.w, 900) * s, h: n(item.attrs.h, 900) * s };
       case "run":
-        if (item.attrs.on && !item.attrs.w && !item.attrs.h) return { w: 0, h: 0 };
+        if (overlay(item)) return { w: 0, h: 0 };
       // falls through
       default: {
         if (SHAPE_KINDS.includes(item.kind)) return shapeSize(item, s);
-        const b = env.natural(item);
-        return { w: b.w * s, h: b.h * s };
+        const raw = env.natural(item);
+        const b = item.kind === "run" ? sized(raw.w, raw.h) : raw;
+        return { w: b.w * scaleOf(item, s), h: b.h * scaleOf(item, s) };
       }
     }
   };
@@ -357,12 +399,92 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       return [];
     });
   items = pull(items);
-  const root: Item = { kind: "stack", id: "board", line: 0, attrs: {}, children: items };
+  // The stretch, united: every thing any of its states shows, in order, each holding the room of its largest version.
+  // Things that are never on the board together may share a place (one replaces the other); what this state does not
+  // show is only room. A container whose things come in a different order in some state is laid out as it is.
+  const ghost = new Set<Item>();
+  const alts = new Map<Item, Item[]>();
+  const slotsOf = (lists: Item[][]): string[][] | undefined => {
+    const together = new Map<string, Set<string>>();
+    for (const l of lists) for (const a of l) for (const b of l) if (a.id !== b.id) together.set(a.id, (together.get(a.id) ?? new Set()).add(b.id));
+    const slots: string[][] = [];
+    for (const l of lists) {
+      const here = new Set(l.map((c) => c.id));
+      let prev = -1;
+      for (const c of l) {
+        let at = slots.findIndex((x) => x.includes(c.id));
+        if (at < 0) {
+          const next = slots[prev + 1];
+          at = prev + 1;
+          if (next && !next.some((id) => here.has(id) || together.get(c.id)?.has(id))) next.push(c.id);
+          else slots.splice(at, 0, [c.id]);
+        }
+        if (at <= prev) return undefined;
+        prev = at;
+      }
+    }
+    return slots;
+  };
+  const unite = (now: Item[] | undefined, lists: Item[][]): Item[] => {
+    const slots = slotsOf(lists);
+    if (!slots) return now ?? [];
+    return slots.map((ids) => {
+      const here = now?.find((c) => ids.includes(c.id));
+      const all = lists.flatMap((l) => l.filter((c) => ids.includes(c.id)));
+      const node: Item = { ...(here ?? all.at(-1)!) };
+      if (!here) ghost.add(node);
+      if (CONTAINER_KINDS.includes(node.kind)) node.children = unite(here?.children, all.filter((c) => c.id === node.id).map((c) => c.children));
+      alts.set(node, all);
+      return node;
+    });
+  };
+  const kept = framed.length;
+  const versions = stretch && stretch.length > 1 ? stretch.map((b) => pull(b)) : undefined;
+  framed.length = kept;
+  const root: Item = { kind: "stack", id: "board", line: 0, attrs: {}, children: versions ? unite(items, versions) : items };
   let s = cap;
   let box = sizeOf(root, s);
   while ((box.w > env.safe.w || box.h > env.safe.h) && s > MIN_SCALE) box = sizeOf(root, (s = Math.round((s - 0.02) * 100) / 100));
 
-  const out: Laid = { parts: [], boxes: new Map(), members: new Map(), slots: [], links: [], problems: [], scale: s, smallest: Infinity, texts: [], fields: [] };
+  // The subject grows: kits, graphs, programs and pictures down the main column take the room the words leave, as far
+  // as the width allows, and then the words may grow a little, so a phone frame is used by what carries the idea.
+  let members = 0;
+  const subjects: Item[] = [];
+  const along = (item: Item) => {
+    for (const c of item.children) {
+      if (c.kind === "stack" && !backOf(c)) along(c);
+      else {
+        members++;
+        if (isSubject(c)) {
+          grown.add(c.id);
+          subjects.push(c);
+        }
+      }
+    }
+  };
+  along(root);
+  if (grown.size && box.w <= env.safe.w && box.h <= env.safe.h) {
+    const reserve = members > 1 ? env.safe.h * BREATHE : 0;
+    const fits = (b: { w: number; h: number }) => b.w <= env.safe.w && b.h <= env.safe.h - reserve;
+    // The largest value in steps of 0.01 from lo to hi that still fits, or lo when even lo does not.
+    const most = (lo: number, hi: number, at: (v: number) => { w: number; h: number }) => {
+      let [a, b] = [Math.round(lo * 100), Math.floor(hi * 100)];
+      if (!fits(at(a / 100))) return lo;
+      while (a < b) {
+        const m = Math.ceil((a + b) / 2);
+        if (fits(at(m / 100))) a = m;
+        else b = m - 1;
+      }
+      return a / 100;
+    };
+    const text = Math.min(s, TEXT_GROW);
+    grow = s;
+    grow = most(s, SUBJECT_MAX, (v) => ((grow = v), sizeOf(root, text)));
+    s = text < TEXT_GROW ? most(text, Math.min(cap, TEXT_GROW), (v) => sizeOf(root, v)) : text;
+    box = sizeOf(root, s);
+  }
+
+  const out: Laid = { parts: [], boxes: new Map(), members: new Map(), slots: [], links: [], problems: [], scale: s, smallest: Infinity, texts: [], fields: [], held: [] };
   if (box.w > env.safe.w || box.h > env.safe.h) {
     const at = items[0]?.line ?? 0;
     out.problems.push({ line: at, message: `This state does not fit even at ${Math.round(MIN_SCALE * 100)}% size: it needs ${Math.round(box.w)} by ${Math.round(box.h)} of ${Math.round(env.safe.w)} by ${Math.round(env.safe.h)}. Remove something or split it.` });
@@ -385,8 +507,10 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     // Outer gaps open more than inner ones, so groups still read as groups.
     const weight = (x: Item) => (x === root || (root.children.length === 1 && root.children[0] === x) ? 2 : 1);
     const total = column.reduce((sum, x) => sum + (x.children.length - 1) * weight(x), 0);
-    const unit = Math.min((room * 0.6) / total, (env.safe.h * SPREAD) / 2);
+    // With a subject the gaps share one limit, since the subject already fills the frame; without one each may open.
+    const unit = Math.min((room * 0.6) / total, (env.safe.h * SPREAD) / (subjects.length ? total : 2));
     for (const x of column) x.attrs = { ...x.attrs, gap: String(n(x.attrs.gap, 44) + (unit * weight(x)) / s) };
+    memo.clear();
     box = sizeOf(root, s);
   }
 
@@ -406,7 +530,12 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   const rule = (id: string, points: number[], line: number, color: string) => out.parts.push({ id, kind: "path", line, props: { points: points.map(round), stroke: color, strokeWidth: 6 } });
 
   const place = (item: Item, cx: number, cy: number, s: number, behind?: string) => {
-    const outer = sizeOf(item, s);
+    // What this state does not show only holds its room. What it shows is drawn at its own size in the room it holds.
+    if (ghost.has(item)) {
+      out.held.push({ x: cx, y: cy, ...ownSize(item, s) });
+      return;
+    }
+    const outer = ownSize(item, s);
     out.boxes.set(item.id, { x: cx, y: cy, w: outer.w, h: outer.h });
     const [padX, padY] = padOf(item, s);
     const pad = padX || padY;
@@ -534,7 +663,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         let x = cx - size.w / 2;
         for (const c of item.children) {
           const b = sizeOf(c, s);
-          const y = item.attrs.align === "top" ? cy - size.h / 2 + b.h / 2 : item.attrs.align === "bottom" ? cy + size.h / 2 - b.h / 2 : cy;
+          const own = ownSize(c, s);
+          const y = item.attrs.align === "top" ? cy - size.h / 2 + own.h / 2 : item.attrs.align === "bottom" ? cy + size.h / 2 - own.h / 2 : cy;
           place(c, x + b.w / 2, y, s, back);
           x += b.w + gap;
         }
@@ -542,10 +672,12 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       }
       case "stack": {
         let y = cy - size.h / 2;
+        // Each thing sits at the top of the room it holds, so words that grow by a line grow downward.
         for (const c of item.children) {
           const b = sizeOf(c, s);
-          const x = item.attrs.align === "left" ? cx - size.w / 2 + b.w / 2 : item.attrs.align === "right" ? cx + size.w / 2 - b.w / 2 : cx;
-          place(c, x, y + b.h / 2, s, back);
+          const own = ownSize(c, s);
+          const x = item.attrs.align === "left" ? cx - size.w / 2 + own.w / 2 : item.attrs.align === "right" ? cx + size.w / 2 - own.w / 2 : cx;
+          place(c, x, y + Math.min(b.h, own.h) / 2, s, back);
           y += b.h + gap;
         }
         return;
@@ -562,7 +694,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
           else place(c, cx, p + b.h / 2, s, back);
           p += (across ? b.w : b.h) + step;
         }
-        item.children.slice(1).forEach((c, i) => out.links.push({ from: item.children[i]!.id, to: c.id, line: item.line }));
+        const shown = item.children.filter((c) => !ghost.has(c));
+        shown.slice(1).forEach((c, i) => out.links.push({ from: shown[i]!.id, to: c.id, line: item.line }));
         return;
       }
       case "grid": {
@@ -578,15 +711,17 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
           // The style's table: a rule under the header, under every row, or between every cell, and stripes on
           // alternate rows, all behind the words.
           const t = design!.elements.table;
+          // Rules and stripes only as far as the rows this state shows; the rest of the table is room for rows to come.
+          const last = Math.floor(item.children.reduce((m, c, i) => (ghost.has(c) ? m : i), -1) / cols(item));
           const [l, r, top] = [cx - size.w / 2 - gap / 2, cx + size.w / 2 + gap / 2, cy - size.h / 2];
           const below = (row: number) => top + heights.slice(0, row + 1).reduce((a, b) => a + b + gap, 0) - gap / 2;
           const line = (id: string, pts: number[], w: number) => out.parts.push({ id, kind: "path", line: item.line, props: { points: pts.map(round), stroke: t.rule, strokeWidth: round(w), glowLevel: 0.3, z: -1 } });
-          if (t.zebra !== "none") for (let row = 2; row < heights.length; row += 2) out.parts.push({ id: `${item.id}.zebra${row}`, kind: "path", line: item.line, props: { x: round(cx), y: round(below(row) - (heights[row]! + gap) / 2), points: rect(r - l, heights[row]! + gap), closed: 1, fill: t.zebra, stroke: "none", z: -1 } });
+          if (t.zebra !== "none") for (let row = 2; row <= last; row += 2) out.parts.push({ id: `${item.id}.zebra${row}`, kind: "path", line: item.line, props: { x: round(cx), y: round(below(row) - (heights[row]! + gap) / 2), points: rect(r - l, heights[row]! + gap), closed: 1, fill: t.zebra, stroke: "none", z: -1 } });
           if (t.lines !== "none") line(`${item.id}.rule0`, [l, below(0), r, below(0)], t.ruleWidth * 1.5);
-          if (t.lines === "rows" || t.lines === "grid") for (let row = 1; row < heights.length; row++) line(`${item.id}.rule${row}`, [l, below(row), r, below(row)], t.ruleWidth);
+          if (t.lines === "rows" || t.lines === "grid") for (let row = 1; row < last; row++) line(`${item.id}.rule${row}`, [l, below(row), r, below(row)], t.ruleWidth);
           if (t.lines === "grid") for (let col = 1; col < widths.length; col++) {
             const x = cx - size.w / 2 + widths.slice(0, col).reduce((a, b) => a + b + gap, 0) - gap / 2;
-            line(`${item.id}.col${col}`, [x, top - gap / 2, x, cy + size.h / 2 + gap / 2], t.ruleWidth);
+            line(`${item.id}.col${col}`, [x, top - gap / 2, x, below(last) + gap / 2], t.ruleWidth);
           }
         }
         return;
@@ -598,7 +733,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
           const a = -Math.PI / 2 + (i / item.children.length) * Math.PI * 2;
           place(c, cx + Math.cos(a) * r, cy + Math.sin(a) * r, s, back);
         });
-        if (item.attrs.arrows) item.children.forEach((c, i) => out.links.push({ from: c.id, to: item.children[(i + 1) % item.children.length]!.id, line: item.line }));
+        const shown = item.children.filter((c) => !ghost.has(c));
+        if (item.attrs.arrows) shown.forEach((c, i) => out.links.push({ from: c.id, to: shown[(i + 1) % shown.length]!.id, line: item.line }));
         return;
       }
       case "free": {
@@ -628,7 +764,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
           b.label.forEach((l, i) => text(i ? `${item.id}.label${i + 1}` : `${item.id}.label`, item, l, 0, (i - (b.label.length - 1) / 2) * b.size * 1.2, b.size, { ...tone, ...look(item, ["weight"]) }, item.id, { x: cx, y: cy }, fill));
           return;
         }
-        out.slots.push({ item, box: { x: cx, y: cy, w: size.w, h: size.h }, scale: s });
+        out.slots.push({ item, box: { x: cx, y: cy, w: size.w, h: size.h }, scale: scaleOf(item, s) });
       }
     }
   };
@@ -659,10 +795,48 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       if (f.text) text(`${f.id}.label`, f, f.text, 0, 0, fontSize(f, TEXT_SIZE.big!), textLook(f, fill, fontSize(f, TEXT_SIZE.big!)), f.id, { x: cx, y: cy }, fill);
     }
   }
-  // Content sits a little above the middle, with the free space shared around it.
+  // Content sits a little above the middle, with the free space shared around it. With a subject, what the subject shows
+  // sits there (just above the middle of the safe area) and the rest arranges around it, as far as the frame allows: a
+  // title goes up and what comes under it goes down, rather than everything floating high.
   const { safe } = env;
-  place(root, safe.x, safe.y - Math.max(0, safe.h - box.h) * 0.08, s);
-  out.boxes.delete("board");
+  let cy = safe.y - Math.max(0, safe.h - box.h) * 0.08;
+  const main = subjects.reduce<Item | undefined>((best, x) => (!best || sizeOf(x, s).w * sizeOf(x, s).h > sizeOf(best, s).w * sizeOf(best, s).h ? x : best), undefined);
+  const spot = (item: Item, at: number): number | undefined => {
+    if (item === main) return at + (main.kind !== "image" && main.kind !== "run" ? (env.natural(main).rest ?? 0) * ownSize(main, s).h : 0);
+    if (item.kind !== "stack" || (item !== root && backOf(item))) return undefined;
+    let y = at - ownSize(item, s).h / 2;
+    for (const c of item.children) {
+      const b = sizeOf(c, s);
+      const found = spot(c, y + Math.min(b.h, ownSize(c, s).h) / 2);
+      if (found !== undefined) return found;
+      y += b.h + n(item.attrs.gap, 44) * s;
+    }
+  };
+  const anchor = () => {
+    const offset = main && box.h < safe.h ? spot(root, 0) : undefined;
+    if (offset !== undefined) cy = Math.min(safe.y + (safe.h - box.h) / 2, Math.max(safe.y - (safe.h - box.h) / 2, safe.y - safe.h * 0.02 - offset));
+    return offset !== undefined;
+  };
+  // Then the room left above and below goes between the subject and what is above and below it, so the words move out
+  // toward the edges of the frame (never onto them) and the subject keeps the middle.
+  const holds = (item: Item): boolean => item === main || item.children.some(holds);
+  const holder = root.children.findIndex(holds);
+  if (anchor() && holder >= 0) {
+    const [above, below] = [cy - box.h / 2 - (safe.y - safe.h / 2), safe.y + safe.h / 2 - (cy + box.h / 2)];
+    const gap = n(root.attrs.gap, 44) * s;
+    const spacer = (room: number, at: number): Item => ({ kind: "space", id: `board.space${at}`, line: 0, attrs: { h: String(Math.max(0, Math.min(room * 0.6, safe.h * 0.15) - gap) / s) }, children: [] });
+    const list = [...root.children];
+    if (holder < list.length - 1 && below > gap) list.splice(holder + 1, 0, spacer(below, 1));
+    if (holder > 0 && above > gap) list.splice(holder, 0, spacer(above, 0));
+    if (list.length !== root.children.length) {
+      root.children = list;
+      memo.clear();
+      box = sizeOf(root, s);
+      anchor();
+    }
+  }
+  place(root, safe.x, cy, s);
+  for (const id of ["board", "board.space0", "board.space1"]) out.boxes.delete(id);
   const leaves = (item: Item): string[] => (item.kind === "atoms" ? out.members.get(item.id) ?? [] : item.children.length ? item.children.flatMap(leaves) : [item.id]);
   const walk = (item: Item) => {
     if (item.children.length) out.members.set(item.id, leaves(item));

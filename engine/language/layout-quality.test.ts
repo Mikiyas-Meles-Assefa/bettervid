@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { evaluate } from "../core/evaluate.ts";
 import type { CompileContext, Resolved, Scene, Theme } from "../core/types.ts";
+import { KITS } from "../kits/index.ts";
 import { mathKit } from "../kits/math.ts";
 import { build, formatProblems } from "./build.ts";
 import { estimate, safeArea } from "./layout.ts";
@@ -149,4 +150,53 @@ test("a kit takes size words like text, and nothing laid out beside it ends up w
   assert.ok(finite(evaluate(s, 30)));
   const r1 = find(evaluate(s, 30), "r1");
   assert.ok(r1 && Number.isFinite(Number(r1.props.y)));
+});
+
+// Where a part is on the frame: its own place through every parent's place and scale.
+const placeOf = (s: Scene, f: number, id: string) => {
+  const walk = (list: Resolved[], x: number, y: number, k: number): { x: number; y: number; k: number } | undefined => {
+    for (const r of list) {
+      const [rx, ry, rk] = [x + num(r.props.x) * k, y + num(r.props.y) * k, k * num(r.props.scaleX ?? 1)];
+      if (r.id === id) return { x: rx, y: ry, k: rk };
+      const hit = walk(r.children, rx, ry, rk);
+      if (hit) return hit;
+    }
+  };
+  return walk(evaluate(s, f), 0, 0, 1);
+};
+// The height a kit takes on the frame: its invisible frame, which holds everything it may ever show, at its scale.
+const kitHeight = (s: Scene, f: number, id: string) => {
+  const box = find(evaluate(s, f), `${id}.frame`)!;
+  const ys = (box.props.points as number[]).filter((_, i) => i % 2);
+  return (Math.max(...ys) - Math.min(...ys)) * placeOf(s, f, id)!.k;
+};
+
+test("the subject uses the frame: a kit or picture down the main column grows into the height the words leave", async () => {
+  const kits = { ...ctx, kits: KITS };
+  const s = await ok(`@0\ntext t "Watch the bars" role=heading\nsort s data=[5,2,8,1] algo=bubble show=bars\ntext n "smallest first" role=note\n`, {}, kits);
+  const h = kitHeight(s, 30, "s");
+  assert.ok(h > safe.h * 0.6, `the sort is ${Math.round(h)} of ${Math.round(safe.h)} tall`);
+  // The words around it keep their role's size: the subject grew, they were not shrunk to make room.
+  assert.ok(num(at(s, 30, "t.l1")!.props.size) >= 0.065 * 1080 - 0.5);
+  const p = await ok(`@0\ntext t "A tall picture" role=heading\nimage p asset=photo w=600 h=1200\n`, pics);
+  assert.ok(num(at(p, 30, "p")!.props.h) > safe.h * 0.65, `the picture is ${at(p, 30, "p")!.props.h} tall`);
+  // A photo given at its pixel size no longer shrinks the words beside it.
+  const wide = await ok(`@0\ntext t "A wide photo" role=heading\nimage p asset=photo w=4000 h=3000\n`, pics);
+  assert.ok(num(at(wide, 30, "t.l1")!.props.size) >= 0.065 * 1080 - 0.5);
+});
+
+test("what stays keeps its box: a card added, then dropped, never moves the title or the kit", async () => {
+  const kits = { ...ctx, kits: KITS };
+  const s = await ok(`@0\ntext t "Watch it" role=heading\nsort s data=[38,27,43,10] algo=merge show=boxes order=levels\n@4 keep\ntext q "Which comes out first?" role=heading\n@8 keep\ndrop q\n@12 keep\ntext r "Now the right side" role=heading\n`, {}, kits);
+  const [a, b, c, d] = [40, 100, 200, 300].map((f) => ({ t: placeOf(s, f, "t.l1")!, s: placeOf(s, f, "s")! }));
+  for (const later of [b!, c!, d!]) {
+    assert.deepEqual(later.t, a!.t, "the title stayed");
+    assert.deepEqual(later.s, a!.s, "the kit stayed, at the same size");
+  }
+  // What replaces a dropped thing takes its place rather than a new one below it.
+  assert.equal(placeOf(s, 300, "r.l1")!.y, placeOf(s, 100, "q.l1")!.y);
+  // A table that gains its answer row keeps its rows where they were, at the same size.
+  const g = await ok(`@0\ngrid tb cols=2\n  text h1 "x"\n  text h2 "y"\n  text a1 "1"\n  text a2 "2"\n@4 keep\ntext a3 "3" into=tb\ntext a4 "4" into=tb\n`);
+  assert.deepEqual(placeOf(g, 200, "a1.l1"), placeOf(g, 40, "a1.l1"));
+  assert.equal(num(at(g, 200, "a1.l1")!.props.size), num(at(g, 40, "a1.l1")!.props.size));
 });
