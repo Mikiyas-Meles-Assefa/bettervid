@@ -29,11 +29,13 @@ export function imageSources(scene: Scene): string[] {
 }
 
 // An SVG image paints whenever it arrives, which could be after a frame is captured. Every image is decoded before the
-// first frame, and the browser then paints it from memory.
+// first frame and kept for the life of the tab, so an image that leaves and comes back paints from memory.
+const kept = new Map<string, HTMLImageElement>();
 const decoded = (sources: string[]) =>
   Promise.all(
     sources.map((src) => {
-      const img = new Image();
+      const img = kept.get(src) ?? new Image();
+      kept.set(src, img);
       img.src = src;
       return img.decode().catch(() => {
         throw new Error(`scene image ${src} did not load`);

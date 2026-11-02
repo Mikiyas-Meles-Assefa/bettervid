@@ -11,6 +11,7 @@ import { imageCredits } from "./timeline.ts";
 const CRF = Number(process.env.RENDER_CRF ?? 23);
 // Spike S7: 4 workers was fastest on the M4 (performance cores); more is slower.
 const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? 4);
+const MANY_PICTURES = 12; // the moon scene (10 pictures) rendered at 30 frames/s with 4 tabs
 
 // What the composition gets. Remotion hands the props to the page for every frame, so their size costs on every frame:
 // a 1.8 MB scene (6 minutes) rendered at 18 frames/s against 27 for the same frames with small props. Each engine
@@ -39,6 +40,11 @@ export async function render(p: Project, force = false) {
     // A Chrome to use instead of the one Remotion downloads, e.g. a shared chrome-headless-shell for worktrees.
     const browserExecutable = process.env.BETTERVID_CHROME || null;
     const composition = await selectComposition({ serveUrl, id: "Bettervid", inputProps, browserExecutable });
+    // SceneView keeps every image mounted while hidden. With many pictures (a 33-image documentary), 4 tabs stalled
+    // for minutes while 2 rendered at 9.6 frames/s. Until hidden images are unmounted (asked of the engine render
+    // owner), such scenes render with 2 tabs unless RENDER_CONCURRENCY says otherwise.
+    const pictures = new Set(p.timeline!.clips.flatMap((c) => (c.scene ? c.scene.nodes.filter((n) => n.kind === "image").map((n) => String(n.props.src)) : []))).size;
+    const concurrency = process.env.RENDER_CONCURRENCY || pictures <= MANY_PICTURES ? CONCURRENCY : 2;
     let last = 0;
     const t1 = Date.now();
     await renderMedia({
@@ -49,14 +55,14 @@ export async function render(p: Project, force = false) {
       codec: "h264",
       crf: CRF,
       imageFormat: "jpeg",
-      concurrency: CONCURRENCY,
+      concurrency,
       outputLocation: join(dir(p), "video.mp4"),
       onProgress: ({ progress }) => {
         if (progress - last >= 0.25) console.log(`  render ${Math.round(progress * 100)}%`), (last = progress);
       },
     });
     const seconds = (Date.now() - t1) / 1000;
-    console.log(`  render: ${composition.durationInFrames} frames in ${seconds.toFixed(0)} s, ${(composition.durationInFrames / seconds).toFixed(1)} frames/s at concurrency ${CONCURRENCY}, props ${(JSON.stringify(inputProps).length / 1024).toFixed(0)} KB`);
+    console.log(`  render: ${composition.durationInFrames} frames in ${seconds.toFixed(0)} s, ${(composition.durationInFrames / seconds).toFixed(1)} frames/s at concurrency ${concurrency}${pictures ? ` with ${pictures} scene pictures` : ""}, props ${(JSON.stringify(inputProps).length / 1024).toFixed(0)} KB`);
     p.render = { path: "video.mp4", ms: Date.now() - t0 };
   }, force);
 }
