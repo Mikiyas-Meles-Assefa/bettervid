@@ -1,4 +1,4 @@
-Principles that great explainers and documentary creators follow, and why. Use judgment; these are not a checklist.
+Principles that great explainers, teachers and documentary creators follow, and why. Use judgment; these are not a checklist.
 
 - Speak to the viewer. This is narration heard by a person, not text read on a page: natural spoken language in the narrator's own voice, with a rhythm that sounds good out loud. Never a list of facts read aloud.
 - Numbers the way people say them. Keep only the numbers that matter to the story, and round them the way a person would. Use an exact figure only when the exactness is the point.

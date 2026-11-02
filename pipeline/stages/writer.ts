@@ -8,11 +8,12 @@ import { scriptSchema } from "../../schemas/project.ts";
 import { json, text } from "../lib/meta.ts";
 import { asked, charge, persona, prompt, save, seconds, stage, topic } from "../lib/project.ts";
 import { hash } from "../lib/util.ts";
+import { viewer } from "./plan.ts";
 
 // Measured in spike S6: eleven_v4 reads about 2.4 words per second.
 const WORDS_PER_SEC = 2.4;
 
-const FREE = "as long as the story needs to be told well, and no longer. Topics like this usually land between 1 and 4 minutes.";
+const FREE = "as long as this video needs to give the viewer what they came for, and no longer. Videos like this usually land between 1 and 4 minutes.";
 const target = (seconds: number) => `about ${seconds} seconds, roughly ${Math.round(seconds * WORDS_PER_SEC)} spoken words.`;
 
 // Replies are "KEY: value" header lines, a blank line, then the narration.
@@ -38,12 +39,13 @@ export async function writer(p: Project, force = false) {
   const narrator = `${who.label}. ${who.brief}${who.expertise ? ` Expertise: ${who.expertise}` : ""}`;
   const secs = seconds(p);
   const length = secs ? target(secs) : FREE;
-  const fill = (name: string, len: string) => prompt(name).replace("{{persona}}", narrator).replace("{{mode}}", p.input.mode).replace("{{length}}", len);
+  const fill = (name: string, len: string) => prompt(name).replace("{{persona}}", narrator).replace("{{length}}", len);
   const f = p.factSheet!;
   const claims = `Claims, with ids:\n${JSON.stringify(f.claims, null, 1)}`;
-  // The research angle is not passed on: the writer decides what the story is about from the whole story.
+  // The research angle is not passed on: the writer decides what the video is about from the whole research and from
+  // the person who asked (their words and the plan's reading of why), which every writing step sees.
   const wishes = asked([...(p.plan?.story ?? []), p.plan?.tone ? `Tone: ${p.plan.tone}` : ""]);
-  const research = `Topic: ${topic(p)}\n\n${wishes ? `${wishes}\n\n` : ""}Common misconception: ${f.misconception || "none"}\n\nResearch:\n${f.story}\n\n${claims}`;
+  const research = `Topic: ${topic(p)}\n\n${viewer(p)}\n\n${wishes ? `${wishes}\n\n` : ""}Common misconception: ${f.misconception || "none"}\n\nResearch:\n${f.story}\n\n${claims}`;
   const prompts = [fill("writer", FREE), fill("cut", length), fill("review", length), prompt("structure")];
   await stage(p, "writer", [prompts, research, secs, p.plan?.visuals], 0.25, async () => {
     // Each finished step is saved with the key of its inputs, so a run that fails (say, on a network drop) resumes

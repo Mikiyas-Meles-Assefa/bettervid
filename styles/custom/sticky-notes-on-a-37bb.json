@@ -1,0 +1,66 @@
+{
+  "name": "custom/sticky-notes-on-a-37bb",
+  "label": "Fridge Notes",
+  "palette": {
+    "paper": "#CBD2D8",
+    "ink": "#21272D",
+    "accent": "#CC2E2E",
+    "highlight": "#FFC933"
+  },
+  "fonts": {
+    "title": "Marker Felt",
+    "body": "Bradley Hand",
+    "caption": "Arial Rounded MT Bold"
+  },
+  "art": {
+    "scene": "Chunky black marker doodle with flat bright fills on paper stuck to a brushed stainless fridge door, a round red magnet holding the top edge, cozy kitchen snapshot feel, subject big and instantly recognizable, no writing.",
+    "object": "One thing drawn whole as a thick black marker doodle on a single yellow sticky note with a curled corner, held by a red magnet on brushed steel fridge, flat color, nothing around it, no writing.",
+    "diagram": "Simple idea explained with chunky marker shapes and arrows drawn on overlapping pastel sticky notes stuck on a steel fridge door, one red magnet accent, one idea only, no writing."
+  },
+  "realAssets": "prefer",
+  "surface": {
+    "filter": "saturate(1.05) contrast(1.02)",
+    "paper": 0.08
+  },
+  "grain": 0.06,
+  "vignette": 0.12,
+  "hand": {
+    "wobble": 2.4,
+    "weight": 1.4
+  },
+  "render": {
+    "line": {
+      "pen": "marker",
+      "weight": 2.2,
+      "wobble": 2.2
+    },
+    "fill": {
+      "kind": "solid",
+      "base": 1,
+      "shadow": 35,
+      "outline": 1
+    },
+    "surface": {
+      "kind": "slate",
+      "grain": 0.15,
+      "smudge": 0.85,
+      "light": 0.95
+    },
+    "type": {
+      "title": "\"Marker Felt\", \"Comic Sans MS\", \"Liberation Sans\", sans-serif",
+      "body": "\"Bradley Hand\", Chalkboard, \"Liberation Sans\", sans-serif",
+      "bold": 700,
+      "jitter": 0.6
+    },
+    "motion": {
+      "feel": "springy",
+      "frames": 14,
+      "enter": "pop"
+    }
+  },
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  },
+  "description": "sticky notes on a fridge"
+}
