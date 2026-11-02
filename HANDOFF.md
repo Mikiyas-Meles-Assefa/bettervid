@@ -22,7 +22,7 @@ Pipeline order: plan, research, writer (draft, cut, review, structure), voice, d
 - **Web app** (`app/server.ts`, `app/public/index.html`, no new packages): `npm run app`, then http://localhost:4173. Prompt box, optional style, narrator and length, live stages, the plan, player, script, critic notes, sources and gallery. Caption editing re-renders with no model calls. Replay walks through a finished run for free, for when the budget or rate limits stop new videos. It spawns the real pipeline, one run at a time, and listens on 127.0.0.1 only. Setting `HOST` makes it public: new videos are limited (`RUNS_PER_DAY` 20, `RUNS_PER_VISITOR` 2) and editing is off; those limits are tested, and `BUDGET_USD` is the hard stop. A `Dockerfile` is written but has never been built, because Docker was not running. Not hosted yet: the user must pick a provider, and it needs a volume at /srv/projects and the keys passed in at run time.
 - **Simulations**: not in the pipeline. `research/spikes/S11-simulation.md` has the result: formula-based ideas only, and they need a frame review. Spike code is in `scripts/s11/`.
 - **Network from Doha**: IPv4 only (`pipeline/lib/meta.ts`). Background tasks die when the session restarts, so long renders should run detached with a log in the project folder.
-- **Dev budget**: $25, raised by the user on Oct 30. The ledger misses the simulation spikes, about $0.37.
+- **Dev budget**: $75, raised by the user on Nov 2. The ledger misses the simulation spikes, about $0.37.
 
 Rules from the user: every fix must be general, never tuned to one video, and prompt examples must not come from the test topic. They dislike fallbacks: prefer repair loops, and say so plainly if a fallback remains. Discuss design ideas first unless told to go ahead.
 

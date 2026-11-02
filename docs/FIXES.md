@@ -64,6 +64,8 @@ Fixes and ideas the user raised while reviewing test videos. All are open unless
 
 29. **Teaching stage (the user's biggest note).** The camera-over-pictures board made Cramer's rule harder to follow than audio alone. `video/Stage.tsx`, `pipeline/stages/stage.ts` and `prompts/stage.md` are a new engine: Spark writes board states on spoken words, things keep an id and travel, nothing slides, what is spoken lights up. The plan's `notation` field sends math, code and logic topics to it in any style. Still weak: the general-rule part before an example is thin, some results sit unlabeled, and code has no monospace or indentation. Graphs and diagrams are not supported yet. Only tested on Cramer's rule.
 
+30. **Your Material, then projects.** After the current 13-subagent plan: uploads of PDFs, images, video, audio and links, a material library, cutting with SAM, reading with Spark, and intent. After submission: project mode, series and playlists, slides, orientation. The user's words and the plan are in `docs/ideas/projects-and-studio.md`. Bring this up when the 13 are done.
+
 ## Done (Oct 30)
 
 - Default length is story-led (1). Annotation and the drawing toolset on any image (2, 3). Board format and whiteboard motion (4), first version. Clear look by image type (6). Accuracy in the review (7). Picker stricter on kind of thing, models and loose matches, with no second chance for a rejected image (8, 16, 20). Fake writing checked and redone (11). Reuse capped per image, honest illustrations for gaps (9, 12, 17). Compression (15). Paper and grain softened (18). Duplicate titles (19).
