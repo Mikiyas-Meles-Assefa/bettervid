@@ -232,7 +232,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   }
   const seen = (size: number, line: number) => {
     if (size < out.smallest) out.smallest = size;
-    if (size < env.minText - 0.5) out.problems.push({ line, message: `Text here comes out only ${Math.round(size)} pixels tall, too small to read, because this state holds too much to fit. Put less on screen at once or use shorter lines.` });
+    if (size < env.minText - 0.5) out.problems.push({ line, message: `Text here comes out only ${Math.round(size)} pixels tall; the smallest readable is ${Math.round(env.minText)}. This state holds too much to fit at a readable size: put less on screen at once, use shorter lines, or use a bigger size for this text.` });
   };
   const text = (id: string, item: Item, content: string, x: number, y: number, size: number, extra: Props = {}, parent?: string) => {
     seen(size, item.line);

@@ -16,6 +16,10 @@ There is no limit on states: a scene can have hundreds, and change on any word. 
 
 State settings: `enter=fade|draw|pop|none` for how new things arrive, `move=FRAMES` for how long changes take, `ease={{eases}}`. Example: `@30 keep enter=pop move=20 ease=spring`
 
+`@N cut` changes everything on that frame, as a film cuts: what leaves is gone, what arrives is there, with no fades. It works with `keep` too.
+
+Any single thing, or an arrangement, can arrive its own way with `enter=`: `fade`, `draw`, `pop`, `none`, `slide` (in from the right), `slide-left`, `rise` (up from below) or `slam` (drops down large and lands with a jolt).
+
 # What can be on screen
 
 Lines of atoms. Each atom moves on its own. Sizes: `huge`, `big`, `normal`, `small`, `note`.
@@ -54,8 +58,13 @@ A graph, laid out by the engine. Edges are `A-B`, with a weight as `A-B:4`, and 
 
     graph g: A-B:4 A-C:2 B-C:1
 
-Images, only with a name from the assets list: `image id asset=NAME w=600 h=400`
+Images, only with a name from the assets list: `image id asset=NAME w=600 h=400`. `w` and `h` give its shape.
 {{assets}}
+A picture, or a shape as a field of color, can fill the whole frame behind everything else. It takes no room in the arrangement:
+
+    image p1 asset=NAME w=1152 h=2048 frame=fill     covers the frame, cropping what spills over
+    image p2 asset=NAME w=1600 h=900 frame=fit       all of it, as large as it goes
+    box field frame=fill fill=ink                    a field of color
 Empty room: `space h=80`
 {{kits}}
 
@@ -70,7 +79,7 @@ Indent to put things inside an arrangement, which can nest. Everything goes in `
     chain id dir=down|up|right|left             a line with arrows between neighbors
     free id w=900 h=900                         by percent: each child has at=X,Y from the top left
 
-`into=ID`, `before=ID` and `after=ID` on any line place it relative to something in a keep state. An arrangement's id can be used anywhere a thing's id can, and means everything inside it.
+`back=COLOR` on a row, stack or grid sets it on a panel, like a card. `into=ID`, `before=ID` and `after=ID` on any line place it relative to something in a keep state. An arrangement's id can be used anywhere a thing's id can, and means everything inside it.
 
 # Attached to things
 
@@ -85,23 +94,53 @@ These find their own place and follow what they touch.
     mark brace a,b "label"
     tag a "words" side=right
 
-An optional `id=` names an arrow or mark. Otherwise they are `arrow.a.b`, `mark.ring.a`, `tag.a`.
+An arrow from a thing to itself (`arrow a -> a "turns"`) circles around it.
+
+`at=` puts a mark or a tag at a place inside a thing, in that thing's own coordinates: x,y pairs from its top left (0,0) to its bottom right (1,1). Inside a picture they belong to the picture: they move, zoom and leave with it, and keep their size on screen.
+
+    mark ring photo at=0.62,0.30,0.80,0.42          around a place: two corners
+    mark box photo at=0.1,0.1,0.4,0.3
+    mark underline photo at=0.2,0.8,0.7,0.8
+    mark line photo at=0.1,0.5,0.9,0.5               through points
+    mark path photo at=0.1,0.9,0.3,0.6,0.6,0.7       a smooth curve through points
+    mark arrow photo at=0.2,0.9,0.5,0.55             pointing at its last point
+    mark dots photo at=0.3,0.4,0.5,0.45,0.7,0.5      dots that pop on one after another
+    tag photo "the bridge" at=0.5,0.6
+    mark highlight quote                             a highlighter swept under words (or across a place, with at=)
+
+Words on a picture sit on a small card so they read on any photo; `back=COLOR` picks the card, `back=none` drops it. An optional `id=` names an arrow, mark or tag. Otherwise they are `arrow.a.b`, `mark.ring.a`, `tag.a`; one placed with `at=` needs an `id=` to be named later.
 
 # Changing things
 
     light a b c color=accent       color these for this state only
-    dim a b amount=0.25            fade these for this state only
+    dim a b amount=0.5             fade these for this state only
     focus a b                      light these and dim everything else, for this state only
     set a fill=highlight opacity=0.5 rotate=30     change any property until you change it again
     do BEHAVIOR target key=value   start ongoing or one-off motion
     emit NAME                      send an event that sound can follow
 
-These sit at the left edge of a state, not inside an arrangement. A value such as `until=@40` is a spoken moment.
+These commands sit at the left edge of a state, not inside an arrangement. A value such as `until=@40` is a spoken moment.
 
-Properties for `set`: x, y, scaleX, scaleY, rotate, skew, opacity, drawn (0 to 1 of a line drawn), fill, stroke, strokeWidth, color, text, size, weight. Colors are only these names: {{colors}}, and `none`.
+Properties for `set`: x, y, scaleX, scaleY, rotate, skew, opacity, drawn (0 to 1 of a line drawn), fill, stroke, strokeWidth, color, text, size, weight, and the looks any part can take: blur, brightness, saturation, contrast, glow, shadowY, shadowBlur, shadowOpacity. Colors are only these names: {{colors}}, and `none`.
 
 Behaviors:
 {{behaviors}}
+
+# The camera
+
+The camera starts at rest, showing the frame as laid out. It keeps its view through keep states, and a plain state goes back to rest unless it moves the camera itself.
+
+    camera p1                                   frame a thing, in the part of the frame clear of captions
+    camera p1 at=0.55,0.20,0.95,0.50            frame a place inside it: two corners, in its own coordinates
+    camera p1 zoom=1.1                          a little closer than framing it
+    camera zoom=1                               back to the whole frame
+    camera p1 at=... frames=60 ease=smooth drift=0.015
+
+`frames` is how long the move takes (in a cut, it is there at once). `drift` keeps it pushing closer by that much each second after it lands, until its next move: the slow push-in that keeps a still picture alive. When a picture fills the frame, the camera never shows past its edges. Anything can be framed: a part of a diagram, a node of a graph, a word.
+
+# Readable
+
+Nothing the engine places (tags, labels, the words of a graph or a program) is drawn smaller than the style's readable size; laid-out text that would come out smaller is reported, so put less on screen. `dim` and `focus` never fade the rest below a level that stays readable, and `dim` and `focus` never fade the rest below a level that stays readable. A scene can change both for itself with a line before its first state: `read text=0.04 dim=0.5` (text is the smallest text as a share of the frame's width; dim is the lowest opacity).
 
 # Programs
 

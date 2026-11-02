@@ -21,12 +21,33 @@ export type AuthorRequest = { topic: string; words: { text: string; start: numbe
 
 const list = (items: string[]) => (items.length ? items.map((x) => `- ${x}`).join("\n") : "- none yet");
 
+// What each motion behavior does and the settings it takes, read from the comment above it in engine/motion, so the
+// guide never falls behind the code and a model does not have to guess a behavior's settings.
+let motionCache: Record<string, string> | undefined;
+export function motionDocs(): Record<string, string> {
+  if (motionCache) return motionCache;
+  const out: Record<string, string> = {};
+  for (const file of ["moves.ts", "parts.ts", "effects.ts"]) {
+    let src = "";
+    try {
+      src = readFileSync(join(PROMPTS, "..", "engine", "motion", file), "utf8");
+    } catch {
+      continue;
+    }
+    for (const m of src.matchAll(/((?:^ {2}\/\/.*\n)+)^ {2}(\w+): /gm)) {
+      const text = m[1]!.split("\n").map((l) => l.replace(/^\s*\/\/\s?/, "").trim()).filter(Boolean).join(" ");
+      out[m[2]!] = `\`do ${m[2]} id key=value\`: ${text.replace(/\bargs:/, "Settings:")}`;
+    }
+  }
+  return (motionCache = out);
+}
+
 // The language guide, filled in with what this engine can really do right now, so new abilities reach Spark by themselves.
 export function languagePrompt(opts: BuildOptions): string {
   const { ctx } = opts;
   const kits = ctx.kits ?? [];
   const kinds = kits.flatMap((k) => Object.keys(k.kinds ?? {}).map((name) => ({ name, doc: k.docs?.[name] })));
-  const docs: Record<string, string> = { flow: "`do flow id color=accent frames=20`: a pulse of color runs along a line", pulse: "`do pulse id size=1.25 frames=16`: a quick grow and return", shake: "`do shake id size=14`: a short shake" };
+  const docs: Record<string, string> = { ...motionDocs(), flow: "`do flow id color=accent frames=20`: a pulse of color runs along a line", pulse: "`do pulse id size=1.25 frames=16`: a quick grow and return", shake: "`do shake id size=14`: a short shake" };
   const behaviors = [...Object.keys(BEHAVIORS).map((name) => docs[name] ?? `\`do ${name} id\``), ...kits.flatMap((k) => Object.keys(k.behaviors ?? {}).map((name) => k.docs?.[name] ?? `\`do ${name} id\``))];
   const assets = Object.keys(opts.assets ?? {});
   const fill: Record<string, string> = {

@@ -180,7 +180,7 @@ tag g.node.A "start"
   assert.match(await bad(`read text=0.08
 @0
 text t "${"many words here ".repeat(30)}" size=small
-`), /too small to read/);
+`), /smallest readable is 86/);
 });
 
 const allText = (list: Resolved[]): string[] => list.flatMap((r) => [...(r.kind === "text" ? [String(r.props.text)] : []), ...allText(r.children)]);

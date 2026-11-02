@@ -540,11 +540,32 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       // A spot pushed back onto the canvas is no longer beside its target, so it counts against that spot.
       const ranked = want.map((p) => ({ b: box(p), p })).map(({ b, p }, i) => ({ b, over: cost(b), c: cost(b) + (Math.abs(b.x - p.x) > 2 ? w * h * 0.25 : 0), i })).sort((a, b) => a.c - b.c || a.i - b.i);
       const best = ranked[0]!;
-      if (best.over > 0.3 * w * h) report(line, `There is no free place for "${text}": everything around what it points to is full. Shorten it, or give that thing room with space, a row or a stack.`);
-      words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs));
+      // With no free place, the words sit on a card over what they cover, so they still read. Only words on top of other
+      // words are a problem, because then neither can be read.
+      const onLabels = placedLabels.reduce((sum, l) => sum + hits(best.b, l.box), 0);
+      if (onLabels > 0.3 * w * h) report(line, `"${text}" would sit on top of other attached words, because everything around what it points to is full. Shorten it, drop an earlier tag or mark label, or give that thing room with space, a row or a stack.`);
+      const crowded = best.over > 0.3 * w * h && attrs.back !== "none";
+      words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs) ?? (crowded ? "paper" : undefined));
       placedLabels.push({ box: best.b, line, id });
     };
     const addLink = (id: string, a: Box, b: Box, line: number, head: boolean, attrs: Attrs, text?: string) => {
+      if (a === b || (Math.abs(a.x - b.x) < 1 && Math.abs(a.y - b.y) < 1 && Math.abs(a.w - b.w) < 1)) {
+        // From a thing to itself: a turn around it, as for something spinning or returning to where it began.
+        const [rx, ry] = [a.w / 2 + MARK_PAD * 2.5, a.h / 2 + MARK_PAD * 2.5];
+        const pts = Array.from({ length: 31 }, (_, i) => {
+          const t = ((200 + (i / 30) * 280) * Math.PI) / 180;
+          return [round(a.x + Math.cos(t) * rx), round(a.y + Math.sin(t) * ry)];
+        }).flat();
+        const color = attrs.color ?? "ink";
+        const width = number(attrs.strokeWidth ?? "") ?? 6;
+        drawn.push({ id, kind: "path", line, props: { points: pts, stroke: color, strokeWidth: width, smooth: 1 } });
+        if (head) {
+          const [px, py, qx, qy] = pts.slice(-4) as [number, number, number, number];
+          drawn.push({ id: `${id}.head`, kind: "path", line, props: { x: qx, y: qy, rotate: round((Math.atan2(qy - py, qx - px) * 180) / Math.PI), points: [-26, -16, 0, 0, -26, 16], stroke: color, strokeWidth: width } });
+        }
+        if (text) label(`${id}.label`, line, text, [{ x: a.x, y: a.y - ry - 40 }, { x: a.x + rx + 120, y: a.y }, { x: a.x, y: a.y + ry + 40 }, { x: a.x - rx - 120, y: a.y }], attrs);
+        return;
+      }
       const len = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
       const [ux, uy] = [(b.x - a.x) / len, (b.y - a.y) / len];
       const curve = (amount: number) => {
