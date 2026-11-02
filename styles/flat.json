@@ -27,5 +27,12 @@
   "hand": {
     "wobble": 0,
     "weight": 1.1
+  },
+  "render": {
+    "line": { "pen": "vector", "weight": 1.1 },
+    "fill": { "kind": "solid", "outline": 0 },
+    "surface": { "kind": "plain" },
+    "type": { "title": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif", "body": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif", "bold": 800 },
+    "motion": { "feel": "springy" }
   }
 }

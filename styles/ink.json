@@ -1,0 +1,38 @@
+{
+  "name": "ink",
+  "label": "Ink on paper",
+  "palette": {
+    "paper": "#f3ecdc",
+    "ink": "#1c1a17",
+    "accent": "#b5361f",
+    "highlight": "#d9a441"
+  },
+  "fonts": {
+    "caption": "Arial Black",
+    "title": "Baskerville",
+    "body": "Baskerville"
+  },
+  "art": {
+    "scene": "Pen and ink illustration: expressive black brush lines with fine cross hatching on warm plain paper, one vermilion accent, the subject sharp and instantly recognizable.",
+    "object": "Pen and ink drawing of a single object shown whole on plain warm paper: expressive black lines, fine hatching, one vermilion accent, nothing around it.",
+    "diagram": "Clean pen and ink diagram on plain warm paper: black lines, one vermilion accent, simple clear shapes, one idea only."
+  },
+  "realAssets": "proof",
+  "grain": 0,
+  "vignette": 0,
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  },
+  "hand": {
+    "wobble": 1.8,
+    "weight": 1
+  },
+  "render": {
+    "line": { "pen": "ink", "weight": 1.05 },
+    "fill": { "kind": "hatch", "spacing": 10, "angle": 38, "cross": 1, "base": 0.8 },
+    "surface": { "kind": "paper" },
+    "type": { "title": "Baskerville, \"Hoefler Text\", Georgia, \"Liberation Serif\", serif", "body": "Baskerville, \"Hoefler Text\", Georgia, \"Liberation Serif\", serif", "jitter": 0.2 },
+    "motion": { "feel": "calm" }
+  }
+}

@@ -27,5 +27,12 @@
   "hand": {
     "wobble": 2.5,
     "weight": 1
+  },
+  "render": {
+    "line": { "pen": "vector", "wobble": 1.2, "weight": 1.05 },
+    "fill": { "kind": "solid", "shadow": 9, "outline": 0.4 },
+    "surface": { "kind": "paper", "grain": 0.25, "smudge": 0.1 },
+    "type": { "title": "Georgia, \"Liberation Serif\", serif", "body": "Georgia, \"Liberation Serif\", serif" },
+    "motion": { "feel": "snappy", "enter": "pop" }
   }
 }

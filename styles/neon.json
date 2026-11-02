@@ -1,0 +1,38 @@
+{
+  "name": "neon",
+  "label": "Neon",
+  "palette": {
+    "paper": "#0d0b1e",
+    "ink": "#62e7ff",
+    "accent": "#ff3fa4",
+    "highlight": "#ffe14d"
+  },
+  "fonts": {
+    "caption": "Arial Black",
+    "title": "Avenir Next",
+    "body": "Avenir Next"
+  },
+  "art": {
+    "scene": "Neon sign art: glowing tube lines in cyan and pink on a plain dark wall, simple clean shapes, the subject sharp and instantly recognizable.",
+    "object": "Neon sign of a single object shown whole on a plain dark wall: glowing cyan lines, one pink accent, nothing around it.",
+    "diagram": "Clean neon diagram on a plain dark wall: glowing cyan lines, one pink accent, simple clear shapes, one idea only."
+  },
+  "realAssets": "proof",
+  "grain": 0,
+  "vignette": 0,
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  },
+  "hand": {
+    "wobble": 0,
+    "weight": 0.8
+  },
+  "render": {
+    "line": { "pen": "neon" },
+    "fill": { "kind": "solid", "glow": 1, "outline": 0.5 },
+    "surface": { "kind": "night" },
+    "type": { "title": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif", "body": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif", "bold": 600, "glow": 1 },
+    "motion": { "feel": "snappy" }
+  }
+}

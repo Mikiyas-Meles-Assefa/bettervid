@@ -8,7 +8,7 @@
   "scripts": {
     "spike": "node --env-file=.env --experimental-strip-types",
     "typecheck": "tsc --noEmit",
-    "test:engine": "node --experimental-strip-types --test engine/core/*.test.ts engine/truth/*.test.ts",
+    "test:engine": "node --experimental-strip-types --test engine/core/*.test.ts engine/truth/*.test.ts engine/style/*.test.ts",
     "pipeline": "node --env-file=.env --experimental-strip-types pipeline/run.ts",
     "app": "node --env-file=.env --experimental-strip-types app/server.ts"
   },

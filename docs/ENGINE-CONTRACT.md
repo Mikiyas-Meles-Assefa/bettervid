@@ -27,7 +27,7 @@ Files: `engine/core` (contract, compile, evaluate, behaviors), `engine/render` (
 - **A kit:** export a `Kit` with `kinds` and, if useful, `behaviors`. Example: `engine/kits/graph.ts`.
 - **A truth engine:** a pure function returning `TruthEvent`s. Example: `engine/truth/dijkstra.ts`.
 - **A behavior:** a function returning tracks. Examples: `engine/core/behaviors.ts`.
-- **A style:** a file in `styles/`. `engine/render/theme.ts` reads it.
+- **A style:** a file in `styles/` with a `render` block: a named pen, fill, surface and feel, plus any overrides. `engine/style/format.ts` holds the presets, the checks, and `STYLE_GUIDE`, the short brief a model needs to write one. `engine/render/theme.ts` reads it. Texture goes on the surface and on colored shapes. Images are never touched, and nothing is laid over the whole frame.
 - **A property on a primitive:** add it in `SceneView`, then document it here. Everything else already animates it.
 
 ## What every workstream must deliver
