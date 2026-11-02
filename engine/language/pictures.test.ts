@@ -31,7 +31,7 @@ const find = (list: Resolved[], id: string): Resolved | undefined => {
 const at = (s: Scene, f: number, id: string) => find(evaluate(s, f), id);
 
 test("a picture can fill the frame, behind the arrangement, taking no room in it", async () => {
-  const s = await ok(`@0\nimage p asset=photo w=1000 h=1000 frame=fill\ntext t "over it"\n`, pics);
+  const s = await ok(`@0\nimage p asset=photo w=1000 h=1000 frame=fill\ntext t "over it" role=caption\n`, pics);
   const p = at(s, 30, "p")!;
   assert.equal(p.props.w, 1920);
   assert.equal(p.props.h, 1920);
