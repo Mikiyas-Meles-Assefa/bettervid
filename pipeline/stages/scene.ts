@@ -16,18 +16,20 @@ import { build, formatProblems, type BuildOptions, type BuildResult } from "../.
 import { loadLibrary } from "../../engine/language/library.ts";
 import { parse, type Item, type State } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
+import { better, decode, hide, inventory, issuesFrom, judgeSchema, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
 import { json, text } from "../lib/meta.ts";
 import { asked, charge, dir, prompt, stage, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 
-const VERSION = 1; // bump when the way sections are written or checked changes, so cached sections are redone
+const VERSION = 2; // bump when the way sections are written or checked changes, so cached sections are redone
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
 const BUILD_ROUNDS = 4;
 const LOOK_ROUNDS = 2;
-const STILLS = 6;
+const LOOK_FRAMES = 10; // each state settled, and changes while they happen
+const LOOK_SCALE = 0.6; // frames Spark sees: 648 by 1152, near full size
 const PARALLEL = 6;
 const MAX_PROBLEMS = 25;
 
@@ -412,37 +414,147 @@ async function compose(job: Job, start: string | undefined, prior: string): Prom
   return { source, result: last?.result ?? { problems: [], stats: { states: 0, parts: 0, programs: 0, programMs: 0 } }, problems: last ? last.problems : ["the model never answered"], warnings: last?.warnings ?? [], usd, rounds: Math.min(round, BUILD_ROUNDS) };
 }
 
-// Frames spread over the section, each with the words said since the frame before it.
-function moments(job: Job, n = STILLS): { frame: number; words: string }[] {
+// ---------------------------------------------------------------------------------------------------------------------
+// The look step (pipeline/lib/look.ts): frames of each state settled and changing, rendered near full size, measured by
+// the engine, and judged by Spark with the words, the exact on-screen text and the research facts. A fix changes only
+// what was named, the changed version is kept only if it measures and looks better, and then the look stops.
+
+type Seen = { moments: Moment[]; files: string[]; measured: { frame: number; findings: Finding[]; words: string[] }[] };
+
+const lookPart = (name: "Judge" | "Fix" | "Recheck") => (prompt("scene-look").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
+
+// Renders the frames worth seeing three ways (as is, without words, without words and pictures) and measures them.
+async function see(job: Job, scene: Scene, source: string, folder: string): Promise<Seen> {
   const ctx = job.opts.ctx;
-  const f0 = when({ word: job.range.firstWord }, ctx);
-  const f1 = endFrame(job);
+  const starts = parse(source, kitKinds()).doc.states.map((s) => when({ word: s.at.word }, ctx));
   const words = job.p.narration!.words;
-  const out: { frame: number; words: string }[] = [];
-  let prev = f0;
-  for (let i = 0; i < n; i++) {
-    const frame = Math.min(f1, Math.round(f0 + ((i + 0.6) / n) * (f1 - f0)));
-    const said = words.map((w, k) => ({ w, k })).filter(({ w, k }) => k >= job.range.firstWord && k <= job.range.lastWord && w.start * FPS >= prev - 1 && w.start * FPS <= frame);
-    out.push({ frame, words: said.map(({ w }) => w.text).join(" ") });
-    prev = frame;
-  }
-  return out;
+  const picked = lookFrames(starts, when({ word: job.range.firstWord }, ctx), endFrame(job), FPS, LOOK_FRAMES);
+  const moments: Moment[] = picked.map((m) => ({ ...m, words: words.filter((w) => w.start * FPS >= m.frame - 2.5 * FPS && w.start * FPS <= m.frame + 0.5 * FPS).map((w) => w.text).join(" ") }));
+  const frames = moments.map((m) => m.frame);
+  const [files, bare, empty] = await Promise.all([
+    renderStills(scene, ctx.theme, frames, join(folder, "shown"), LOOK_SCALE),
+    renderStills(hide(scene, ["text"]), ctx.theme, frames, join(folder, "bare"), 0.5),
+    renderStills(hide(scene, ["text", "image"]), ctx.theme, frames, join(folder, "empty"), 0.5),
+  ]);
+  writeFileSync(join(folder, "scene.txt"), source);
+  const read = readOf(ctx.theme);
+  const measured = frames.map((frame, k) => {
+    const things = inventory(scene, frame);
+    const shown = decode(files[k]!, 540);
+    const changing = moments[k]!.why === "changing";
+    const findings = merge(measureLayout(things, ctx.width, ctx.height, read, changing), measurePixels(things, shown, decode(bare[k]!), decode(empty[k]!), ctx.width, changing));
+    return { frame, findings, words: wordsOnScreen(things) };
+  });
+  writeFileSync(join(folder, "measured.json"), JSON.stringify(measured, null, 1));
+  return { moments, files, measured };
 }
 
-async function look(job: Job, w: Written, round: number): Promise<{ reply: string; usd: number }> {
-  const shots = moments(job);
-  const folder = join(job.folder, `look${round}`);
-  const files = await renderStills(w.result.scene!, job.opts.ctx.theme, shots.map((s) => s.frame), folder);
-  writeFileSync(join(folder, "scene.txt"), w.source);
-  const content: unknown[] = [{ type: "input_text", text: `${job.request}\n\nThe scene written for this part:\n${w.source}` }];
-  shots.forEach((s, i) => {
-    content.push({ type: "input_text", text: `Frame ${i + 1}, at ${(s.frame / FPS).toFixed(1)} s. Words just said: ${s.words ? `"${s.words}"` : "(a pause)"}` });
-    content.push({ type: "input_image", image_url: `data:image/jpeg;base64,${readFileSync(files[i]!).toString("base64")}` });
+// What the judge reads before the frames: the topic, the research facts, computed steps, and this part's words.
+function lookHeader(job: Job, w: Written): string {
+  const p = job.p;
+  const facts = (p.factSheet?.claims ?? []).map((c) => `- ${c.text}`).join("\n");
+  const steps = w.result.truth?.length ? `\n\nSteps computed by the engine, correct by construction:\n${w.result.truth.map((t) => `${t.id} (${t.kind}): ${t.steps.slice(0, 40).join("; ")}`).join("\n")}` : "";
+  const said = p.narration!.words.slice(job.range.firstWord, job.range.lastWord + 1).map((x) => x.text).join(" ");
+  return `Topic: ${topic(p)}\nVisual style: ${p.input.style || "default"}\n\nResearch facts the video is built on:\n${facts || "(none listed)"}${steps}\n\nThis part's narration:\n${said}`;
+}
+
+function frameContent(seen: Seen, only?: Set<number>, label = "Frame"): unknown[] {
+  return seen.moments.flatMap((m, k) => {
+    if (only && !only.has(k + 1)) return [];
+    const found = seen.measured[k]!.findings.map((f) => `[${f.severity}] ${f.note}`);
+    return [
+      { type: "input_text", text: `${label} ${k + 1}, at ${(m.frame / FPS).toFixed(1)} s (${m.why}). Words around it: ${m.words ? `"${m.words}"` : "(a pause)"}\nOn screen: ${seen.measured[k]!.words.join(" / ") || "(no writing)"}\nMeasured: ${found.join("; ") || "nothing found"}` },
+      { type: "input_image", image_url: `data:image/jpeg;base64,${readFileSync(seen.files[k]!).toString("base64")}` },
+    ];
   });
-  content.push({ type: "input_text", text: prompt("scene-look") });
-  const r = await text({ system: job.system, user: content, effort: "medium", maxOutput: 32000 });
-  writeFileSync(join(folder, "reply.txt"), r.value);
-  return { reply: r.value, usd: r.usd };
+}
+
+const issueText = (issues: Issue[]) => issues.map((x) => `${x.id} [severity ${x.severity}, frames ${x.frames.join(", ")}] ${x.what} Should be: ${x.want}`).join("\n");
+
+async function judge(job: Job, w: Written, seen: Seen): Promise<{ judged: Judged; usd: number }> {
+  const r = await json<Judged>({ system: lookPart("Judge"), user: [{ type: "input_text", text: lookHeader(job, w) }, ...frameContent(seen)], schema: judgeSchema, schemaName: "look", effort: "medium" });
+  return { judged: r.value, usd: r.usd };
+}
+
+async function recheck(job: Job, w: Written, after: Seen, before: Seen, issues: Issue[]): Promise<{ re: Rechecked; usd: number }> {
+  const named = new Set(issues.flatMap((x) => x.frames).filter((f) => f <= after.moments.length));
+  const user = [
+    { type: "input_text", text: `${lookHeader(job, w)}\n\nThe issues you named:\n${issueText(issues)}\n\nThe frames before the change, where those issues were:` },
+    ...frameContent(before, new Set([...named].slice(0, 4)), "Before, frame"),
+    { type: "input_text", text: "The changed version, every frame:" },
+    ...frameContent(after),
+  ];
+  const r = await json<Rechecked>({ system: `${lookPart("Judge")}\n\n${lookPart("Recheck")}`, user, schema: recheckSchema, schemaName: "recheck", effort: "medium" });
+  return { re: r.value, usd: r.usd };
+}
+
+async function look(job: Job, start: Written, log: string[]): Promise<{ w: Written; usd: number; rounds: number }> {
+  let w = start;
+  let usd = 0;
+  let rounds = 0;
+  let seen = await see(job, w.result.scene!, w.source, join(job.folder, "look1"));
+  let judged: Judged["issues"] | undefined;
+  for (let round = 1; round <= LOOK_ROUNDS; round++) {
+    if (!judged) {
+      const j = await judge(job, w, seen);
+      usd += j.usd;
+      judged = j.judged.issues;
+      job.log(`  ${job.range.id} look ${round}: design ${j.judged.design}/5, ${j.judged.designNote.slice(0, 140)}`);
+    }
+    const issues = issuesFrom(judged, seen.measured);
+    writeFileSync(join(job.folder, `look${round}`, "issues.json"), JSON.stringify(issues, null, 1));
+    if (!issues.length) {
+      job.log(`  ${job.range.id} look ${round}: fine`);
+      log.push("fine");
+      break;
+    }
+    job.log(`  ${job.range.id} look ${round}: ${issues.length} issues (${weight(issues)} weight)`);
+    for (const x of issues.slice(0, 6)) job.log(`      ${x.id} [${x.severity}] ${x.what.slice(0, 170)}`);
+    const shown = new Set(issues.flatMap((x) => x.frames).slice(0, 4));
+    const user = [
+      { type: "input_text", text: `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(w.source)}\n\n${lookPart("Fix")}\n\nIssues:\n${issueText(issues)}\n\nThe frames the issues name:` },
+      ...frameContent(seen, shown),
+    ];
+    let reply: string;
+    try {
+      const r = await text({ system: job.system, user, effort: "medium", maxOutput: 32000 });
+      usd += r.usd;
+      reply = r.value;
+    } catch (e) {
+      usd += (e as { usd?: number }).usd ?? 0;
+      log.push(`fix failed: ${(e as Error).message.slice(0, 120)}`);
+      break;
+    }
+    const fixed = await compose(job, reply, `${job.request}\n\nYour part:\n${reply}`);
+    usd += fixed.usd;
+    rounds += fixed.rounds;
+    if (fixed.problems.length || !fixed.result.scene) {
+      job.log(`  ${job.range.id} look ${round}: !!! the fixed part does not build after ${fixed.rounds} repairs; keeping the version before it. Problems: ${fixed.problems.slice(0, 3).join(" | ")}`);
+      log.push("fix did not build, kept before");
+      break;
+    }
+    const after = await see(job, fixed.result.scene, fixed.source, join(job.folder, `look${round}b`));
+    const { re, usd: u } = await recheck(job, fixed, after, seen, issues);
+    usd += u;
+    writeFileSync(join(job.folder, `look${round}b`, "recheck.json"), JSON.stringify(re, null, 1));
+    const open = issues.filter((x) => x.source === "seen" && re.named.find((n) => n.id === x.id)?.fixed !== "yes");
+    const fresh = re.issues.filter((x) => x.severity >= 2);
+    const measuredAfter = weight(after.measured.flatMap((m) => m.findings.filter((f) => f.severity >= 2)));
+    const measuredBefore = weight(seen.measured.flatMap((m) => m.findings.filter((f) => f.severity >= 2)));
+    const verdict = better({ measuredBefore, measuredAfter, seenBefore: weight(issues.filter((x) => x.source === "seen")), seenAfter: weight([...open, ...fresh]), newSevere: fresh.filter((x) => x.severity >= 3).length, prefer: re.better });
+    job.log(`  ${job.range.id} look ${round}: measured ${measuredBefore} -> ${measuredAfter}, seen ${weight(issues.filter((x) => x.source === "seen"))} -> ${weight([...open, ...fresh])}, prefers ${re.better}: ${verdict ? "kept the fix" : "kept the version before"}`);
+    if (!verdict) {
+      log.push("fix not better, kept before");
+      break;
+    }
+    log.push("fixed");
+    w = fixed;
+    seen = after;
+    // What is still open carries into the next round as the judgement of this version, so it is not judged afresh.
+    judged = [...open.map(({ id: _i, source: _s, ...x }) => x), ...fresh];
+    if (![...judged, ...after.measured.flatMap((m) => m.findings)].some((x) => x.severity >= 3)) break;
+  }
+  return { w, usd, rounds };
 }
 
 async function writeSection(job: Job, draft: string): Promise<Written & { looks: string[] }> {
@@ -451,37 +563,35 @@ async function writeSection(job: Job, draft: string): Promise<Written & { looks:
   let usd = w.usd;
   let rounds = w.rounds;
   const looks: string[] = [];
-  for (let round = 1; round <= LOOK_ROUNDS && !w.problems.length && w.result.scene; round++) {
-    let seen: { reply: string; usd: number };
+  if (!w.problems.length && w.result.scene) {
     try {
-      seen = await look(job, w, round);
+      const r = await look(job, w, looks);
+      [w, usd, rounds] = [r.w, usd + r.usd, rounds + r.rounds];
     } catch (e) {
       usd += (e as { usd?: number }).usd ?? 0;
-      job.log(`  ${job.range.id} look ${round}: FAILED to look: ${(e as Error).message.slice(0, 200)}`);
+      job.log(`  ${job.range.id} look: FAILED to look: ${(e as Error).message.slice(0, 200)}`);
       looks.push(`failed: ${(e as Error).message.slice(0, 200)}`);
-      break;
     }
-    usd += seen.usd;
-    if (/^\W*fine\W*$/i.test(seen.reply.trim())) {
-      job.log(`  ${job.range.id} look ${round}: fine`);
-      looks.push("fine");
-      break;
-    }
-    job.log(`  ${job.range.id} look ${round}: Spark changed the part`);
-    looks.push("changed");
-    const fixed = await compose(job, seen.reply, `${job.request}\n\nYour part:\n${seen.reply}`);
-    usd += fixed.usd;
-    rounds += fixed.rounds;
-    if (fixed.problems.length) {
-      job.log(`  ${job.range.id} look ${round}: !!! the changed part does not build after ${fixed.rounds} repairs; keeping the version before it. Problems: ${fixed.problems.slice(0, 3).join(" | ")}`);
-      looks.push("change did not build");
-      break;
-    }
-    w = fixed;
   }
-  // The final version, rendered for the record; no model call.
-  if (w.result.scene) await renderStills(w.result.scene, job.opts.ctx.theme, moments(job).map((m) => m.frame), join(job.folder, "final")).catch((e) => job.log(`  ${job.range.id}: final stills failed: ${(e as Error).message.slice(0, 160)}`));
   return { ...w, usd, rounds, looks };
+}
+
+// The look step on its own, for a section already written: no rewriting from scratch. Used to test the look.
+export async function lookAgain(p: Project, sectionId: string, assets: Record<string, string>): Promise<{ before: string; after: string; looks: string[]; usd: number }> {
+  const ranges = splitSections(p.narration!.words);
+  const i = ranges.findIndex((r) => r.id === sectionId);
+  const section = p.scene!.sections.find((s) => s.id === sectionId)!;
+  const castFile = join(dir(p), "scene", "cast.json");
+  const cast: CastPart[] = existsSync(castFile) ? JSON.parse(readFileSync(castFile, "utf8")).cast : ranges.map(() => ({ shows: "", handoff: [] }));
+  const header = [`Topic: ${topic(p)}`, p.plan?.intent ? `Why the viewer wants this: ${p.plan.intent}` : "", asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])])].filter(Boolean).join("\n\n") + "\n\n";
+  const pics = pictures(p, p.scene!.assets);
+  const opts = sceneBuildOptions(p, assets);
+  const job: Job = { p, range: ranges[i]!, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system: languagePrompt(opts), request: requestFor(p, ranges, i, cast, header, describe(pics)), opts, folder: join(dir(p), "scene", sectionId), log: (l) => console.log(l) };
+  const start = await check(job, section.source);
+  if (start.problems.length || !start.result.scene) throw new Error(`${sectionId} does not build: ${start.problems.slice(0, 3).join(" | ")}`);
+  const looks: string[] = [];
+  const r = await look(job, { source: section.source, result: start.result, problems: [], warnings: start.warnings, usd: 0, rounds: 0 }, looks);
+  return { before: section.source, after: r.w.source, looks, usd: r.usd };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
