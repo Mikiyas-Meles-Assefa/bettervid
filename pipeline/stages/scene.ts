@@ -23,7 +23,7 @@ import { asked, charge, dir, prompt, stage, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 
-const VERSION = 2; // bump when the way sections are written or checked changes, so cached sections are redone
+const VERSION = 3; // bump when the way sections are written or checked changes, so cached sections are redone
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
