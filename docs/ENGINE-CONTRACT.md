@@ -66,6 +66,8 @@ The engine becomes the one visual step for every video, documentaries included. 
 
 Flow: plan, research, writer, voice, director, assets, annotate (pictures for any video that needs them), then `scene` (Spark writes scene language per section, starting from `shotsToScene` where there are shots), then timeline (compiles the scene into an `engine` clip), mix, render, critic.
 
+The language gained general words for this: `image ... frame=fill|fit`, `camera`, marks and tags placed inside a thing with `at=`, `@N cut`, entrances on any thing, and panels with `back=`. Readability floors live in each style's `render.read` (`text`, the smallest text as a share of the shorter side, and `dim`, the lowest opacity `dim` and `focus` reach); a scene may override them with `read text= dim=`. Truth kits (`matrix`, `det`, `cramer`, `matvec`, `sort`, `trace`, `dijkstra`) play with `do steps`, and once a part builds, Spark sees the computed steps once to tie them to words.
+
 Each workstream owns its files. A change outside them needs the lead's review.
 
 | Workstream | Owns |
