@@ -5,7 +5,7 @@ import type { CompileContext, Ease, Kit, NodeSpec, Props, Scene, SceneDoc, Step,
 import { EASES } from "../core/ease.ts";
 import { evaluate } from "../core/evaluate.ts";
 import { graphKit } from "../kits/graph.ts";
-import { estimate, graphPositions, layout, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
+import { estimate, graphPositions, layout, readableOn, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import type { LibraryEntry } from "./library.ts";
 import { checkOutput } from "./program.ts";
 import { runProgram, type RunResult } from "./sandbox.ts";
@@ -233,7 +233,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         }
       }
       for (const raw of clone(s.items)) {
-        const hasId = !/^(row|stack|grid|ring|chain|free|line|space)\d+$/.test(raw.id);
+        const hasId = !/^(row|stack|grid|ring|chain|free|line|space|k\d+-line)\d*$/.test(raw.id);
         const same = hasId ? findItem(board, raw.id) : undefined;
         for (const id of raw.children.length || raw.kind === "atoms" ? leafIds(raw).filter((x) => x !== raw.id) : []) {
           removeAtom(board, id);
@@ -267,6 +267,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const mount = async (slotItem: Item, box: Box, s: number, at: number, laid: Laid) => {
     const def = programs.get(slotItem.program!);
     if (!def) {
+      failed.add(slotItem.id);
       report(slotItem.line, `There is no program called ${slotItem.program}.${suggest(slotItem.program!, programs.keys())} Define it with a program block or use one from the library.`);
       return;
     }
@@ -302,18 +303,25 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     stats.programs++;
     stats.programMs += result.ms;
     if (!result.ok) {
+      failed.add(slotItem.id);
       report(def.line && result.line ? def.line + result.line : slotItem.line, `The program ${slotItem.program} failed${result.line && !def.line ? ` at its line ${result.line}` : ""}: ${result.error}`);
       return;
     }
     const { errors, checked } = checkOutput(result.output, { mount: slotItem.id, on: onIds, offset: { x: left, y: up }, frames: ctx.frames, colors });
     for (const e of errors) report(def.line || slotItem.line, `The program ${slotItem.program}: ${e}.`);
-    if (!checked) return;
+    if (!checked) {
+      failed.add(slotItem.id);
+      return;
+    }
     const parts: Part[] = checked.parts.map((p) => ({ ...p, line: slotItem.line }));
     mounted.set(slotItem.id, { parts, first: area, scale: s, ends: new Map(checked.tracks.map((t) => [`${t.target}\u0000${t.prop}`, t.keys.at(-1)!.at])) });
     programTracks.push(...checked.tracks);
     for (const e of checked.events) steps.push({ at: e.at, emit: [{ name: e.name, ...(e.data ? { data: e.data } : {}) }] });
     if (checked.tracks.length) laterPlay.push({ behavior: `program.${slotItem.id}`, target: slotItem.id });
   };
+  // A program that failed has already been reported. Its parts being missing is not a second problem.
+  const failed = new Set<string>();
+  const fromFailed = (id: string) => [...failed].some((m) => id === m || id.startsWith(`${m}.`));
   const kitsMade: Kit = { name: "programs", behaviors: {} };
   let laterPlay: NonNullable<Step["play"]> = []; // program motion, played once its parts exist
 
@@ -394,7 +402,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     };
     const needBox = (id: string, line: number): Box | undefined => {
       const b = boxOf(id);
-      if (!b) report(line, `"${id}" is not on the board at this state.${suggest(id, [...parts.keys(), ...laid.boxes.keys()])}`);
+      if (!b && !fromFailed(id)) report(line, `"${id}" is not on the board at this state.${suggest(id, [...parts.keys(), ...laid.boxes.keys()])}`);
       return b;
     };
 
@@ -411,25 +419,44 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const h = size * 1.2;
       const box = (p: { x: number; y: number }) => ({ x: Math.max(w / 2 + 10, Math.min(ctx.width - w / 2 - 10, p.x)), y: Math.max(h, Math.min(ctx.height - h, p.y)), w, h });
       const cost = (b: Box) => [...obstacles, ...placedLabels.map((l) => l.box)].reduce((sum, o) => sum + hits(b, o), 0);
-      const ranked = want.map(box).map((b, i) => ({ b, c: cost(b), i })).sort((a, b) => a.c - b.c || a.i - b.i);
+      // A spot pushed back onto the canvas is no longer beside its target, so it counts against that spot.
+      const ranked = want.map((p) => ({ b: box(p), p })).map(({ b, p }, i) => ({ b, over: cost(b), c: cost(b) + (Math.abs(b.x - p.x) > 2 ? w * h * 0.25 : 0), i })).sort((a, b) => a.c - b.c || a.i - b.i);
       const best = ranked[0]!;
-      if (best.c > 0.3 * w * h) report(line, `There is no free place for "${text}" near what it points to. Shorten it, or make more room on screen.`);
+      if (best.over > 0.3 * w * h) report(line, `There is no free place for "${text}": everything around what it points to is full. Shorten it, or give that thing room with space, a row or a stack.`);
       drawn.push({ id, kind: "text", line, props: { x: round(best.b.x), y: round(best.b.y), text, size: round(size), color: attrs.color ?? "ink", weight: 700 } });
       placedLabels.push({ box: best.b, line, id });
     };
     const addLink = (id: string, a: Box, b: Box, line: number, head: boolean, attrs: Attrs, text?: string) => {
-      const bend = (number(attrs.bend ?? "") ?? 0) * Math.hypot(a.x - b.x, a.y - b.y);
-      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const len = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
       const [ux, uy] = [(b.x - a.x) / len, (b.y - a.y) / len];
-      const ctrl = { x: mid.x - uy * bend, y: mid.y + ux * bend };
-      const p0 = edgePoint(a, ctrl, MARK_PAD);
-      const p1 = edgePoint(b, ctrl, MARK_PAD);
-      const points: number[] = [];
-      for (let i = 0; i <= 16; i++) {
-        const t = i / 16;
-        points.push(round((1 - t) ** 2 * p0.x + 2 * (1 - t) * t * ctrl.x + t * t * p1.x), round((1 - t) ** 2 * p0.y + 2 * (1 - t) * t * ctrl.y + t * t * p1.y));
-      }
+      const curve = (amount: number) => {
+        const ctrl = { x: (a.x + b.x) / 2 - uy * amount * len, y: (a.y + b.y) / 2 + ux * amount * len };
+        const p0 = edgePoint(a, ctrl, MARK_PAD);
+        const p1 = edgePoint(b, ctrl, MARK_PAD);
+        const out: number[] = [];
+        for (let i = 0; i <= 16; i++) {
+          const t = i / 16;
+          out.push(round((1 - t) ** 2 * p0.x + 2 * (1 - t) * t * ctrl.x + t * t * p1.x), round((1 - t) ** 2 * p0.y + 2 * (1 - t) * t * ctrl.y + t * t * p1.y));
+        }
+        return out;
+      };
+      // Unless told how to curve, a line bends around what lies between its two ends.
+      const crossings = (pts: number[]) => {
+        let count = 0;
+        for (const o of obstacles) {
+          if (hits(o, a) > 0.5 * o.w * o.h || hits(o, b) > 0.5 * o.w * o.h) continue;
+          for (let i = 2; i + 3 < pts.length; i += 2) {
+            if (Math.abs(pts[i]! - o.x) < o.w / 2 + 4 && Math.abs(pts[i + 1]! - o.y) < o.h / 2 + 4) {
+              count++;
+              break;
+            }
+          }
+        }
+        return count;
+      };
+      const bends = attrs.bend !== undefined ? [number(attrs.bend) ?? 0] : [0, 0.2, -0.2, 0.4, -0.4, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6];
+      const offCanvas = (pts: number[]) => pts.some((v, i) => (i % 2 ? false : v < 20 || v > ctx.width - 20));
+      const points = bends.map((x) => curve(x)).map((pts, i) => ({ pts, i, c: crossings(pts) + (offCanvas(pts) ? 0.5 : 0) })).sort((x, y) => x.c - y.c || x.i - y.i)[0]!.pts;
       const color = attrs.color ?? "ink";
       const width = number(attrs.strokeWidth ?? "") ?? 6;
       drawn.push({ id, kind: "path", line, props: { points, stroke: color, strokeWidth: width } });
@@ -493,19 +520,21 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         colorOk(c.attrs.color, c.line);
         const size = number(c.attrs.size ?? "") ?? 42 * Math.max(0.8, Math.min(1.2, laid.scale));
         const w = env.measure(c.text, size);
-        const options: Record<string, Box> = {
-          right: { x: b.x + b.w / 2 + 24 + w / 2, y: b.y, w, h: size * 1.2 },
-          left: { x: b.x - b.w / 2 - 24 - w / 2, y: b.y, w, h: size * 1.2 },
-          top: { x: b.x, y: b.y - b.h / 2 - 14 - size * 0.6, w, h: size * 1.2 },
-          bottom: { x: b.x, y: b.y + b.h / 2 + 14 + size * 0.6, w, h: size * 1.2 },
-        };
+        const beside = (dist: number): Record<string, Box> => ({
+          right: { x: b.x + b.w / 2 + dist + w / 2, y: b.y, w, h: size * 1.2 },
+          left: { x: b.x - b.w / 2 - dist - w / 2, y: b.y, w, h: size * 1.2 },
+          top: { x: b.x, y: b.y - b.h / 2 - dist - size * 0.6, w, h: size * 1.2 },
+          bottom: { x: b.x, y: b.y + b.h / 2 + dist + size * 0.6, w, h: size * 1.2 },
+        });
+        const options = beside(24);
         const order = (["right", "left", "top", "bottom"] as const).filter((k) => k !== c.attrs.side);
         if (c.attrs.side && !options[c.attrs.side]) {
           report(c.line, `side must be right, left, top or bottom.`);
           continue;
         }
         const id = c.attrs.id ?? `tag.${c.target}`;
-        label(id, c.line, c.text, [...(c.attrs.side ? [options[c.attrs.side]!] : []), ...order.map((k) => options[k]!)], { color: c.attrs.color ?? "ink" }, size);
+        const further = [70, 120].flatMap((d) => (["right", "left", "top", "bottom"] as const).map((k) => beside(d)[k]!));
+        label(id, c.line, c.text, [...(c.attrs.side ? [options[c.attrs.side]!] : []), ...order.map((k) => options[k]!), ...further], { color: c.attrs.color ?? "ink" }, size);
       }
     }
     for (const p of drawn) parts.set(p.id, p);
@@ -515,7 +544,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       const hit = laid.members.get(id) ?? [];
       const under = [...parts.keys()].filter((k) => k === id || k.startsWith(`${id}.`));
       const out = [...new Set([...hit.flatMap((m) => [...parts.keys()].filter((k) => k === m || k.startsWith(`${m}.`))), ...under])];
-      if (!out.length) report(line, `"${id}" is not on the board at this state.${suggest(id, [...parts.keys(), ...laid.members.keys()])}`);
+      if (!out.length && !fromFailed(id)) report(line, `"${id}" is not on the board at this state.${suggest(id, [...parts.keys(), ...laid.members.keys()])}`);
       return out;
     };
     // Sends a property to the part that really holds it, so `set a fill=accent` works on a shape with a label.
@@ -600,8 +629,11 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     }
 
     // The difference from the last state becomes this state's steps.
+    const boardColor = new Set<string>();
+    walkAll(board, (i) => {
+      if (i.attrs.color) boardColor.add(i.id);
+    });
     const move = { ...(s.attrs.move ? { frames: Number(s.attrs.move) } : {}), ...(s.attrs.ease ? { ease: s.attrs.ease as Ease } : {}) };
-    const main: Step = { at, ...(Object.keys(move).length ? { move } : {}), ...(s.attrs.enter ? { enter: s.attrs.enter as Step["enter"] } : {}) };
     const addMain: NodeSpec[] = [];
     const addDraw: NodeSpec[] = [];
     const addQuiet: NodeSpec[] = [];
@@ -612,6 +644,12 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const drawnIds = new Set(drawn.map((p) => p.id));
     for (const [id, part] of parts) {
       const props: Props = { ...part.props, ...overrides.get(id), ...effects.get(id) };
+      // A label on a recolored shape stays readable unless it was given a color of its own.
+      const own = part.parent ? parts.get(`${part.parent}.shape`) : undefined;
+      if (own && part.kind === "text" && effects.get(id)?.color === undefined && overrides.get(id)?.color === undefined && !boardColor.has(part.parent!)) {
+        const fill = overrides.get(own.id)?.fill ?? effects.get(own.id)?.fill ?? own.props.fill;
+        if (typeof fill === "string") props.color = readableOn(fill, ctx.theme);
+      }
       const was = live.get(id);
       if (was?.alive) {
         for (const [k, v] of Object.entries(props)) {
@@ -646,16 +684,19 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (!(l.parent && !parts.has(l.parent))) remove.push(id);
       overrides.delete(id);
     }
+    // Everything arrives first, so anything in this state can act on anything new in it.
     if (Object.keys(preset).length) steps.push({ at: Math.max(0, at - 1), move: { frames: 1 }, set: preset });
-    if (addMain.length) main.add = addMain;
-    if (Object.keys(set).length) main.set = set;
-    if (remove.length) main.remove = remove;
-    if (play.length) main.play = play;
-    if (emit.length) main.emit = emit;
+    const moved = Object.keys(move).length ? { move } : {};
     if (addScaled.length) steps.push({ at, enter: s.attrs.enter === "none" ? "none" : "fade", add: addScaled });
-    steps.push(main);
-    if (addDraw.length) steps.push({ at, enter: "draw", add: addDraw, ...(Object.keys(move).length ? { move } : {}) });
+    if (addMain.length) steps.push({ at, ...moved, ...(s.attrs.enter ? { enter: s.attrs.enter as Step["enter"] } : {}), add: addMain });
+    if (addDraw.length) steps.push({ at, ...moved, enter: "draw", add: addDraw });
     if (addQuiet.length) steps.push({ at, enter: "none", add: addQuiet });
+    const change: Step = { at, ...moved };
+    if (Object.keys(set).length) change.set = set;
+    if (remove.length) change.remove = remove;
+    if (play.length) change.play = play;
+    if (emit.length) change.emit = emit;
+    if (Object.keys(change).length > 2 || (!moved.move && Object.keys(change).length > 1)) steps.push(change);
     if (laterPlay.length) steps.push({ at, play: laterPlay });
     laterPlay = [];
   }
@@ -687,6 +728,14 @@ function settle(scene: Scene): Scene {
   for (const t of scene.tracks) {
     const keys = t.keys.map((k, i) => ({ k, i })).sort((a, b) => a.k.at - b.k.at || a.i - b.i).map((x) => x.k);
     t.keys = keys.filter((k, i) => k.at !== keys[i + 1]?.at);
+    // A pulse does not exist until it starts, and must not sit at the start of its line until then.
+    if (t.prop === "pulse") {
+      const start = t.keys.find((k) => k.at > 0 && k.value === 0)?.at;
+      if (start !== undefined && t.keys[0]!.value === 0) {
+        t.keys[0]!.value = -1;
+        if (start > 1) t.keys.splice(1, 0, { at: start - 1, value: -1 });
+      }
+    }
   }
   return scene;
 }

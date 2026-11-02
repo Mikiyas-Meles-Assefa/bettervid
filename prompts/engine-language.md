@@ -132,7 +132,7 @@ Inside a program, these names exist and nothing else from the outside world:
 - `words`: `[{ text, frame }]`, the spoken words in its time range.
 - `on`: `{ id: { x, y, w, h } }`, centers and sizes in its own coordinates. It can move those things with `key` and `anim`.
 - `colors`: the color names.
-- `group(id, props)`, `path(id, props)`, `text(id, props)`: make a part and return its id. `props.parent` puts it in a group made earlier. A path needs `points`, a flat list `[x, y, x, y]`. Path props: x, y, points, closed, smooth, fill, stroke, strokeWidth, opacity, drawn, rotate, scaleX, scaleY. Text props: x, y, text, size, color, weight, anchor, opacity.
+- `group(id, props)`, `path(id, props)`, `text(id, props)`: make a part and return its id. `props.parent` puts it in a group made earlier. A path needs `points`, a flat list `[x, y, x, y]`. Path props: x, y, points, closed (0 or 1), smooth (0 or 1), fill, stroke, strokeWidth, opacity, drawn, rotate, scaleX, scaleY. Text props: x, y, text, size, color, weight, anchor (start, middle, end), opacity. Text is centered on its x, y by default. A path's x, y moves it, and it turns and scales around that point, so draw around 0, 0 what you want to turn in place.
 - `key(id, prop, frame, value, ease)`: one keyframe. Eases: {{eases}}.
 - `anim(id, prop, from, to, fn, step)`: keyframes from `fn(t, frame)`, with t from 0 to 1, every `step` frames (default 2).
 - `emit(name, frame, data)`: an event at a frame.

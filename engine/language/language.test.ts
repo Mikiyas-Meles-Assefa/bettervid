@@ -131,9 +131,40 @@ test("focus keeps what is attached and dims the rest, also inside a kit", async 
   assert.equal(at(s, 60, "title")!.props.opacity, 0.25);
 });
 
+const allText = (list: Resolved[]): string[] => list.flatMap((r) => [...(r.kind === "text" ? [String(r.props.text)] : []), ...allText(r.children)]);
+
 test("an atom like +=+ just says +", async () => {
   const s = await ok(`@0\nbig: a=1 +=+ b=2\n`);
-  assert.equal(find(evaluate(s, 30), "t+".replace("+", "15") + ".1")?.props.text ?? "+", "+");
+  assert.deepEqual(allText(evaluate(s, 30)), ["1", "+", "2"]);
+});
+
+test("atoms with no id on different lines stay separate things", async () => {
+  const s = await ok(`@0\nbig: x + y = 5\nbig: 2x - y = 1\n@2 keep\nnormal: x = 2\n`);
+  assert.deepEqual(allText(evaluate(s, 100)).filter((t) => t === "="), ["=", "=", "="]);
+  const t = await ok(`@0\nbig: x + y\n@2\nbig: x + y + z\n`);
+  assert.equal(t.nodes.filter((n) => n.props.text === "x").length, 1); // and still travel between plain states
+});
+
+test("a label can be read on any fill, also after the fill changes", async () => {
+  const s = await ok(`@0\nbox a "dark" fill=ink\nbox b "light"\nbox c "mine" fill=ink color=highlight\n@2 keep\nset b fill=ink\n`);
+  assert.equal(at(s, 20, "a.label")!.props.color, "#ffffff");
+  assert.equal(at(s, 20, "b.label")!.props.color, "#111111");
+  assert.equal(at(s, 100, "b.label")!.props.color, "#ffffff");
+  assert.equal(at(s, 100, "c.label")!.props.color, "#ffff00");
+});
+
+test("a flow leaves no mark on its line before it starts", async () => {
+  const s = await ok(`@0\ngraph g: A-B\n@8 keep\ndo flow g.edge.AB\n`);
+  assert.equal(at(s, 60, "g.edge.AB")!.props.pulse, -1);
+  assert.ok((at(s, 125, "g.edge.AB")!.props.pulse as number) > 0);
+});
+
+test("a line bends around what lies between its ends, unless told how", async () => {
+  const s = await ok(`@0\nbox a "one"\ntext m "in the middle here"\nbox b "two"\narrow a -> b\n@2 keep\narrow a -> b bend=0\n`);
+  const bent = at(s, 20, "arrow.a.b")!.props.points as number[];
+  const straight = at(s, 100, "arrow.a.b")!.props.points as number[];
+  assert.notEqual(bent[16], bent[0]);
+  assert.equal(straight[16], straight[0]);
 });
 
 test("a graph is laid out by code and its parts can be addressed", async () => {
@@ -199,6 +230,16 @@ test("a program can animate things already on the board", async () => {
   const start = at(s, 31, "a")!.props.y as number;
   const end = at(s, 95, "a")!.props.y as number;
   assert.ok(Math.abs(start - end - 100) < 8, `${start} ${end}`);
+});
+
+test("a state can act on what it brings in", async () => {
+  const s = await ok(`${orbit}@0\nrow r\n  box a "x"\n  box b "y"\nrun orbit o1 h=300\narrow a -> b id=ar\ndo flow ar\nlight o1.p0\n`);
+  assert.ok(at(s, 40, "ar"));
+});
+
+test("a failed program is one problem, not a list of its missing parts", async () => {
+  const text = await bad(`program broke\nnope();\nend\n@0\nrun broke b1\nlight b1.sun\ntag b1.sun "hi"\n`);
+  assert.equal(text.split("\n").length, 1, text);
 });
 
 test("program failures come back with the document's line", async () => {

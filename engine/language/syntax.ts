@@ -148,7 +148,7 @@ function checkId(id: string, fail: Fail) {
 }
 
 // Parses the tokens after `big:` into atoms, fractions and matrices.
-function parseAtoms(toks: string[], fail: Fail): AtomPart[] {
+function parseAtoms(toks: string[], line: string, fail: Fail): AtomPart[] {
   const seen = new Map<string, number>();
   const atom = (tok: string): Atom => {
     if (isQuoted(tok)) tok = unquote(tok);
@@ -161,7 +161,7 @@ function parseAtoms(toks: string[], fail: Fail): AtomPart[] {
     const slug = tok.replace(/[^A-Za-z0-9]/g, (c) => c.charCodeAt(0).toString(36)) || "x";
     const n = (seen.get(slug) ?? 0) + 1;
     seen.set(slug, n);
-    return { id: `t${slug}.${n}`, text: tok.replace(/_/g, " ") };
+    return { id: `t${slug}.${line}.${n}`, text: tok.replace(/_/g, " ") };
   };
   const parts: AtomPart[] = [];
   for (let i = 0; i < toks.length; i++) {
@@ -241,7 +241,7 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
     if (head === "program") {
       const { plain, attrs } = split(toks.slice(1), null, "program", fail);
       const name = plain[0];
-      if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) fail(`A program needs a name in lowercase letters, digits and hyphens, as in: program spiral n=40`);
+      if (!name || !/^[A-Za-z][\w-]*$/.test(name)) fail(`A program needs a name made of letters, digits and hyphens, as in: program spiral n=40`);
       if (doc.programs.some((p) => p.name === name)) fail(`There is already a program called ${name}.`);
       const body: string[] = [];
       let closed = false;
@@ -271,6 +271,7 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
       state = { line: number, at, keep: plain.includes("keep"), attrs, items: [], commands: [] };
       doc.states.push(state);
       stack = [];
+      auto = 0; // unnamed lines count per state, so an unnamed line in a later plain state is the same line
       continue;
     }
 
@@ -297,9 +298,9 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
     if (atoms) {
       const rest = tokenize(atoms[4]!)!;
       const { attrs } = split(tokenize(atoms[3]!.trim()) ?? [], ATTRS.atoms!, "A line of atoms", fail);
-      const id = atoms[2] ?? `line${++auto}`;
+      const id = atoms[2] ?? `${state.keep ? `k${doc.states.length}-` : ""}line${++auto}`;
       if (atoms[2]) checkId(id, fail);
-      const parts = parseAtoms(rest, fail);
+      const parts = parseAtoms(rest, id, fail);
       if (!parts.length) fail(`This line has nothing on it. Write parts after the colon, as in big: a=1 b=+ c=2`);
       add({ kind: "atoms", id, line: number, attrs, children: [], size: atoms[1] as Size, parts }, false);
       continue;

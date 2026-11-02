@@ -73,6 +73,21 @@ function shapePoints(kind: string, w: number, h: number): number[] {
   return roundedBox(w, h, Math.min(w, h) * 0.1);
 }
 
+const luminance = (c: string) => {
+  const h = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c)?.[1];
+  if (!h) return 0.5;
+  const full = h.length === 3 ? [...h].map((x) => x + x).join("") : h;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+};
+// Whichever of ink and paper can be read on a fill, so a label never disappears into its own shape.
+export function readableOn(fill: string, theme: Theme): string {
+  const c = theme.colors;
+  if (!c.ink || !c.paper) return "ink";
+  const on = luminance(c[fill] ?? c.paper);
+  return Math.abs(on - luminance(c.ink)) >= Math.abs(on - luminance(c.paper)) ? "ink" : "paper";
+}
+
 export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   const { measure } = env;
   const atomWidth = (a: Atom, size: number) => measure(a.text, size);
@@ -365,7 +380,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
           const fill = item.attrs.fill ?? (item.kind === "dot" ? "ink" : "paper");
           out.parts.push({ id: item.id, kind: "group", line: item.line, props: { x: round(cx), y: round(cy), ...look(item, ["opacity", "rotate"]) } });
           out.parts.push({ id: `${item.id}.shape`, kind: "path", parent: item.id, line: item.line, props: { points: shapePoints(item.kind, b.w, b.h).map(round), closed: 1, fill, stroke: item.attrs.stroke ?? (item.kind === "dot" ? "none" : "ink"), strokeWidth: n(item.attrs.strokeWidth, 6) } });
-          b.label.forEach((l, i) => text(i ? `${item.id}.label${i + 1}` : `${item.id}.label`, item, l, 0, (i - (b.label.length - 1) / 2) * b.size * 1.2, b.size, look(item, ["color", "weight"]), item.id));
+          b.label.forEach((l, i) => text(i ? `${item.id}.label${i + 1}` : `${item.id}.label`, item, l, 0, (i - (b.label.length - 1) / 2) * b.size * 1.2, b.size, { ...(item.attrs.color ? {} : { color: readableOn(fill, env.theme) }), ...look(item, ["color", "weight"]) }, item.id));
           return;
         }
         out.slots.push({ item, box: { x: cx, y: cy, w: size.w, h: size.h }, scale: s });

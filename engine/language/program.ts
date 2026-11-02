@@ -26,6 +26,8 @@ function checkValue(prop: string, v: unknown, colors: Set<string>): { value: Val
     for (const x of v) if (typeof x !== "number" || !Number.isFinite(x)) return { error: `points holds ${String(x)}, which is not a finite number` };
     return { value: (v as number[]).map((x) => Math.round(x * 100) / 100) };
   }
+  if (typeof v === "boolean") return { value: v ? 1 : 0 };
+  if (prop === "anchor" && v === "center") return { value: "middle" };
   if (typeof v === "number") return Number.isFinite(v) ? { value: v } : { error: `${prop} is ${v}` };
   const rule = WORDS[prop];
   if (rule) return typeof v === "string" && rule.test(v) ? { value: v } : { error: `${prop} has a bad value ${JSON.stringify(v)?.slice(0, 60)}` };
