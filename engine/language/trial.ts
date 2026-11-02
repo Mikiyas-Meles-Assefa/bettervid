@@ -33,19 +33,35 @@ const REQUESTS: Record<string, () => AuthorRequest> = {
   // These two have no ready-made form, so they are where programs must carry the scene.
   chance: () => invented("How throwing random darts can measure pi", `Draw a square, and inside it a circle that just touches the sides. Now throw darts completely at random. Some land in the circle, some only in the square. The fraction landing inside depends only on the two areas. Circle over square is pi over four. So count them. After ten darts the guess is rough. After a hundred it wobbles around three point one. After a thousand it settles close to pi. Nobody measured a circle. Random dots did the geometry.`),
   waves: () => invented("Why two sound waves can cancel each other out", `Sound is a wave of pressure, rising and falling as it travels. Send a second wave along the same path, and the two simply add up, point by point. When their peaks line up, the result is twice as tall. That is why two speakers can sound louder. Now slide one wave along by half a wavelength. Every peak meets a trough. They add up to nothing, and the line goes flat. Both waves are still there, carrying energy, but where they cancel you hear silence.`),
+  headphones: () => fromProject("how-do-noise-cancelling-headphones-work-397c9b", "How do noise-cancelling headphones work?"),
   science: () => fromProject("why-do-we-have-seasons-under-a-minute-4ab3fd", "Why do we have seasons?"),
 };
+
+// Realistic mistakes planted in a scene that builds, to measure the repair loop on its own.
+function corrupt(source: string): string {
+  const lines = source.split("\n");
+  const state = lines.findIndex((l) => l.startsWith("@"));
+  const plant = (at: number, line: string) => lines.splice(at, 0, line);
+  plant(state + 1, "boxx wrong1 \"typo in a word\"");
+  plant(state + 2, "text wrong2 \"no closing quote");
+  plant(state + 3, "light nothing-called-this");
+  plant(state + 4, "box wrong3 \"bad color\" fill=purple");
+  plant(state + 5, "do wiggle wrong3");
+  plant(state + 6, "run no-such-program wrong4");
+  lines.push("@99999 keep", "normal: late=1");
+  return lines.join("\n");
+}
 
 const [out = "projects/engine-language", cap = "2", ...names] = process.argv.slice(2);
 const limit = Number(cap);
 const style = process.env.STYLE ?? "whiteboard";
 const theme = themeFrom(style);
-const library = loadLibrary();
+const library = process.env.LIBRARY === "off" ? [] : loadLibrary(); // off when the library came from these same topics
 const ledger = (name: string, usd: number, detail: string) => appendFileSync(join(PROJECTS, "spend.jsonl"), `${JSON.stringify({ project: `engine-language-${name}`, stage: "language", usd: +usd.toFixed(5), detail, at: new Date().toISOString() })}\n`);
 
 let total = 0;
 const summary: Record<string, unknown>[] = [];
-for (const name of names.length ? names : Object.keys(REQUESTS)) {
+for (const name of names.length ? names : Object.keys(REQUESTS).filter((n) => n !== "headphones")) {
   if (total >= limit) {
     console.log(`stopping: $${total.toFixed(2)} of the $${limit} cap is spent`);
     break;
@@ -54,7 +70,8 @@ for (const name of names.length ? names : Object.keys(REQUESTS)) {
   const frames = Math.ceil((request.words.at(-1)!.start + 1.5) * 30);
   const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames, theme, words: request.words };
   console.log(`\n${name}: ${request.words.length} words, ${(frames / 30).toFixed(0)} s`);
-  const r = await author(request, { ctx, library, seed: 11, rounds: Number(process.env.ROUNDS ?? 4), log: console.log });
+  const start = process.env.REPAIR_FROM ? corrupt(readFileSync(join(process.env.REPAIR_FROM, name, "scene.txt"), "utf8")) : undefined;
+  const r = await author(request, { ctx, library, seed: 11, rounds: Number(process.env.ROUNDS ?? 4), log: console.log, ...(start ? { start } : {}) });
   ledger(name, r.usd, r.ok ? `built in ${r.rounds.length} rounds` : `failed after ${r.rounds.length} rounds`);
   total += r.usd;
   const dir = join(out, name);

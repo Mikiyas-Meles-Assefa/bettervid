@@ -43,7 +43,8 @@ export async function testProgram(entry: LibraryEntry): Promise<string[]> {
     { W: 1000, H: 420, seed: 3, T0: 10, T1: 60 },
   ];
   for (const c of cases) {
-    const args = Object.fromEntries(Object.entries(entry.params).map(([k, v]) => [k, /^-?[\d.]+$/.test(v) ? Number(v) : v]));
+    // A spoken moment has no word to land on here, so it stands for a point inside the program's time.
+    const args = Object.fromEntries(Object.entries(entry.params).map(([k, v]) => [k, /^-?[\d.]+$/.test(v) ? Number(v) : v.startsWith("@") ? Math.round((c.T0 + c.T1) / 2) : v]));
     const input: ProgramInput = { ...c, fps: 30, frames: 600, args, on: {}, words: [], colors: COLORS };
     const [a, b] = await Promise.all([runProgram(entry.source, input), runProgram(entry.source, input)]);
     const size = `at ${c.W} by ${c.H}`;
@@ -58,6 +59,16 @@ export async function testProgram(entry: LibraryEntry): Promise<string[]> {
     if (outside(a.output.nodes, c.W, c.H) > 0.02) problems.push(`${size} it draws outside its box, so it ignores W and H`);
   }
   return problems;
+}
+
+// Finds programs in a written scene that could be kept. A person or reviewer still decides which are general enough.
+export async function harvest(source: string, parsePrograms: (s: string) => { name: string; doc?: string; params: Record<string, string>; source: string }[]) {
+  const out: { entry: LibraryEntry; problems: string[] }[] = [];
+  for (const p of parsePrograms(source)) {
+    const entry: LibraryEntry = { name: p.name.toLowerCase(), doc: p.doc ?? "", params: p.params, source: p.source };
+    out.push({ entry, problems: await testProgram(entry) });
+  }
+  return out;
 }
 
 // Saves a program after it passes. Throws with every reason when it does not, so nothing untested gets in.

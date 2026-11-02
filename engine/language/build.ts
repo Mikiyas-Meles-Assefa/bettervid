@@ -1,5 +1,6 @@
 // Turns scene language into a scene document, then a scene. Each state is laid out in full, and the difference from the
 // state before becomes the steps: new things enter, things with a known id travel, things no longer listed leave.
+import { BEHAVIORS } from "../core/behaviors.ts";
 import { compile, when } from "../core/compile.ts";
 import type { CompileContext, Ease, Kit, NodeSpec, Props, Scene, SceneDoc, Step, Track, Value } from "../core/types.ts";
 import { EASES } from "../core/ease.ts";
@@ -93,7 +94,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const stats = { states: doc.states.length, parts: 0, programs: 0, programMs: 0 };
   if (problems.length) return { problems, stats };
 
-  const behaviors = new Set(["flow", "pulse", "shake", ...allKits.flatMap((k) => Object.keys(k.behaviors ?? {}))]);
+  const behaviors = new Set([...Object.keys(BEHAVIORS), ...allKits.flatMap((k) => Object.keys(k.behaviors ?? {}))]);
   const report = (line: number, message: string) => problems.length < 40 && problems.push({ line, message });
   const colors = new Set(Object.keys(ctx.theme.colors));
   const colorOk = (v: string | undefined, line: number) => {
@@ -354,7 +355,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     problems.push(...laid.problems.slice(0, 6).map((p) => ({ ...p, line: p.line || s.line })));
 
     // Parts for this state: laid-out parts, then kits and programs in their slots, then everything attached to them.
-    const parts = new Map<string, Part>(laid.parts.map((p) => [p.id, p]));
+    const parts = new Map<string, Part>(laid.parts.map((p) => [p.id, p.kind === "image" ? { ...p, props: { ...p.props, src: opts.assets?.[String(p.props.src)] ?? "" } } : p]));
     const newPrograms: string[] = [];
     for (const slot of laid.slots) {
       const { item, box, scale } = slot;
@@ -401,7 +402,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         const scale = Number(up.props.scaleX ?? 1);
         [x, y, k] = [valueAt(up.id, "x") + x * scale, valueAt(up.id, "y") + y * scale, k * scale];
       }
-      const pts = p.props.points;
+      const moving = motion.get(`${id}\u0000points`);
+      const pts = moving ? sample(moving, at) : p.props.points;
       if (Array.isArray(pts)) {
         const xs = pts.filter((_, i) => i % 2 === 0);
         const ys = pts.filter((_, i) => i % 2 === 1);

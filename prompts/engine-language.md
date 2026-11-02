@@ -139,7 +139,7 @@ Inside a program, these names exist and nothing else from the outside world:
 - `arc(cx, cy, r, a0, a1, n)`, `circle(cx, cy, r)`, `rect(x, y, w, h)`, `polygon(cx, cy, r, sides, turn)`, `curve(x0, x1, fn)`, each returning points.
 - `lerp(a, b, t)`, `clamp(v, lo, hi)`, `smooth(t)`, `TAU`, `Math`, `random()`: `random` and `Math.random` are seeded, so a run always repeats.
 
-A part with no keys is visible for as long as its box is. There is no Date, no network, no files and no timers. A program stops after {{cpu}} ms and may make {{nodes}} parts.
+A program can compute real results and show them: a `text` part's `text` can change with `key`, so a number on screen can be the number it really worked out. A part with no keys is visible for as long as its box is. There is no Date, no network, no files and no timers. A program stops after {{cpu}} ms and may make {{nodes}} parts.
 
 Library programs, already written and tested. Use them with `run NAME id`:
 {{programs}}

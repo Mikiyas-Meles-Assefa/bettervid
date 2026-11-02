@@ -5,8 +5,9 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { evaluate } from "../core/evaluate.ts";
 import type { CompileContext, Resolved, Scene } from "../core/types.ts";
+import { author, languagePrompt } from "./author.ts";
 import { build, formatProblems } from "./build.ts";
-import { loadLibrary, saveProgram, testProgram } from "./library.ts";
+import { harvest, loadLibrary, saveProgram, testProgram } from "./library.ts";
 import { parse, tokenize } from "./syntax.ts";
 
 const words = Array.from({ length: 60 }, (_, i) => ({ start: i * 0.5 }));
@@ -292,6 +293,110 @@ test("the library takes a tested program and refuses a bad one", async () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("every word in the language builds together", async () => {
+  await ok(`bg paper
+program bars n=3 doc="Some bars."
+  for (let i = 0; i < args.n; i++) path("b" + i, { points: rect(i * 50, 0, 40, H), fill: "accent" });
+end
+@0 enter=pop move=20 ease=spring
+huge: a=1
+big b1: { p=1 / q=2 } [ m=1 ; n=2 ] | u=3 ; v=4 |
+normal: x=x y=y
+small: "two words"
+note: z
+text t1 "words here" size=small color=accent align=left font=mono weight=700 opacity=0.8
+row r1 gap=20 align=top
+  stack s1 gap=10 align=left
+    box c1 "a" w=200 h=100 fill=highlight stroke=accent
+    pill c2 "b"
+  grid g1 cols=2 gap=8
+    circle c3 "c"
+    diamond c4 "d"
+    tri c5
+    dot c6 w=40
+ring r2 arrows=1
+  dot d1
+  dot d2
+  dot d3
+chain ch1 dir=right gap=40
+  box e1 "x"
+  box e2 "y"
+free f1 w=600 h=200
+  dot g1a at=20,50
+  text g1b "here" at=70,50 size=small
+space h=30
+code c9
+  | a = 1
+  |   b = 2
+arrow c1 -> c2 "go" bend=0.2 color=accent both=1
+link c3 -- c4
+mark ring c1 color=accent strokeWidth=4
+mark box c2 id=m2
+mark underline c3 "under"
+mark cross c4
+mark brace e1,e2 "both"
+tag c5 "tag" side=bottom color=accent
+light a p color=highlight
+dim x
+set c1 rotate=5 opacity=0.9
+do pulse c1 size=1.1 frames=10
+do shake c2 size=4
+emit hello kind=one
+@6 keep
+drop a
+run bars b9 n=2 w=300 h=100 until=@9 seed=4
+focus c1 amount=0.3
+`);
+});
+
+test("images use only named assets, and their real source is filled in by the engine", async () => {
+  const s = await ok(`@0\nimage p asset=photo w=300 h=200\n`, { assets: { photo: "/assets/a.png" } });
+  assert.equal(at(s, 30, "p")!.props.src, "/assets/a.png");
+  assert.match(await bad(`@0\nimage p asset=http://evil.example/a.png\n`, { assets: { photo: "/assets/a.png" } }), /assets list/);
+});
+
+test("the guide has every blank filled, teaches what exists, and its own example builds", async () => {
+  const kit = { name: "t", kinds: { blob: () => [] }, behaviors: { spin: () => [] }, docs: { blob: "a soft shape", spin: "turns a thing" } };
+  const guide = languagePrompt({ ctx: { ...ctx, kits: [kit] }, library: [{ name: "dots", doc: "A row of dots.", params: { n: "2" }, source: "" }] });
+  assert.doesNotMatch(guide, /\{\{/);
+  for (const word of ["a soft shape", "turns a thing", "`dots` (n=2)", "ink, accent, paper, highlight"]) assert.ok(guide.includes(word), word);
+  const example = guide.slice(guide.indexOf("# Example of the form")).split("\n").filter((l) => l.startsWith("    ")).map((l) => l.slice(4)).join("\n");
+  assert.ok(example.includes("@33 keep"));
+  await ok(example);
+});
+
+test("the repair loop sends errors back until the scene builds", async () => {
+  const seen: string[] = [];
+  const replies = [`@0\nboxx a "hi"\n`, `@0\nbox a "hi"\nlight b\n`, `@0\nbox a "hi"\nlight a\n`];
+  const ask = async (_: string, user: string) => {
+    seen.push(user);
+    return { value: replies[seen.length - 1]!, usd: 0.01 };
+  };
+  const r = await author({ topic: "t", words: words.map((w) => ({ text: "w", start: w.start })) }, { ctx, ask });
+  assert.equal(r.ok, true);
+  assert.equal(r.rounds.length, 3);
+  assert.ok(Math.abs(r.usd - 0.03) < 1e-9);
+  assert.match(seen[1]!, /Did you mean box/);
+  assert.match(seen[2]!, /"b" is not on the board/);
+});
+
+test("the repair loop gives up honestly, with no stand-in scene", async () => {
+  const r = await author({ topic: "t", words: words.map((w) => ({ text: "w", start: w.start })) }, { ctx, rounds: 2, ask: async () => ({ value: "nonsense", usd: 0 }) });
+  assert.equal(r.ok, false);
+  assert.equal(r.result.scene, undefined);
+});
+
+test("harvest tests what a scene invented", async () => {
+  const src = `program good n=2 doc="Dots along the middle of the box."\nfor (let i = 0; i < args.n; i++) path("d" + i, { points: circle((i + 1) * W / 3, H / 2, 10), fill: "ink" });\nend\nprogram broke doc="This one always fails when run."\nnope();\nend\n@0\ndot a\n`;
+  const out = await harvest(src, (s) => parse(s).doc.programs);
+  assert.deepEqual(out.map((o) => [o.entry.name, o.problems.length > 0]), [["good", false], ["broke", true]]);
+});
+
+test("a program can show a number it worked out, changing over time", async () => {
+  const s = await ok(`program counter\ntext("n", { x: W / 2, y: H / 2, text: "0", size: 60 });\nfor (let i = 1; i <= 3; i++) key("n", "text", T0 + i * 10, String(i * i), "step");\nend\n@0\nrun counter c1 w=300 h=200\n`);
+  assert.equal(at(s, 45, "c1.n")!.props.text, "9");
 });
 
 test("a saved program runs by name", async () => {

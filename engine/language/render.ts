@@ -18,7 +18,7 @@ const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx")
 for (const style of styles) {
   const theme = themeFrom(style);
   const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: request.frames, theme, words: request.words };
-  const r = await build(source, { ctx, library: loadLibrary(), seed: 11, words: request.words.map((w: { text: string }) => w.text) });
+  const r = await build(source, { ctx, library: process.env.LIBRARY === "off" ? [] : loadLibrary(), seed: 11, words: request.words.map((w: { text: string }) => w.text) });
   if (!r.scene) throw new Error(`does not build:\n${formatProblems(r.problems.slice(0, 6))}`);
   const inputProps = { scene: r.scene, theme };
   const composition = await selectComposition({ serveUrl, id: "Scene", inputProps });

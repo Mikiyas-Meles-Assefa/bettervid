@@ -56,7 +56,7 @@ export function numbered(source: string): string {
   return source.split("\n").map((l, i) => `${i + 1}: ${l}`).join("\n");
 }
 
-export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" | "words"> & { ctx: CompileContext; ask?: Ask; rounds?: number; log?: (line: string) => void }): Promise<Authored> {
+export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" | "words"> & { ctx: CompileContext; ask?: Ask; rounds?: number; start?: string; log?: (line: string) => void }): Promise<Authored> {
   const ask = opts.ask ?? spark;
   const log = opts.log ?? (() => {});
   const buildOpts: BuildOptions = { ...opts, words: req.words.map((w) => w.text) };
@@ -70,7 +70,8 @@ export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" 
   for (let round = 1; round <= (opts.rounds ?? 4); round++) {
     let reply: { value: string; usd: number };
     try {
-      reply = await ask(system, next);
+      // `start` begins from an existing scene, so the loop can also repair a scene someone edited.
+      reply = round === 1 && opts.start !== undefined ? { value: opts.start, usd: 0 } : await ask(system, next);
     } catch (e) {
       const spent = (e as { usd?: number }).usd ?? 0;
       usd += spent;
