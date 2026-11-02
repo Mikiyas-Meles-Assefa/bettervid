@@ -2,7 +2,7 @@
 // (spike S5: frames catch everything except timing, which code enforces). One fix round applies them and re-renders.
 // Engine videos are judged by the look step's judge (pipeline/lib/look.ts) on the final render, and get notes only.
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Project } from "../../schemas/project.ts";
 import { KITS } from "../../engine/kits/index.ts";
@@ -71,6 +71,7 @@ async function engineCritic(p: Project, video: string) {
     const group = moments.slice(i, i + 12);
     const content: unknown[] = [{ type: "input_text", text: head }];
     group.forEach((m, k) => {
+      mkdirSync(join(dir(p), "assets"), { recursive: true }); // a video with no pictures has no assets folder yet
       const file = join(dir(p), "assets", `critic-${i + k}.jpg`);
       execFileSync("ffmpeg", ["-y", "-v", "error", "-ss", (m.frame / t.fps).toFixed(2), "-i", video, "-frames:v", "1", "-vf", "scale=648:-2", "-q:v", "3", file]);
       const things = inventory(clip.scene!, m.frame - clip.from);
@@ -107,6 +108,7 @@ export async function critic(p: Project, force = false) {
     const frames = clips.flatMap((c, i) => {
       // Late in the shot, so moves have landed and marks are drawn.
       const at = (c.from + Math.min(c.frames * 0.85, c.frames - 3)) / t.fps;
+      mkdirSync(join(dir(p), "assets"), { recursive: true }); // a video with no pictures has no assets folder yet
       const file = join(dir(p), "assets", `critic-${i}.jpg`);
       execFileSync("ffmpeg", ["-y", "-v", "error", "-ss", at.toFixed(2), "-i", video, "-frames:v", "1", "-vf", "scale=432:-2", "-q:v", "4", file]);
       const said = words.filter((w) => w.start * t.fps >= c.from && w.start * t.fps < c.from + c.frames).map((w) => w.text).join(" ");
