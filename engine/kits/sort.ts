@@ -127,8 +127,9 @@ function sortBoard(id: string, d: Record<string, unknown>): Board {
       const sign = e.result === "less" ? "<" : e.result === "greater" ? ">" : "=";
       const swaps = next?.type === "swap";
       begin(`compare ${e.a} ${sign} ${e.b}${swaps ? ", swap" : next?.type === "take" ? `, take ${val(next.from)}` : ""}`);
-      s.flash(shape(e.i), "fill", "accent").flash(shape(e.j), "fill", "accent");
-      if (show === "boxes") s.flash(shape(e.i), "stroke", "accent").flash(shape(e.j), "stroke", "accent");
+      // Bars light their fill, with their values outside them; boxes light their edge and value, which sit on the page.
+      if (show === "bars") s.flash(shape(e.i), "fill", "accent").flash(shape(e.j), "fill", "accent");
+      else s.flash(shape(e.i), "stroke", "accent").flash(shape(e.j), "stroke", "accent").flash(sortPart.value(id, at[e.i]!), "color", "accent").flash(sortPart.value(id, at[e.j]!), "color", "accent");
     } else if (e.type === "swap") {
       if (!open.started || open.moved) begin(`swap ${val(e.i)} and ${val(e.j)}`);
       const [a, b] = [at[e.i]!, at[e.j]!];
