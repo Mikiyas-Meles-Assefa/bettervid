@@ -1,0 +1,11 @@
+{
+  "name": "dart-scatter",
+  "doc": "Square with inscribed circle and log-timed random darts inside vs outside.",
+  "params": {
+    "n": "1000",
+    "circleAt": "@7",
+    "dartsAt": "@14"
+  },
+  "source": "  const cx = W / 2\n  const cy = H * 0.42\n  const side = Math.min(W, H) * 0.86\n  const r = side / 2\n  path(\"sq\", { x: cx, y: cy, points: rect(-side / 2, -side / 2, side, side), fill: \"paper\", stroke: \"ink\", strokeWidth: 8, closed: 1 })\n  const cAt = args.circleAt\n  const dAt = args.dartsAt\n  path(\"circ\", { x: cx, y: cy, points: circle(0, 0, r), fill: \"highlight\", stroke: \"accent\", strokeWidth: 8, opacity: 0 })\n  key(\"circ\", \"opacity\", T0, 0)\n  key(\"circ\", \"opacity\", cAt, 0, \"step\")\n  key(\"circ\", \"opacity\", cAt + 8, 1, \"smooth\")\n  const dotR = Math.max(5, side * 0.013)\n  for (let i = 0; i < args.n; i++) {\n    const rx = random() * 2 - 1\n    const ry = random() * 2 - 1\n    const inside = rx * rx + ry * ry <= 1\n    const px = cx + rx * r\n    const py = cy + ry * r\n    const id = path(\"d\" + i, { x: px, y: py, points: circle(0, 0, dotR), fill: inside ? \"accent\" : \"ink\", opacity: 0 })\n    key(id, \"opacity\", T0, 0)\n    const f = dAt + (Math.log10(i + 1) / 3) * (T1 - dAt)\n    key(id, \"opacity\", f, 1, \"step\")\n  }",
+  "tested": "3 sizes, 3 seeds, repeatable, stays in its box"
+}

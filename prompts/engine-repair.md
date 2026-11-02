@@ -1,0 +1,1 @@
+The engine could not build your scene. Each problem below gives the line of your scene it is on. Fix every problem, keep everything else as it was, and return the whole scene again, in the same language, with no commentary.

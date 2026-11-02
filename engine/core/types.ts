@@ -142,6 +142,7 @@ export type Kit = {
   name: string;
   kinds?: Record<string, (node: NodeSpec, ctx: CompileContext) => NodeSpec[]>;
   behaviors?: Record<string, Behavior>;
+  docs?: Record<string, string>; // one line each for kinds and behaviors, so the language guide can teach them to a planner
 };
 export type Behavior = ((a: { target: string; start: number; args: Record<string, Value>; ctx: CompileContext; now: (prop: string) => Value | undefined; tools: MotionTools }) => Track[]) & {
   selects?: boolean; // takes a whole pattern such as "g.node.*" as its target, instead of running once per match

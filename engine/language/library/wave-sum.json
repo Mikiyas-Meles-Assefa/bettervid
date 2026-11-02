@@ -1,0 +1,12 @@
+{
+  "name": "wave-sum",
+  "doc": "Two traveling pressure waves and their live sum shifting to cancellation.",
+  "params": {
+    "send": "0",
+    "sumShow": "0",
+    "slide0": "0",
+    "slide1": "0"
+  },
+  "source": "  const N=90;\n  const K=TAU*2/W;\n  const A=H*0.21;\n  const spd=0.09;\n  path(\"mid\", {x: 0, y: 0, points: [0,H/2,W,H/2], stroke: \"soft\", strokeWidth: 5, fill: \"none\", opacity: 0.9});\n  path(\"w1\", {x: 0, y: 0, points: [0,H/2,W,H/2], stroke: \"ink\", strokeWidth: 7, fill: \"none\"});\n  path(\"w2\", {x: 0, y: 0, points: [0,H/2,W,H/2], stroke: \"accent\", strokeWidth: 7, fill: \"none\", opacity: 0});\n  path(\"s\", {x: 0, y: 0, points: [0,H/2,W,H/2], stroke: \"highlight\", strokeWidth: 12, fill: \"none\", opacity: 0});\n  key(\"w2\", \"opacity\", T0, 0);\n  key(\"w2\", \"opacity\", args.send, 0);\n  key(\"w2\", \"opacity\", args.send+8, 1, \"smooth\");\n  key(\"s\", \"opacity\", T0, 0);\n  key(\"s\", \"opacity\", args.sumShow, 0);\n  key(\"s\", \"opacity\", args.sumShow+8, 1, \"smooth\");\n  function shiftAt(f) { if (f <= args.slide0) return 0; if (f >= args.slide1) return Math.PI; return Math.PI*smooth((f-args.slide0)/Math.max(1,args.slide1-args.slide0)); }\n  function ph(f) { return -(f-T0)*spd; }\n  anim(\"w1\", \"points\", T0, T1, (t,f) => { const p=[]; const o=ph(f); for (let i=0;i<=N;i++) { const x=W*i/N; const y=H/2+A*Math.sin(K*x+o); p.push(x,y); } return p; }, 3);\n  anim(\"w2\", \"points\", T0, T1, (t,f) => { const p=[]; const o=ph(f)+shiftAt(f); for (let i=0;i<=N;i++) { const x=W*i/N; const y=H/2+A*Math.sin(K*x+o); p.push(x,y); } return p; }, 3);\n  anim(\"s\", \"points\", T0, T1, (t,f) => { const p=[]; const o=ph(f); const e=shiftAt(f); for (let i=0;i<=N;i++) { const x=W*i/N; const y1=A*Math.sin(K*x+o); const y2=A*Math.sin(K*x+o+e); p.push(x,H/2+y1+y2); } return p; }, 3);",
+  "tested": "3 sizes, 3 seeds, repeatable, stays in its box"
+}
