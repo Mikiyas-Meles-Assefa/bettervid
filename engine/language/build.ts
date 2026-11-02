@@ -1755,7 +1755,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       const list = g.map((j) => areas[j]).filter((a): a is Box => !!a);
       const at = plan.times[g[0]!]!;
       const until = groups[n + 1] ? plan.times[groups[n + 1]![0]!]! : end;
-      const own = [plan.from + g[0]! - 1, plan.from + g.at(-1)!].flatMap((step) => wordsAfter(board, made.nodes, step)).map((w): Seen => ({ id: w.id, box: toScene(w.box), line: f.line, what: "text", text: w.text, laid: false, slot: f.target }));
+      const own = [plan.from + g[0]! - 1, ...g.map((j) => plan.from + j)].flatMap((step) => wordsAfter(board, made.nodes, step)).map((w): Seen => ({ id: w.id, box: toScene(w.box), line: f.line, what: "text", text: w.text, laid: false, slot: f.target }));
       const v = list.length ? viewOn(union(list), most, at, until, own) : undefined;
       views.push({ at: Math.max(f.at, at - lead), view: v ?? REST, until });
     });

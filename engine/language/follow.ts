@@ -83,7 +83,21 @@ export function wordsAfter(board: Board, nodes: NodeSpec[], step: number): { id:
     }
     if (!seen) continue;
     const size = Number(n.props.size ?? 60);
-    out.push({ id: n.id, box: { x, y, w: estimate(String(n.props.text), size), h: size * 1.2 }, text: String(n.props.text) });
+    const w = estimate(String(n.props.text), size);
+    let [x0, y0, x1, y1] = [x - w / 2, y - size * 0.6, x + w / 2, y + size * 0.6];
+    // A value drawn in a frame (a box or bar beside it in its own group) reads whole only with its frame whole.
+    const [px, py] = [x - prop(n.id, "x"), y - prop(n.id, "y")];
+    for (const m of nodes) {
+      const pts = m.props?.points;
+      if (m.parent !== n.parent || m.kind !== "path" || !Array.isArray(pts) || pts.length < 4 || prop(m.id, "opacity") <= 0.02) continue;
+      const half = Number(m.props?.strokeWidth ?? 0) / 2;
+      const [mx, my] = [px + prop(m.id, "x"), py + prop(m.id, "y")];
+      for (let i = 0; i + 1 < pts.length; i += 2) {
+        const [a, b] = [mx + Number(pts[i]), my + Number(pts[i + 1])];
+        [x0, y0, x1, y1] = [Math.min(x0, a - half), Math.min(y0, b - half), Math.max(x1, a + half), Math.max(y1, b + half)];
+      }
+    }
+    out.push({ id: n.id, box: { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }, text: String(n.props.text) });
   }
   return out;
 }
