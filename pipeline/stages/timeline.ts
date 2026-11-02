@@ -27,8 +27,10 @@ export function credits(p: Project, used: Asset[], board = true): Credits {
 
 // Caption pages: 1 to 3 words, broken after punctuation, after an emphasis word and at beat changes (craft rule C1).
 // Only the emphasis words are highlighted, and pages that start during a title card are dropped: the title is the text.
-function captions(p: Project, titles: [number, number][]): Timeline["captions"] {
+// A page never runs across a hold, so no word shows before it is said and nothing hangs through the silence.
+export function captions(p: Project, titles: [number, number][]): Timeline["captions"] {
   const words = p.narration!.words;
+  const held = new Set((p.narration!.holds ?? []).map((h) => h.afterWord));
   const emphasis = new Map(p.script!.beats.map((b) => [b.id, new Set(b.emphasis.flatMap((e) => e.toLowerCase().split(/\s+/)))]));
   const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
   const isEmph = (w: (typeof words)[number]) => !!emphasis.get(w.beatId)?.has(norm(w.text));
@@ -39,7 +41,7 @@ function captions(p: Project, titles: [number, number][]): Timeline["captions"] 
     const next = words[i + 1];
     // Up to 4 words only to keep an emphasis phrase like "bad air" on one page.
     const full = cur.length >= 3 && !(isEmph(w) && next && isEmph(next) && cur.length < 4);
-    if (full || /[.,!?;:]$/.test(w.text) || !next || next.beatId !== w.beatId || (isEmph(w) && !isEmph(next))) {
+    if (full || held.has(i) || /[.,!?;:]$/.test(w.text) || !next || next.beatId !== w.beatId || (isEmph(w) && !isEmph(next))) {
       pages.push({ words: cur });
       cur = [];
     }
