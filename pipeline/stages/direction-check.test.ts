@@ -43,6 +43,15 @@ test("sampling marks what moves, fades or changes color, frame by frame, and wha
   assert.equal(s.text.get("a"), "A");
 });
 
+test("a thing is named by every text it comes to show, so a slot that fills later can be found", () => {
+  const s = sample(scene(60, box("slot", 100, 500), [track("slot.label", "text", [[0, "?"], [30, "42"]])]));
+  assert.equal(s.text.get("slot"), "SLOT ? 42");
+  assert.deepEqual(s.rewords.get("slot"), [{ frame: 30, text: "42" }]);
+  const p = plan([event("e1", 0, 1, { withhold: { what: "the answer", until: "e2" } }), event("e2", 2, 3)]);
+  const r = checkWithhold(s, spans(p, words(4, 0.75), FPS, 60), ids({ e1: { withhold: ["slot"] } }), new Map());
+  assert.match(r[0]!.note, /shows from 0\.0 s and reads "42" from 1\.0 s/);
+});
+
 test("a part whose id extends a top-level id belongs to it, and marks count for what they mark", () => {
   const s = sample(scene(10, [{ id: "arrow", kind: "path", props: { points: [0, 0, 10, 10] } }, { id: "arrow.head", kind: "path", props: { points: [0, 0, 5, 5] } }]));
   assert.deepEqual(s.ids, ["arrow"]);
@@ -61,9 +70,9 @@ test("look: quiet when the look is what changes, and names the competition when 
   const p = plan([event("e1", 0, 9), event("e2", 10, 19)]);
   const sc = scene(300, [...box("a", 100, 500), ...box("b", 500, 500), ...box("c", 900, 500), ...box("d", 500, 900)], [
     wobble("a", 0, 140), // e1: only the look moves
-    wobble("b", 150, 290), // e2: three other things move all through, the look moves once
-    wobble("c", 150, 290),
-    wobble("d", 150, 290),
+    wobble("b", 150, 200), // e2: three other things move one after another, the look moves once
+    wobble("c", 200, 250),
+    wobble("d", 250, 290),
     track("a", "x", [[0, 100], [200, 100], [206, 140]]),
   ]);
   const s = sample(sc);
@@ -74,6 +83,15 @@ test("look: quiet when the look is what changes, and names the competition when 
   assert.equal(r.tickets[0]!.kind, "competing");
   assert.match(r.tickets[0]!.note, /3 other things/);
   assert.ok(r.rows[0]!.share > 0.9);
+});
+
+test("look: things that change together are one pull on the eye, not several", () => {
+  const w = words(10);
+  const p = plan([event("e1", 0, 9)]);
+  const sc = scene(150, [...box("a", 100, 500), ...box("b", 300, 500), ...box("c", 500, 500), ...box("d", 700, 500), ...box("e", 900, 500)], [wobble("a", 0, 40), wobble("b", 60, 90), wobble("c", 60, 90), wobble("d", 60, 90), wobble("e", 100, 130)]);
+  const r = checkLook(sample(sc), spans(p, w, FPS, sc.frames), ids({ e1: { look: ["a"] } }), new Map());
+  assert.equal(r.rows[0]!.competing, 2);
+  assert.match(r.tickets[0]?.note ?? "", /b, c, d together/);
 });
 
 test("look: a look that never changes while other things do, and a look the scene does not have", () => {

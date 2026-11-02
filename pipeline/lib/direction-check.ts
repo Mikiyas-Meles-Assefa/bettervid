@@ -35,7 +35,8 @@ export type Samples = {
   ids: string[];
   visible: Uint8Array[]; // per thing, per frame: 1 when any of it shows
   active: Uint8Array[]; // per thing, per frame: 1 when it moves, grows, fades, changes color or lights
-  text: Map<string, string>; // the words a thing carries, for naming it
+  text: Map<string, string>; // the words a thing carries over the video, for naming it
+  rewords: Map<string, { frame: number; text: string }[]>; // when a thing's words change, and to what
 };
 
 // What counts as a change between two frames `GAP` apart. Below these a viewer does not see anything happen: a drift of
@@ -105,15 +106,32 @@ export function sample(scene: Scene): Samples {
   const index = new Map(ids.map((id, i) => [id, i]));
   const visible = ids.map(() => new Uint8Array(frames));
   const active = ids.map(() => new Uint8Array(frames));
-  const text = new Map<string, string>();
+  // Every text a thing shows over the video, including words that change later (an empty slot that fills with a value),
+  // so a thing can be named by what it comes to show.
+  const shown = new Map<string, string[]>();
   const parent = new Map(scene.nodes.map((n) => [n.id, n.parent]));
-  for (const n of scene.nodes) {
-    if (n.kind !== "text" || typeof n.props.text !== "string") continue;
-    let root = n.id;
-    for (let p = n.parent; p; p = parent.get(p)) root = p;
-    const u = unitOf(root);
-    text.set(u, `${text.get(u) ?? ""} ${n.props.text}`.trim());
+  const rootOf = (id: string) => {
+    let root = id;
+    for (let p = parent.get(id); p; p = parent.get(p)) root = p;
+    return unitOf(root);
+  };
+  const say = (id: string, v: unknown) => {
+    if (typeof v !== "string" || !v.trim()) return;
+    const u = rootOf(id);
+    const list = shown.get(u) ?? [];
+    if (!list.includes(v.trim())) list.push(v.trim());
+    shown.set(u, list);
+  };
+  for (const n of scene.nodes) if (n.kind === "text") say(n.id, n.props.text);
+  const rewords = new Map<string, { frame: number; text: string }[]>();
+  for (const t of scene.tracks) {
+    if (t.prop !== "text") continue;
+    t.keys.forEach((k, i) => {
+      say(t.target, k.value);
+      if (i && k.value !== t.keys[i - 1]!.value && typeof k.value === "string") rewords.set(rootOf(t.target), [...(rewords.get(rootOf(t.target)) ?? []), { frame: k.at, text: k.value }]);
+    });
   }
+  const text = new Map([...shown].map(([u, list]) => [u, list.join(" ")]));
   const history: Map<string, Map<string, Sig>>[] = [];
   for (let f = 0; f < frames; f++) {
     const raw = signatures(evaluate(scene, f));
@@ -132,7 +150,7 @@ export function sample(scene: Scene): Samples {
     }
     if (f >= GAP) history[f - GAP] = undefined as never; // only the last few frames are needed
   }
-  return { fps: scene.fps, frames, ids, visible, active, text };
+  return { fps: scene.fps, frames, ids, visible, active, text, rewords };
 }
 
 // Marks, tags and arrows name what they are attached to, from the scene's source.
@@ -226,6 +244,28 @@ export function activity(s: Samples, from: number, to: number): { id: string; fr
   return s.ids.map((id, i) => ({ id, frames: count(s.active[i]!, from, to) })).filter((x) => x.frames > 0).sort((a, b) => b.frames - a.frames);
 }
 
+// Things that change on the same frames are seen as one (common fate): four boxes lit together are one pull on the
+// eye, not four. Groups things whose changing frames in the stretch overlap by 80 percent or more.
+export function pulls(s: Samples, list: { id: string; frames: number }[], from: number, to: number): { ids: string[]; frames: number }[] {
+  const out: { ids: string[]; frames: number; bits: Uint8Array }[] = [];
+  for (const x of list) {
+    const bits = s.active[s.ids.indexOf(x.id)]!.subarray(Math.max(0, from), Math.min(s.frames, to));
+    const same = out.find((g) => {
+      let both = 0;
+      let either = 0;
+      for (let f = 0; f < bits.length; f++) {
+        both += bits[f]! & g.bits[f]!;
+        either += bits[f]! | g.bits[f]!;
+      }
+      return either && both / either >= 0.8;
+    });
+    if (same) same.ids.push(x.id);
+    else out.push({ ids: [x.id], frames: x.frames, bits });
+  }
+  return out.map(({ ids, frames }) => ({ ids, frames }));
+}
+const pullName = (s: Samples, g: { ids: string[]; frames: number }) => `${g.ids.length > 1 ? `${g.ids.slice(0, 4).join(", ")}${g.ids.length > 4 ? ` and ${g.ids.length - 4} more` : ""} together` : name(s, g.ids[0]!)} for ${sec(g.frames, s.fps)}`;
+
 // Moments something starts to change, merged across things that start together into one beat (a step of the picture).
 export function beats(s: Samples, from: number, to: number, only?: (id: string) => boolean): number[] {
   const starts: number[] = [];
@@ -258,13 +298,13 @@ export function checkLook(s: Samples, list: Span[], ids: IdMap, attached: Map<st
     const mine = (id: string) => belongs(id, look, attached);
     const seen = s.ids.some((id, i) => mine(id) && count(s.visible[i]!, from, to) > 0);
     const act = activity(s, from, to);
-    const lookFrames = act.filter((x) => mine(x.id)).reduce((n, x) => n + x.frames, 0);
-    const others = act.filter((x) => !mine(x.id) && x.frames >= s.fps * PULL);
+    const lookFrames = pulls(s, act.filter((x) => mine(x.id)), from, to).reduce((n, x) => n + x.frames, 0);
+    const others = pulls(s, act.filter((x) => !mine(x.id) && x.frames >= s.fps * PULL), from, to);
     const otherFrames = others.reduce((n, x) => n + x.frames, 0);
     const share = lookFrames + otherFrames ? lookFrames / (lookFrames + otherFrames) : 1;
     rows.push({ event: event.id, share, competing: others.length });
     const where = { event: event.id, from: from / s.fps, to: to / s.fps };
-    const list3 = others.slice(0, 5).map((x) => `${name(s, x.id)} for ${sec(x.frames, s.fps)}`).join(", ");
+    const list3 = others.slice(0, 5).map((g) => pullName(s, g)).join(", ");
     if (!look.length || !seen) {
       tickets.push(ticket({ ...where, kind: "look_absent", severity: 2, note: `The eye should be on "${event.look}", but ${look.length ? `${look.join(", ")} never shows` : "nothing in the scene matches it"} during ${event.id} (${where.from.toFixed(1)} to ${where.to.toFixed(1)} s, "${event.job}").` }));
       continue;
@@ -294,7 +334,12 @@ export function checkWithhold(s: Samples, list: Span[], ids: IdMap, attached: Ma
     }).sort((a, b) => a.first - b.first);
     if (!early.length) continue;
     const firstAt = early[0]!.first;
-    out.push(ticket({ event: event.id, kind: "withheld_early", severity: 3, from: firstAt / s.fps, to: until / s.fps, note: `"${event.withhold.what}" is withheld until ${event.withhold.until} (${sec(until, s.fps)}), but ${early.slice(0, 4).map((x) => `${name(s, x.id)} shows from ${sec(x.first, s.fps)}`).join(", ")}.` }));
+    // A thing whose words change before the moment (a slot that fills) is named with when it changed and to what.
+    const told = (x: { id: string; first: number }) => {
+      const change = (s.rewords.get(x.id) ?? []).filter((c) => c.frame >= x.first && c.frame < until).at(-1);
+      return `${name(s, x.id)} shows from ${sec(x.first, s.fps)}${change ? ` and reads "${change.text.slice(0, 24)}" from ${sec(change.frame, s.fps)}` : ""}`;
+    };
+    out.push(ticket({ event: event.id, kind: "withheld_early", severity: 3, from: firstAt / s.fps, to: until / s.fps, note: `"${event.withhold.what}" is withheld until ${event.withhold.until} (${sec(until, s.fps)}), but ${early.slice(0, 4).map(told).join(", ")}.` }));
   }
   return out;
 }
@@ -348,11 +393,11 @@ export function checkHoldPictures(s: Samples, hs: Hold[], list: Span[], ids: IdM
       out.push(ticket({ ...where, kind: "hold_frozen", severity: h.seconds >= 2 ? 3 : 2, note: `Hold ${h.id} (${h.purpose}, ${h.seconds.toFixed(1)} s after word ${h.afterWord}) should show: "${h.does}". Nothing on screen changes from ${h.start.toFixed(1)} to ${h.end.toFixed(1)} s: a frozen frame.` }));
       continue;
     }
-    const others = act.filter((x) => !related(x.id) && x.frames >= s.fps * PULL);
-    const mineFrames = act.filter((x) => related(x.id)).reduce((n, x) => n + x.frames, 0);
+    const others = pulls(s, act.filter((x) => !related(x.id) && x.frames >= s.fps * PULL), from, to);
+    const mineFrames = pulls(s, act.filter((x) => related(x.id)), from, to).reduce((n, x) => n + x.frames, 0);
     const otherFrames = others.reduce((n, x) => n + x.frames, 0);
     if (look.length && others.length && otherFrames > mineFrames) {
-      out.push(ticket({ ...where, kind: "hold_competing", severity: 2, note: `During hold ${h.id} (${h.start.toFixed(1)} to ${h.end.toFixed(1)} s, "${h.does}") the change is mostly away from the event's look (${look.join(", ")}): ${others.slice(0, 4).map((x) => `${name(s, x.id)} for ${sec(x.frames, s.fps)}`).join(", ")}.` }));
+      out.push(ticket({ ...where, kind: "hold_competing", severity: 2, note: `During hold ${h.id} (${h.start.toFixed(1)} to ${h.end.toFixed(1)} s, "${h.does}") the change is mostly away from the event's look (${look.join(", ")}): ${others.slice(0, 4).map((g) => pullName(s, g)).join(", ")}.` }));
     }
   }
   return out;
