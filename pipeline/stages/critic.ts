@@ -36,7 +36,7 @@ export async function critic(p: Project, force = false) {
   await stage(p, "critic", [t, prompt("critic")], 0.15, async () => {
     const words = p.narration!.words;
     const clips = t.clips.filter((c) => c.image);
-    if (!clips.length) return; // a board has no shots to swap; it has its own checks
+    if (!clips.length) return; // a board or stage has no shots to swap; each has its own checks
     const video = join(dir(p), "video.mp4");
     const frames = clips.flatMap((c, i) => {
       // Late in the shot, so moves have landed and marks are drawn.

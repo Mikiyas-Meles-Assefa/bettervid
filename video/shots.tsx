@@ -3,6 +3,7 @@ import React from "react";
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Clip, StyleFile } from "../schemas/project.ts";
 import { BoardShot } from "./Board.tsx";
+import { StageShot } from "./Stage.tsx";
 import { Marks } from "./marks.tsx";
 
 type ShotProps = { clip: Clip; style: StyleFile; index: number };
@@ -188,4 +189,4 @@ export const CreditsCard: React.FC<ShotProps> = ({ clip, style }) => {
   );
 };
 
-export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard, board: BoardShot };
+export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard, board: BoardShot, stage: StageShot };

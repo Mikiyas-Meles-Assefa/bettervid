@@ -76,6 +76,19 @@ const Picture: React.FC<{ e: TimedElement }> = ({ e }) => {
   return <Img src={staticFile(e.image!)} style={{ position: "absolute", left: e.x, top: e.y, width: e.w, height: e.h, objectFit: "contain", mixBlendMode: "multiply", filter: "brightness(1.12) contrast(1.15)", WebkitMaskImage: mask, maskImage: mask }} />;
 };
 
+// Things on the board can be picked up and carried: an element glides to its next place on a spoken word.
+const Moving: React.FC<{ e: TimedElement; children: React.ReactNode }> = ({ e, children }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  let at = { x: e.x, y: e.y, scale: 1 };
+  for (const m of e.moves ?? []) {
+    const t = interpolate(frame, [m.frame, m.frame + 0.8 * fps], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+    if (t <= 0) break;
+    at = { x: at.x + (m.x - at.x) * t, y: at.y + (m.y - at.y) * t, scale: at.scale + (m.scale - at.scale) * t };
+  }
+  return <div style={{ position: "absolute", left: 0, top: 0, transformOrigin: `${e.x}px ${e.y}px`, transform: `translate(${at.x - e.x}px, ${at.y - e.y}px) scale(${at.scale})` }}>{children}</div>;
+};
+
 function view(frame: number, fps: number, stops: BoardCamera[]) {
   let at = stops[0]!;
   for (let i = 1; i < stops.length; i++) {
@@ -99,9 +112,9 @@ export const BoardShot: React.FC<{ clip: Clip; style: StyleFile; index: number }
   return (
     <AbsoluteFill style={{ backgroundColor: style.palette.paper, overflow: "hidden" }}>
       <div style={{ position: "absolute", left: 0, top: 0, transformOrigin: "0 0", transform: `scale(${s}) translate(${-cam.x}px, ${-cam.y}px)` }}>
-        {shown.filter((e) => e.kind === "image").map((e, i) => <Picture key={i} e={e} />)}
-        {shown.filter((e) => e.kind === "text").map((e, i) => <Text key={i} e={e} style={style} />)}
-        {shown.filter((e) => e.kind === "math").map((e, i) => <Mathematics key={i} e={e} style={style} />)}
+        {shown.filter((e) => e.kind === "image").map((e, i) => <Moving key={i} e={e}><Picture e={e} /></Moving>)}
+        {shown.filter((e) => e.kind === "text").map((e, i) => <Moving key={i} e={e}><Text e={e} style={style} /></Moving>)}
+        {shown.filter((e) => e.kind === "math").map((e, i) => <Moving key={i} e={e}><Mathematics e={e} style={style} /></Moving>)}
         <Marks marks={marks} view={WORLD} style={style} />
       </div>
     </AbsoluteFill>

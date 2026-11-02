@@ -8,6 +8,7 @@ Requests come in every shape: a few words, a question, a long detailed brief, pa
 - `tone`: how the narration should sound, if they said ("like a detective story", "funny", "calm, for 10 year olds"), else "".
 - `visuals`: each wish about what to show or how it should look, one per item.
 - `sound`: each wish about music, sound effects or the voice, one per item.
+- `notation`: true if the viewer can only understand this by seeing it worked out in symbols step by step: math, physics with equations, code, logic, grammar rules. False for stories, history, and how things work in the physical world. This one field is your judgment, not the user's words.
 - `material`: notes, facts, quotes or sources the user supplied for the video, copied verbatim; "" if none.
 
 A wish can concern more than one part. Put it in every part it needs, worded for that part: "put the final score big on screen" needs the narration to give the score (story: "say the final score") and the picture to show it (visuals: "show the final score in big numbers when it is said").

@@ -5,23 +5,23 @@ import { AbsoluteFill, Audio, Img, Sequence, spring, staticFile, useCurrentFrame
 import type { Timeline } from "../schemas/project.ts";
 import { SHOTS } from "./shots.tsx";
 
-const Caption: React.FC<{ words: { text: string; highlight: boolean }[]; color: string; font: string; low?: boolean }> = ({ words, color, font, low }) => {
+const Caption: React.FC<{ words: { text: string; highlight: boolean }[]; color: string; font: string }> = ({ words, color, font }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const pop = spring({ frame, fps, config: { damping: 12, stiffness: 240 } });
   return (
-    // Safe zone (docs/PLAN.md section 3): centered, y about 1150 to 1300, never the bottom 25% or the right 15%.
-    <AbsoluteFill style={{ top: low ? 1640 : 1130, height: low ? 170 : 260, alignItems: "center", justifyContent: "center", padding: "0 160px 0 90px" }}>
+    // Low and small, so the picture stays the subject. The user preferred this to big mid-screen captions.
+    <AbsoluteFill style={{ top: 1640, height: 170, alignItems: "center", justifyContent: "center", padding: "0 160px 0 90px" }}>
       <div
         style={{
           fontFamily: font,
           fontWeight: 900,
-          fontSize: low ? 58 : 92,
+          fontSize: 58,
           lineHeight: 1.1,
           textAlign: "center",
           textTransform: "uppercase",
           color: "white",
-          WebkitTextStroke: low ? "10px black" : "16px black",
+          WebkitTextStroke: "10px black",
           paintOrder: "stroke fill",
           transform: `scale(${0.7 + 0.3 * pop})`,
         }}
@@ -57,7 +57,7 @@ export const Video: React.FC<{ timeline: Timeline }> = ({ timeline: t }) => {
       {!!t.style.surface?.paper && <Img src={staticFile("paper.png")} style={{ position: "absolute", width: "100%", height: "100%", mixBlendMode: "multiply", opacity: t.style.surface.paper }} />}
       {t.captions.map((c, i) => (
         <Sequence key={i} from={c.startFrame} durationInFrames={Math.max(1, c.endFrame - c.startFrame)} layout="none">
-          <Caption words={c.words} color={t.style.palette.highlight} font={t.style.fonts.caption} low={t.style.motion === "board"} />
+          <Caption words={c.words} color={t.style.palette.highlight} font={t.style.fonts.caption} />
         </Sequence>
       ))}
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,${t.style.vignette}) 100%)` }} />

@@ -1,7 +1,7 @@
 // The Project JSON: one file per run. Each pipeline stage reads earlier fields and writes its own.
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
 
-export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "board" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "board" | "stage" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
@@ -14,6 +14,7 @@ export type Project = {
   narration?: Narration;
   shots?: Shot[];
   board?: BoardPlan;
+  stagePlan?: StagePlan;
   assets?: Asset[];
   timeline?: Timeline;
   render?: { path: string; ms: number };
@@ -41,6 +42,7 @@ export type Plan = {
   visuals: string[];
   sound: string[];
   material: string; // notes, facts or sources the user supplied, verbatim
+  notation: boolean; // understanding it means seeing worked notation, so any style uses the teaching stage
 };
 
 export type Cost = { stage: StageName; usd: number; detail: string; at: string };
@@ -72,7 +74,7 @@ export type Word = { text: string; start: number; end: number; beatId: string };
 export type Narration = { audio: string; voiceId: string; model: string; seconds: number; words: Word[] };
 
 // Stage 4: director (shot types are the build order in docs/PLAN.md section 5)
-export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits" | "board";
+export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits" | "board" | "stage";
 export type Shot = {
   id: string;
   beatId: string;
@@ -128,12 +130,19 @@ export type Timeline = {
   captions: { words: { text: string; highlight: boolean }[]; startFrame: number; endFrame: number }[];
 };
 // `punch` marks a clip that reuses the previous clip's image, so it zooms in harder instead of repeating.
-export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits; board?: { elements: TimedElement[]; camera: BoardCamera[] } };
+export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits; stage?: StageState[]; board?: { elements: TimedElement[]; camera: BoardCamera[] } };
+// The teaching stage: what is on the board at each spoken moment. An id that appears in two states is one thing, which travels.
+export type StageAtom = { id: string; text: string };
+export type StagePart = StageAtom & { type: "text" | "frac" | "matrix"; num: StageAtom[]; den: StageAtom[]; rows: StageAtom[][]; bars: boolean };
+export type StageLine = { size: "big" | "normal" | "note"; parts: StagePart[] };
+export type StageState = { word: number; frame: number; lines: StageLine[]; light: string[] };
+export type StagePlan = { states: Omit<StageState, "frame">[] };
 // A live whiteboard: everything is placed in board pixels and starts on a spoken word.
 export type MathToken = { type: "text" | "frac" | "matrix"; text: string; num: string; den: string; rows: string[][]; highlight: number[]; bars: boolean };
-export type BoardElement = { kind: MarkTool | "text" | "image" | "math"; math?: MathToken[]; word: number; x: number; y: number; w: number; h: number; points: [number, number][]; text?: string; size?: number; color?: "ink" | "accent" | "highlight"; prompt?: string; image?: string };
+export type BoardMove = { word: number; x: number; y: number; scale: number };
+export type BoardElement = { kind: MarkTool | "text" | "image" | "math"; id?: string; moves?: BoardMove[]; math?: MathToken[]; word: number; x: number; y: number; w: number; h: number; points: [number, number][]; text?: string; size?: number; color?: "ink" | "accent" | "highlight"; prompt?: string; image?: string };
 export type BoardPlan = { elements: BoardElement[]; camera: { word: number; x: number; y: number; w: number }[] };
-export type TimedElement = BoardElement & { frame: number };
+export type TimedElement = Omit<BoardElement, "moves"> & { frame: number; moves?: (BoardMove & { frame: number })[] };
 export type BoardCamera = { frame: number; x: number; y: number; w: number; hold?: number }; // hold: seconds the move takes
 // The end card: every source the facts rest on, and who made each image.
 export type Credits = { sources: string[]; images: string[] };
@@ -174,8 +183,8 @@ const strArr = { type: "array", items: str } as const;
 export const planSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["topic", "seconds", "story", "tone", "visuals", "sound", "material"],
-  properties: { topic: str, seconds: { type: "integer" }, story: strArr, tone: str, visuals: strArr, sound: strArr, material: str },
+  required: ["topic", "seconds", "story", "tone", "visuals", "sound", "material", "notation"],
+  properties: { topic: str, seconds: { type: "integer" }, story: strArr, tone: str, visuals: strArr, sound: strArr, material: str, notation: { type: "boolean" } },
 } as const;
 
 export const factSheetSchema = {

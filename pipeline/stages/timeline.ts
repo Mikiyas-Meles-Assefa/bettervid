@@ -56,7 +56,7 @@ function captions(p: Project, titles: [number, number][]): Timeline["captions"] 
 
 export async function timeline(p: Project, force = false) {
   const s = style(p.input.style);
-  await stage(p, "timeline", [p.shots, p.assets, p.board, p.narration, s], 0, async () => {
+  await stage(p, "timeline", [p.shots, p.assets, p.board, p.stagePlan, p.narration, s], 0, async () => {
     const grain = join(dir(p), "grain.png");
     if (!existsSync(grain)) execFileSync("python3", ["-I", "pipeline/tools/make_grain.py", grain]);
     const paper = join(dir(p), "paper.png");
@@ -64,9 +64,18 @@ export async function timeline(p: Project, force = false) {
     const assets = new Map((p.assets ?? []).map((a) => [a.shotId, a]));
     const story = Math.ceil((p.narration!.seconds + TAIL) * FPS);
     const frames = story + CREDITS * FPS;
+    if (p.stagePlan && p.plan?.notation) {
+      const stage = p.stagePlan.states.map((s) => ({ ...s, frame: Math.round((p.narration!.words[s.word]?.start ?? 0) * FPS) }));
+      const clips: Clip[] = [
+        { shotId: "stage", type: "stage", from: 0, frames: story, stage },
+        { shotId: "credits", type: "credits", from: story, frames: CREDITS * FPS, credits: credits(p, []) },
+      ];
+      p.timeline = { fps: FPS, width: 1080, height: 1920, frames, audio: p.narration!.audio, style: s, clips, captions: captions(p, []) };
+      return;
+    }
     if (p.board) {
       const at = (word: number) => Math.round((p.narration!.words[word]?.start ?? 0) * FPS);
-      const elements = p.board.elements.map((e) => ({ ...e, frame: at(e.word) }));
+      const elements = p.board.elements.map((e) => ({ ...e, frame: at(e.word), moves: e.moves?.map((m) => ({ ...m, frame: at(m.word) })) }));
       // The last stop pulls back to the whole board and holds there.
       const boxes = p.board.camera.map((c) => [c.x, c.y, c.x + c.w, c.y + c.w * 1.5] as const);
       const [x0, y0, x1, y1] = [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];

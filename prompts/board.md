@@ -4,6 +4,10 @@ Split the narration into scenes. A scene is one idea on one area of the board, a
 
 Each scene has:
 - `word`: the number of the spoken word where the scene starts.
+- `near` and `side`: where it goes. `near` is the index of an earlier scene it grows from, usually not simply the last one if it relates to something further back, and `side` is "right", "left", "below" or "above". Think of how a person really fills a board: a main idea, a side note next to it, a result under the work that made it. Never settle into a pattern such as right, left, right, left. For the first scene use 0 and "below".
+- `size`: "small", "medium" or "large". A side note is small, the heart of the idea is large. Vary it.
+- `view`: "scene" frames this scene. "wide" pulls back to include the scene it grows from, to show how the two connect. Use "wide" only for a real moment of connection, at most twice in a video.
+- `bring`: earlier items carried over into this scene when they are used again, each with its `id` and the `word` it moves on. For example a result worked out earlier slides over to be plugged in. Use it whenever something earlier is reused; otherwise leave it empty.
 - `heading`: the idea in 2 to 5 words, written big. Make it a thought a viewer would remember, not a copy of the narration.
 - `layout`:
   - "hero": one big picture, with notes under it. For one thing to look at.
@@ -12,7 +16,7 @@ Each scene has:
   - "cycle": a picture in the center with 2 to 4 around it, connected in a loop. For something that repeats, or things around one center.
   - "work": lines of real work, one under another, like solving something on a board. For math, logic, code and anything with steps of reasoning.
   - "statement": no pictures. The heading alone, huge, for the line that lands the point.
-- `items`: what appears, in the order it is spoken. Each has `word` (the spoken word it appears on), `picture` and `label`.
+- `items`: what appears, in the order it is spoken. Each has `id` (a short name if a later scene will bring it, else ""), `word` (the spoken word it appears on), `picture`, `label`, `math` and `closeUp` (true to move the camera in tight on it, when that one detail is the point, and false otherwise).
 
 Show the real thing. When the subject is abstract, such as math, data, logic or language, the viewer needs to see the actual object being talked about, written out, and worked through step by step: never an everyday object or a metaphor standing in for it. An example that the narration works through must appear in full on the board, with every number the narrator says.
 

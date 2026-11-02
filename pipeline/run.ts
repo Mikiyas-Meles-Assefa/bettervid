@@ -13,6 +13,7 @@ import { mix } from "./stages/mix.ts";
 import { plan } from "./stages/plan.ts";
 import { render } from "./stages/render.ts";
 import { research } from "./stages/research.ts";
+import { stage } from "./stages/stage.ts";
 import { timeline } from "./stages/timeline.ts";
 import { voice } from "./stages/voice.ts";
 import { writer } from "./stages/writer.ts";
@@ -24,6 +25,7 @@ const ORDER: [StageName, (p: Project, force: boolean) => Promise<void>][] = [
   ["voice", voice],
   ["director", director],
   ["board", board],
+  ["stage", stage],
   ["assets", assets],
   ["annotate", annotate],
   ["timeline", timeline],
@@ -56,12 +58,18 @@ if (args[0] === "new") {
   p = load(args[0]!);
 }
 
-// A board style plans one live whiteboard instead of shots and images.
+const only = flag("only") as StageName | undefined;
+// A topic that needs worked notation uses the teaching stage, in any style. Otherwise a board style plans one live
+// whiteboard, and other styles plan shots and images. Decided as stages run, because the plan comes first.
 const boardStyle = style(p.input.style).motion === "board";
-const skip = (name: StageName) => (boardStyle ? ["director", "assets", "annotate"].includes(name) : name === "board");
+function skip(name: StageName) {
+  if (only === name) return false;
+  const visuals: Record<string, string[]> = { stage: ["stage"], board: ["board"], shots: ["director", "assets", "annotate"] };
+  const mine = p.plan?.notation ? "stage" : boardStyle ? "board" : "shots";
+  return Object.entries(visuals).some(([k, list]) => k !== mine && list.includes(name));
+}
 const until = flag("until") as StageName | undefined;
 const force = flag("force") as StageName | undefined;
-const only = flag("only") as StageName | undefined;
 for (const [name, run] of ORDER) {
   if ((only && only !== name) || skip(name)) continue;
   await run(p, force === name);
