@@ -80,7 +80,7 @@ function pathBody(r: Resolved, ctx: Ctx, id: string, defs: React.ReactNode[]) {
   const width = n(a.strokeWidth, 6);
   const pen = ctx.theme.style;
   // The style draws plain lines and fills. A part with its own gradient or dash pattern keeps exactly what it asked for.
-  if (pen && points && !parseGradient(a.fill) && !parseGradient(a.stroke) && a.dash === undefined && a.trimStart === undefined && a.trimEnd === undefined) {
+  if (pen && points && !a.glyph && !parseGradient(a.fill) && !parseGradient(a.stroke) && a.dash === undefined && a.trimStart === undefined && a.trimEnd === undefined) {
     const p = n(a.pulse, -1);
     return (
       <>
@@ -176,7 +176,7 @@ const Item: React.FC<{ r: Resolved; ctx: Ctx; direct?: boolean }> = ({ r, ctx, d
   // Effects sit outside the transform so a shadow keeps its direction as a part turns.
   if (!filter && !blend && !masked && !n(a.isolate)) {
     // A plain leaf is one element, which is what keeps scenes of thousands of parts quick to paint.
-    if (!r.children.length && !defined && !a.clip && (r.kind === "path" || r.kind === "text") && React.isValidElement(body) && body.type !== React.Fragment) return React.cloneElement(body as React.ReactElement<React.SVGProps<SVGElement>>, { transform, opacity });
+    if (!r.children.length && !defined && !a.clip && (r.kind === "path" || r.kind === "text") && React.isValidElement(body) && typeof body.type === "string") return React.cloneElement(body as React.ReactElement<React.SVGProps<SVGElement>>, { transform, opacity });
     return <g transform={transform} opacity={opacity}>{defined}{content}</g>;
   }
   return (

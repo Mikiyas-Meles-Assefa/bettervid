@@ -45,7 +45,7 @@ function toAtoms(raw: Raw[], size: number, color: string): Atom[] {
   const shape = (rings: Pt[][], key: string, r: Raw): Atom => {
     const c = center(rings);
     const centred = rings.map((ring) => ring.map(([x, y]): Pt => [x - c.x, y - c.y]));
-    return { key, chunk: r.chunk, x: c.x, y: c.y, w: c.w, h: c.h, kind: "path", home: r.home, of: r.of, props: { points: joinRings(centred), closed: 1, fill: color } };
+    return { key, chunk: r.chunk, x: c.x, y: c.y, w: c.w, h: c.h, kind: "path", home: r.home, of: r.of, props: { glyph: 1, points: joinRings(centred), closed: 1, fill: color } };
   };
   return raw.flatMap((r) => {
     if (r.type === "char") {
