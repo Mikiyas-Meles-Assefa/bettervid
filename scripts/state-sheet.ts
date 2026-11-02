@@ -11,7 +11,7 @@ import { evaluate } from "../engine/core/evaluate.ts";
 import type { Resolved } from "../engine/core/types.ts";
 import { build } from "../engine/language/build.ts";
 import { parse } from "../engine/language/syntax.ts";
-import { inventory, lookFrames, measureLayout, readOf, type Rect } from "../pipeline/lib/look.ts";
+import { inventory, keptAt, lookFrames, measureLayout, readOf, type Rect } from "../pipeline/lib/look.ts";
 import { closeRenderer, kitKinds, plainMoments, renderStills, sceneBuildOptions } from "../pipeline/stages/scene.ts";
 import type { Project } from "../schemas/project.ts";
 
@@ -39,7 +39,7 @@ let prev = new Map<string, ReturnType<typeof box>>();
 const report: string[] = [];
 for (const f of frames) {
   const things = inventory(r.scene, f).filter((t) => t.opacity >= 0.15 && !(t.kind === "shape" && (t.box.x1 - t.box.x0) * (t.box.y1 - t.box.y0) > ctx.width * ctx.height * 0.8));
-  const findings = measureLayout(things, ctx.width, ctx.height, read);
+  const findings = measureLayout(things, ctx.width, ctx.height, read, false, process.env.NOKEPT ? [] : keptAt(r.scene, f));
   const top = Math.min(...things.map((t) => t.box.y0));
   const bottom = Math.max(...things.map((t) => t.box.y1));
   // Words that stay on screen and moved or changed size: a jump the viewer sees.

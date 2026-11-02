@@ -7,7 +7,7 @@ import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
 import type { Resolved } from "../core/types.ts";
 import { graphKit } from "../kits/graph.ts";
-import { truthSteps } from "../kits/steps.ts";
+import { storyOf, truthSteps } from "../kits/steps.ts";
 import { estimate, graphPositions, layout, TEXT_SIZE, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
 import { contrast } from "../style/color.ts";
@@ -235,11 +235,33 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     }
     if (!nodes.some((n) => n.id === item.id)) nodes = [{ id: item.id, kind: "group" }, ...nodes.map((n) => ({ ...n, parent: n.parent ?? item.id }))];
     nodes.sort((a, b) => Number(b.id === item.id) - Number(a.id === item.id));
-    // What it shows before any step plays: not its invisible frame, nor parts that start hidden.
-    const byId = new Map(nodes.map((x) => [x.id, x]));
-    const hidden = (x: NodeSpec | undefined): boolean => !!x && (x.props?.opacity === 0 || hidden(x.parent ? byId.get(x.parent) : undefined));
-    const shown = nodes.filter((x, i) => i === 0 || (!hidden(x) && !(x.kind === "path" && (x.props?.stroke ?? "none") === "none" && (x.props?.fill ?? "none") === "none")));
-    const made = { nodes, box: bounds(nodes), rest: shown.length > 1 ? bounds(shown) : bounds(nodes), errors };
+    // Where what it shows sits: before any step plays, and for a truth thing after each step of its story too, so a
+    // kit that keeps room for later steps is placed by where its parts mostly are while it plays. Not its invisible
+    // frame, nor parts hidden at that moment.
+    const seenBox = (list: NodeSpec[]) => {
+      const byId = new Map(list.map((x) => [x.id, x]));
+      const hidden = (x: NodeSpec | undefined): boolean => !!x && (x.props?.opacity === 0 || hidden(x.parent ? byId.get(x.parent) : undefined));
+      const shown = list.filter((x, i) => i === 0 || (!hidden(x) && !(x.kind === "path" && (x.props?.stroke ?? "none") === "none" && (x.props?.fill ?? "none") === "none")));
+      return shown.length > 1 ? bounds(shown) : bounds(list);
+    };
+    const root = nodes[0];
+    const moments = [seenBox(nodes)];
+    if (root && typeof root.props?.truth === "string" && typeof root.props.spec === "string") {
+      try {
+        for (const step of storyOf(root.props.truth, root.id, root.props.spec, kitCtx).steps) {
+          const now = new Map<string, Props>();
+          for (const [key, value] of step.after) {
+            const [id, prop] = key.split("\u0000") as [string, string];
+            if (["x", "y", "opacity"].includes(prop)) now.set(id, { ...now.get(id), [prop]: value });
+          }
+          moments.push(seenBox(nodes.map((x) => (now.has(x.id) ? { ...x, props: { ...x.props, ...now.get(x.id) } } : x))));
+        }
+      } catch {
+        // The kind has already said what is wrong with its input.
+      }
+    }
+    const rest = { ...moments[0]!, y: moments.reduce((sum, m) => sum + m.y, 0) / moments.length };
+    const made = { nodes, box: bounds(nodes), rest, errors };
     expansions.set(item.id, made);
     return made;
   };
@@ -448,8 +470,11 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   // boards of all of them (layout's `stretch`), so everything the stretch will show has its room from the start: adding
   // a row, an answer or a question never shrinks or shoves what is already there, and what stays keeps its box.
   quiet = true;
+  // Words attached in each state (tags, and labels on marks and arrows), for the room the layout leaves them.
+  const attachedWords: number[] = [];
   const boards = doc.states.map((st) => {
     applyState(st);
+    attachedWords.push(attached.filter((a) => a.do === "tag" || ((a.do === "mark" || a.do === "arrow") && !!a.text)).length);
     return clone(board);
   });
   board = [];
@@ -459,11 +484,14 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   for (let i = 0; i < doc.states.length; ) {
     let j = i + 1;
     while (j < doc.states.length && doc.states[j]!.keep) j++;
-    for (let k = i; k < j; k++) stretchOf[k] = boards.slice(i, j);
+    const one = boards.slice(i, j); // one list for the stretch, so its states can be told apart from others by it
+    for (let k = i; k < j; k++) stretchOf[k] = one;
     i = j;
   }
   // One scale for the stretch, the one that fits the fullest of its states; the united layout already makes them one.
-  const fits = boards.map((b, i) => layout(clone(b), env, undefined, stretchOf[i]).scale);
+  // About a line and a half of room for each attached line of words, the most any state of the stretch has.
+  const spareOf = (i: number) => Math.min(safe.h * 0.25, Math.max(...boards.map((_, k) => (stretchOf[k] === stretchOf[i] ? attachedWords[k]! : 0))) * minText * 1.25 * 1.6);
+  const fits = boards.map((b, i) => layout(clone(b), env, undefined, stretchOf[i], spareOf(i)).scale);
   const stretchScale = fits.map((_, i) => Math.min(...fits.filter((__, k) => stretchOf[k] === stretchOf[i])));
   // What was on screen in the state before, for leaving things that would cross entering ones, and the words and marks
   // of every state, for the camera's drift.
@@ -471,6 +499,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   // Where each tag and mark label sat in the state before, and whether it was a callout, so it can stay there.
   const labelsBefore = new Map<string, { box: Box; away: boolean; near?: Box }>();
   const seenAt: { at: number; list: Seen[] }[] = [];
+  const heldAt: NonNullable<Scene["held"]> = [];
 
   for (let index = 0; index < doc.states.length; index++) {
     const s = doc.states[index]!;
@@ -496,7 +525,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       if (i.kind === "image" && !opts.assets?.[i.attrs.asset ?? ""]) report(i.line, `The image ${i.id} needs asset=NAME with a name from the assets list.${opts.assets ? ` Available: ${Object.keys(opts.assets).join(", ") || "none"}.` : " This scene has no assets."}`);
     });
 
-    const laid = layout(board, env, stretchScale[index], stretchOf[index]);
+    const laid = layout(board, env, stretchScale[index], stretchOf[index], spareOf(index));
     problems.push(...laid.problems.slice(0, 6).map((p) => ({ ...p, line: p.line || s.line })));
     // How the state reads once it settles: sentences crowding one frame, or a frame left mostly empty.
     const lasts = (index + 1 < doc.states.length ? when(doc.states[index + 1]!.at, ctx) : ctx.frames) - momentOf(s.at, s.line);
@@ -668,6 +697,13 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       const slot = laid.slots.find((x) => p.id.startsWith(`${x.item.id}.`))!.item.id;
       return b ? [{ id: p.id, box: b, line: p.line, what: "text", text: String(p.props.text ?? ""), laid: false, slot }] : [];
     });
+    // Math is drawn as glyph outlines, not text: for anything placed beside it, each glyph counts as writing, so a tag
+    // never sits on a formula's symbols or its fraction bars.
+    const glyphWords: Seen[] = [...parts.values()].filter((p) => p.props.glyph && laid.slots.some((x) => p.id.startsWith(`${x.item.id}.`))).flatMap((p) => {
+      const b = slotPartBox(p.id);
+      const slot = laid.slots.find((x) => p.id.startsWith(`${x.item.id}.`))!.item.id;
+      return b ? [{ id: p.id, box: b, line: p.line, what: "math", text: slot, laid: false, slot }] : [];
+    });
     const laidWords: Seen[] = laid.texts.map((t) => ({ id: t.id, box: t.box, line: t.line, what: "text", text: t.text, item: t.item, laid: true, ...(t.back ? { back: t.back } : {}) }));
     // Everything a label must keep clear of: all text and every solid shape, including the parts of kits and programs.
     // What sits behind everything (a picture or color filling the frame, a panel) is not in the way.
@@ -802,7 +838,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       // Attached words stay in view, clear of the captions, however far out their target is.
       const room = roomNow();
       const box = (p: { x: number; y: number }) => ({ x: Math.max(room.l + w / 2, Math.min(room.r - w / 2, p.x)), y: Math.max(room.t + h / 2, Math.min(room.d - h / 2, p.y)), w, h });
-      const inWords = (b: Box) => [...laidWords, ...slotWords].reduce((sum, o) => sum + hits(b, o.box), 0);
+      const inWords = (b: Box) => [...laidWords, ...slotWords, ...glyphWords].reduce((sum, o) => sum + hits(b, o.box), 0);
+      // Any piece of writing a place would cover a fair part of, however small that piece is next to the words placed.
+      const covers = (b: Box) => [...laidWords, ...slotWords, ...glyphWords].some((o) => hits(b, o.box) > 0.15 * o.box.w * o.box.h);
       const onLabels = (b: Box) => placedLabels.reduce((sum, l) => sum + hits(b, l.box), 0);
       // Covering words costs most, since then neither can be read; covering a shape costs less, as words can sit on a card.
       const cost = (b: Box) => [...obstacles, ...placedLabels.map((l) => l.box)].reduce((sum, o) => sum + hits(b, o), 0) + inWords(b) * 2;
@@ -822,13 +860,15 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       }
       // When everything around the target is full, the words go to the nearest free place in view, with a line back to
       // what they name, as a callout does; on two lines if that is what fits there.
-      if (!stays && near && (onLabels(best.b) > 0.08 * w * h || inWords(best.b) > 0.08 * w * h || best.over > 0.3 * w * h)) {
+      if (!stays && near && (onLabels(best.b) > 0.08 * w * h || inWords(best.b) > 0.08 * w * h || covers(best.b) || best.over > 0.3 * w * h)) {
         // How many words a line from a place back to the target would run through.
-        const through = (b: Box) => [...laidWords, ...slotWords].filter((o) => hits(o.box, near) < 0.5 * o.box.w * o.box.h && Array.from({ length: 11 }, (_, i) => i / 10).some((t) => Math.abs(b.x + (near.x - b.x) * t - o.box.x) < o.box.w / 2 && Math.abs(b.y + (near.y - b.y) * t - o.box.y) < o.box.h / 2)).length;
+        // Counted by the thing crossed (a line of words, a formula), not by its letters.
+        const through = (b: Box) => [...laidWords, ...slotWords, ...glyphWords].filter((o) => hits(o.box, near) < 0.5 * o.box.w * o.box.h && Array.from({ length: 11 }, (_, i) => i / 10).some((t) => Math.abs(b.x + (near.x - b.x) * t - o.box.x) < o.box.w / 2 && Math.abs(b.y + (near.y - b.y) * t - o.box.y) < o.box.h / 2)).reduce((set, o) => set.add(o.item ?? o.slot ?? o.id), new Set<string>()).size;
         const search = (bw: number, bh: number) => {
           const spots: { b: Box; over: number; far: number }[] = [];
-          const stepX = Math.max(24, bw / 5);
-          const stepY = Math.max(20, bh * 0.4);
+          // A fine grid, so a gap only a little taller than the words between two formulas is found.
+          const stepX = Math.max(16, bw / 8);
+          const stepY = Math.max(8, bh * 0.15);
           for (let y = room.t + bh / 2; y <= room.d - bh / 2 + 1; y += stepY) {
             for (let x = room.l + bw / 2; x <= room.r - bw / 2 + 1; x += stepX) {
               const b = { x, y, w: bw, h: bh };
@@ -853,6 +893,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
         if (pick) {
           best = pick;
           away = true;
+        } else if (given > (minText / z) * 1.05 && (covers(best.b) || inWords(best.b) > 0)) {
+          // Nowhere at this size: the words try again at the smallest readable size before covering any writing.
+          return label(id, line, text, want, attrs, minText / z, near);
         } else {
           // Nowhere at all: say how many characters the largest free place takes, so a shorter version fits.
           for (let k = 0.9; k >= 0.2; k -= 0.1) {
@@ -866,10 +909,10 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       // words are a problem, because then neither can be read.
       if (onLabels(best.b) > 0.3 * w * h) report(line, `"${text}" would sit on top of other attached words, and there is no free place left in view for it. ${fits ? `The largest free place left holds about ${fits} characters: shorten it to that,` : "Shorten it,"} drop an earlier tag or mark label, or give that thing room with space, a row or a stack.`);
       else if (inWords(best.b) > 0.08 * w * h) {
-        const under = [...laidWords, ...slotWords].sort((a, b) => hits(best.b, b.box) - hits(best.b, a.box))[0];
+        const under = [...laidWords, ...slotWords, ...glyphWords].sort((a, b) => hits(best.b, b.box) - hits(best.b, a.box))[0];
         report(line, `"${text}" would sit on top of the words "${under?.text ?? ""}", and there is no free place left in view for it. ${fits ? `The largest free place left holds about ${fits} characters: shorten it to that` : "Shorten it to a word or two"}, drop something, or put less on screen in this state.`);
       }
-      const crowded = best.over > 0.3 * w * h && attrs.back !== "none";
+      const crowded = (best.over > 0.3 * w * h || covers(best.b)) && attrs.back !== "none";
       words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs) ?? (crowded ? captionBack : undefined), undefined, rows);
       if (away && near) leader(id, line, best.b, near, attrs);
       placedLabels.push({ box: best.b, line, id });
@@ -1244,6 +1287,10 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       report(w.line, `With the camera where it is at this state${moved ? ` (zoom ${view.zoom.toFixed(2)}, from line ${moved.line})` : ""}, "${w.text}" runs ${where} by ${Math.round(by * view.zoom)} pixels.${hint || ""}${hint ? " shorten" : " Shorten"} it to ${w.box.w > a.w ? `${chars} characters or fewer` : "fewer words"}, or attach it elsewhere (another side=, or at= nearer the middle), or drop it.`);
     }
     seenAt.push({ at, list: keyWords });
+    // The room kept for later things, where it falls on the frame with the camera as this state leaves it.
+    // A kit's whole box counts too: it keeps room for what its later steps show.
+    const keptRoom = [...laid.held, ...laid.slots.filter((x) => x.box.w > 0).map((x) => x.box)];
+    if (keptRoom.length) heldAt.push({ from: at, to: index + 1 < doc.states.length ? when(doc.states[index + 1]!.at, ctx) : ctx.frames, boxes: keptRoom.map((b) => ({ x: round((b.x - view.panX) * view.zoom + ctx.width / 2), y: round((b.y - view.panY) * view.zoom + ctx.height / 2), w: round(b.w * view.zoom), h: round(b.h * view.zoom) })) });
 
     // Anything addressed by id: a part, a whole row or container, or everything under a prefix.
     const expandTarget = (id: string, line: number): string[] => {
@@ -1658,6 +1705,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   const sceneDoc: SceneDoc = { background: doc.background ?? "paper", steps };
   try {
     const scene = settle(compile(sceneDoc, kitCtx));
+    if (heldAt.length) scene.held = heldAt;
     for (const f of [0, Math.floor(ctx.frames / 2), ctx.frames - 1]) evaluate(scene, f);
     // A position or size that is not a number draws nothing where it should be and drags its neighbors with it. Say
     // which thing it was, so it is repaired rather than shipped.

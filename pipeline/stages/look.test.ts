@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Scene, SceneNode } from "../../engine/core/types.ts";
-import { better, hide, inkOf, inventory, issuesFrom, lookFrames, measureLayout, measurePixels, type Pixels, type Thing, wordsOnScreen } from "../lib/look.ts";
+import { better, hide, inkOf, inventory, issuesFrom, keptAt, lookFrames, measureLayout, measurePixels, type Pixels, type Thing, wordsOnScreen } from "../lib/look.ts";
 
 const W = 1080;
 const H = 1920;
@@ -53,6 +53,18 @@ test("measureLayout reports an empty lower frame and a mostly dimmed one, but no
   assert.ok(kinds.includes("empty"));
   assert.ok(kinds.includes("dimmed"));
   assert.ok(!measureLayout(top, W, H, READ, true).some((f) => f.kind === "empty" || f.kind === "dimmed"));
+});
+
+test("room the layout keeps for what comes later is not counted as empty", () => {
+  // A build-up: a title at the top now, the rest of the board kept free for the lines that come later in the stretch.
+  const top = [thing({ id: "title", owner: "title", box: { x0: 80, y0: 120, x1: 1000, y1: 260 } })];
+  assert.ok(measureLayout(top, W, H, READ).some((f) => f.kind === "empty"));
+  const kept = [{ x0: 80, y0: 300, x1: 1000, y1: 1500 }];
+  assert.ok(!measureLayout(top, W, H, READ, false, kept).some((f) => f.kind === "empty"));
+  // The room comes from the built scene, for the frames of the state that keeps it.
+  const s = { ...scene([text("a", 100, 100, "A")]), held: [{ from: 0, to: 30, boxes: [{ x: 540, y: 900, w: 900, h: 1200 }] }] };
+  assert.deepEqual(keptAt(s, 10), [{ x0: 90, y0: 300, x1: 990, y1: 1500 }]);
+  assert.deepEqual(keptAt(s, 30), []);
 });
 
 test("a picture under an opaque shape painted after it is hidden", () => {

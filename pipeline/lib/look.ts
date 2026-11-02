@@ -51,6 +51,11 @@ const area = (r: Rect) => Math.max(0, r.x1 - r.x0) * Math.max(0, r.y1 - r.y0);
 const meet = (a: Rect, b: Rect): Rect => ({ x0: Math.max(a.x0, b.x0), y0: Math.max(a.y0, b.y0), x1: Math.min(a.x1, b.x1), y1: Math.min(a.y1, b.y1) });
 const painted = (v: unknown) => typeof v === "string" && v !== "none" && v !== "transparent" && !/^#[0-9a-f]{6}00$/i.test(v);
 
+// The room a scene's layout keeps free at a frame for what a later state shows, on the frame.
+export function keptAt(scene: Scene, frame: number): Rect[] {
+  return (scene.held ?? []).filter((h) => frame >= h.from && frame < h.to).flatMap((h) => h.boxes.map((b) => ({ x0: b.x - b.w / 2, y0: b.y - b.h / 2, x1: b.x + b.w / 2, y1: b.y + b.h / 2 })));
+}
+
 // Everything visible on one frame, with its box on the frame and its paint order.
 export function inventory(scene: Scene, frame: number): Thing[] {
   const out: (Thing & { layer: number; seq: number })[] = [];
@@ -107,7 +112,8 @@ const quote = (t: Thing) => `"${(t.text ?? t.id).slice(0, 40)}"`;
 
 // What the compiled scene alone shows about a frame: no pixels needed. On a frame caught while things change, what is
 // fading in or out is not judged as faint, dimmed or empty; writing over writing still counts, a little less.
-export function measureLayout(things: Thing[], W: number, H: number, read: Read, changing = false): Finding[] {
+// `kept`: room the layout keeps free for what comes later (keptAt), which the empty check counts as used.
+export function measureLayout(things: Thing[], W: number, H: number, read: Read, changing = false, kept: Rect[] = []): Finding[] {
   const out: Finding[] = [];
   const texts = things.filter((t) => t.kind === "text" && t.opacity >= 0.2);
   const frame: Rect = { x0: 0, y0: 0, x1: W, y1: H };
@@ -149,7 +155,7 @@ export function measureLayout(things: Thing[], W: number, H: number, read: Read,
   const content = things.filter((t) => t.opacity >= 0.15 && !(t.kind === "shape" && area(t.box) > W * H * 0.8));
   const used = Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => {
     const cell: Rect = { x0: (c * W) / cols, x1: ((c + 1) * W) / cols, y0: top + (r * (bottom - top)) / rows, y1: top + ((r + 1) * (bottom - top)) / rows };
-    return content.some((t) => area(meet(t.box, cell)) > area(cell) * 0.15);
+    return content.some((t) => area(meet(t.box, cell)) > area(cell) * 0.15) || kept.some((k) => area(meet(k, cell)) > area(cell) * 0.15);
   }));
   const filled = used.flat().filter(Boolean).length / (rows * cols);
   let band = 0;
@@ -161,8 +167,9 @@ export function measureLayout(things: Thing[], W: number, H: number, read: Read,
   const bandShare = band / rows;
   if (!changing && (bandShare >= 0.3 || filled < 0.2)) out.push({ kind: "empty", ids: [], severity: bandShare >= 0.45 || filled < 0.12 ? 3 : 2, value: filled, note: `${Math.round(filled * 100)}% of the usable frame has anything in it; the largest empty band is ${Math.round(bandShare * 100)}% of its height` });
 
-  // How much of what is on screen is stepped back.
-  const weight = (t: Thing) => Math.min(area(meet(t.box, frame)), W * H * 0.25);
+  // How much of what is on screen is stepped back. An outline with no fill (a faint guide, a place left behind) is not
+  // stepped-back content.
+  const weight = (t: Thing) => (t.kind === "shape" && !t.filled && t.color === "none" ? 0 : Math.min(area(meet(t.box, frame)), W * H * 0.25));
   const total = content.reduce((s, t) => s + weight(t), 0);
   const dim = content.filter((t) => t.opacity < Math.max(0.75, read.dim + 0.2) || t.muted).reduce((s, t) => s + weight(t), 0);
   const share = total ? dim / total : 0;

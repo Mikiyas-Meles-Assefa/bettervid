@@ -200,3 +200,36 @@ test("what stays keeps its box: a card added, then dropped, never moves the titl
   assert.deepEqual(placeOf(g, 200, "a1.l1"), placeOf(g, 40, "a1.l1"));
   assert.equal(num(at(g, 200, "a1.l1")!.props.size), num(at(g, 40, "a1.l1")!.props.size));
 });
+
+// Boxes on the frame of everything drawn: path outlines and lines of words, through every parent's place and scale.
+const drawn = (s: Scene, f: number) => {
+  const out: { id: string; glyph: boolean; x0: number; y0: number; x1: number; y1: number }[] = [];
+  const walk = (list: Resolved[], x: number, y: number, k: number) => {
+    for (const r of list) {
+      const [rx, ry, rk] = [x + num(r.props.x) * k, y + num(r.props.y) * k, k * num(r.props.scaleX ?? 1)];
+      const pts = r.props.points as number[] | undefined;
+      if (Array.isArray(pts)) {
+        const [xs, ys] = [pts.filter((_, i) => i % 2 === 0), pts.filter((_, i) => i % 2)];
+        out.push({ id: r.id, glyph: !!r.props.glyph, x0: rx + Math.min(...xs) * rk, x1: rx + Math.max(...xs) * rk, y0: ry + Math.min(...ys) * rk, y1: ry + Math.max(...ys) * rk });
+      } else if (r.kind === "text" && r.props.text) {
+        const [w, h] = [estimate(String(r.props.text), num(r.props.size) * rk), num(r.props.size) * rk];
+        out.push({ id: r.id, glyph: false, x0: rx - w / 2, x1: rx + w / 2, y0: ry - h / 2, y1: ry + h / 2 });
+      }
+      walk(r.children, rx, ry, rk);
+    }
+  };
+  walk(evaluate(s, f), 0, 0, 1);
+  return out;
+};
+
+test("a tag never sits on a formula: math drawn as outlines counts as writing", async () => {
+  const kits = { ...ctx, kits: [mathKit] };
+  // Words packed between two wide fractions on a card: the places beside the words are on the fractions.
+  const s = await ok(`@0\nstack c gap=4 back=paper\n  math f latex="\\frac{16}{4} + \\frac{16}{4} + \\frac{16}{4} = 12" size=110\n  text t "the variance of this sample is" size=small\n  math g latex="\\frac{12}{3} + \\frac{12}{3} + \\frac{12}{3} = 12" size=110\ntag t "divide by n minus one" side=top\n`, {}, kits);
+  const all = drawn(s, 30);
+  const tag = all.filter((b) => b.id.startsWith("tag.") && !b.glyph && !/\.(back|lead)$/.test(b.id)); // the words and their card, not a line back to the target
+  const glyphs = all.filter((b) => b.glyph);
+  assert.ok(tag.length && glyphs.length);
+  const hit = (a: (typeof all)[0], b: (typeof all)[0]) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+  for (const t of tag) for (const g of glyphs) assert.ok(hit(t, g) < 0.15 * (g.x1 - g.x0) * (g.y1 - g.y0), `the tag ${t.id} covers ${g.id}`);
+});

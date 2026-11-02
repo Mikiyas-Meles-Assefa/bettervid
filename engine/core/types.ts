@@ -66,7 +66,9 @@ export type Step = {
 export type SceneEvent = { name: string; at?: number; data?: Record<string, unknown> };
 export type SceneDoc = { background?: string; steps: Step[] };
 
-export type Scene = { fps: number; width: number; height: number; frames: number; background: string; nodes: SceneNode[]; tracks: Track[]; events: SceneEvent[] };
+// `held`: room the layout keeps free in a stretch of states for what a later state shows, on the frame, by the frames
+// it is kept in; checks of how full a frame is count it as used, since it is filled on purpose later.
+export type Scene = { fps: number; width: number; height: number; frames: number; background: string; nodes: SceneNode[]; tracks: Track[]; events: SceneEvent[]; held?: { from: number; to: number; boxes: { x: number; y: number; w: number; h: number }[] }[] };
 
 // Tree of nodes with every property worked out for one frame. This is all a renderer sees.
 export type Resolved = { id: string; kind: Primitive; props: Props; children: Resolved[] };

@@ -20,7 +20,7 @@ import { loadLibrary } from "../../engine/language/library.ts";
 import { fontMeasure } from "../../engine/language/measure.ts";
 import { parse, type Item, type State } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
-import { better, decode, hide, inventory, issuesFrom, judgeSchema, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
+import { better, decode, hide, inventory, issuesFrom, judgeSchema, keptAt, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
 import { json, text } from "../lib/meta.ts";
 import { asked, charge, dir, prompt, stage, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
@@ -598,7 +598,7 @@ async function see(job: Job, scene: Scene, source: string, folder: string): Prom
     const things = inventory(scene, frame);
     const shown = decode(files[k]!, 540);
     const changing = moments[k]!.why === "changing";
-    const findings = merge(measureLayout(things, ctx.width, ctx.height, read, changing), measurePixels(things, shown, decode(bare[k]!), decode(empty[k]!), ctx.width, changing));
+    const findings = merge(measureLayout(things, ctx.width, ctx.height, read, changing, keptAt(scene, frame)), measurePixels(things, shown, decode(bare[k]!), decode(empty[k]!), ctx.width, changing));
     return { frame, findings, words: wordsOnScreen(things) };
   });
   writeFileSync(join(folder, "measured.json"), JSON.stringify(measured, null, 1));

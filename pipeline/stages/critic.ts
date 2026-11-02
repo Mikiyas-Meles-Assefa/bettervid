@@ -10,7 +10,7 @@ import { KITS } from "../../engine/kits/index.ts";
 import { parse } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { asCritic, checkDirection, checkHoldAudio, holds, silences, type Ticket as Check } from "../lib/direction-check.ts";
-import { inventory, judgeSchema, lookFrames, measureLayout, readOf, wordsOnScreen, type Judged } from "../lib/look.ts";
+import { inventory, judgeSchema, keptAt, lookFrames, measureLayout, readOf, wordsOnScreen, type Judged } from "../lib/look.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, dir, prompt, save, stage, style, topic } from "../lib/project.ts";
 import { replaceImage } from "./assets.ts";
@@ -78,7 +78,7 @@ async function engineCritic(p: Project, video: string) {
       const file = join(dir(p), "assets", `critic-${i + k}.jpg`);
       execFileSync("ffmpeg", ["-y", "-v", "error", "-ss", (m.frame / t.fps).toFixed(2), "-i", video, "-frames:v", "1", "-vf", "scale=648:-2", "-q:v", "3", file]);
       const things = inventory(clip.scene!, m.frame - clip.from);
-      const found = measureLayout(things, clip.scene!.width, clip.scene!.height, read).filter((f) => f.severity >= 2);
+      const found = measureLayout(things, clip.scene!.width, clip.scene!.height, read, false, keptAt(clip.scene!, m.frame - clip.from)).filter((f) => f.severity >= 2);
       const said = words.filter((w) => w.start * t.fps >= m.frame - 2.5 * t.fps && w.start * t.fps <= m.frame + 0.5 * t.fps).map((w) => w.text).join(" ");
       content.push({ type: "input_text", text: `Frame ${k + 1} (part ${m.section}), at ${(m.frame / t.fps).toFixed(1)} s (settled). Words around it: "${said}"\nOn screen: ${wordsOnScreen(things).join(" / ") || "(no writing)"}\nMeasured: ${found.map((f) => `[${f.severity}] ${f.note}`).join("; ") || "nothing found"}` });
       content.push({ type: "input_image", image_url: `data:image/jpeg;base64,${readFileSync(file).toString("base64")}` });

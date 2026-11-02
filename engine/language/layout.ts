@@ -135,8 +135,10 @@ export function pictureLook(theme: Theme, id: string, placed: "page" | "fit" | "
 
 // `stretch` is the board of every state in this state's stretch (a plain state and the keep states after it), this one
 // included. The state is laid out over all of them: whatever any of them shows has its room in every one, so a thing
-// that stays keeps its place and size while others come and go around it.
-export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[][]): Laid {
+// that stays keeps its place and size while others come and go around it. `spare` is height, in pixels, to leave free
+// for words attached to things (tags and labels), which are placed after the layout: neither the subject's growth nor
+// the spreading of the frame takes it.
+export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[][], spare = 0): Laid {
   const { measure, theme } = env;
   const short = Math.min(env.W, env.H);
   const atomWidth = (a: Atom, size: number, font?: string) => measure(a.text, size, font);
@@ -464,7 +466,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   };
   along(root);
   if (grown.size && box.w <= env.safe.w && box.h <= env.safe.h) {
-    const reserve = members > 1 ? env.safe.h * BREATHE : 0;
+    const reserve = Math.max(members > 1 ? env.safe.h * BREATHE : 0, spare);
     const fits = (b: { w: number; h: number }) => b.w <= env.safe.w && b.h <= env.safe.h - reserve;
     // The largest value in steps of 0.01 from lo to hi that still fits, or lo when even lo does not.
     const most = (lo: number, hi: number, at: (v: number) => { w: number; h: number }) => {
@@ -502,7 +504,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   };
   down(root);
   const gaps = column.reduce((sum, x) => sum + x.children.length - 1, 0);
-  const room = env.safe.h - box.h;
+  const room = env.safe.h - box.h - spare;
   if (gaps && room > 1) {
     // Outer gaps open more than inner ones, so groups still read as groups.
     const weight = (x: Item) => (x === root || (root.children.length === 1 && root.children[0] === x) ? 2 : 1);
@@ -822,7 +824,9 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   const holds = (item: Item): boolean => item === main || item.children.some(holds);
   const holder = root.children.findIndex(holds);
   if (anchor() && holder >= 0) {
-    const [above, below] = [cy - box.h / 2 - (safe.y - safe.h / 2), safe.y + safe.h / 2 - (cy + box.h / 2)];
+    const [free0, free1] = [cy - box.h / 2 - (safe.y - safe.h / 2), safe.y + safe.h / 2 - (cy + box.h / 2)];
+    const keep = Math.min(1, spare / Math.max(1, free0 + free1));
+    const [above, below] = [free0 * (1 - keep), free1 * (1 - keep)];
     const gap = n(root.attrs.gap, 44) * s;
     const spacer = (room: number, at: number): Item => ({ kind: "space", id: `board.space${at}`, line: 0, attrs: { h: String(Math.max(0, Math.min(room * 0.6, safe.h * 0.15) - gap) / s) }, children: [] });
     const list = [...root.children];
