@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { build } from "../../engine/language/build.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
-import { cleanCast, contract, joinSections, pieces, sliceSource, splitSections, visibleAt } from "./scene.ts";
+import { cleanCast, contract, joinSections, overPictures, pieces, sliceSource, splitSections, visibleAt } from "./scene.ts";
 
 // Invented narration: beats of given lengths, sentences of about eight words.
 function narration(beats: number[]) {
@@ -134,4 +134,36 @@ test("cleanCast makes ids valid, keeps one per part, and empties the last hand-o
   assert.equal(c.length, 3);
   assert.deepEqual(c[0]!.handoff.map((x) => x.id), ["st_thing_", "thing"]);
   assert.deepEqual(c[2]!.handoff, []);
+});
+
+test("cleanCast keeps a carried thing's pieces and what the next part does with it", () => {
+  const c = cleanCast([{ shows: "x", handoff: [{ id: "bins", what: "three bins", parts: ["bin-1", "2bad", "bins", "bin-1"], use: " fills them " }] }, { shows: "y", handoff: [] }], 2);
+  assert.deepEqual(c[0]!.handoff, [{ id: "bins", what: "three bins", parts: ["bin-1", "bad"], use: "fills them" }]);
+});
+
+test("a carried thing kept without its pieces is caught, and leaving it out is the writer's call", () => {
+  const range = { id: "s2", firstWord: 6, lastWord: 12 };
+  const carry = [{ id: "bins", what: "three bins", parts: ["b1", "b2"] }];
+  assert.deepEqual(contract(`@6\nrow bins\n  box b1 "a"\n  box b2 "b"\n`, range, carry), []);
+  const renamed = contract(`@6\nrow bins\n  box x1 "a"\n  box b2 "b"\n`, range, carry);
+  assert.equal(renamed.length, 1);
+  assert.match(renamed[0]!, /you keep bins, but not its pieces b1/);
+  assert.match(contract(`@6\ntext other "new thread"\n`, range, carry)[0]!, /If your first words build on it.*it leaves as your part begins/);
+});
+
+test("a thing left over picture after picture is noted, and one that leaves with its picture is not", async () => {
+  const words = Array.from({ length: 40 }, (_, i) => ({ text: `w${i}`, start: i * 0.5 }));
+  const ctx = { fps: 30, width: 1080, height: 1920, frames: 700, theme: themeFrom("whiteboard"), words };
+  const assets = { a: "/a.png", b: "/b.png", c: "/c.png" };
+  const opts = { ctx, words: words.map((w) => w.text), assets };
+  const stuck = `@0\nimage p1 asset=a w=1152 h=2048 frame=fill\ntext list "three reasons"\n@10 keep\ndrop p1\nimage p2 asset=b w=1152 h=2048 frame=fill\n@20 keep\ndrop p2\nimage p3 asset=c w=1152 h=2048 frame=fill\n`;
+  const r = await build(stuck, opts);
+  assert.deepEqual(r.problems, []);
+  const notes = overPictures(stuck, r.scene!, 0, 600);
+  assert.equal(notes.length, 1);
+  assert.match(notes[0]!, /^list \(line 3\) stays over the full-frame pictures for \d+ s, across p1, p2, p3/);
+  const clean = `@0\nimage p1 asset=a w=1152 h=2048 frame=fill\ntext list "three reasons"\n@10\nimage p2 asset=b w=1152 h=2048 frame=fill\ntext about "about this one"\n@20\nimage p3 asset=c w=1152 h=2048 frame=fill\n`;
+  const r2 = await build(clean, opts);
+  assert.deepEqual(r2.problems, []);
+  assert.deepEqual(overPictures(clean, r2.scene!, 0, 600), []);
 });

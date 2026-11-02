@@ -34,15 +34,15 @@ Lines of atoms. Each atom moves on its own. Sizes: `huge`, `big`, `normal`, `sma
     normal: [ a=1 b=2 ; c=3 d=4 ]        a matrix, rows split by ;
     normal: | a=1 b=2 ; c=3 d=4 |        a determinant
 
-Use Unicode for symbols and small marks, such as ², √, π, Σ, ≤, ×.
+Use Unicode for a symbol in passing, such as π, ≤, ×. A formula with roots, bars, sums, powers or indices reads better set by `math`, when your guide lists it below.
 
 Text that wraps by itself:
 
-    text id "words that may run long" size=normal color=ink align=left font=title
+    text id "words that may run long" size=normal align=left{{as heading|font=title}}
 
 Shapes, with an optional label inside. `box`, `circle`, `pill`, `diamond`, `tri`, `dot`:
 
-    box id "label" w=300 h=160 fill=highlight stroke=ink
+    box id "label" w=300 h=160{{as key|fill=highlight stroke=ink}}
     circle id "label"
     dot id
 
@@ -68,6 +68,23 @@ A picture, or a shape as a field of color, can fill the whole frame behind every
 Empty room: `space h=80`
 {{kits}}
 
+# What a thing is for
+
+[[roles]]
+Say what each thing is for, and the style decides how it looks: its color, size, weight, the surface under it, any glow, and how it steps back. Put `role=NAME` on a text, an atom line, a shape, an arrangement, a tag, a mark or an arrow:
+
+{{roles}}
+
+    text q "Why does bread rise?" role=title
+    box yeast "yeast" role=label
+    text gas "it breathes out gas" role=answer
+
+A thing with no role is `body`. Give a role for what the thing means at that moment, and when its meaning changes (a guess that turns out wrong, a value that becomes the result), repeat its line with the same id and the new role: it changes in place. Leave color, fill, stroke, back and glow to the style. Name a color yourself only when the color is itself the information: two series that must be told apart, the real colors of a real thing, or inside a program.
+[[/roles]]
+[[looks]]
+The style gives every color name its look on its own surface. Use few: `ink` for ordinary words, one accent for what the eye must follow now, and the rest only when a second meaning needs its own color. Leave glow, shadows and cards alone unless they carry meaning; the style already draws things its way.
+[[/looks]]
+
 # Arranging
 
 Indent to put things inside an arrangement, which can nest. Everything goes in `stack` order at the top level.
@@ -79,7 +96,13 @@ Indent to put things inside an arrangement, which can nest. Everything goes in `
     chain id dir=down|up|right|left             a line with arrows between neighbors
     free id w=900 h=900                         by percent: each child has at=X,Y from the top left
 
-`back=COLOR` on a row, stack or grid sets it on a panel, like a card. `into=ID`, `before=ID` and `after=ID` on any line place it relative to something in a keep state. An arrangement's id can be used anywhere a thing's id can, and means everything inside it.
+[[roles]]
+`role=panel` on a row, stack or grid sets it on a panel, like a card, drawn the style's way.
+[[/roles]]
+[[looks]]
+`back=COLOR` on a row, stack or grid sets it on a panel, like a card.
+[[/looks]]
+`into=ID`, `before=ID` and `after=ID` on any line place it relative to something in a keep state. An arrangement's id can be used anywhere a thing's id can, and means everything inside it.
 
 # Attached to things
 
@@ -108,14 +131,14 @@ An arrow from a thing to itself (`arrow a -> a "turns"`) circles around it.
     tag photo "the bridge" at=0.5,0.6
     mark highlight quote                             a highlighter swept under words (or across a place, with at=)
 
-Words on a picture sit on a small card so they read on any photo; `back=COLOR` picks the card, `back=none` drops it. An optional `id=` names an arrow, mark or tag. Otherwise they are `arrow.a.b`, `mark.ring.a`, `tag.a`; one placed with `at=` needs an `id=` to be named later.
+Words on a picture sit on a small card so they read on any photo[[looks]]; `back=COLOR` picks the card, `back=none` drops it[[/looks]][[roles]], in the style's `caption` look; `back=none` drops the card[[/roles]]. An optional `id=` names an arrow, mark or tag. Otherwise they are `arrow.a.b`, `mark.ring.a`, `tag.a`; one placed with `at=` needs an `id=` to be named later.
 
 # Changing things
 
-    light a b c color=accent       color these for this state only
+    light a b c                    show these as what the eye must follow now, for this state only
     dim a b amount=0.5             fade these for this state only
     focus a b                      light these and dim everything else, for this state only
-    set a fill=highlight opacity=0.5 rotate=30     change any property until you change it again
+    set a opacity=0.5 rotate=30    change any property until you change it again
     do BEHAVIOR target key=value   start ongoing or one-off motion
     emit NAME                      send an event that sound can follow
 
@@ -140,7 +163,7 @@ The camera starts at rest, showing the frame as laid out. It keeps its view thro
 
 # Readable
 
-Nothing the engine places (tags, labels, the words of a graph or a program) is drawn smaller than the style's readable size; laid-out text that would come out smaller is reported, so put less on screen. `dim` and `focus` never fade the rest below a level that stays readable, and `dim` and `focus` never fade the rest below a level that stays readable. A scene can change both for itself with a line before its first state: `read text=0.04 dim=0.5` (text is the smallest text as a share of the frame's width; dim is the lowest opacity).
+Nothing the engine places (tags, labels, the words of a graph or a program) is drawn smaller than the style's readable size; laid-out text that would come out smaller is reported, so put less on screen. `dim` and `focus` never fade the rest below a level that stays readable. A scene can change both for itself with a line before its first state: `read text=0.04 dim=0.5` (text is the smallest text as a share of the frame's width; dim is the lowest opacity).
 
 # Programs
 
@@ -183,6 +206,18 @@ A program can compute real results and show them: a `text` part's `text` can cha
 Library programs, already written and tested. Use them with `run NAME id`:
 {{programs}}
 
+# Craft
+
+What the language can do is above. This is what tends to make it work on a phone screen, for any kind of video: a lesson, an ad, a story, a post. Weigh it against what the words need.
+
+**Emphasis costs what it takes away.** `dim` and `focus` grey out everything else. A frame where most things are faded looks washed out, the style loses its colors, and the viewer can no longer read what they were holding in mind. Fading earns its place for a moment, when several things share the screen and the words single one out against the others: one row of a table, one side of a comparison, the term being changed while the rest of the line waits. To draw the eye to one thing without taking anything from the rest, `light` it, mark it, pulse it, or move the camera to it. If the rest is no longer needed, drop it instead of fading it. When the words move on, let everything return to full: these commands last one state, so repeating them state after state keeps the screen grey.
+
+**Everything on screen competes for the eye.** Keep in view what the coming words build on (the table being filled in, the diagram the steps run on, the line being rewritten) and remove what the words have left behind. A picture that fills the frame is the subject while it is up: words and shapes over it should be about it, and leave when it changes. A heading, a list or a running count that stays over picture after picture stops being read and starts hiding the picture.
+
+**Computed beats typed.** When a thing in your guide works a process out for real ({{truthKinds}}), use it rather than drawing the process by hand: every step is right, every part can be pointed at, and `do steps` ties each step to the words that say it, slow or fast. A copy typed by hand can disagree with the truth and has no steps to play. The same holds for math: a formula with a root over something, a fraction inside something, a bar or hat on a letter, a sum, powers or indices is set for real by `math` when your guide lists it, and every symbol is its own part; characters typed for marks (a bar over a letter, a root over a fraction) can drop out or sit wrong. Atom lines suit short arithmetic whose terms move one by one. A program can compute what no kit covers.
+
+**Tempo follows understanding.** The first time a process happens, give each step its own state on the words that say it, slow enough to watch. When the words say it happens again the same way, let it run faster, several steps under one phrase, and then show the whole. Build a table, list or diagram as the words reach each part (a column, a row, a branch) rather than all at once, and keep it in view while later steps use it. Show a result after the work that produces it, not before.
+
 # Example of the form, on an unrelated topic
 
     program ticks n=24 doc="A dial of tick marks that light up in turn."
@@ -195,7 +230,7 @@ Library programs, already written and tested. Use them with `run NAME id`:
     end
 
     @0
-    text title "Why a bicycle has gears" size=big font=title
+    text title "Why a bicycle has gears" size=big{{as title|font=title}}
     @6 keep
     row pair
       circle front "48" w=320
@@ -205,14 +240,14 @@ Library programs, already written and tested. Use them with `run NAME id`:
     tag front "one turn"
     do pulse front
     @19 keep
-    tag back "three turns" color=accent
+    tag back "three turns"
     light back
-    do flow chain color=accent
+    do flow chain
     @26
     big: t48=48 sign=÷ t16=16 eq== three=3
     run ticks dial until=@40 w=700 h=700
     @33 keep
-    focus three
+    light three
     mark ring three
 
 Write the scene for the request below. Every `@N` must be a real word number. Refer only to things that are on screen at that state.

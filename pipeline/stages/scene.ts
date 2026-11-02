@@ -9,9 +9,10 @@ import { join } from "node:path";
 import type { Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
 import { when } from "../../engine/core/compile.ts";
 import { evaluate } from "../../engine/core/evaluate.ts";
-import type { CompileContext, Resolved, Scene, Theme } from "../../engine/core/types.ts";
+import type { CompileContext, Kit, Resolved, Scene, Theme } from "../../engine/core/types.ts";
 import { KITS } from "../../engine/kits/index.ts";
-import { languagePrompt, numbered, truthText } from "../../engine/language/author.ts";
+import { mathKit } from "../../engine/kits/math.ts";
+import { languagePrompt, numbered, reviewText, truthKinds } from "../../engine/language/author.ts";
 import { build, formatProblems, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
 import { loadLibrary } from "../../engine/language/library.ts";
 import { parse, type Item, type State } from "../../engine/language/syntax.ts";
@@ -21,7 +22,7 @@ import { asked, charge, dir, prompt, stage, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 
-const VERSION = 1; // bump when the way sections are written or checked changes, so cached sections are redone
+const VERSION = 2; // bump when the way sections are written or checked changes, so cached sections are redone
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
@@ -32,7 +33,9 @@ const PARALLEL = 6;
 const MAX_PROBLEMS = 25;
 
 export type Range = { id: string; firstWord: number; lastWord: number };
-export type Carry = { id: string; what: string };
+// A thing one section hands to the next: what it is, the ids of its pieces (so they stay the same things on screen rather
+// than being drawn again), and how the next section builds on it.
+export type Carry = { id: string; what: string; parts?: string[]; use?: string };
 export type CastPart = { shows: string; handoff: Carry[] };
 type Spoken = { text: string; start: number; beatId?: string };
 
@@ -202,9 +205,18 @@ export function contract(source: string, range: Range, carry: Carry[], kitKinds:
   if (first.keep) out.push(`line ${first.line}: your first state must be a plain state, not keep, so your part stands on its own; list everything that is on screen.`);
   for (const s of doc.states) if (s.at.word < range.firstWord || s.at.word > range.lastWord) out.push(`line ${s.line}: @${s.at.word} is outside your part; every state starts on a word from ${range.firstWord} to ${range.lastWord}.`);
   const shown = named(first.items);
-  for (const c of carry) if (!shown.has(c.id)) out.push(`line ${first.line}: the part before yours leaves ${c.id} (${c.what}) on screen. List it in your first state with the id ${c.id}, so it stays rather than being drawn again.`);
+  for (const c of carry) {
+    if (!shown.has(c.id)) out.push(`line ${first.line}: the part before yours leaves ${c.id} (${c.what}) on screen. If your first words build on it, list it in your first state with the id ${c.id}, so it stays rather than being drawn again; if they do not, it leaves as your part begins.`);
+    else if (c.parts?.length) {
+      const missing = c.parts.filter((x) => !shown.has(x));
+      if (missing.length) out.push(`line ${first.line}: you keep ${c.id}, but not its pieces ${missing.join(", ")}, so the viewer sees them drawn again. Give its pieces the ids ${c.parts.join(", ")}, as the part before yours does.`);
+    }
+  }
   return out;
 }
+
+// Whether a contract line is about a carried thing the part left out, which is the writer's call, not a mistake.
+const leftOut = (x: string) => x.includes("the part before yours leaves");
 
 // Every id visible at a frame, through the whole tree, so a hand-off can be checked on the built scene.
 export function visibleAt(scene: Scene, frame: number): Set<string> {
@@ -236,15 +248,64 @@ function handedOver(source: string, scene: Scene, frame: number, handoff: Carry[
   doc.states.forEach((s: State) => index(s.items));
   const seen = visibleAt(scene, frame);
   const visible = (id: string) => [...(members.get(id) ?? new Set([id]))].some((m) => seen.has(m) || [...seen].some((v) => v.startsWith(`${m}.`)));
-  return handoff.filter((c) => !visible(c.id)).map((c) => `The next part picks up ${c.id} (${c.what}), but it is not on screen when your last word, ${range.lastWord}, is spoken. Have it on screen with that id by then.`);
+  return handoff.flatMap((c) => {
+    if (!visible(c.id)) return [`The next part picks up ${c.id} (${c.what}), but it is not on screen when your last word, ${range.lastWord}, is spoken. Have it on screen with that id by then.`];
+    const missing = (c.parts ?? []).filter((x) => !visible(x));
+    return missing.length ? [`The next part picks up ${c.id} with its pieces ${c.parts!.join(", ")}, but ${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} not on screen with ${missing.length > 1 ? "those ids" : "that id"} as your last word is spoken. Give its pieces those ids.`] : [];
+  });
+}
+
+// Things that stay over full-frame pictures through picture after picture: a heading or list left on top stops being
+// read and hides the pictures. Measured on the built scene, so it sees what the viewer sees. Feedback, not a rule.
+export function overPictures(source: string, scene: Scene, from: number, to: number, kitKinds: string[] = [], fps = FPS): string[] {
+  const { doc } = parse(source, kitKinds);
+  const fills = new Set<string>();
+  const tops = new Map<string, number>();
+  const walk = (items: Item[], top: boolean) => {
+    for (const i of items) {
+      if (i.attrs.frame === "fill" && i.kind === "image") fills.add(i.id);
+      else if (i.attrs.frame === "fill") continue; // a field of color behind everything is a backdrop, not something on top
+      else if (top && i.kind !== "image" && i.kind !== "space" && !tops.has(i.id)) tops.set(i.id, i.line);
+      walk(i.children, false);
+    }
+  };
+  for (const s of doc.states) walk(s.items, true);
+  if (!fills.size || !tops.size) return [];
+  const step = Math.max(1, Math.round(fps / 2));
+  const over = new Map<string, { frames: number; pictures: Set<string> }>();
+  for (let f = from; f <= to; f += step) {
+    const seen = visibleAt(scene, f);
+    const pics = [...fills].filter((id) => seen.has(id));
+    if (!pics.length) continue;
+    for (const id of tops.keys()) {
+      if (!seen.has(id) && ![...seen].some((v) => v.startsWith(`${id}.`))) continue;
+      const o = over.get(id) ?? { frames: 0, pictures: new Set<string>() };
+      o.frames += step;
+      pics.forEach((x) => o.pictures.add(x));
+      over.set(id, o);
+    }
+  }
+  return [...over].filter(([, o]) => o.pictures.size >= 2 && o.frames / fps >= 6).map(([id, o]) => `${id} (line ${tops.get(id)}) stays over the full-frame pictures for ${Math.round(o.frames / fps)} s, across ${[...o.pictures].join(", ")}. Over a picture that fills the frame, the picture is the subject. If the words are no longer about ${id}, drop it when the picture changes, or bring it back when they return to it.`);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Building: the same context and options for checking a section, the whole scene, and the player.
 
+// Real math typesetting joins the scene's kits here, with the guide line a writer needs, so a formula is set for real
+// rather than typed as characters. Its part behaviors (become, each, swell) stay out until the language can reach a
+// kit's parts from `do`: a guide must not teach what fails.
+const mathFormulas: Kit = {
+  name: "math",
+  kinds: mathKit.kinds,
+  docs: {
+    math: "`math f latex=\"\\bar{x} = \\frac{1}{n}\\sum x_i\"` real typeset math from LaTeX, as in a good textbook: fractions, roots that reach over what they cover, bars and hats, sums, powers and indices, matrices. Write each backslash once. Every symbol is its own part, and the whole formula can be lit, tagged, ringed, marked and moved like any thing. To change a formula, repeat its line with the same id and new latex, and it changes in place",
+  },
+};
+export const SCENE_KITS: Kit[] = [...KITS, mathFormulas];
+
 export function sceneContext(p: Project, theme: Theme = themeFrom(p.input.style)): CompileContext {
   const words = p.narration!.words.map((w) => ({ text: w.text, start: w.start }));
-  return { fps: FPS, width: WIDTH, height: HEIGHT, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: KITS };
+  return { fps: FPS, width: WIDTH, height: HEIGHT, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: SCENE_KITS };
 }
 
 // Build options for this project's scene. `assets` maps asset names to an image source the renderer can load.
@@ -255,7 +316,7 @@ export function sceneBuildOptions(p: Project, assets: Record<string, string> = {
 // The whole scene document, ready for `build()`.
 export const joinScene = (plan: ScenePlan) => joinSections(plan.sections);
 
-const kitKinds = () => KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
+const kitKinds = () => SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Pictures: the director's images, offered to Spark by name.
@@ -357,35 +418,52 @@ type Written = { source: string; result: BuildResult; problems: string[]; warnin
 
 const endFrame = (job: Job) => (job.next ? when({ word: job.next.firstWord }, job.opts.ctx) - 2 : job.opts.ctx.frames - 1);
 
-async function check(job: Job, source: string): Promise<{ result: BuildResult; problems: string[]; warnings: string[] }> {
+type Checked = { result: BuildResult; problems: string[]; warnings: string[]; notes: string[] };
+
+async function check(job: Job, source: string): Promise<Checked> {
   const kinds = kitKinds();
   const result = await build(source, job.opts);
   const built = result.problems.map((p) => (p.line ? `line ${p.line}: ${p.message}` : p.message));
   const shape = contract(source, job.range, job.carry, kinds);
-  // Ranges and plain first states keep the join sound, so they must be fixed. Hand-offs are what the parts agreed;
-  // they go back for repair too, but a part that still misses one is reported, not failed.
+  // Ranges and plain first states keep the join sound, so they must be fixed. What the next part was promised goes back
+  // for repair too, but a part that still misses it is reported, not failed. Leaving out a carried thing is the
+  // writer's call (its words may have moved on), so it is only recorded.
   const handoff = result.scene ? handedOver(source, result.scene, endFrame(job), job.handoff, job.range, kinds) : [];
-  const carryMiss = shape.filter((x) => x.includes("the part before yours leaves"));
-  return { result, problems: [...built, ...shape.filter((x) => !carryMiss.includes(x))], warnings: [...carryMiss, ...handoff] };
+  const carry = shape.filter((x) => !leftOut(x) && x.includes("you keep"));
+  return { result, problems: [...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x))], warnings: [...carry, ...handoff], notes: shape.filter(leftOut) };
 }
 
-async function compose(job: Job, start: string | undefined, prior: string): Promise<Written> {
+// What code can see about a built part beyond errors: computed steps to bind, and craft notes the writer weighs.
+function review(job: Job, source: string, result: BuildResult): string {
+  const kinds = kitKinds();
+  const from = when({ word: job.range.firstWord }, job.opts.ctx);
+  const extra = result.scene ? overPictures(source, result.scene, from, endFrame(job), kinds) : [];
+  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra });
+}
+
+async function compose(job: Job, start: string | undefined, prior: string, reviewed = start === undefined): Promise<Written> {
   let usd = 0;
   let source = start ?? "";
   let next = prior;
-  let last: { result: BuildResult; problems: string[]; warnings: string[] } | undefined;
+  let last: Checked | undefined;
   let round = 0;
+  const ask = async (user: string, what: string): Promise<string | undefined> => {
+    try {
+      const r = await text({ system: job.system, user, effort: "medium", maxOutput: 32000 });
+      usd += r.usd;
+      return r.value;
+    } catch (e) {
+      usd += (e as { usd?: number }).usd ?? 0;
+      job.log(`    ${job.range.id} ${what}: the model failed: ${(e as Error).message.slice(0, 160)}`);
+      return undefined;
+    }
+  };
+  const repair = (src: string, list: string[]) => `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(src)}\n\n${prompt("engine-repair")}\nProblems:\n${list.slice(0, MAX_PROBLEMS).join("\n")}`;
   for (round = 1; round <= BUILD_ROUNDS; round++) {
     if (round > 1 || start === undefined) {
-      try {
-        const r = await text({ system: job.system, user: next, effort: "medium", maxOutput: 32000 });
-        usd += r.usd;
-        source = r.value;
-      } catch (e) {
-        usd += (e as { usd?: number }).usd ?? 0;
-        job.log(`    ${job.range.id} round ${round}: the model failed: ${(e as Error).message.slice(0, 160)}`);
-        continue;
-      }
+      const reply = await ask(next, `round ${round}`);
+      if (reply === undefined) continue;
+      source = reply;
     }
     last = await check(job, source);
     const all = [...last.problems, ...last.warnings];
@@ -393,23 +471,23 @@ async function compose(job: Job, start: string | undefined, prior: string): Prom
     for (const x of all.slice(0, 4)) job.log(`      ${x.slice(0, 180)}`);
     if (!all.length) break;
     if (!last.problems.length && round >= 2) break; // builds and is sound; a hand-off still missed after a repair is reported
-    next = `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${prompt("engine-repair")}\nProblems:\n${all.slice(0, MAX_PROBLEMS).join("\n")}`;
+    next = repair(source, all);
   }
-  // Computed steps are only known once the part builds, so Spark sees them once to tie each step to the right words.
-  // The aligned version is kept only if it is still sound.
-  if (last && !last.problems.length && last.result.truth?.length) {
-    try {
-      const r = await text({ system: job.system, user: `${job.request}\n\nYour part builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${truthText(last.result.truth)}`, effort: "medium", maxOutput: 32000 });
-      usd += r.usd;
-      const aligned = await check(job, r.value);
-      job.log(`    ${job.range.id} steps aligned: ${aligned.problems.length} problems`);
-      if (!aligned.problems.length) [source, last] = [r.value, aligned];
-    } catch (e) {
-      usd += (e as { usd?: number }).usd ?? 0;
-      job.log(`    ${job.range.id} step alignment failed: ${(e as Error).message.slice(0, 160)}`);
+  // Once the part builds, what code can see about it goes back once: the steps truth things computed, to tie each to the
+  // right words, and craft notes to weigh. A reviewed version that breaks is repaired once; it replaces the built one
+  // only when it is sound.
+  const said = last && !last.problems.length && reviewed ? review(job, source, last.result) : "";
+  if (said && last) {
+    let src = await ask(`${job.request}\n\nYour part builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${said}`, "review");
+    let seen = src === undefined ? undefined : await check(job, src);
+    if (src !== undefined && seen?.problems.length) {
+      src = await ask(repair(src, [...seen.problems, ...seen.warnings]), "review repair");
+      seen = src === undefined ? undefined : await check(job, src);
     }
+    job.log(`    ${job.range.id} reviewed: ${seen ? `${seen.problems.length} problems, ${seen.warnings.length} hand-off misses` : "no answer"}`);
+    if (src !== undefined && seen && !seen.problems.length && seen.warnings.length <= last.warnings.length) [source, last] = [src, seen];
   }
-  return { source, result: last?.result ?? { problems: [], stats: { states: 0, parts: 0, programs: 0, programMs: 0 } }, problems: last ? last.problems : ["the model never answered"], warnings: last?.warnings ?? [], usd, rounds: Math.min(round, BUILD_ROUNDS) };
+  return { source, result: last?.result ?? { problems: [], stats: { states: 0, parts: 0, programs: 0, programMs: 0 } }, problems: last ? last.problems : ["the model never answered"], warnings: last ? [...last.warnings, ...last.notes] : [], usd, rounds: Math.min(round, BUILD_ROUNDS) };
 }
 
 // Frames spread over the section, each with the words said since the frame before it.
@@ -500,24 +578,35 @@ const castSchema = {
         required: ["shows", "handoff"],
         properties: {
           shows: { type: "string" },
-          handoff: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "what"], properties: { id: { type: "string" }, what: { type: "string" } } } },
+          handoff: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["id", "what", "parts", "use"],
+              properties: { id: { type: "string" }, what: { type: "string" }, parts: { type: "array", items: { type: "string" } }, use: { type: "string" } },
+            },
+          },
         },
       },
     },
   },
 } as const;
 
-// Ids must be valid in the language and unique to a thing; a cast id that clashes with another thing is renamed.
+// Ids must be valid in the language and unique to a thing; a cast id that clashes with another thing is renamed. Piece
+// ids are cleaned the same way and never repeat the thing's own id.
+const cleanId = (id: string) => id.replace(/[^\w-]/g, "_").replace(/^[^A-Za-z]+/, "");
 export function cleanCast(parts: CastPart[], count: number): CastPart[] {
   const whatOf = new Map<string, string>();
   return Array.from({ length: count }, (_, i) => {
     const part = parts[i] ?? { shows: "", handoff: [] };
     const handoff = i === count - 1 ? [] : part.handoff.map((c) => {
-      let id = c.id.replace(/[^\w-]/g, "_").replace(/^[^A-Za-z]+/, "") || `thing${i + 1}`;
+      let id = cleanId(c.id) || `thing${i + 1}`;
       const known = whatOf.get(id);
       if (known !== undefined && known !== c.what && !parts[i - 1]?.handoff.some((x) => x.id === c.id)) id = `${id}_${i + 1}`;
       whatOf.set(id, c.what);
-      return { id, what: c.what };
+      const pieces = [...new Set((c.parts ?? []).map(cleanId).filter((x) => x && x !== id))];
+      return { id, what: c.what, ...(pieces.length ? { parts: pieces } : {}), ...(c.use?.trim() ? { use: c.use.trim() } : {}) };
     });
     const seen = new Set<string>();
     return { shows: part.shows, handoff: handoff.filter((c) => !seen.has(c.id) && seen.add(c.id)) };
@@ -546,9 +635,9 @@ function fill(template: string, values: Record<string, string>) {
 function requestFor(p: Project, ranges: Range[], i: number, cast: CastPart[], header: string, pics: string): string {
   const r = ranges[i]!;
   const words = p.narration!.words;
-  const list = (c: Carry[]) => c.map((x) => `- ${x.id}: ${x.what}`).join("\n");
-  const carry = i === 0 ? "Your part opens the video." : cast[i - 1]!.handoff.length ? `When your part begins, the part before has left these on screen. List them in your first state with the same ids, so the viewer sees them stay rather than being drawn again. Then move, change or remove them as your words need:\n${list(cast[i - 1]!.handoff)}` : "The part before yours leaves nothing you need, so start fresh.";
-  const handoff = i === ranges.length - 1 ? "Your part ends the video." : cast[i]!.handoff.length ? `The next part picks these up, so have them on screen, with these ids, as your last word is spoken:\n${list(cast[i]!.handoff)}` : "The next part starts fresh, so end your part however suits your words.";
+  const list = (c: Carry[]) => c.map((x) => `- ${x.id}: ${x.what}${x.parts?.length ? ` Its pieces have the ids ${x.parts.join(", ")}.` : ""}${x.use ? ` The next part: ${x.use}` : ""}`).join("\n");
+  const carry = i === 0 ? "Your part opens the video." : cast[i - 1]!.handoff.length ? `When your part begins, the part before has left these on screen, for your words to build on:\n${list(cast[i - 1]!.handoff)}\nWhere your first words build on one, list it in your first state with the same id, and its pieces with theirs, so the viewer sees it stay rather than being drawn again; then change it as your words need, and drop it once they have moved on. Anything you leave out of your first state leaves as your part begins, which is right when your words turn to something else.` : "The part before yours leaves nothing you need, so start fresh.";
+  const handoff = i === ranges.length - 1 ? "Your part ends the video." : cast[i]!.handoff.length ? `The next part builds on these, so have them on screen, with these ids, as your last word is spoken. Until then show them only where your own words use them:\n${list(cast[i]!.handoff)}` : "The next part starts fresh, so end your part however suits your words.";
   const arc = cast.map((c, k) => `${k + 1}. words ${ranges[k]!.firstWord} to ${ranges[k]!.lastWord}${k === i ? " (yours)" : ""}: ${c.shows}`).join("\n");
   const plain = (a: number, b: number) => words.slice(a, b).map((w) => w.text).join(" ");
   const narration = `${plain(0, r.firstWord)}\n[your part starts]\n${plain(r.firstWord, r.lastWord + 1)}\n[your part ends]\n${plain(r.lastWord + 1, words.length)}`.trim();
