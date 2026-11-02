@@ -15,6 +15,7 @@ import { mathKit } from "../../engine/kits/math.ts";
 import { languagePrompt, numbered, reviewText, truthKinds } from "../../engine/language/author.ts";
 import { build, formatProblems, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
 import { loadLibrary } from "../../engine/language/library.ts";
+import { fontMeasure } from "../../engine/language/measure.ts";
 import { parse, type Item, type State } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { better, decode, hide, inventory, issuesFrom, judgeSchema, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
@@ -300,7 +301,7 @@ const mathFormulas: Kit = {
   kinds: mathKit.kinds,
   behaviors: mathKit.behaviors,
   docs: {
-    math: "`math f latex=\"\\bar{x} = \\frac{1}{n}\\sum x_i\"` real typeset math from LaTeX, as in a good textbook: fractions, roots that reach over what they cover, bars and hats, sums, powers and indices, matrices. Write each backslash once. Every symbol is its own part, and the whole formula can be lit, tagged, ringed, marked and moved like any thing. To change a formula, repeat its line with the same id and new latex, and it changes in place. For a derivation, give `states=[\"...\",\"...\"]` and step through them with `do become f state=N`: symbols that stay travel to their new places",
+    math: "`math f latex=\"\\bar{x} = \\frac{1}{n}\\sum x_i\"` real typeset math from LaTeX, as in a good textbook: fractions, roots that reach over what they cover, bars and hats, sums, powers and indices, matrices. Write each backslash once. Every symbol is its own part, and the whole formula can be lit, tagged, ringed, marked and moved like any thing. Give it a role, as words take (role=answer for a result), and it takes that role's color and the style's hand. To change a formula, repeat its line with the same id and new latex, and it changes in place. For a derivation, give `states=[\"...\",\"...\"]` and step through them with `do become f state=N`: symbols that stay travel to their new places",
     become: "`do become f state=1 frames=20`: a formula with `states=` moves to that state; matching symbols travel, the rest appear or fade",
     each: "`do each f part=frac.0.num color=accent stagger=4`: recolor, fade (opacity=) or nudge (dx= dy=) every symbol of a named part at once. Parts: word.N, line.N, frac.N.num, frac.N.den, matrix.N.row.R, matrix.N.col.C, char.X",
     swell: "`do swell f part=matrix.0.col.1 size=1.2`: a set of symbols swells and settles together, to point at it",
@@ -314,8 +315,10 @@ export function sceneContext(p: Project, theme: Theme = themeFrom(p.input.style)
 }
 
 // Build options for this project's scene. `assets` maps asset names to an image source the renderer can load.
+// Words are measured in the style's real fonts, so what is laid out is what the renderer draws.
 export function sceneBuildOptions(p: Project, assets: Record<string, string> = {}): BuildOptions {
-  return { ctx: sceneContext(p), words: p.narration!.words.map((w) => w.text), assets, library: loadLibrary(), seed: 11 };
+  const ctx = sceneContext(p);
+  return { ctx, words: p.narration!.words.map((w) => w.text), assets, library: loadLibrary(), seed: 11, measure: fontMeasure(ctx.theme) };
 }
 
 // The whole scene document, ready for `build()`.
@@ -583,7 +586,9 @@ async function recheck(job: Job, w: Written, after: Seen, before: Seen, issues: 
   return { re: r.value, usd: r.usd };
 }
 
-async function look(job: Job, start: Written, log: string[]): Promise<{ w: Written; usd: number; rounds: number }> {
+// Returns the version kept and the severe problems it still has (measured or seen), so a section that a fix could not
+// mend is rewritten or reported rather than shipped as it is.
+async function look(job: Job, start: Written, log: string[]): Promise<{ w: Written; usd: number; rounds: number; severe: Issue[] }> {
   let w = start;
   let usd = 0;
   let rounds = 0;
@@ -650,8 +655,11 @@ async function look(job: Job, start: Written, log: string[]): Promise<{ w: Writt
     judged = [...open.map(({ id: _i, source: _s, ...x }) => x), ...fresh];
     if (![...judged, ...after.measured.flatMap((m) => m.findings)].some((x) => x.severity >= 3)) break;
   }
-  return { w, usd, rounds };
+  return { w, usd, rounds, severe: severeOf(judged ?? [], seen.measured) };
 }
+
+// What still breaks a frame in a version: severe issues seen, and severe measured findings.
+export const severeOf = (judged: Judged["issues"], measured: Seen["measured"]): Issue[] => issuesFrom(judged, measured).filter((x) => x.severity >= 3);
 
 async function writeSection(job: Job, draft: string): Promise<Written & { looks: string[] }> {
   job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing`);
@@ -663,6 +671,28 @@ async function writeSection(job: Job, draft: string): Promise<Written & { looks:
     try {
       const r = await look(job, w, looks);
       [w, usd, rounds] = [r.w, usd + r.usd, rounds + r.rounds];
+      if (r.severe.length) {
+        // A fix that was no better leaves a severe problem in place. Write the part again from the start, told what went
+        // wrong, and keep whichever version has fewer severe problems; what is still severe is reported, not hidden.
+        job.log(`  ${job.range.id} look: !!! still severe after the look: ${r.severe.map((x) => x.what.slice(0, 100)).join(" | ")}. Writing it again.`);
+        const again = await compose(job, undefined, `${job.request}\n\nAn earlier version of your part had these problems on screen, and changing it did not remove them. Write your part again so that none of them can happen:\n${issueText(r.severe)}`);
+        usd += again.usd;
+        rounds += again.rounds;
+        let severe = r.severe;
+        if (!again.problems.length && again.result.scene) {
+          const seen = await see(job, again.result.scene, again.source, join(job.folder, "rewrite"));
+          const j = await judge(job, again, seen);
+          usd += j.usd;
+          const left = severeOf(j.judged.issues, seen.measured);
+          job.log(`  ${job.range.id} rewrite: ${left.length} severe (was ${r.severe.length})`);
+          if (left.length < r.severe.length) [w, severe] = [again, left];
+          looks.push(left.length < r.severe.length ? "rewritten" : "rewrite not better");
+        } else looks.push("rewrite did not build");
+        if (severe.length) {
+          job.log(`  ${job.range.id} look: !!! SEVERE problems remain: ${severe.map((x) => x.what.slice(0, 120)).join(" | ")}`);
+          w = { ...w, warnings: [...w.warnings, ...severe.map((x) => `severe on screen: ${x.what}`)] };
+        }
+      }
     } catch (e) {
       usd += (e as { usd?: number }).usd ?? 0;
       job.log(`  ${job.range.id} look: FAILED to look: ${(e as Error).message.slice(0, 200)}`);
@@ -688,6 +718,21 @@ export async function lookAgain(p: Project, sectionId: string, assets: Record<st
   const looks: string[] = [];
   const r = await look(job, { source: section.source, result: start.result, problems: [], warnings: start.warnings, usd: 0, rounds: 0 }, looks);
   return { before: section.source, after: r.w.source, looks, usd: r.usd };
+}
+
+// One section written again from the start, with build repairs and the look, as the stage would. For checking a change
+// to the guide or the engine on one section without redoing a whole video. The project itself is not changed.
+export async function writeAgain(p: Project, sectionId: string, assets: Record<string, string>): Promise<Written & { looks: string[] }> {
+  const ranges = splitSections(p.narration!.words);
+  const i = ranges.findIndex((r) => r.id === sectionId);
+  if (i < 0) throw new Error(`no section ${sectionId}`);
+  const castFile = join(dir(p), "scene", "cast.json");
+  const cast: CastPart[] = existsSync(castFile) ? JSON.parse(readFileSync(castFile, "utf8")).cast : ranges.map(() => ({ shows: "", handoff: [] }));
+  const header = [`Topic: ${topic(p)}`, p.plan?.intent ? `Why the viewer wants this: ${p.plan.intent}` : "", asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])])].filter(Boolean).join("\n\n") + "\n\n";
+  const pics = pictures(p, p.scene?.assets);
+  const opts = sceneBuildOptions(p, assets);
+  const job: Job = { p, range: ranges[i]!, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system: languagePrompt(opts), request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)), opts, folder: join(dir(p), "scene", sectionId, "again"), log: (l) => console.log(l) };
+  return writeSection(job, "");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -844,7 +889,7 @@ export async function scene(p: Project, force = false) {
           spent.usd += w.usd;
           const ok = !w.problems.length && !!w.result.scene;
           sections[i] = { id: range.id, firstWord: range.firstWord, lastWord: range.lastWord, source: w.source, ok, rounds: w.rounds, usd: +w.usd.toFixed(4) };
-          notes[i] = [...w.problems, ...w.warnings.map((x) => `hand-off: ${x}`), `looks: ${w.looks.join(", ") || "none"}`];
+          notes[i] = [...w.problems, ...w.warnings.map((x) => (x.startsWith("severe on screen") ? x : `hand-off: ${x}`)), `looks: ${w.looks.join(", ") || "none"}`];
           mkdirSync(folder, { recursive: true });
           writeFileSync(join(folder, "scene.txt"), w.source);
           writeFileSync(file, JSON.stringify({ key, section: sections[i], notes: notes[i] }, null, 1));
@@ -866,6 +911,8 @@ export async function scene(p: Project, force = false) {
         throw new Error(`scene: ${failed.length ? `sections ${failed.map((s) => s.id).join(", ")} could not be repaired` : "the joined scene does not build"}. No lesser visual stands in for them.\n${lines.join("\n")}`);
       }
       console.log(`  joined scene: ${whole.stats.states} states, ${whole.stats.parts} parts, ${whole.stats.programs} programs`);
+      const severe = notes.flatMap((n, i) => n.filter((x) => x.startsWith("severe on screen")).map((x) => `${ranges[i]!.id}: ${x}`));
+      if (severe.length) console.log(`  !!! sections shipped with severe problems on screen (a fix and a rewrite could not remove them):\n${severe.map((x) => `    ${x.slice(0, 220)}`).join("\n")}`);
     } catch (e) {
       if (spent.usd) Object.assign(e as object, { usd: spent.usd });
       throw e;

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { build } from "../../engine/language/build.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
-import { cleanCast, contract, joinSections, overPictures, pieces, sliceSource, splitSections, visibleAt } from "./scene.ts";
+import { cleanCast, contract, joinSections, overPictures, pieces, severeOf, sliceSource, splitSections, visibleAt } from "./scene.ts";
 
 // Invented narration: beats of given lengths, sentences of about eight words.
 function narration(beats: number[]) {
@@ -166,4 +166,13 @@ test("a thing left over picture after picture is noted, and one that leaves with
   const r2 = await build(clean, opts);
   assert.deepEqual(r2.problems, []);
   assert.deepEqual(overPictures(clean, r2.scene!, 0, 600), []);
+});
+
+test("a kept version still severely broken is named, measured or seen, so the section is rewritten or reported", () => {
+  const measured = [{ frame: 10, words: [], findings: [{ kind: "covered" as const, ids: ["t"], severity: 3 as const, note: "\"sample\" hidden behind something" }] }, { frame: 20, words: [], findings: [{ kind: "empty" as const, ids: [], severity: 2 as const, note: "40% used" }] }];
+  const seen = [{ frames: [1], kind: "overlap" as const, what: "a dark bar crosses the formula", want: "nothing covers it", severity: 3 as const }, { frames: [2], kind: "design" as const, what: "a little plain", want: "more color", severity: 2 as const }];
+  const severe = severeOf(seen, measured);
+  assert.deepEqual(severe.map((x) => x.source).sort(), ["measured", "seen"]);
+  assert.ok(severe.every((x) => x.severity === 3));
+  assert.deepEqual(severeOf([], [{ frame: 1, words: [], findings: [] }]), []);
 });
