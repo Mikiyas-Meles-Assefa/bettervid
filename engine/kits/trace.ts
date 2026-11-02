@@ -6,7 +6,7 @@ import { frame, playSteps, Story, STEPS_DOC, text, textWidth, truthKind, type Bo
 
 const SIZE = 46;
 const LH = SIZE * 1.5;
-const PANEL = SIZE * 0.62; // panel titles
+const PANEL = SIZE * 0.8; // panel titles
 const GAP = SIZE * 1.1;
 
 export const tracePart = {
@@ -44,7 +44,8 @@ function traceBoard(id: string, d: Record<string, unknown>, ctx: Parameters<NonN
   parts.push({ id: tracePart.cursor(id), kind: "path", parent: id, props: { x: 0, y: lineY(1), points: [-pad, -LH / 2, codeW + pad, -LH / 2, codeW + pad, LH / 2, -pad, LH / 2, -pad, -LH / 2], closed: 1, fill: "highlight", stroke: "none", opacity: 0, z: -1 } });
   lines.forEach((l, i) => {
     parts.push(text(`${id}.num.${i + 1}`, id, -numW, lineY(i + 1), String(i + 1), SIZE * 0.7, { ...mono, color: "soft", opacity: 0.45 }));
-    parts.push(text(tracePart.line(id, i + 1), id, 0, lineY(i + 1), l, SIZE, mono));
+    // Leading spaces would collapse when drawn, so indentation is kept with spaces that do not.
+    parts.push(text(tracePart.line(id, i + 1), id, 0, lineY(i + 1), l.replace(/^ +/, (m) => "\u00a0".repeat(m.length)), SIZE, mono));
   });
   const rets = log.filter((e) => e.type === "return").map((e) => `→ ${e.returned}`);
   const retW = Math.max(0, ...rets.map((r) => textWidth(r, SIZE * 0.85, true)));

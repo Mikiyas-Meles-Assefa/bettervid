@@ -117,6 +117,7 @@ test("the tracer runs code for real and records lines, variables and output", ()
   assert.equal(log[0]!.line, 8);
   const totals = log.filter((e) => e.line === 4).map((e) => e.vars.find((v) => v.name === "total")!.value);
   assert.deepEqual(totals, ["0", "3", "8"]);
+  assert.deepEqual(log.filter((e) => e.line === 4).map((e) => e.vars.find((v) => v.name === "n")?.value), ["3", "5", "2"]);
   const ret = log.find((e) => e.type === "return")!;
   assert.equal(ret.returned, "10");
   assert.equal(log.find((e) => e.line === 2)!.stack.at(-1)!.args, "xs=[3, 5, 2]");

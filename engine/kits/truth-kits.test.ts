@@ -89,6 +89,9 @@ test("wrong step timing is reported with the step list, so it can be repaired", 
   assert.match(msg, /1 3 × 6 = 18; 2 8 × 4 = 32/);
   assert.match(await bad(`@0\ndet d data=[[3,8],[4,6]]\ndo steps d from=2 to=9\n`), /steps 1 to 3/);
   assert.match(await bad(`@0\nbox b "x"\ndo steps b\n`), /not one/);
+  // Playing the same steps twice is caught, and the message says where to go on from.
+  assert.match(await bad(`@0\ndet d data=[[3,8],[4,6]]\ndo steps d to=2 each=5\n@4 keep\ndo steps d each=5\n`), /already played steps 1 to 2.*from=3/);
+  await ok(`@0\ndet d data=[[3,8],[4,6]]\ndo steps d to=2 each=5\n@4 keep\ndo steps d from=3 each=5\n`);
 });
 
 test("bad input fails loudly with a reason", async () => {
@@ -141,6 +144,7 @@ test("a trace lights each line and shows the real variables and output", async (
   const frames = Array.from({ length: end(s) }, (_, f) => f);
   assert.ok(frames.some((f) => at(s, f, tracePart.variable("t", "total")).text === "total = 8"));
   assert.ok(frames.some((f) => at(s, f, tracePart.frame("t", 2)).text === "sum(xs=[3, 5, 2])"));
+  assert.ok(frames.some((f) => at(s, f, tracePart.variable("t", "n")).text === "n = 5"), "loop variables show too");
 });
 
 test("dijkstra is callable like the others and ends on the real shortest path", async () => {

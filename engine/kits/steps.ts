@@ -112,7 +112,7 @@ export function truthKind(kind: string, make: Maker, allowed: string[]): NonNull
     const board = boardFor(kind, n.id, spec, ctx);
     const [root, ...rest] = board.parts;
     if (!root || root.id !== n.id || root.kind !== "group") throw new Error(`${kind} must start with its own group`);
-    return [{ ...root, parent: n.parent, props: { ...n.props, ...root.props, truth: kind, spec } }, ...rest];
+    return [{ ...root, parent: n.parent, props: { ...n.props, ...root.props, truth: kind, spec, played: 0 } }, ...rest];
   };
 }
 
@@ -155,6 +155,9 @@ export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
   const from = int(args.from, "from") ?? 1;
   const to = int(args.to, "to") ?? n;
   if (from < 1 || to > n || from > to) throw new Error(`${target} has steps 1 to ${n}, so from=${from} to=${to} does not fit. Its steps: ${stepList(steps)}`);
+  // Playing steps that already played would show the same work twice; a scene that wants more goes on from where it was.
+  const done = Number(tools.value(target, "played", start) ?? 0);
+  if (from <= done) throw new Error(`${target} already played steps 1 to ${done} before this moment, so this play must start at from=${done + 1}${done < n ? "" : ", but there are no steps left"}. Its steps: ${stepList(steps)}`);
   const count = to - from + 1;
   const longest = Number(args.frames ?? Math.round(ctx.theme.moveFrames * 1.2));
   let times: number[];
@@ -205,12 +208,13 @@ export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
       if (valueAt(id, prop, end) !== value) put(id, prop, value, end, Math.round(longest / 3));
     }
   }
+  tools.write({ target, prop: "played", keys: [{ at: start, value: to, ease: "step" }] });
   tools.emit({ name: "steps", at: times[0], data: { target, from, to } });
   return [];
 };
 
 // The one behavior every truth kit adds, with the one line that teaches it.
-export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` plays only those steps (counted from 1), so several states can each play a few. Every number shown is computed, never written by you";
+export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. A tall one such as trace fills more of the screen with `h=1400`";
 
 // ---------- Layout helpers shared by the kits ----------
 
@@ -230,4 +234,11 @@ export function frame(id: string, parent: string, l: number, t: number, r: numbe
 
 export function text(id: string, parent: string, x: number, y: number, value: string, size: number, more: Props = {}): NodeSpec {
   return { id, kind: "text", parent, props: { x, y, text: value, size, color: "ink", ...more } };
+}
+
+// The steps a truth thing will play, in words, for a planner deciding which spoken moment each step belongs to.
+// Throws, as the kind does, on bad input.
+export function truthSteps(kind: string, id: string, data: Record<string, unknown>, ctx: CompileContext): string[] {
+  const { w: _w, h: _h, ...rest } = data;
+  return boardFor(kind, id, JSON.stringify(rest), ctx).steps.map((s) => s.say);
 }

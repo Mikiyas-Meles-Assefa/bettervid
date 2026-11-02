@@ -503,23 +503,22 @@ export function trace(source: string, limits: TraceLimits = TRACE_LIMITS): Trace
     env.vars.set(n, { value, constant, order: order++ });
   };
 
-  const snapshot = (type: TraceEvent["type"], line: number, returned?: Val) => {
+  const snapshot = (type: TraceEvent["type"], line: number, here: Env, returned?: Val) => {
     if (events.length >= limits.events) fail(`the program takes more than ${limits.events} steps to show; give it a smaller input`, line);
-    const top = stack.at(-1)!;
     const seen = new Map<string, Binding>();
-    for (let e: Env | undefined = top.env; e; e = e.parent) for (const [n, b] of e.vars) if (!seen.has(n) && !isFn(b.value)) seen.set(n, b);
+    for (let e: Env | undefined = here; e; e = e.parent) for (const [n, b] of e.vars) if (!seen.has(n) && !isFn(b.value)) seen.set(n, b);
     const vars = [...seen].sort((a, b) => a[1].order - b[1].order).map(([name, b]) => ({ name, value: display(b.value) }));
     events.push({ type, line, stack: stack.map(({ name, args, line }) => ({ name, args, line })), vars, output: [...output], ...(type === "return" ? { returned: display(returned) } : {}) });
   };
-  const at = (line: number) => {
+  const at = (line: number, here: Env) => {
     if (++steps > limits.steps) fail(`the program ran more than ${limits.steps} steps; it may never stop`, line);
-    snapshot("line", line);
+    snapshot("line", line, here);
   };
   const size = (v: Val[] | string, line: number) => {
     if (v.length > limits.size) fail(`a list or string grew past ${limits.size} items`, line);
   };
 
-  const call = (f: Val, args: Val[], line: number): Val => {
+  const call = (f: Val, args: Val[], line: number, here: Env): Val => {
     if (!isFn(f)) return fail(`${display(f)} is not a function`, line);
     if (f.kind === "builtin") return f.call(args, line);
     if (stack.length >= limits.depth) fail(`calls went more than ${limits.depth} deep`, line);
@@ -533,7 +532,7 @@ export function trace(source: string, limits: TraceLimits = TRACE_LIMITS): Trace
     } finally {
       stack.pop();
     }
-    snapshot("return", line, result);
+    snapshot("return", line, here, result);
     return result;
   };
 
@@ -562,20 +561,20 @@ export function trace(source: string, limits: TraceLimits = TRACE_LIMITS): Trace
       case "block":
         return block(s.body, { vars: new Map(), parent: env, frame: env.frame });
       case "expr":
-        at(s.line);
+        at(s.line, env);
         evaluate(s.e, env);
         return;
       case "decl":
-        at(s.line);
+        at(s.line, env);
         for (const [n, e] of s.list) declare(env, n, e ? evaluate(e, env) : undefined, s.kind === "const", s.line);
         return;
       case "if":
-        at(s.line);
+        at(s.line, env);
         if (truthy(evaluate(s.test, env))) return exec(s.then, env);
         return s.else ? exec(s.else, env) : undefined;
       case "while":
         for (;;) {
-          at(s.line);
+          at(s.line, env);
           if (!truthy(evaluate(s.test, env))) return;
           const r = loopBody(s.body, env);
           if (r === "break") return;
@@ -583,14 +582,14 @@ export function trace(source: string, limits: TraceLimits = TRACE_LIMITS): Trace
         }
       case "for": {
         const scope: Env = { vars: new Map(), parent: env, frame: env.frame };
-        at(s.line);
+        at(s.line, env);
         if (s.init) {
           if (s.init.k === "decl") for (const [n, e] of s.init.list) declare(scope, n, e ? evaluate(e, scope) : undefined, s.init.kind === "const", s.line);
           else if (s.init.k === "expr") evaluate(s.init.e, scope);
         }
         for (let first = true; ; first = false) {
           if (!first) {
-            at(s.line);
+            at(s.line, scope);
             if (s.update) evaluate(s.update, scope);
           }
           if (s.test && !truthy(evaluate(s.test, scope))) return;
@@ -600,27 +599,27 @@ export function trace(source: string, limits: TraceLimits = TRACE_LIMITS): Trace
         }
       }
       case "forof": {
-        at(s.line);
+        at(s.line, env);
         const it = evaluate(s.iter, env);
         const list = Array.isArray(it) ? it : typeof it === "string" ? [...it] : fail(`for...of needs a list or a string, not ${display(it)}`, s.line);
         for (let i = 0; i < list.length; i++) {
-          if (i > 0) at(s.line);
+          if (i > 0) at(s.line, env);
           const scope: Env = { vars: new Map(), parent: env, frame: env.frame };
           declare(scope, s.name, list[i], s.kind === "const", s.line);
           const r = loopBody(s.body, scope);
           if (r === "break") return;
           if (r) return r;
         }
-        if (list.length) at(s.line);
+        if (list.length) at(s.line, env);
         return;
       }
       case "return":
-        at(s.line);
+        at(s.line, env);
         if (stack.length < 2) fail("return outside a function", s.line);
         return new Signal("return", s.e ? evaluate(s.e, env) : undefined);
       case "break":
       case "continue":
-        at(s.line);
+        at(s.line, env);
         return new Signal(s.k);
     }
   };
@@ -782,7 +781,7 @@ export function trace(source: string, limits: TraceLimits = TRACE_LIMITS): Trace
         return getProp(evaluate(e.obj, env), key(evaluate(e.index, env), e.line), e.line);
       case "call": {
         const f = evaluate(e.callee, env);
-        return call(f, e.args.map((a) => evaluate(a, env)), e.line);
+        return call(f, e.args.map((a) => evaluate(a, env)), e.line, env);
       }
     }
   };
@@ -790,6 +789,6 @@ export function trace(source: string, limits: TraceLimits = TRACE_LIMITS): Trace
   stack.push({ name: "program", args: "", line: 0, env: global });
   block(program, global);
   const last = events.at(-1);
-  snapshot("end", last?.line ?? 1);
+  snapshot("end", last?.line ?? 1, global);
   return events;
 }

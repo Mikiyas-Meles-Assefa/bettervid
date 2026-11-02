@@ -92,18 +92,19 @@ function matrixBoard(id: string, d: Record<string, unknown>): Board {
   const parts: NodeSpec[] = [{ id, kind: "group", props: {} }];
   const g = grid(id, id, 0, 0, states, { edge: "bracket", aug });
   parts.push(...g.nodes);
-  const opX = g.right + SIZE * 0.6;
+  // The operation is written under the matrix; the rows it touches light up, so the eye finds them.
+  const opY = g.bottom + LINE * 1.1;
   const opW = Math.max(0, ...log.map((e) => textWidth(e.label, LINE)));
-  parts.push(text(linalgPart.op(id), id, opX, g.at(1, 1).y, "", LINE, { anchor: "start", color: "accent", opacity: 0, weight: 700 }));
-  parts.push(frame(`${id}.frame`, id, g.left, g.top, opX + opW + 10, g.bottom));
+  const mid = (g.left + g.right) / 2;
+  parts.push(text(linalgPart.op(id), id, mid, opY, "", LINE, { color: "accent", opacity: 0, weight: 700 }));
+  parts.push(frame(`${id}.frame`, id, Math.min(g.left, mid - opW / 2), g.top, Math.max(g.right, mid + opW / 2), opY + LINE * 0.7));
   const s = new Story(parts);
   const rowY = (r: number) => g.at(r, 1).y;
   for (const e of log) {
     s.step(e.label);
     const op = e.op;
     const involved = op.type === "add" ? [op.row, op.src] : e.rows;
-    const y = e.rows.reduce((a, r) => a + rowY(r), 0) / e.rows.length;
-    s.set(linalgPart.op(id), "text", e.label, 0, 0).set(linalgPart.op(id), "y", y, 0, 0.3).set(linalgPart.op(id), "opacity", 1, 0, 0.25);
+    s.set(linalgPart.op(id), "text", e.label, 0, 0).set(linalgPart.op(id), "opacity", 1, 0, 0.25);
     for (let r = 1; r <= rows; r++) if (!involved.includes(r)) s.flash(linalgPart.row(id, r), "opacity", 0.3);
     for (const r of e.rows) for (let c = 1; c <= cols; c++) s.flash(linalgPart.cell(id, r, c), "color", "accent");
     if (op.type === "swap") {
