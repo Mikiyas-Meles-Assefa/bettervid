@@ -81,7 +81,13 @@ function paintFill(hand: Pt[], color: string, material: number, drawn: number, s
   return layers;
 }
 
-export function paintPath(a: Props, id: string, style: StyleSpec, surface: string, pulseDefault: string): Layer[] {
+// `glowLevel` (0 to 1, default 1) turns a part's own glow down without touching the style: a dimmed neon tube keeps
+// its hue and loses its light, and a role's `glow` is passed here by whoever draws roles.
+const glowAt = (style: StyleSpec, level: number): StyleSpec =>
+  level === 1 ? style : { ...style, line: { ...style.line, glow: style.line.glow * level }, fill: { ...style.fill, glow: style.fill.glow * level }, type: { ...style.type, glow: style.type.glow * level } };
+
+export function paintPath(a: Props, id: string, given: StyleSpec, surface: string, pulseDefault: string): Layer[] {
+  const style = glowAt(given, Math.max(0, Math.min(1, num(a.glowLevel, 1))));
   const { line, fill } = style;
   const seed = hash(id);
   const closed = !!num(a.closed);
@@ -105,7 +111,8 @@ export function paintPath(a: Props, id: string, style: StyleSpec, surface: strin
 
 export type TextPaint = { text: string; family: string; size: number; weight: number; spacing: number; color: string; rotate?: string; dy?: string; dry: boolean; glow: { width: number; opacity: number }[] };
 
-export function paintText(a: Props, id: string, theme: Theme, style: StyleSpec, surface: string): TextPaint {
+export function paintText(a: Props, id: string, theme: Theme, given: StyleSpec, surface: string): TextPaint {
+  const style = glowAt(given, Math.max(0, Math.min(1, num(a.glowLevel, 1))));
   const { type } = style;
   const size = num(a.size, 60);
   const font = String(a.font ?? "body");
@@ -142,6 +149,6 @@ export function paintSurface(style: StyleSpec, color: string, theme: Theme): Sur
   if (surface.light) out.light = { color: surface.kind === "night" ? blend(color, theme.colors.accent ?? ink, 0.35) : blend(color, "#ffffff", dark ? 0.3 : 0.8), opacity: surface.light };
   if (surface.grain) out.grain = { color: dark ? ink : blend(ink, color, 0.3), opacity: surface.grain * (dark ? 0.3 : 0.16) };
   if (surface.smudge) out.smudge = { color: dark ? ink : blend(ink, color, 0.55), opacity: surface.smudge * (dark ? 0.06 : 0.05) }; // barely there: a stronger one reads as an oily film
-  if (surface.grid) out.grid = { color: ink, spacing: surface.grid, major: surface.major, opacity: 0.16 };
+  if (surface.grid) out.grid = { color: ink, spacing: surface.grid, major: surface.major, opacity: 0.11 }; // quiet enough that words crossing a line still read
   return out;
 }

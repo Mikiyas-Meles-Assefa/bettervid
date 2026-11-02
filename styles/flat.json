@@ -18,8 +18,8 @@
     "diagram": "Flat vector explainer diagram: simple clear shapes, limited palette of teal, navy and warm orange, plain cream background, one idea only."
   },
   "realAssets": "proof",
-  "grain": 0.25,
-  "vignette": 0.3,
+  "grain": 0.06,
+  "vignette": 0,
   "voice": {
     "id": "JBFqnCBsd6RMkjVDRZzb",
     "model": "eleven_v4"
@@ -29,10 +29,245 @@
     "weight": 1.1
   },
   "render": {
-    "line": { "pen": "vector", "weight": 1.1 },
-    "fill": { "kind": "solid", "outline": 0 },
-    "surface": { "kind": "plain" },
-    "type": { "title": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif", "body": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif", "bold": 800 },
-    "motion": { "feel": "springy" }
+    "line": {
+      "pen": "vector",
+      "weight": 1.1
+    },
+    "fill": {
+      "kind": "solid",
+      "outline": 0
+    },
+    "surface": {
+      "kind": "plain"
+    },
+    "type": {
+      "title": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif",
+      "body": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif",
+      "bold": 800,
+      "mono": "\"PT Mono\", Menlo, \"Liberation Mono\", monospace"
+    },
+    "motion": {
+      "feel": "springy"
+    }
+  },
+  "design": {
+    "colors": {
+      "block": "#ebe1cc",
+      "orangeDeep": "#a04512",
+      "slate": "#53637a",
+      "red": "#c0392b",
+      "teal": "#136660"
+    },
+    "scale": {
+      "base": 0.044,
+      "ratio": 1.333
+    },
+    "roles": {
+      "title": {
+        "color": "ink",
+        "step": 3,
+        "weight": 800,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "heading": {
+        "color": "orangeDeep",
+        "step": 0,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "body": {
+        "color": "ink",
+        "step": 0,
+        "weight": 500,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "label": {
+        "color": "ink",
+        "step": -1,
+        "weight": 600,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "note": {
+        "color": "slate",
+        "step": -1,
+        "weight": 500,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "key": {
+        "color": "ink",
+        "step": 1,
+        "weight": 700,
+        "font": "body",
+        "case": "asis",
+        "glow": 0,
+        "back": "highlight"
+      },
+      "answer": {
+        "color": "orangeDeep",
+        "step": 2,
+        "weight": 800,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "muted": {
+        "color": "slate",
+        "step": 0,
+        "weight": 500,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "wrong": {
+        "color": "red",
+        "step": 0,
+        "weight": 600,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "code": {
+        "color": "teal",
+        "step": 0,
+        "weight": 400,
+        "font": "mono",
+        "case": "asis",
+        "glow": 0
+      },
+      "caption": {
+        "color": "paper",
+        "step": 0,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0,
+        "back": "ink"
+      },
+      "panel": {
+        "color": "ink",
+        "back": "block",
+        "stroke": 1
+      },
+      "pointer": {
+        "color": "orangeDeep",
+        "stroke": 1.2,
+        "glow": 0
+      }
+    },
+    "surfaces": {
+      "paper": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "pointer"
+        ]
+      },
+      "block": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "answer",
+          "muted",
+          "wrong",
+          "code"
+        ]
+      },
+      "highlight": {
+        "text": "ink",
+        "roles": [
+          "key",
+          "body",
+          "label"
+        ]
+      },
+      "accent": {
+        "text": "ink",
+        "roles": []
+      },
+      "ink": {
+        "text": "paper",
+        "roles": [
+          "caption"
+        ]
+      }
+    },
+    "elements": {
+      "panel": {
+        "radius": 0.06,
+        "edge": "none",
+        "edgeWidth": 0,
+        "shadow": 0,
+        "rotate": 0,
+        "pad": 0.8
+      },
+      "caption": {
+        "rotate": 0,
+        "pad": 0.5,
+        "rule": "accent",
+        "ruleWidth": 10,
+        "edge": "none"
+      },
+      "label": {
+        "back": "ink",
+        "leader": "ink",
+        "leaderWidth": 3
+      },
+      "table": {
+        "lines": "rows",
+        "rule": "slate",
+        "ruleWidth": 2,
+        "header": "label",
+        "zebra": "block"
+      },
+      "pointer": {
+        "head": "solid",
+        "ring": "clean",
+        "width": 6
+      },
+      "highlight": {
+        "kind": "marker",
+        "color": "highlight",
+        "opacity": 1
+      },
+      "dim": {
+        "amount": 0.45,
+        "keepHue": false,
+        "glow": 0,
+        "stroke": 1
+      }
+    },
+    "picture": {
+      "saturation": 0.9,
+      "contrast": 1.04,
+      "brightness": 1.0,
+      "tint": "paper",
+      "tintAmount": 0.08,
+      "border": "none",
+      "borderWidth": 0,
+      "shadow": 0,
+      "rotate": 0
+    }
   }
 }

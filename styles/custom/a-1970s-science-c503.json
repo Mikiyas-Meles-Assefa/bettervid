@@ -4,8 +4,8 @@
   "palette": {
     "paper": "#f1e6c2",
     "ink": "#2a2013",
-    "accent": "#b94a12",
-    "highlight": "#67742e"
+    "accent": "#9c3c0b",
+    "highlight": "#56621f"
   },
   "fonts": {
     "title": "Rockwell",
@@ -49,7 +49,7 @@
     "type": {
       "title": "Rockwell, \"Liberation Serif\", serif",
       "body": "Charter, \"Liberation Serif\", serif",
-      "mono": "\"Courier New\", \"Liberation Mono\", monospace",
+      "mono": "\"PT Mono\", \"Courier New\", \"Liberation Mono\", monospace",
       "bold": 800,
       "tracking": 0.02,
       "case": "upper"
@@ -64,5 +64,216 @@
     "id": "JBFqnCBsd6RMkjVDRZzb",
     "model": "eleven_v4"
   },
-  "description": "a 1970s science textbook"
+  "description": "a 1970s science textbook",
+  "design": {
+    "colors": {
+      "plate": "#e7d8a6",
+      "faded": "#7c6a4e",
+      "umber": "#54442e",
+      "cream": "#fbf4dc"
+    },
+    "scale": {
+      "base": 0.042,
+      "ratio": 1.333
+    },
+    "roles": {
+      "title": {
+        "color": "ink",
+        "step": 3,
+        "weight": 800,
+        "font": "title",
+        "case": "upper",
+        "glow": 0
+      },
+      "heading": {
+        "color": "accent",
+        "step": 0,
+        "weight": 800,
+        "font": "title",
+        "case": "upper",
+        "glow": 0
+      },
+      "body": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "label": {
+        "color": "ink",
+        "step": -1,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "note": {
+        "color": "umber",
+        "step": -1,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "key": {
+        "color": "accent",
+        "step": 1,
+        "weight": 800,
+        "font": "title",
+        "case": "upper",
+        "glow": 0
+      },
+      "answer": {
+        "color": "accent",
+        "step": 2,
+        "weight": 800,
+        "font": "title",
+        "case": "upper",
+        "glow": 0
+      },
+      "muted": {
+        "color": "faded",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "wrong": {
+        "color": "faded",
+        "step": 0,
+        "weight": 400,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "code": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "mono",
+        "case": "asis",
+        "glow": 0
+      },
+      "caption": {
+        "color": "ink",
+        "step": 0,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0,
+        "back": "plate"
+      },
+      "panel": {
+        "color": "ink",
+        "back": "plate",
+        "stroke": 1
+      },
+      "pointer": {
+        "color": "accent",
+        "stroke": 1,
+        "glow": 0
+      }
+    },
+    "surfaces": {
+      "paper": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "pointer"
+        ]
+      },
+      "plate": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "key",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "caption"
+        ]
+      },
+      "accent": {
+        "text": "cream",
+        "roles": []
+      },
+      "highlight": {
+        "text": "cream",
+        "roles": []
+      }
+    },
+    "elements": {
+      "panel": {
+        "radius": 0,
+        "edge": "none",
+        "edgeWidth": 0,
+        "shadow": 0,
+        "rotate": 0,
+        "pad": 0.8
+      },
+      "caption": {
+        "rotate": 0,
+        "pad": 0.45,
+        "rule": "accent",
+        "ruleWidth": 10,
+        "edge": "none"
+      },
+      "label": {
+        "back": "plate",
+        "leader": "ink",
+        "leaderWidth": 2
+      },
+      "table": {
+        "lines": "rows",
+        "rule": "ink",
+        "ruleWidth": 2,
+        "header": "label",
+        "zebra": "plate"
+      },
+      "pointer": {
+        "head": "solid",
+        "ring": "clean",
+        "width": 5
+      },
+      "highlight": {
+        "kind": "underline",
+        "color": "accent",
+        "opacity": 1
+      },
+      "dim": {
+        "amount": 0.45,
+        "keepHue": false,
+        "glow": 0,
+        "stroke": 0.8
+      }
+    },
+    "picture": {
+      "saturation": 0.75,
+      "contrast": 0.96,
+      "brightness": 1.0,
+      "tint": "cream",
+      "tintAmount": 0.25,
+      "border": "cream",
+      "borderWidth": 10,
+      "shadow": 0,
+      "rotate": 0
+    }
+  }
 }

@@ -2,15 +2,15 @@
   "name": "collage",
   "label": "Documentary collage",
   "palette": {
-    "paper": "#e9dfc9",
-    "ink": "#1d1b18",
-    "accent": "#c8372d",
-    "highlight": "#ffd93d"
+    "paper": "#efe9dc",
+    "ink": "#161412",
+    "accent": "#ac2a1a",
+    "highlight": "#f2c53d"
   },
   "fonts": {
-    "caption": "Arial Black",
-    "title": "Georgia",
-    "body": "Georgia"
+    "caption": "Futura",
+    "title": "Big Caslon",
+    "body": "Futura"
   },
   "art": {
     "scene": "Documentary still: realistic, natural light, muted archival color, the subject sharp and instantly recognizable.",
@@ -18,8 +18,8 @@
     "diagram": "A clean educational illustration: simple clear shapes, strong contrast, plain pale background, one idea only."
   },
   "realAssets": "prefer",
-  "grain": 0,
-  "vignette": 0.55,
+  "grain": 0.1,
+  "vignette": 0,
   "voice": {
     "id": "JBFqnCBsd6RMkjVDRZzb",
     "model": "eleven_v4"
@@ -29,10 +29,261 @@
     "weight": 1
   },
   "render": {
-    "line": { "pen": "vector", "wobble": 1.2, "weight": 1.05 },
-    "fill": { "kind": "solid", "shadow": 9, "outline": 0.4 },
-    "surface": { "kind": "paper", "grain": 0.25, "smudge": 0.1 },
-    "type": { "title": "Georgia, \"Liberation Serif\", serif", "body": "Georgia, \"Liberation Serif\", serif" },
-    "motion": { "feel": "snappy", "enter": "pop" }
+    "line": {
+      "pen": "vector",
+      "wobble": 1.2,
+      "weight": 1.05
+    },
+    "fill": {
+      "kind": "solid",
+      "shadow": 6,
+      "outline": 0.4
+    },
+    "surface": {
+      "kind": "paper",
+      "grain": 0.22,
+      "smudge": 0.04,
+      "light": 0
+    },
+    "type": {
+      "title": "\"Big Caslon\", \"Hoefler Text\", Georgia, \"Liberation Serif\", serif",
+      "body": "Futura, \"Avenir Next\", \"Helvetica Neue\", \"Liberation Sans\", sans-serif",
+      "mono": "\"PT Mono\", Menlo, \"Liberation Mono\", monospace",
+      "tracking": 0.01
+    },
+    "motion": {
+      "feel": "snappy",
+      "enter": "pop"
+    }
+  },
+  "design": {
+    "colors": {
+      "strip": "#1b1916",
+      "cream": "#f7f2e6",
+      "kraft": "#e4d6b8",
+      "tag": "#fbf8f1",
+      "faded": "#73685a",
+      "sepia": "#54493c",
+      "warm": "#ffe9c4"
+    },
+    "scale": {
+      "base": 0.044,
+      "ratio": 1.333
+    },
+    "roles": {
+      "title": {
+        "color": "ink",
+        "step": 3,
+        "weight": 500,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "heading": {
+        "color": "accent",
+        "step": 0,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "body": {
+        "color": "ink",
+        "step": 0,
+        "weight": 500,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "label": {
+        "color": "ink",
+        "step": -1,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0
+      },
+      "note": {
+        "color": "sepia",
+        "step": -1,
+        "weight": 500,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "key": {
+        "color": "ink",
+        "step": 1,
+        "weight": 700,
+        "font": "body",
+        "case": "asis",
+        "glow": 0,
+        "back": "highlight"
+      },
+      "answer": {
+        "color": "accent",
+        "step": 2,
+        "weight": 500,
+        "font": "title",
+        "case": "asis",
+        "glow": 0
+      },
+      "muted": {
+        "color": "faded",
+        "step": 0,
+        "weight": 500,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "wrong": {
+        "color": "faded",
+        "step": 0,
+        "weight": 500,
+        "font": "body",
+        "case": "asis",
+        "glow": 0
+      },
+      "code": {
+        "color": "ink",
+        "step": 0,
+        "weight": 400,
+        "font": "mono",
+        "case": "asis",
+        "glow": 0
+      },
+      "caption": {
+        "color": "cream",
+        "step": 0,
+        "weight": 700,
+        "font": "body",
+        "case": "upper",
+        "glow": 0,
+        "back": "strip"
+      },
+      "panel": {
+        "color": "ink",
+        "back": "kraft",
+        "stroke": 1
+      },
+      "pointer": {
+        "color": "accent",
+        "stroke": 1.3,
+        "glow": 0
+      }
+    },
+    "surfaces": {
+      "paper": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "answer",
+          "muted",
+          "wrong",
+          "code",
+          "pointer"
+        ]
+      },
+      "kraft": {
+        "text": "ink",
+        "roles": [
+          "title",
+          "heading",
+          "body",
+          "label",
+          "note",
+          "answer",
+          "muted",
+          "wrong",
+          "code"
+        ]
+      },
+      "tag": {
+        "text": "ink",
+        "roles": [
+          "label",
+          "body",
+          "note"
+        ]
+      },
+      "highlight": {
+        "text": "ink",
+        "roles": [
+          "key",
+          "body",
+          "label"
+        ]
+      },
+      "strip": {
+        "text": "cream",
+        "roles": [
+          "caption"
+        ]
+      },
+      "accent": {
+        "text": "cream",
+        "roles": []
+      }
+    },
+    "elements": {
+      "panel": {
+        "radius": 0,
+        "edge": "none",
+        "edgeWidth": 0,
+        "shadow": 0.35,
+        "rotate": -1,
+        "pad": 0.8
+      },
+      "caption": {
+        "rotate": -1,
+        "pad": 0.45,
+        "rule": "accent",
+        "ruleWidth": 12,
+        "edge": "none"
+      },
+      "label": {
+        "back": "tag",
+        "leader": "ink",
+        "leaderWidth": 3
+      },
+      "table": {
+        "lines": "rows",
+        "rule": "ink",
+        "ruleWidth": 2,
+        "header": "label",
+        "zebra": "none"
+      },
+      "pointer": {
+        "head": "open",
+        "ring": "hand",
+        "width": 7
+      },
+      "highlight": {
+        "kind": "marker",
+        "color": "highlight",
+        "opacity": 0.92
+      },
+      "dim": {
+        "amount": 0.45,
+        "keepHue": false,
+        "glow": 0,
+        "stroke": 0.8
+      }
+    },
+    "picture": {
+      "saturation": 0.7,
+      "contrast": 1.06,
+      "brightness": 1.0,
+      "tint": "warm",
+      "tintAmount": 0.2,
+      "border": "tag",
+      "borderWidth": 14,
+      "shadow": 0.4,
+      "rotate": 1.5
+    }
   }
 }

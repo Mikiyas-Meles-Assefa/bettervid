@@ -4,6 +4,7 @@
 // pipeline still reads and which mean something else there.
 import type { Ease, FillKind, FillStyle, LineStyle, MotionFeel, MotionStyle, Pen, ReadStyle, StyleSpec, SurfaceKind, SurfaceStyle, TypeStyle } from "../core/types.ts";
 import { contrast } from "./color.ts";
+import { type Design, resolveDesign } from "./design.ts";
 
 export const PENS: Record<Pen, Omit<LineStyle, "pen">> = {
   vector: { weight: 1, wobble: 0, pressure: 0, nib: 0, passes: 1, grain: 0, glow: 0, overshoot: 0 },
@@ -118,6 +119,13 @@ export function resolveStyle(file: StyleFileLike): StyleSpec {
   return { line, fill, surface, type, motion, read };
 }
 
+// The whole file, render block and design layer, as the engine will use it. Throws with the exact problem when the
+// style is incomplete or could put unreadable words on screen, so nothing half designed reaches a video.
+export function checkStyleFile(file: StyleFileLike & { design?: Raw }): { style: StyleSpec; design: Design } {
+  const style = resolveStyle(file);
+  return { style, design: resolveDesign(file, style) };
+}
+
 // Given to a model that turns a person's description into a style file.
 export const STYLE_GUIDE = `A style is a JSON file. Add a "render" object, and write only what you want to change from the presets.
 Colors go in "palette" as hex: paper (the background), ink (lines and words), accent (what matters), highlight.
@@ -132,5 +140,35 @@ render.read:    optional. text = the smallest text, as a share of the frame's sh
 
 Texture goes on the surface and on colored shapes. Images are never touched, and nothing is ever laid over the whole frame.
 
-Example, "pencil on grey paper, unhurried":
+The "design" object is the style's design system. Scenes never pick colors, sizes or cards: they say what a thing is
+(its role) and the style decides how it looks. Every part is required.
+
+design.colors:   extra named hex colors beyond the palette, such as a panel surface, a caption strip, a faded ink.
+design.scale:    { base, ratio }. base = body text size as a share of the frame's shorter side (0.03 to 0.07); ratio =
+                 the step between sizes (1.1 to 1.62, for example 1.25 or 1.333). Every size is base * ratio ^ step.
+design.roles:    one look for each of: ${"title, heading, body, label, note, key, answer, muted, wrong, code, panel, caption, pointer"}.
+                 Text roles (all but panel and pointer) need color, step (a whole number from -2 to 6), weight (100 to
+                 900), font (title | body | mono), case (asis | upper), glow (0 to 1); back is optional (a surface the
+                 role brings with it, such as a marker highlight behind key words). No text may be smaller than
+                 render.read.text. caption needs a back: words over a picture always sit on something. panel needs a
+                 back (what a panel is made of) and stroke. pointer needs color and stroke. muted may set opacity
+                 (0.6 to 1), but should step back with color first, in the style's own way: faded ink, rubbed chalk, a
+                 tube at lower power; never plain grey.
+design.surfaces: what may sit on what. A key per surface color ("paper" is the page and is required; also each panel or
+                 caption back, and each color shapes are filled with): { text, roles }. text = the ink for words placed
+                 on it; roles = the roles that keep their own color there. Every pairing is measured against the surface
+                 as really drawn (light, smudge, grain, grid, fill texture): words need contrast 4.5, large text (step
+                 size of 0.06 or more), muted, wrong and pointers need 3. Words on a bright fill need a dark ink.
+design.elements: panel { radius 0 to 0.5, edge (color or none), edgeWidth, shadow 0 to 1, rotate -4 to 4, pad 0.3 to 2 },
+                 caption { rotate, pad 0.2 to 1.5, rule (a colored bar at its start, or none), ruleWidth 0 to 24, edge },
+                 label { back (what a label sits on over a picture, a listed surface), leader (color or none), leaderWidth },
+                 table { lines none | header | rows | grid, rule (a color that shows on the page), ruleWidth 0.5 to 8, header (a text role), zebra (color or none) },
+                 pointer { head open | solid | none, ring hand | clean, width 2 to 16 },
+                 highlight { kind marker | underline | ring | box | glow, color, opacity 0.2 to 1 } (a marker sits behind words, so its color must be a surface),
+                 dim { amount 0.1 to 0.8, keepHue (true: lower the light and keep the hue, as a neon tube; false: fade toward the page), glow 0 to 1, stroke 0.4 to 1 }.
+design.picture:  how every picture is treated so archival photos and generated pictures look like one piece:
+                 saturation 0 to 1.6, contrast 0.8 to 1.3, brightness 0.8 to 1.2, tint (a color name), tintAmount 0 to 0.5,
+                 border (color or none), borderWidth 0 to 40 px, shadow 0 to 1, rotate 0 to 4 degrees.
+
+Example render block, "pencil on grey paper, unhurried":
 { "line": { "pen": "ink", "pressure": 0.3, "grain": 0.4, "passes": 2 }, "fill": { "kind": "hatch" }, "surface": { "kind": "paper" }, "motion": { "feel": "calm" } }`;
