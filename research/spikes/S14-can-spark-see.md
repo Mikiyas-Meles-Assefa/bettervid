@@ -96,7 +96,17 @@ The critic stage now judges engine videos the same way on the final render, thre
 `scripts/look-run.ts` runs the new look on sections already written, with no rewriting from scratch.
 
 - **Standard deviation, s6 (the cream table card):** the judge gave design 2 of 5 ("the pale panel behind the table ... makes the table unreadable") and named one issue; the measures added the contrast finding ("Data" 1.4:1, "x - mean" 1.3:1, values 1.2:1). The fix removed `back=soft` from the table on its 7 states and changed nothing else. Recheck: both issues fixed, no new issue, design 4 of 5, prefers the change. Measured weight 30 to 0, seen 3 to 0. Kept, and the look stopped after one round. $0.099. Frames: `projects/<id>/scene/s6/look1/shown` (before) and `look1b/shown` (after), copied projects only.
-- **Standard deviation, s8 (table dimmed to 87%)** and **merge sort, s6 and s2 (title at 1.2:1, notes that do not show, 88 to 90% dimmed):** were still running when this was written. Logs: `media/spikes/s14/look-stats.log`, `media/spikes/s14/look-merge.log`; results land in each project's `scene/look-run.json`.
+- **Standard deviation, s8 (table dimmed to 87%):** settled in one round. The judge named nothing itself; the 4 issues came from the measurements (87% dimmed, an "=" at 2.0:1, writing over writing mid-change, empty space). Measured weight 8 to 1, kept, $0.111.
+- **Merge sort, s6 (title and notes at about 1.2:1, heavily dimmed):** 13 issues, design 2/5. Round 1 kept (measured 45 to 27, seen 12 to 4, after one build repair); round 2 changed nothing measurable and seen problems rose from 4 to 5, so it was rejected and the look stopped, $0.242. Still open: content in the top third, the two halves not shown as groups, a pointer emoji at 1.1:1.
+- **Merge sort, s2:** started at design 3/5 with 4 issues (pink text on bright boxes at 2.5:1); the run reached its spending cap before an outcome was logged.
+
+| Section | Rounds | Measured | Seen | Result | Cost |
+|---|---|---|---|---|---|
+| Stats s6 | 1 | 30 to 0 | 3 to 0 | kept | $0.099 |
+| Stats s8 | 1 | 8 to 1 | 0 to 0 | kept | $0.111 |
+| Merge s6 | 2 | 45 to 27 | 12 to 4 | round 1 kept, round 2 rejected | $0.242 |
+
+Logs: `media/spikes/s14/look-stats.log`, `media/spikes/s14/look-merge.log`; results in each project's `scene/look-run.json`.
 
 ## Spend
 
