@@ -9,9 +9,10 @@ export type Props = Record<string, Value>;
 // When something happens. Tied to a spoken word wherever possible, so visuals follow the voice if narration changes.
 export type Moment = number | { word: number; offset?: number }; // a number is a frame
 
-export type Ease = "linear" | "smooth" | "in" | "out" | "spring" | "bounce" | "step";
+export type Ease = "linear" | "smooth" | "in" | "out" | "spring" | "bounce" | "step" | "anticipate" | "overshoot" | "swing" | "elastic";
 export type Key = { at: number; value: Value; ease?: Ease };
-export type Track = { target: string; prop: string; keys: Key[] };
+// With no `blend` a track replaces the value. "add" and "multiply" tracks are offsets on top of it (engine/motion/compose.ts).
+export type Track = { target: string; prop: string; keys: Key[]; blend?: "add" | "multiply" };
 
 export type Primitive = "group" | "path" | "text" | "image";
 
@@ -26,7 +27,8 @@ export type Step = {
   enter?: "fade" | "draw" | "pop" | "none";
   set?: Record<string, Props>;
   remove?: string[];
-  move?: { frames?: number; ease?: Ease };
+  // `blend: "add"` sums with moves already running instead of taking over. `stagger` delays each added or set target by that many frames.
+  move?: { frames?: number; ease?: Ease; blend?: "takeover" | "add"; stagger?: number };
   play?: { behavior: string; target: string; args?: Record<string, Value> }[];
   emit?: SceneEvent[]; // for sound and other listeners
 };
@@ -62,7 +64,31 @@ export type Kit = {
   kinds?: Record<string, (node: NodeSpec, ctx: CompileContext) => NodeSpec[]>;
   behaviors?: Record<string, Behavior>;
 };
-export type Behavior = (a: { target: string; start: number; args: Record<string, Value>; ctx: CompileContext; now: (prop: string) => Value | undefined }) => Track[];
+export type Behavior = ((a: { target: string; start: number; args: Record<string, Value>; ctx: CompileContext; now: (prop: string) => Value | undefined; tools: MotionTools }) => Track[]) & {
+  selects?: boolean; // takes a whole pattern such as "g.node.*" as its target, instead of running once per match
+};
+
+// Reads the finished scene while constraints are solved, so a follower can see moves written after it.
+export type Reader = { value: (id: string, prop: string, frame: number) => Value | undefined; matrix: (id: string, frame: number) => number[] };
+// A property worked out from other things, frame by frame, from `start` to `end`. Pure: it may only use what it is given.
+export type Constraint = { target: string; props: string[]; start: number; end: number; solve: (frame: number, read: Reader, own: (prop: string) => Value | undefined) => Record<string, Value> };
+
+// What a behavior can ask of the scene while it is compiled. `value` and `matrix` see what has been written so far.
+export type MotionTools = {
+  select: (pattern: string) => string[]; // "*" is one dotted part, "**" is any depth
+  has: (id: string) => boolean;
+  kind: (id: string) => Primitive;
+  parent: (id: string) => string | undefined;
+  props: (id: string) => Props; // what it starts as, before any track
+  children: (id: string) => string[];
+  value: (id: string, prop: string, frame: number) => Value | undefined;
+  matrix: (id: string, frame: number) => number[];
+  spawn: (node: NodeSpec, place?: { before?: string }) => void; // adds a part with no entrance
+  run: (behavior: string, target: string, start: number, args?: Record<string, Value>) => void;
+  write: (track: Track) => void;
+  constrain: (c: Constraint) => void;
+  emit: (event: SceneEvent) => void;
+};
 
 // A truth engine does real work and reports what happened, in order. Animations follow this record, so they cannot lie.
 export type TruthEvent<T = Record<string, unknown>> = { type: string } & T;

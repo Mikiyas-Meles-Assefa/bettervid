@@ -16,4 +16,11 @@ export const EASES: Record<Ease, (t: number) => number> = {
     return n * (t -= 2.625 / d) * t + 0.984375;
   },
   step: (t) => (t < 1 ? 0 : 1),
+  // Pulls back before it goes.
+  anticipate: (t) => t * t * (2.7 * t - 1.7),
+  // Goes too far, then comes back.
+  overshoot: (t) => 1 + 2.7 * (t - 1) ** 3 + 1.7 * (t - 1) ** 2,
+  // Both of the above.
+  swing: (t) => (t < 0.5 ? (2 * t) ** 2 * (3.6 * 2 * t - 2.6) / 2 : ((2 * t - 2) ** 2 * (3.6 * (2 * t - 2) + 2.6) + 2) / 2),
+  elastic: (t) => (t <= 0 ? 0 : t >= 1 ? 1 : 2 ** (-10 * t) * Math.sin(((t * 10 - 0.75) * 2 * Math.PI) / 3) + 1),
 };
