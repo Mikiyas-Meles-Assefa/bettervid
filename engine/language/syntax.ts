@@ -39,7 +39,10 @@ export type Command =
 export type State = { line: number; at: Time; keep: boolean; cut: boolean; attrs: Attrs; items: Item[]; commands: Command[] };
 export type ProgramDef = { name: string; line: number; params: Attrs; doc?: string; source: string };
 // `read` overrides the style's readability settings for this scene: text (smallest text, share of the frame) and dim.
-export type Document = { background?: string; read?: Attrs; programs: ProgramDef[]; states: State[] };
+// `withholds`: things that must not be on screen before a moment (the answer before its reveal); none names nothing,
+// a declaration that this scene shows nothing of what is withheld.
+export type Withhold = { line: number; targets: string[]; until: Time };
+export type Document = { background?: string; read?: Attrs; programs: ProgramDef[]; states: State[]; withholds: Withhold[] };
 
 export const SIZES = ["huge", "big", "normal", "small", "note"];
 export const SHAPES = ["box", "circle", "pill", "diamond", "dot", "tri"];
@@ -71,10 +74,11 @@ const ATTRS: Record<string, string[]> = {
   focus: ["color", "amount"],
   state: ["enter", "move", "ease"],
   read: ["text", "dim"],
+  withhold: ["until"],
 };
 const COMMANDS = ["arrow", "link", "mark", "tag", "light", "dim", "focus", "drop", "set", "do", "emit", "camera"];
 const LEAVES = ["text", "code", "image", "graph", "run", "space", ...SHAPES];
-const WORDS = [...CONTAINERS, ...SIZES, ...COMMANDS, ...LEAVES, "program", "bg", "read"];
+const WORDS = [...CONTAINERS, ...SIZES, ...COMMANDS, ...LEAVES, "program", "bg", "read", "withhold"];
 export const ID = /^[A-Za-z0-9][\w-]*(\.[\w-]+)*$/;
 const BAD_IDS = new Set(["constructor", "prototype"]);
 
@@ -222,7 +226,7 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
   const kits = new Set(kitKinds);
   const lines = source.replace(/\r/g, "").split("\n");
   const problems: Problem[] = [];
-  const doc: Document = { programs: [], states: [] };
+  const doc: Document = { programs: [], states: [], withholds: [] };
   let state: State | undefined;
   let stack: { indent: number; item: Item }[] = [];
   let auto = 0;
@@ -252,6 +256,17 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
       if (plain.length || !Object.keys(attrs).length) fail(`read takes settings only, as in read text=0.04 dim=0.5`);
       for (const [k, v] of Object.entries(attrs)) if (!(Number(v) > 0 && Number(v) <= 1)) fail(`read ${k} is a share between 0 and 1, not ${v}.`);
       doc.read = { ...doc.read, ...attrs };
+      continue;
+    }
+
+    // Holds for the whole scene, wherever it is written, as read is.
+    if (head === "withhold") {
+      const { plain, attrs } = split(toks.slice(1), ATTRS.withhold!, "withhold", fail);
+      const until = attrs.until ? parseTime(attrs.until) : null;
+      const targets = plain.length === 1 && plain[0] === "none" ? [] : targetList(plain, fail);
+      if (!plain.length) fail(`withhold needs the ids to keep off screen, as in withhold answer,a2 until=@40, or none when this scene shows nothing of it.`);
+      else if (!until) fail(`withhold needs until=@N, the spoken moment before which these must not be on screen.`);
+      else doc.withholds.push({ line: number, targets, until });
       continue;
     }
 

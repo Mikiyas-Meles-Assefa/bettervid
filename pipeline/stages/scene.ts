@@ -6,14 +6,16 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
+import type { DemoPhase, DirectionEvent, Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
 import { when } from "../../engine/core/compile.ts";
 import { evaluate } from "../../engine/core/evaluate.ts";
 import type { CompileContext, Kit, Resolved, Scene, Theme } from "../../engine/core/types.ts";
 import { KITS } from "../../engine/kits/index.ts";
 import { mathKit } from "../../engine/kits/math.ts";
+import { STEPS_DOC } from "../../engine/kits/steps.ts";
 import { languagePrompt, numbered, reviewText, truthKinds } from "../../engine/language/author.ts";
 import { build, formatProblems, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
+import { expandHolds, holdMoments, type HoldTime } from "../../engine/language/holds.ts";
 import { loadLibrary } from "../../engine/language/library.ts";
 import { fontMeasure } from "../../engine/language/measure.ts";
 import { parse, type Item, type State } from "../../engine/language/syntax.ts";
@@ -24,7 +26,7 @@ import { asked, charge, dir, prompt, stage, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 
-const VERSION = 3; // bump when the way sections are written or checked changes, so cached sections are redone
+const VERSION = 4; // bump when the way sections are written or checked changes, so cached sections are redone
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
@@ -41,6 +43,7 @@ export type Range = { id: string; firstWord: number; lastWord: number };
 export type Carry = { id: string; what: string; parts?: string[]; use?: string };
 export type CastPart = { shows: string; handoff: Carry[] };
 type Spoken = { text: string; start: number; beatId?: string };
+type Span = { id: string; firstWord: number; lastWord: number; demo?: unknown };
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Pure parts: splitting, slicing and joining scene text. Tested in scene.test.ts.
@@ -71,16 +74,20 @@ function splitRun(words: Spoken[], from: number, to: number, max: number): [numb
   return out.flatMap(([a, b]) => (b - a + 1 > max ? splitRun(words, a, b, max) : [[a, b] as [number, number]]));
 }
 
-// Sections follow the script's beats: whole beats are grouped to about `target` words, a beat longer than `max` is split
-// at its sentences, and a short tail joins the section before it.
-export function splitSections(words: Spoken[], size = SIZE): Range[] {
+// Sections follow the script's beats, or the direction's events when there are some, so a section ends where the viewer
+// feels one thing end: whole runs are grouped to about `target` words, a run longer than `max` is split at its
+// sentences, and a short tail joins the section before it. An event with a demonstration may run half as long again
+// before it is split, so one author plays it through.
+export function splitSections(words: Spoken[], size = SIZE, events: Span[] = []): Range[] {
+  const owner = words.map((_, i) => events.find((e) => i >= e.firstWord && i <= e.lastWord));
+  const key = (i: number) => owner[i]?.id ?? `beat ${words[i]!.beatId}`;
   const runs: [number, number][] = [];
   for (let i = 0; i < words.length; i++) {
     const last = runs.at(-1);
-    if (last && words[i]!.beatId === words[last[1]]!.beatId) last[1] = i;
+    if (last && key(i) === key(last[1])) last[1] = i;
     else runs.push([i, i]);
   }
-  const pieces = runs.flatMap(([a, b]) => splitRun(words, a, b, size.max));
+  const pieces = runs.flatMap(([a, b]) => splitRun(words, a, b, owner[a]?.demo ? Math.round(size.max * 1.5) : size.max));
   const groups: [number, number][] = [];
   for (const [a, b] of pieces) {
     const cur = groups.at(-1);
@@ -123,9 +130,11 @@ export function pieces(source: string): Pieces {
       out.bg ??= bg[1];
       continue;
     }
-    const at = /^@(\d+)/.exec(t);
+    const at = /^@(\d+|[A-Za-z]\w*)/.exec(t);
     if (at) {
-      out.states.push({ word: Number(at[1]), text: [...pending, line].join("\n") });
+      // A hold moment (@h2) sits in the stretch of the word before it; its number is known once holds are expanded.
+      const word = /^\d+$/.test(at[1]!) ? Number(at[1]) : (out.states.at(-1)?.word ?? 0);
+      out.states.push({ word, text: [...pending, line].join("\n") });
       pending = [];
       continue;
     }
@@ -318,8 +327,19 @@ export function sceneContext(p: Project, theme: Theme = themeFrom(p.input.style)
 // Words are measured in the style's real fonts, so what is laid out is what the renderer draws.
 export function sceneBuildOptions(p: Project, assets: Record<string, string> = {}): BuildOptions {
   const ctx = sceneContext(p);
-  return { ctx, words: p.narration!.words.map((w) => w.text), assets, library: loadLibrary(), seed: 11, measure: fontMeasure(ctx.theme) };
+  return { ctx, words: p.narration!.words.map((w) => w.text), assets, library: loadLibrary(), seed: 11, measure: fontMeasure(ctx.theme), holds: holdsOf(p) };
 }
+
+// The silences the voice left, as the language reads them.
+export const holdsOf = (p: Project): HoldTime[] => (p.narration?.holds ?? []).map((h) => ({ id: h.id, afterWord: h.afterWord, start: h.start, seconds: h.seconds }));
+
+// A section with its hold moments written as word moments, which is how it is stored, joined and read by later steps.
+export function plainMoments(source: string, opts: BuildOptions): string {
+  return expandHolds(source, holdMoments(opts.holds, opts.ctx)).source;
+}
+
+// The sections of this video: by the direction's events when there is a direction, else by the script's beats.
+export const sectionsOf = (p: Project): Range[] => splitSections(p.narration!.words, SIZE, p.direction?.events ?? []);
 
 // The whole scene document, ready for `build()`.
 export const joinScene = (plan: ScenePlan) => joinSections(plan.sections);
@@ -442,9 +462,10 @@ const endFrame = (job: Job) => (job.next ? when({ word: job.next.firstWord }, jo
 
 type Checked = { result: BuildResult; problems: string[]; warnings: string[]; notes: string[] };
 
-async function check(job: Job, source: string): Promise<Checked> {
+async function check(job: Job, written: string): Promise<Checked> {
   const kinds = kitKinds();
-  const result = await build(source, job.opts);
+  const result = await build(written, job.opts);
+  const source = plainMoments(written, job.opts);
   const built = result.problems.map((p) => (p.line ? `line ${p.line}: ${p.message}` : p.message));
   const shape = contract(source, job.range, job.carry, kinds);
   // Ranges and plain first states keep the join sound, so they must be fixed. What the next part was promised goes back
@@ -452,12 +473,49 @@ async function check(job: Job, source: string): Promise<Checked> {
   // writer's call (its words may have moved on), so it is only recorded.
   const handoff = result.scene ? handedOver(source, result.scene, endFrame(job), job.handoff, job.range, kinds) : [];
   const carry = shape.filter((x) => !leftOut(x) && x.includes("you keep"));
-  return { result, problems: [...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x))], warnings: [...carry, ...handoff], notes: shape.filter(leftOut) };
+  // What the direction asks of this stretch that code can check: withheld things declared, and a demonstration of
+  // computed steps played by the thing that computes them. Both go back for repair; a part that still misses a
+  // demonstration is reported rather than failed, as a hand-off is.
+  const direction = directed(source, job.p, job.range, kinds);
+  return { result, problems: [...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x)), ...direction.withholds], warnings: [...carry, ...handoff, ...direction.demos], notes: [...shape.filter(leftOut), ...needs(written)] };
+}
+
+// Lines a writer leaves when a hold is too short for what the direction asks of it: `# needs h2 6s: why`. They go to
+// the section's notes, for the direction to lengthen the hold.
+export const needs = (source: string): string[] => [...source.matchAll(/^\s*#\s*needs\s+([A-Za-z]\w*)\s+([\d.]+)\s*s\b:?\s*(.*)$/gm)].map((m) => `hold ${m[1]} too short: needs ${m[2]} s${m[3] ? `, ${m[3].trim()}` : ""}`);
+
+// Events of the direction that share words with a range.
+const eventsIn = (p: Project, range: Range): DirectionEvent[] => (p.direction?.events ?? []).filter((e) => e.lastWord >= range.firstWord && e.firstWord <= range.lastWord);
+
+// Withholds whose stretch (from the event that sets it to the event it waits for) overlaps a range, with the word the
+// thing may appear from.
+export function withholdsIn(p: Project, range: Range): { event: DirectionEvent; what: string; until: string; word: number }[] {
+  const events = p.direction?.events ?? [];
+  return events.flatMap((e) => {
+    if (!e.withhold) return [];
+    const word = events.find((x) => x.id === e.withhold!.until)?.firstWord ?? (p.narration?.words.length ?? 0);
+    return e.firstWord <= range.lastWord && word > range.firstWord ? [{ event: e, what: e.withhold.what, until: e.withhold.until, word }] : [];
+  });
+}
+
+// Checks a part against its direction, from its source alone.
+export function directed(source: string, p: Project, range: Range, kitKindList: string[] = kitKinds()): { withholds: string[]; demos: string[] } {
+  if (!p.direction?.events?.length) return { withholds: [], demos: [] };
+  const { doc } = parse(source, kitKindList);
+  const withholds = withholdsIn(p, range).flatMap((w) => doc.withholds.some((d) => d.until.word >= w.word) ? [] : [`The direction withholds ${w.what} until event ${w.until}, at word ${w.word}, and your part comes before it. Name the ids in your part that show it with \`withhold IDS until=@${w.word}\`, so the engine keeps them off screen until then; if nothing in your part shows it, write \`withhold none until=@${w.word}\`.`]);
+  const truth = new Set(truthKinds(SCENE_KITS));
+  const kinds = new Map<string, string>();
+  const index = (items: Item[]) => items.forEach((i) => (kinds.set(i.id, i.kind), index(i.children)));
+  doc.states.forEach((s) => index(s.items));
+  const played = doc.states.some((s) => s.commands.some((c) => c.do === "play" && c.behavior === "steps" && c.targets.some((t) => truth.has(kinds.get(t) ?? ""))));
+  const demos = eventsIn(p, range).flatMap((e) => (e.demo?.phases.some((ph) => ph.steps) && !played ? [`The direction demonstrates ${e.demo.what} in event ${e.id} as phases of computed steps, but your part plays no steps of a truth thing. Show it with the kit that computes it (${[...truth].map((k) => `\`${k}\``).join(", ")}) and one \`do steps\` per phase, so every step and every label is right; draw it by hand only if no kit computes what the words describe.`] : []));
+  return { withholds, demos };
 }
 
 // What code can see about a built part beyond errors: computed steps to bind, and craft notes the writer weighs.
-function review(job: Job, source: string, result: BuildResult): string {
+function review(job: Job, written: string, result: BuildResult): string {
   const kinds = kitKinds();
+  const source = plainMoments(written, job.opts);
   const from = when({ word: job.range.firstWord }, job.opts.ctx);
   const extra = result.scene ? overPictures(source, result.scene, from, endFrame(job), kinds) : [];
   return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra });
@@ -524,7 +582,7 @@ const lookPart = (name: "Judge" | "Fix" | "Recheck") => (prompt("scene-look").sp
 // Renders the frames worth seeing three ways (as is, without words, without words and pictures) and measures them.
 async function see(job: Job, scene: Scene, source: string, folder: string): Promise<Seen> {
   const ctx = job.opts.ctx;
-  const starts = parse(source, kitKinds()).doc.states.map((s) => when({ word: s.at.word }, ctx));
+  const starts = parse(plainMoments(source, job.opts), kitKinds()).doc.states.map((s) => when(s.at, ctx));
   const words = job.p.narration!.words;
   const picked = lookFrames(starts, when({ word: job.range.firstWord }, ctx), endFrame(job), FPS, LOOK_FRAMES);
   const moments: Moment[] = picked.map((m) => ({ ...m, words: words.filter((w) => w.start * FPS >= m.frame - 2.5 * FPS && w.start * FPS <= m.frame + 0.5 * FPS).map((w) => w.text).join(" ") }));
@@ -704,7 +762,7 @@ async function writeSection(job: Job, draft: string): Promise<Written & { looks:
 
 // The look step on its own, for a section already written: no rewriting from scratch. Used to test the look.
 export async function lookAgain(p: Project, sectionId: string, assets: Record<string, string>): Promise<{ before: string; after: string; looks: string[]; usd: number }> {
-  const ranges = splitSections(p.narration!.words);
+  const ranges = sectionsOf(p);
   const i = ranges.findIndex((r) => r.id === sectionId);
   const section = p.scene!.sections.find((s) => s.id === sectionId)!;
   const castFile = join(dir(p), "scene", "cast.json");
@@ -723,7 +781,7 @@ export async function lookAgain(p: Project, sectionId: string, assets: Record<st
 // One section written again from the start, with build repairs and the look, as the stage would. For checking a change
 // to the guide or the engine on one section without redoing a whole video. The project itself is not changed.
 export async function writeAgain(p: Project, sectionId: string, assets: Record<string, string>): Promise<Written & { looks: string[] }> {
-  const ranges = splitSections(p.narration!.words);
+  const ranges = sectionsOf(p);
   const i = ranges.findIndex((r) => r.id === sectionId);
   if (i < 0) throw new Error(`no section ${sectionId}`);
   const castFile = join(dir(p), "scene", "cast.json");
@@ -789,10 +847,13 @@ export function cleanCast(parts: CastPart[], count: number): CastPart[] {
 async function planCast(p: Project, ranges: Range[], header: string, pics: string): Promise<{ cast: CastPart[]; usd: number }> {
   const words = p.narration!.words;
   const parts = ranges.map((r, i) => `Part ${i + 1} (words ${r.firstWord} to ${r.lastWord}): ${words.slice(r.firstWord, r.lastWord + 1).map((w) => w.text).join(" ")}`).join("\n\n");
-  const user = `${header}${pics ? `Pictures the video has:\n${pics}\n\n` : ""}The ${ranges.length} parts, in order:\n\n${parts}`;
+  const user = `${header}${pics ? `Pictures the video has:\n${pics}\n\n` : ""}${directionSummary(p, ranges)}The ${ranges.length} parts, in order:\n\n${parts}`;
+  // The things that compute a process, so a demonstration that spans parts is carried as the one computed thing.
+  const truth = SCENE_KITS.filter((k) => k.behaviors?.steps).flatMap((k) => Object.keys(k.kinds ?? {}).map((name) => `- ${k.docs?.[name] ?? name}`));
+  const system = `${prompt("scene-cast")}${truth.length ? `\n\nThe engine's things that compute a process for real:\n${truth.join("\n")}\n- ${STEPS_DOC}` : ""}`;
   let usd = 0;
   for (let tries = 1; ; tries++) {
-    const r = await json<{ parts: CastPart[] }>({ system: prompt("scene-cast"), user: tries === 1 ? user : `${user}\n\nReturn exactly ${ranges.length} parts, one per part above, in order.`, schema: castSchema, schemaName: "cast", effort: "low" });
+    const r = await json<{ parts: CastPart[] }>({ system, user: tries === 1 ? user : `${user}\n\nReturn exactly ${ranges.length} parts, one per part above, in order.`, schema: castSchema, schemaName: "cast", effort: "low" });
     usd += r.usd;
     if (r.value.parts.length === ranges.length || tries >= 2) return { cast: cleanCast(r.value.parts, ranges.length), usd };
   }
@@ -814,14 +875,75 @@ function requestFor(p: Project, ranges: Range[], i: number, cast: CastPart[], he
   const arc = cast.map((c, k) => `${k + 1}. words ${ranges[k]!.firstWord} to ${ranges[k]!.lastWord}${k === i ? " (yours)" : ""}: ${c.shows}`).join("\n");
   const plain = (a: number, b: number) => words.slice(a, b).map((w) => w.text).join(" ");
   const narration = `${plain(0, r.firstWord)}\n[your part starts]\n${plain(r.firstWord, r.lastWord + 1)}\n[your part ends]\n${plain(r.lastWord + 1, words.length)}`.trim();
-  const body = fill(prompt("scene"), { first: String(r.firstWord), last: String(r.lastWord), prefix: `${r.id}_`, carry, handoff, arc, pictures: pics ? `\nPictures you can show with \`image id asset=NAME\`:\n${pics}\n` : "", narration });
-  const spoken = words.slice(r.firstWord, r.lastWord + 1).map((w, k) => `${r.firstWord + k} ${w.start.toFixed(1)} ${w.text}`).join("\n");
+  const body = fill(prompt("scene"), { first: String(r.firstWord), last: String(r.lastWord), prefix: `${r.id}_`, carry, handoff, arc, pictures: pics ? `\nPictures you can show with \`image id asset=NAME\`:\n${pics}\n` : "", narration, direction: directionText(p, r) });
+  const silences = new Map((p.narration?.holds ?? []).map((h) => [h.afterWord, h]));
+  const spoken = words.slice(r.firstWord, r.lastWord + 1).map((w, k) => {
+    const h = silences.get(r.firstWord + k);
+    return `${r.firstWord + k} ${w.start.toFixed(1)} ${w.text}${h ? `\n   (silence: hold ${h.id}, ${h.start.toFixed(1)} to ${(h.start + h.seconds).toFixed(1)} s, @${h.id} to @${h.id}.end)` : ""}`;
+  }).join("\n");
   return `${header}${body}\nYour words (number, seconds, word):\n${spoken}`;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Direction: the moment-by-moment plan, in plain words for the scene's author. Holds are given as moments and frame
+// lengths from what the voice really recorded, and demonstrations as phases tied to words and holds.
+
+export function directionText(p: Project, range: Range, fps = FPS): string {
+  const d = p.direction;
+  const events = d ? eventsIn(p, range) : [];
+  if (!d || !events.length) return "";
+  const words = p.narration!.words;
+  const recorded = new Map((p.narration?.holds ?? []).map((h) => [h.id, h]));
+  const quote = (n: number) => `word ${n}${words[n] ? ` ("${words[n]!.text}")` : ""}`;
+  const len = (s: number) => `${s.toFixed(1)} s (${Math.round(s * fps)} frames)`;
+  // A phase's ends, as a moment the author can write and a time on the narration clock.
+  const point = (m: DemoPhase["at"] | undefined, edge: "start" | "end"): { say: string; t?: number } | undefined => {
+    if (!m) return undefined;
+    if ("word" in m) return { say: `@${m.word}`, t: words[m.word]?.start };
+    const h = recorded.get(m.hold);
+    if (!h) return { say: `the hold ${m.hold} (not recorded as a silence, so treat it as a short beat)` };
+    return edge === "end" ? { say: `@${m.hold}.end`, t: h.start + h.seconds } : { say: `@${m.hold}`, t: h.start };
+  };
+  const phase = (e: DirectionEvent, ph: DemoPhase, k: number, all: DemoPhase[]) => {
+    const from = point(ph.at, "start")!;
+    const sameHold = "hold" in ph.at && ph.until && "hold" in ph.until && ph.until.hold === ph.at.hold;
+    const to = ph.until ? point(ph.until, sameHold ? "end" : "start") : "hold" in ph.at ? point(ph.at, "end") : all[k + 1] ? point(all[k + 1]!.at, "start") : point({ word: e.lastWord }, "start");
+    const span = from.t !== undefined && to?.t !== undefined && to.t > from.t ? `, about ${len(to.t - from.t)}` : "";
+    const what = ph.replay ? "a replay" : ph.steps ? `steps ${ph.steps[0]} to ${ph.steps[1]}` : "the demonstration";
+    return `  ${k + 1}. ${what}, ${ph.pace}, from ${from.say} until ${to?.say ?? "the event ends"}${span}: ${ph.why}`;
+  };
+  const block = (e: DirectionEvent) => {
+    const edge = e.firstWord < range.firstWord ? " (it began in the part before yours)" : e.lastWord > range.lastWord ? " (it goes on into the next part)" : "";
+    const out = [`Event ${e.id}, words ${e.firstWord} to ${e.lastWord}${edge}: ${e.job}`];
+    if (e.knows) out.push(`- By its end the viewer knows: ${e.knows}`);
+    if (e.waiting) out.push(`- The viewer is waiting for: ${e.waiting}`);
+    if (e.look) out.push(`- The eye should be on: ${e.look}`);
+    if (e.feel || e.rhythm) out.push(`- Feel: ${e.feel || "as the words suggest"}; rhythm: ${e.rhythm === "long" ? "long, held" : "short, quick succession"}`);
+    if (e.camera) out.push(`- Camera: ${e.camera}`);
+    if (e.sound) out.push(`- Sound: ${e.sound} (an \`emit NAME\` at that moment lets the sound follow it)`);
+    if (e.reveal) out.push(`- Reveal at ${quote(e.reveal.word)}: ${e.reveal.what}`);
+    for (const h of e.holds ?? []) {
+      const r = recorded.get(h.id);
+      const when = r ? `${len(r.seconds)} of silence after ${quote(h.afterWord)}, from @${h.id} to @${h.id}.end` : `after ${quote(h.afterWord)}, planned at ${h.seconds.toFixed(1)} s but not recorded as a silence, so it is only a beat`;
+      out.push(`- Hold ${h.id}, ${h.purpose}: ${when}. During it: ${h.does}${h.shows ? `. On screen: "${h.shows}"` : ""}`);
+    }
+    if (e.demo) out.push(`- Demonstration: ${e.demo.what}. Phases:\n${e.demo.phases.map((ph, k, all) => phase(e, ph, k, all)).join("\n")}`);
+    return out.join("\n");
+  };
+  const held = withholdsIn(p, range).map((w) => `- ${w.what} (set in event ${w.event.id}), until event ${w.until} at ${quote(w.word)}: write \`withhold IDS until=@${w.word}\` with the ids that show it, or \`withhold none until=@${w.word}\`.`);
+  return `\nHow your part is directed. The direction walked the video as its viewer and wrote what each moment is for; your picture carries it out:\n${d.goal ? `The video is for: ${d.goal}\n` : ""}\n${events.map(block).join("\n\n")}${held.length ? `\n\nWithheld while your part plays, so nothing of it may be seen before its moment:\n${held.join("\n")}` : ""}\n`;
+}
+
+// The direction in short, for the first pass that plans what carries between parts.
+function directionSummary(p: Project, ranges: Range[]): string {
+  if (!p.direction?.events?.length) return "";
+  const lines = ranges.map((r, i) => `Part ${i + 1}: ${eventsIn(p, r).map((e) => `${e.id} (words ${e.firstWord} to ${e.lastWord}) ${e.job}; eye on ${e.look}${e.demo ? `; demonstrates ${e.demo.what} in ${e.demo.phases.length} phases` : ""}${e.withhold ? `; withholds ${e.withhold.what} until ${e.withhold.until}` : ""}`).join(" | ")}`);
+  return `How the video is directed, event by event:\n${lines.join("\n")}\n\n`;
 }
 
 export async function scene(p: Project, force = false) {
   const words = p.narration!.words;
-  const ranges = splitSections(words);
+  const ranges = sectionsOf(p);
   // Where the director made shots with pictures, each section starts from its part of them.
   let draft: { source: string; assets: Record<string, string> } | undefined;
   if (p.shots?.length && p.assets?.length) {
@@ -839,7 +961,7 @@ export async function scene(p: Project, force = false) {
   ].filter(Boolean).join("\n\n") + "\n\n";
   const prompts = ["scene", "scene-cast", "scene-look", "engine-language", "engine-repair"].map(prompt);
   const library = loadLibrary().map((x) => x.name);
-  const inputs = [VERSION, words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library];
+  const inputs = [VERSION, words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
   const estimate = 0.03 + ranges.length * 0.12;
   await stage(p, "scene", inputs, estimate, async () => {
     const root = join(dir(p), "scene");
@@ -847,7 +969,7 @@ export async function scene(p: Project, force = false) {
     const spent = { usd: 0 };
     try {
       // The first pass, cached on its own so a resumed run plans the same hand-offs.
-      const castKey = hash(VERSION, ranges, words.map((w) => w.text), header, (describe(pics) + drawings(p)), prompt("scene-cast"));
+      const castKey = hash(VERSION, ranges, words.map((w) => w.text), header, (describe(pics) + drawings(p)), prompt("scene-cast"), directionSummary(p, ranges), STEPS_DOC);
       const castFile = join(root, "cast.json");
       let cast: CastPart[];
       const known = existsSync(castFile) ? JSON.parse(readFileSync(castFile, "utf8")) : undefined;
@@ -888,8 +1010,10 @@ export async function scene(p: Project, force = false) {
           const w = await writeSection(job, drafts[i]!);
           spent.usd += w.usd;
           const ok = !w.problems.length && !!w.result.scene;
-          sections[i] = { id: range.id, firstWord: range.firstWord, lastWord: range.lastWord, source: w.source, ok, rounds: w.rounds, usd: +w.usd.toFixed(4) };
-          notes[i] = [...w.problems, ...w.warnings.map((x) => (x.startsWith("severe on screen") ? x : `hand-off: ${x}`)), `looks: ${w.looks.join(", ") || "none"}`];
+          // Stored with hold moments as word moments, so joining, the player and the critic read it as any scene.
+          sections[i] = { id: range.id, firstWord: range.firstWord, lastWord: range.lastWord, source: plainMoments(w.source, opts), ok, rounds: w.rounds, usd: +w.usd.toFixed(4) };
+          notes[i] = [...w.problems, ...w.warnings.map((x) => (x.startsWith("severe on screen") || x.startsWith("hold ") ? x : `hand-off: ${x}`)), `looks: ${w.looks.join(", ") || "none"}`];
+          for (const x of needs(w.source)) console.log(`  ${range.id}: !!! ${x}`);
           mkdirSync(folder, { recursive: true });
           writeFileSync(join(folder, "scene.txt"), w.source);
           writeFileSync(file, JSON.stringify({ key, section: sections[i], notes: notes[i] }, null, 1));

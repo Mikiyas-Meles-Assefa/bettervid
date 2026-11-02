@@ -6,7 +6,7 @@ This video is written in parts, each by a different author at the same time, and
 {{carry}}
 
 {{handoff}}
-
+{{direction}}
 What the viewer mainly sees in each part of the video, so yours fits the whole:
 {{arc}}
 {{pictures}}

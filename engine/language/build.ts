@@ -5,17 +5,19 @@ import { compile, when } from "../core/compile.ts";
 import type { CompileContext, Ease, Kit, NodeSpec, Props, Scene, SceneDoc, Step, Track, Value } from "../core/types.ts";
 import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
+import type { Resolved } from "../core/types.ts";
 import { graphKit } from "../kits/graph.ts";
 import { truthSteps } from "../kits/steps.ts";
 import { estimate, graphPositions, layout, TEXT_SIZE, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
 import { contrast } from "../style/color.ts";
 import { dimColor } from "../style/design.ts";
+import { expandHolds, holdMoments, type HoldTime } from "./holds.ts";
 import type { LibraryEntry } from "./library.ts";
 import { checkOutput } from "./program.ts";
 import { runProgram, type RunResult } from "./sandbox.ts";
 import { READ_DEFAULT } from "../style/format.ts";
-import { ENTERS, parse, parseTime, suggest, type Attrs, type Command, type Item, type Problem, type State } from "./syntax.ts";
+import { ENTERS, parse, parseTime, suggest, type Attrs, type Command, type Document as Doc, type Item, type Problem, type State, type Time } from "./syntax.ts";
 
 export type BuildOptions = {
   ctx: CompileContext;
@@ -24,6 +26,7 @@ export type BuildOptions = {
   library?: LibraryEntry[];
   seed?: number;
   measure?: Measure;
+  holds?: HoldTime[]; // silences on the narration clock, so `@h2` and `@h2.end` name their start and end
 };
 // `truth`: each thing a truth kit computed, with its numbered steps, so a writer can bind steps to the words that speak them.
 // `notes`: how states read, which is not an error but a writer may act on: a frame crowded with sentences, or one that
@@ -111,12 +114,16 @@ function bounds(nodes: NodeSpec[]): { x: number; y: number; w: number; h: number
   return { x: (l + r) / 2, y: (t + d) / 2, w: Math.max(1, r - l), h: Math.max(1, d - t) };
 }
 
-export async function build(source: string, opts: BuildOptions): Promise<BuildResult> {
+export async function build(written: string, opts: BuildOptions): Promise<BuildResult> {
   const { ctx } = opts;
   const allKits = [graphKit, ...(ctx.kits ?? []).filter((k) => k !== graphKit)];
   const kinds: NonNullable<Kit["kinds"]> = Object.assign({}, ...allKits.map((k) => k.kinds));
   const kitNames = Object.keys(kinds).filter((k) => k !== "graph");
+  // Hold moments become word moments first, so everything below reads plain `@N+frames`.
+  const held = expandHolds(written, holdMoments(opts.holds, ctx));
+  const source = held.source;
   const { doc, problems } = parse(source, kitNames);
+  problems.unshift(...held.problems);
   const stats = { states: doc.states.length, parts: 0, programs: 0, programMs: 0 };
   const notes: string[] = [];
   if (problems.length) return { problems, stats };
@@ -165,6 +172,14 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const kitCtx: CompileContext = { ...ctx, kits: [...allKits, kitsMade] };
   const expansions = new Map<string, { nodes: NodeSpec[]; box: ReturnType<typeof bounds>; errors: { line: number; message: string }[] }>();
 
+  // Kit things by id, so a replay can take the very settings of the thing it repeats.
+  const kitItems = new Map<string, Item>();
+  const findKits = (list: Item[]) => list.forEach((i) => {
+    if (kinds[i.kind] && i.kind !== "graph" && !kitItems.has(i.id)) kitItems.set(i.id, i);
+    findKits(i.children);
+  });
+  doc.states.forEach((s) => findKits(s.items));
+
   const expandKit = (item: Item) => {
     const known = expansions.get(item.id);
     if (known) {
@@ -184,7 +199,16 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       spec = { id: item.id, kind: "graph", data: { radius, nodes: ids.map((id) => ({ id, ...at.get(id)! })), edges: item.edges!.map((e) => ({ id: `${e.from}${e.to}`, ...e })) } };
     } else {
       const data: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(item.attrs)) {
+      // `replay=ID`: a second instance of a kit thing with the same input, to play its steps again beside or after it.
+      let attrs = item.attrs;
+      if (attrs.replay !== undefined) {
+        const first = kitItems.get(attrs.replay);
+        if (!first || first.kind !== item.kind || first.id === item.id) fail(item.line, `replay=${attrs.replay} must name another ${item.kind} in this scene, whose input ${item.id} repeats.${first && first.kind !== item.kind ? ` ${attrs.replay} is a ${first.kind}.` : ""}`);
+        const { replay: _r, ...own } = attrs;
+        const { at: _a, into: _i, before: _b, after: _f, w: _w, h: _h, ...input } = first && first.kind === item.kind ? first.attrs : {};
+        attrs = { ...input, ...own };
+      }
+      for (const [k, v] of Object.entries(attrs)) {
         if (["at", "into", "before", "after"].includes(k)) continue;
         try {
           // A lone backslash is kept as written, so math such as \frac needs no doubling; a doubled one still works.
@@ -1610,6 +1634,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       report(0, `${first.join(", ")} came out with a position or size that is not a number, so it and what is laid out with it would not show. Check its settings (a size as a word on something that takes a number, a missing value), or give it plain settings.`);
       return { problems, stats };
     }
+    withheldEarly(scene, doc, momentOf, words, ctx.fps).forEach((p) => report(p.line, p.message));
+    falseOrder(scene, doc, momentOf, ctx).forEach((p) => report(p.line, p.message));
+    if (problems.length) return { problems, stats };
     stats.parts = scene.nodes.length;
     const truth = [...expansions.entries()].flatMap(([id, e]) => {
       const root = e.nodes.find((n) => n.id === id);
@@ -1625,6 +1652,113 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Checks on the compiled scene: what the viewer would really see, frame by frame.
+
+type Shown = { opacity: number; x: number; y: number; text?: string; size?: number; truth?: string };
+// Everything visible at a frame, with where it sits (offsets added up its parents; scale is ignored, which keeps the
+// order of things that share a parent) and what it says.
+function shownAt(scene: Scene, frame: number): Map<string, Shown> {
+  const out = new Map<string, Shown>();
+  const walk = (list: Resolved[], o: number, x: number, y: number) => {
+    for (const n of list) {
+      const opacity = o * Number(n.props.opacity ?? 1);
+      if (opacity <= 0.05) continue;
+      const [nx, ny] = [x + Number(n.props.x ?? 0), y + Number(n.props.y ?? 0)];
+      out.set(n.id, { opacity, x: nx, y: ny, ...(n.kind === "text" ? { text: String(n.props.text ?? ""), size: Number(n.props.size ?? 40) } : {}), ...(typeof n.props.truth === "string" ? { truth: n.props.truth } : {}) });
+      walk(n.children, opacity, nx, ny);
+    }
+  };
+  walk(evaluate(scene, frame), 1, 0, 0);
+  return out;
+}
+
+const within = (id: string, t: string) => id === t || id.startsWith(`${t}.`);
+// What an id names on screen: itself and, for an arrangement (which draws nothing of its own), everything inside it.
+function membersOf(doc: Doc): (id: string) => string[] {
+  const inside = new Map<string, Set<string>>();
+  const walk = (i: Item): string[] => {
+    const own = i.kind === "atoms" ? (i.parts ?? []).flatMap((p) => (p.type === "text" ? [p.atom] : p.type === "frac" ? [...p.num, ...p.den] : p.rows.flat())).map((a) => a.id) : [];
+    const all = [...own, ...i.children.flatMap((c) => [c.id, ...walk(c)])];
+    const set = inside.get(i.id) ?? inside.set(i.id, new Set()).get(i.id)!;
+    all.forEach((x) => set.add(x));
+    return all;
+  };
+  doc.states.forEach((s) => s.items.forEach(walk));
+  return (id) => [id, ...(inside.get(id) ?? [])];
+}
+const wordNear = (frame: number, words: { text?: string; start: number }[], fps: number) => {
+  let k = 0;
+  while (k + 1 < words.length && Math.round(words[k + 1]!.start * fps) <= frame) k++;
+  return k;
+};
+
+// A withheld thing on screen before its moment spoils what the video holds back. Checked on the built scene, a few
+// frames apart, so it catches every way a thing can show: listed, carried, faded in by a step or a program.
+function withheldEarly(scene: Scene, doc: Doc, momentOf: (t: Time, line: number) => number, words: { text?: string; start: number }[], fps: number): Problem[] {
+  const out: Problem[] = [];
+  const members = membersOf(doc);
+  const open = doc.withholds.filter((w) => w.targets.length).map((w) => ({ w, until: momentOf(w.until, w.line) }));
+  const last = Math.max(0, ...open.map((x) => x.until));
+  for (let f = 0; f < last && open.length; f += 2) {
+    const seen = [...shownAt(scene, f).keys()];
+    for (let k = open.length - 1; k >= 0; k--) {
+      const { w, until } = open[k]!;
+      if (f >= until) {
+        open.splice(k, 1);
+        continue;
+      }
+      const hit = w.targets.find((t) => members(t).some((m) => seen.some((id) => within(id, m))));
+      if (!hit) continue;
+      const near = wordNear(f, words, fps);
+      out.push({ line: w.line, message: `${hit} is on screen at ${(f / fps).toFixed(1)} s, near word ${near}${words[near]?.text ? ` ("${words[near]!.text}")` : ""}, but it is withheld until @${w.until.word}${w.until.offset ? `${w.until.offset > 0 ? "+" : ""}${w.until.offset}` : ""}. Nothing of it may be seen before then: bring it in at that moment or later, and leave it out of every state before it. If ${hit} is not the withheld thing, take it out of this withhold line.` });
+      open.splice(k, 1);
+    }
+  }
+  return out;
+}
+
+// Words attached to numbers that say they are in order must be true while they are on screen. The numbers are read
+// from the built scene where the words are, so a computed thing and a hand-made row are held to the same truth.
+const CLAIM = /\b(sorted|in order|ascending|increasing|descending|decreasing)\b/i;
+const DENIED = /\b(not|never|no|isn't|aren't|unless|until|before)\b[^.;:,]{0,16}\b(sorted|in order|ascending|increasing|descending|decreasing)\b/i;
+const NUMERIC = /^[−-]?\d+(?:[.,]\d+)?$/;
+function falseOrder(scene: Scene, doc: Doc, momentOf: (t: Time, line: number) => number, ctx: CompileContext): Problem[] {
+  const out: Problem[] = [];
+  const told = new Set<number>();
+  const members = membersOf(doc);
+  doc.states.forEach((s, index) => {
+    const end = (index + 1 < doc.states.length ? momentOf(doc.states[index + 1]!.at, doc.states[index + 1]!.line) : ctx.frames) - 1;
+    for (const c of s.commands) {
+      if ((c.do !== "tag" && c.do !== "mark") || !c.text || told.has(c.line)) continue;
+      const claim = CLAIM.exec(c.text);
+      if (!claim || DENIED.test(c.text)) continue;
+      const targets = c.do === "tag" ? [c.target] : c.targets;
+      const seen = shownAt(scene, end);
+      if (!seen.has(attachedId(c)) && ![...seen.keys()].some((id) => id.startsWith(`${attachedId(c)}.`))) continue;
+      const numbers = [...seen].filter(([id, n]) => n.text !== undefined && NUMERIC.test(n.text.trim()) && targets.some((t) => members(t).some((m) => within(id, m))));
+      if (numbers.length < 2) continue;
+      // Rows read top to bottom, each left to right; each row must hold its order.
+      const band = Math.max(20, ...numbers.map(([, n]) => (n.size ?? 40) * 0.8));
+      const rows = new Map<number, { x: number; v: number; t: string }[]>();
+      for (const [, n] of numbers) {
+        const key = Math.round(n.y / band);
+        (rows.get(key) ?? rows.set(key, []).get(key)!).push({ x: n.x, v: Number(n.text!.trim().replace("−", "-").replace(",", ".")), t: n.text!.trim() });
+      }
+      const word = claim[1]!.toLowerCase();
+      const up = (v: number[]) => v.every((x, i) => i === 0 || x >= v[i - 1]!);
+      const down = (v: number[]) => v.every((x, i) => i === 0 || x <= v[i - 1]!);
+      // Sorted or in order means smallest first, unless the words say the other way.
+      const ok = (v: number[]) => (["descending", "decreasing"].includes(word) || /\b(descending|decreasing|largest first|biggest first)\b/i.test(c.text!) ? down(v) : up(v));
+      const wrong = [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r.sort((a, b) => a.x - b.x)).find((r) => r.length >= 2 && !ok(r.map((x) => x.v)));
+      if (!wrong) continue;
+      told.add(c.line);
+      out.push({ line: c.line, message: `"${c.text}" says ${targets.join(", ")} ${targets.length > 1 ? "are" : "is"} ${word}, but as this state ends it shows ${wrong.map((x) => x.t).join(", ")}, which is not. Words on screen must be true while they are there: attach them once the order is really there (after the step that makes it so), say what is true now, or let a kit's own steps show the order.` });
+    }
+  });
+  return out;
 }
 
 // Behaviors and state changes can both touch a property, and either may run past the other. Put keys in time order, and

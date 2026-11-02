@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { build } from "../../engine/language/build.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
-import { cleanCast, contract, joinSections, overPictures, pieces, severeOf, sliceSource, splitSections, visibleAt } from "./scene.ts";
+import type { DirectionEvent, Project } from "../../schemas/project.ts";
+import { cleanCast, contract, directed, directionText, joinSections, needs, overPictures, pieces, severeOf, sliceSource, splitSections, visibleAt } from "./scene.ts";
 
 // Invented narration: beats of given lengths, sentences of about eight words.
 function narration(beats: number[]) {
@@ -175,4 +176,57 @@ test("a kept version still severely broken is named, measured or seen, so the se
   assert.deepEqual(severe.map((x) => x.source).sort(), ["measured", "seen"]);
   assert.ok(severe.every((x) => x.severity === 3));
   assert.deepEqual(severeOf([], [{ frame: 1, words: [], findings: [] }]), []);
+});
+
+// A small directed project: 120 words, a hold after word 40, a demonstration in event e2 and a withhold until e3.
+function directedProject(): Project {
+  const words = narration([60, 60]).map((w, i) => ({ ...w, start: w.start + (i > 40 ? 3 : 0), end: w.start + 0.35 + (i > 40 ? 3 : 0) }));
+  const event = (id: string, firstWord: number, lastWord: number, more: Partial<DirectionEvent> = {}): DirectionEvent => ({ id, firstWord, lastWord, job: `job of ${id}`, knows: "", waiting: "", look: `the thing in ${id}`, feel: "curious", rhythm: "long", ...more });
+  const events = [
+    event("e1", 0, 29, { withhold: { what: "the finished result", until: "e3" } }),
+    event("e2", 30, 89, {
+      holds: [{ id: "h1", afterWord: 40, seconds: 3, purpose: "predict", does: "the two fronts pulse and nothing else moves", shows: "Which goes first?" }],
+      demo: { what: "the process on four values", phases: [{ steps: [1, 2], pace: "slow", at: { word: 30 }, until: { hold: "h1" }, why: "first time" }, { steps: [3, 4], pace: "normal", at: { hold: "h1" }, why: "let them guess" }, { steps: [5, 17], pace: "fast", at: { word: 41 }, until: { word: 80 }, why: "pattern is known" }] },
+    }),
+    event("e3", 90, 119, { reveal: { word: 95, what: "the finished result" } }),
+  ];
+  return { id: "t", createdAt: "", input: { prompt: "", style: "whiteboard", persona: "", mode: "explain", seconds: 0 }, stages: {}, costs: [], direction: { goal: "understand it", promise: "", arc: "", events, cues: [] }, narration: { audio: "", voiceId: "", model: "", seconds: 52, words, holds: [{ id: "h1", afterWord: 40, start: words[40]!.end, seconds: 3 }] } };
+}
+
+test("with a direction, sections end on event boundaries and a demonstration stays whole", () => {
+  const p = directedProject();
+  const s = splitSections(p.narration!.words, undefined, p.direction!.events);
+  const bounds = new Set(p.direction!.events.map((e) => e.firstWord));
+  for (const r of s) assert.ok(bounds.has(r.firstWord), `${r.id} starts on an event`);
+  assert.ok(s.some((r) => r.firstWord <= 30 && r.lastWord >= 89), "the 60 word demonstration is one section");
+});
+
+test("the direction reaches the author as events, holds with frames, phases and withholds", () => {
+  const p = directedProject();
+  const text = directionText(p, { id: "s2", firstWord: 30, lastWord: 89 });
+  assert.match(text, /Event e2, words 30 to 89: job of e2/);
+  assert.match(text, /Hold h1, predict: 3\.0 s \(90 frames\) of silence after word 40 .*@h1 to @h1\.end.*On screen: "Which goes first\?"/);
+  assert.match(text, /1\. steps 1 to 2, slow, from @30 until @h1, about/);
+  assert.match(text, /2\. steps 3 to 4, normal, from @h1 until @h1\.end/);
+  assert.match(text, /withhold IDS until=@90/);
+  assert.equal(directionText(p, { id: "s3", firstWord: 90, lastWord: 119 }).includes("Withheld"), false);
+  assert.equal(directionText({ ...p, direction: undefined }, { id: "s1", firstWord: 0, lastWord: 29 }), "");
+});
+
+test("a part must declare what it withholds and play a demonstration with the kit", () => {
+  const p = directedProject();
+  const range = { id: "s2", firstWord: 30, lastWord: 89 };
+  const hand = directed(`@30\nrow r\n  box a "3"\n  box b "1"\n`, p, range);
+  assert.equal(hand.withholds.length, 1);
+  assert.match(hand.withholds[0]!, /withhold IDS until=@90|until=@90/);
+  assert.equal(hand.demos.length, 1);
+  assert.match(hand.demos[0]!, /`sort`/);
+  const kit = directed(`withhold none until=@90\n@30\nsort s data=[3,1,4,2] algo=merge\ndo steps s from=1 to=2 pace=slow until=@h1\n`, p, range);
+  assert.deepEqual(kit, { withholds: [], demos: [] });
+});
+
+test("hold moments split into states, and a hold too short is noted for the direction", () => {
+  const p = pieces(`@30\ntext a "x"\n@h1 keep\ntext b "y"\n@h1.end keep\ndrop b\n`);
+  assert.deepEqual(p.states.map((x) => x.word), [30, 30, 30]);
+  assert.deepEqual(needs(`@0\n# needs h1 6s: four slow steps\ntext a "x"\n`), ["hold h1 too short: needs 6 s, four slow steps"]);
 });
