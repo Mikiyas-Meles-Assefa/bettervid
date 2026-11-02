@@ -39,6 +39,10 @@ The first pass judged correctness and readability, not whether the videos look g
 
 Every style needs a design pass: how text sits on pictures, what dimming looks like in that style, what a card or panel is, color pairings that always read, and how generated pictures match real ones. The frame check must judge "does this look good and fit the style", not only "is it readable".
 
+## After wave 1 (user's verdict on the reruns)
+
+Same scripts and voices, new visuals. Style clearly improved but is about 60 to 65% of where it should be; the user would not pick neon for anything, though others might. Teaching got worse in merge sort: the first version used fingers moving along the lists and a slow first merge, which held attention; the rerun only talks about dividing and never shows it, and four numbers is a poor example for showing a sort. The good pacing in the first version was luck: nothing plans it, and the example comes from the writer. This is wave 2 (direction: plan what to show, how slowly, where the eye goes, demonstrate rather than describe, and choose examples that make the idea visible). Remaining frame bugs from the reruns (blank frame, a bar over math, squashed tables, math in a foreign font, titles at the frame edge, ghost fades, labels over boxes, empty and crowded frames, repair loops that do not converge) are being fixed before wave 2.
+
 ## What went right
 
 - Scripts fit each request (no history for the exam, mechanism for merge sort, a real "why they succeeded" story).
