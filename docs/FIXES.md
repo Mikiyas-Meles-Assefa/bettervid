@@ -74,3 +74,12 @@ Fixes and ideas the user raised while reviewing test videos. All are open unless
 - Story-led pacing, readable source cards, no visual spoilers (`c078969`).
 - Guided zoom on real images, no fakes of specific real things (`c078969`).
 - Rings land more precisely, and text-heavy images are rejected (`18b7649`).
+
+## Done (Nov 2): picture choice (review problems 12 and 13)
+
+- The picker says what each candidate really shows (kind of thing, original or replica, photo or icon) and judges it against the words on screen at that moment. Its reason is kept on the asset as `why`, and each shot's notes stay in `assets/<shot>.json`.
+- Every generated picture is checked with its words: fake writing, a made-up face for a real person, or passing as the specific real thing the words name. One that would pass is not used.
+- The director can ask for a drawn shot (`kind: "drawn"`, `draw`), made by the scene step, and give a drawing as the fallback of a must-be-real shot. A gap with nothing honest becomes a drawing of what the words say, not a title card. Still open: the scene step does not read `draw` yet (see the pictures-on-screen workstream).
+- Searches that find nothing are rewritten once by Spark from what came back. Smithsonian Open Access and the Internet Archive join Commons, NASA and the Met. The Library of Congress blocks scripts, so it is not searched.
+- Generated pictures in a video are made with one small look study per image type as a reference.
+- Wright test: generated pictures went from 22 of 46 picture shots to 3 of 49 (21 drawn); Taytu from 18 of 29 to 1 of 27 (10 drawn). Asset cost per video rose about 15 to 40 percent.

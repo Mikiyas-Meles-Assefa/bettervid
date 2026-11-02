@@ -1,10 +1,10 @@
 // Stage 4: director. Spark plans shots on word indices; code turns them into timed shots and fills
 // receipts from the fact sheet so outlets, quotes and URLs are never invented.
-import type { ImageType, Project, Shot, ShotType } from "../../schemas/project.ts";
+import type { AssetRequest, ImageType, Project, Shot, ShotType } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, prompt, stage, style, topic } from "../lib/project.ts";
 
-type Planned = { beatId: string; type: ShotType; startWord: number; kind: "real" | "generated" | "none"; query: string; broadQuery: string; prompt: string; idea: string; imageType: ImageType; subject: string; focus: string; mustBeReal: boolean; text: string; claimId: string };
+export type Planned = { beatId: string; type: ShotType; startWord: number; kind: "real" | "generated" | "drawn" | "none"; query: string; broadQuery: string; prompt: string; idea: string; draw: string; imageType: ImageType; subject: string; focus: string; mustBeReal: boolean; text: string; claimId: string };
 
 const str = { type: "string" } as const;
 const schema = {
@@ -17,16 +17,17 @@ const schema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["beatId", "type", "startWord", "kind", "query", "broadQuery", "prompt", "idea", "imageType", "subject", "focus", "mustBeReal", "text", "claimId"],
+        required: ["beatId", "type", "startWord", "kind", "query", "broadQuery", "prompt", "idea", "draw", "imageType", "subject", "focus", "mustBeReal", "text", "claimId"],
         properties: {
           beatId: str,
           type: { type: "string", enum: ["photo_kenburns", "cutout_on_paper", "receipt", "kinetic_title"] },
           startWord: { type: "integer" },
-          kind: { type: "string", enum: ["real", "generated", "none"] },
+          kind: { type: "string", enum: ["real", "generated", "drawn", "none"] },
           query: str,
           broadQuery: str,
           prompt: str,
           idea: str,
+          draw: str,
           imageType: { type: "string", enum: ["scene", "object", "diagram"] },
           subject: str,
           focus: str,
@@ -42,7 +43,7 @@ const schema = {
 const REAL_POLICY = {
   prefer: "This style is documentary collage: use real archival images wherever they exist, and generated art only for moments no camera or archive captured.",
   proof:
-    "This style is fully illustrated: generate almost every image in the style so the video looks unified. Use real images only as proof: a real person's portrait, a real document or map, or a real photo of the actual event. Never use real paintings or stock scenery for ideas, places or moods.",
+    "This style is fully illustrated: generate almost every image in the style, or have it drawn, so the video looks unified. Use real images only as proof: a real person's portrait, a real document or map, or a real photo of the actual event. Never use real paintings or stock scenery for ideas, places or moods.",
 };
 
 export async function director(p: Project, force = false) {
@@ -97,13 +98,24 @@ export function toShots(p: Project, planned: Planned[]): Shot[] {
       shot.type = "kinetic_title";
       shot.text = s.text || claim?.number || p.script!.beats.find((b) => b.id === s.beatId)?.emphasis.join(" ") || "";
     }
-    if (s.type === "photo_kenburns" || s.type === "cutout_on_paper") {
-      shot.asset = { kind: s.kind === "real" ? "real" : "generated", query: s.query, prompt: s.prompt, imageType: s.imageType, subject: s.subject || undefined };
-      if (s.broadQuery && s.broadQuery !== s.query) shot.asset.broadQuery = s.broadQuery;
-      if (s.type === "photo_kenburns" && s.focus) shot.asset.focus = s.focus;
-      if (s.kind === "real" && s.mustBeReal) shot.asset.mustBeReal = true;
-      if (shot.asset.mustBeReal && s.idea) shot.asset.idea = s.idea;
-    }
+    if (s.type === "photo_kenburns" || s.type === "cutout_on_paper") shot.asset = request(s, shot);
     return shot;
   });
+}
+
+// The asset request for a picture shot. A drawn shot has no image to find or make: the scene step draws it, so it is
+// always full frame. A shot that names something to draw with no image request at all is drawn too.
+export function request(s: Planned, shot: Shot): AssetRequest {
+  const draw = s.draw.trim();
+  if (s.kind === "drawn" || (s.kind === "none" && draw)) {
+    shot.type = "photo_kenburns";
+    return { kind: "drawn", query: "", prompt: "", draw: draw || s.idea || s.prompt || s.text, imageType: "diagram" };
+  }
+  const a: AssetRequest = { kind: s.kind === "real" ? "real" : "generated", query: s.query, prompt: s.prompt, imageType: s.imageType, subject: s.subject || undefined };
+  if (s.broadQuery && s.broadQuery !== s.query) a.broadQuery = s.broadQuery;
+  if (s.type === "photo_kenburns" && s.focus) a.focus = s.focus;
+  if (s.kind === "real" && s.mustBeReal) a.mustBeReal = true;
+  if (a.mustBeReal && s.idea) a.idea = s.idea;
+  if (draw) a.draw = draw;
+  return a;
 }
