@@ -5,6 +5,7 @@ import type { Clip, StyleFile } from "../schemas/project.ts";
 import { BoardShot } from "./Board.tsx";
 import { StageShot } from "./Stage.tsx";
 import { Marks } from "./marks.tsx";
+import { SceneView } from "../engine/render/SceneView.tsx";
 
 type ShotProps = { clip: Clip; style: StyleFile; index: number };
 
@@ -189,4 +190,7 @@ export const CreditsCard: React.FC<ShotProps> = ({ clip, style }) => {
   );
 };
 
-export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard, board: BoardShot, stage: StageShot };
+// The engine: one compiled scene for the whole story. The player workstream fills in images, captions and polish.
+const EngineShot: React.FC<ShotProps> = ({ clip }) => <SceneView scene={clip.scene!} theme={clip.theme!} frame={useCurrentFrame()} />;
+
+export const SHOTS = { photo_kenburns: PhotoKenBurns, cutout_on_paper: CutoutOnPaper, receipt: Receipt, kinetic_title: KineticTitle, credits: CreditsCard, board: BoardShot, stage: StageShot, engine: EngineShot };

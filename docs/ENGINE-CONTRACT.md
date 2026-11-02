@@ -60,6 +60,23 @@ Not available yet: conic gradients, blur of what lies behind a part, motion blur
 
 Tests in `*.test.ts` run by `npm run test:engine`, a clean `npm run typecheck`, and a proof that renders in at least two styles. Work on your own branch and files. Changes to `engine/core/types.ts` need review, because everything depends on it.
 
+## Connecting to the pipeline (Nov 2)
+
+The engine becomes the one visual step for every video, documentaries included. Shared fields are in `schemas/project.ts`: `Plan.intent`, `Project.scene` (`ScenePlan`, sections of scene language with global word numbers), and an `engine` clip carrying a compiled `Scene` and `Theme`. Kits are listed in `engine/kits/index.ts`. The old stage, board and shot renderers stay until a side-by-side test shows the engine is at least as good.
+
+Flow: plan, research, writer, voice, director, assets, annotate (pictures for any video that needs them), then `scene` (Spark writes scene language per section, starting from `shotsToScene` where there are shots), then timeline (compiles the scene into an `engine` clip), mix, render, critic.
+
+Each workstream owns its files. A change outside them needs the lead's review.
+
+| Workstream | Owns |
+|---|---|
+| Scene step | `pipeline/stages/scene.ts`, `prompts/scene*.md`, `pipeline/run.ts` |
+| Language and documentaries | `engine/language/*`, `prompts/engine-language.md`, `prompts/engine-repair.md`, `pipeline/lib/shots-scene.ts`, `engine/motion/camera.ts` |
+| Player | `video/*`, `pipeline/stages/timeline.ts`, `pipeline/stages/render.ts` |
+| Truth engines | `engine/truth/*`, new kits in `engine/kits/*` (one line each in `engine/kits/index.ts`) |
+| Intent | `pipeline/stages/plan.ts`, `pipeline/stages/writer.ts`, `pipeline/stages/research.ts`, `prompts/plan.md`, `prompts/research.md`, `prompts/writer.md`, `prompts/cut.md`, `prompts/structure.md`, `prompts/review.md` |
+| Website and styles | `app/*`, `styles/*` (new files only), `pipeline/tools/style-writer.ts`, `prompts/style-writer.md` |
+
 ## Not yet decided
 
 The scene language Spark writes, text split into letters, measured layout, 3D, and how the engine replaces `video/Stage.tsx` and `video/Board.tsx`. The foundation is not connected to the pipeline yet.

@@ -1,7 +1,8 @@
 // The Project JSON: one file per run. Each pipeline stage reads earlier fields and writes its own.
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
+import type { Scene, Theme } from "../engine/core/types.ts";
 
-export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "board" | "stage" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
@@ -15,6 +16,7 @@ export type Project = {
   shots?: Shot[];
   board?: BoardPlan;
   stagePlan?: StagePlan;
+  scene?: ScenePlan; // the engine scene, written by the scene stage
   assets?: Asset[];
   timeline?: Timeline;
   render?: { path: string; ms: number };
@@ -39,6 +41,7 @@ export type Plan = {
   seconds: number; // 0 = not said; when set, it wins over input.seconds
   story: string[]; // content and structure: what to cover or skip, how to open, what to reveal when, how to end, who it is for
   tone: string;
+  intent: string; // why they want it (studying for an exam, curious, a documentary, teaching a class...), read from the request, "" if unclear
   visuals: string[];
   sound: string[];
   material: string; // notes, facts or sources the user supplied, verbatim
@@ -74,7 +77,7 @@ export type Word = { text: string; start: number; end: number; beatId: string };
 export type Narration = { audio: string; voiceId: string; model: string; seconds: number; words: Word[] };
 
 // Stage 4: director (shot types are the build order in docs/PLAN.md section 5)
-export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits" | "board" | "stage";
+export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits" | "board" | "stage" | "engine";
 export type Shot = {
   id: string;
   beatId: string;
@@ -130,7 +133,7 @@ export type Timeline = {
   captions: { words: { text: string; highlight: boolean }[]; startFrame: number; endFrame: number }[];
 };
 // `punch` marks a clip that reuses the previous clip's image, so it zooms in harder instead of repeating.
-export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits; stage?: StageState[]; board?: { elements: TimedElement[]; camera: BoardCamera[] } };
+export type Clip = { shotId: string; type: ShotType; from: number; frames: number; image?: string; cutout?: string; text?: string; receipt?: Shot["receipt"]; punch?: boolean; size?: [number, number]; focus?: Box; zoom?: boolean; marks?: TimedMark[]; credit?: string; credits?: Credits; stage?: StageState[]; scene?: Scene; theme?: Theme; board?: { elements: TimedElement[]; camera: BoardCamera[] } };
 // The teaching stage: what is on the board at each spoken moment. An id that appears in two states is one thing, which travels.
 export type StageAtom = { id: string; text: string };
 export type StagePart = StageAtom & { type: "text" | "frac" | "matrix"; num: StageAtom[]; den: StageAtom[]; rows: StageAtom[][]; bars: boolean };
@@ -144,6 +147,11 @@ export type BoardElement = { kind: MarkTool | "text" | "image" | "math"; id?: st
 export type BoardPlan = { elements: BoardElement[]; camera: { word: number; x: number; y: number; w: number }[] };
 export type TimedElement = Omit<BoardElement, "moves"> & { frame: number; moves?: (BoardMove & { frame: number })[] };
 export type BoardCamera = { frame: number; x: number; y: number; w: number; hold?: number }; // hold: seconds the move takes
+// The engine scene. Each section covers a run of spoken words and is written in the scene language
+// (prompts/engine-language.md) with global word numbers, so the sections join into one document in order.
+// `assets` maps the names a scene may use in `image id asset=NAME` to files in the project folder.
+export type SceneSection = { id: string; firstWord: number; lastWord: number; source: string; ok: boolean; rounds: number; usd: number };
+export type ScenePlan = { sections: SceneSection[]; assets: Record<string, string> };
 // The end card: every source the facts rest on, and who made each image.
 export type Credits = { sources: string[]; images: string[] };
 
@@ -183,8 +191,8 @@ const strArr = { type: "array", items: str } as const;
 export const planSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["topic", "seconds", "story", "tone", "visuals", "sound", "material", "notation"],
-  properties: { topic: str, seconds: { type: "integer" }, story: strArr, tone: str, visuals: strArr, sound: strArr, material: str, notation: { type: "boolean" } },
+  required: ["topic", "seconds", "story", "tone", "intent", "visuals", "sound", "material", "notation"],
+  properties: { topic: str, seconds: { type: "integer" }, story: strArr, tone: str, intent: str, visuals: strArr, sound: strArr, material: str, notation: { type: "boolean" } },
 } as const;
 
 export const factSheetSchema = {
