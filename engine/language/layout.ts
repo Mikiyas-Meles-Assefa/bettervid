@@ -269,11 +269,9 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         const left = item.attrs.align === "left";
         const extra: Props = { ...look(item, ["color", "weight", "opacity"]), ...(item.attrs.font === "title" ? { font: env.theme.fonts.title } : {}), ...(item.attrs.font === "mono" ? { font: env.theme.fonts.mono ?? "Menlo, monospace" } : {}), ...(left ? { anchor: "start" } : {}) };
         const dx = left ? -size.w / 2 : 0;
-        if (lines.length === 1) text(item.id, item, lines[0]!, cx + dx, cy, fs, { ...extra, ...look(item, ["rotate"]) });
-        else {
-          out.parts.push({ id: item.id, kind: "group", line: item.line, props: { x: round(cx), y: round(cy), ...look(item, ["rotate"]) } });
-          lines.forEach((l, i) => text(`${item.id}.l${i + 1}`, item, l, dx, (i - (lines.length - 1) / 2) * fs * 1.25, fs, extra, item.id));
-        }
+        // Always a group with one part per line, so a text can grow or shrink a line without changing what it is.
+        out.parts.push({ id: item.id, kind: "group", line: item.line, props: { x: round(cx), y: round(cy), ...look(item, ["rotate"]) } });
+        lines.forEach((l, i) => text(`${item.id}.l${i + 1}`, item, l, dx, (i - (lines.length - 1) / 2) * fs * 1.25, fs, extra, item.id));
         return;
       }
       case "code": {

@@ -154,10 +154,8 @@ function parseAtoms(toks: string[], fail: Fail): AtomPart[] {
     if (isQuoted(tok)) tok = unquote(tok);
     else {
       const p = pair(tok);
-      if (p) {
-        checkId(p[0], fail);
-        return { id: p[0], text: p[1].replace(/_/g, " ") };
-      }
+      if (p && ID.test(p[0]) && !BAD_IDS.has(p[0])) return { id: p[0], text: p[1].replace(/_/g, " ") };
+      if (p) tok = p[1]; // something like +=+ has no usable id, but its meaning is clear: the atom says +
     }
     // No id given: an anonymous atom keeps its identity by what it says, so it can still travel between states.
     const slug = tok.replace(/[^A-Za-z0-9]/g, (c) => c.charCodeAt(0).toString(36)) || "x";

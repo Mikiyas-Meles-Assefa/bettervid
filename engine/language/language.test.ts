@@ -99,6 +99,43 @@ test("everything a mark can do resolves", async () => {
   await ok(`@0\nbig: a=1 b=2\nmark ring a\nmark box b\nmark underline a,b\nmark cross a\nmark brace a,b "sum"\ntag b "note"\n`);
 });
 
+test("a text can change how many lines it takes", async () => {
+  const s = await ok(`@0\ntext a "short"\n@2 keep\ntext a "${"a much longer sentence that has to wrap ".repeat(3)}"\n@6 keep\ntext a "short again"\n`);
+  assert.equal(at(s, 20, "a.l1")!.props.text, "short");
+  assert.ok(at(s, 70, "a.l2"));
+  assert.equal(at(s, 200, "a.l1")!.props.text, "short again");
+  assert.equal(at(s, 200, "a.l2")!.props.opacity, 0);
+});
+
+test("a tag finds free space, also among a kit's parts", async () => {
+  const s = await ok(`@0\ngraph g: A-B A-C B-C C-D D-E\ntag g.node.A "one label" side=right\ntag g.node.B "another label"\ntag g.node.C "a third"\n`);
+  const box = (id: string) => at(s, 40, id)!.props;
+  assert.ok(box("tag.g.node.A"));
+  for (const n of ["A", "B", "C", "D", "E"]) {
+    const node = box(`g.node.${n}`);
+    const root = box("g");
+    const [x, y] = [(root.x as number) + (node.x as number) * (root.scaleX as number), (root.y as number) + (node.y as number) * (root.scaleX as number)];
+    for (const t of ["A", "B", "C"]) {
+      const tag = box(`tag.g.node.${t}`);
+      const w = (tag.text as string).length * 21;
+      assert.ok(Math.abs((tag.x as number) - x) > w / 2 + 20 || Math.abs((tag.y as number) - y) > 45, `${t} on ${n}`);
+    }
+  }
+});
+
+test("focus keeps what is attached and dims the rest, also inside a kit", async () => {
+  const s = await ok(`@0\ntext title "title"\ngraph g: A-B A-C\ntag g.node.A "start"\n@2 keep\nfocus g.node.A\n`);
+  assert.equal(at(s, 60, "tag.g.node.A")!.props.opacity, 1);
+  assert.equal(at(s, 60, "g.node.B")!.props.opacity, 0.25);
+  assert.equal(at(s, 60, "g.node.A")!.props.opacity, 1);
+  assert.equal(at(s, 60, "title")!.props.opacity, 0.25);
+});
+
+test("an atom like +=+ just says +", async () => {
+  const s = await ok(`@0\nbig: a=1 +=+ b=2\n`);
+  assert.equal(find(evaluate(s, 30), "t+".replace("+", "15") + ".1")?.props.text ?? "+", "+");
+});
+
 test("a graph is laid out by code and its parts can be addressed", async () => {
   const s = await ok(`@0\ngraph g: A-B:4 A-C:2 B-C:1 C-D:8\n@2 keep\nlight g.node.A\ndo flow g.edge.AB\n`);
   assert.equal(at(s, 40, "g.node.A")!.props.stroke, "#ff0000");

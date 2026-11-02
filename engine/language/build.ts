@@ -400,12 +400,22 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
 
     const drawn: Part[] = [];
     const placedLabels: { box: Box; line: number; id: string }[] = [];
-    const flatBoxes = [...laid.parts.filter((p) => p.kind === "text").map((p) => boxOf(p.id)).filter((b): b is Box => !!b)];
-    const label = (id: string, line: number, text: string, want: { x: number; y: number }, attrs: Attrs, size = 42 * Math.max(0.8, Math.min(1.2, laid.scale))) => {
+    // Everything a label must keep clear of: all text and every solid shape, including the parts of kits and programs.
+    const obstacles: Box[] = [...parts.values()].filter((p) => p.kind === "text" || p.props.closed).flatMap((p) => {
+      const inSlot = laid.slots.some((x) => p.id.startsWith(`${x.item.id}.`));
+      const b = inSlot ? slotPartBox(p.id) : laid.boxes.get(p.id) ?? (p.parent ? laid.boxes.get(p.parent) : undefined);
+      return b ? [b] : [];
+    });
+    const label = (id: string, line: number, text: string, want: { x: number; y: number }[], attrs: Attrs, size = 42 * Math.max(0.8, Math.min(1.2, laid.scale))) => {
       const w = env.measure(text, size);
-      const box = { x: Math.max(w / 2 + 10, Math.min(ctx.width - w / 2 - 10, want.x)), y: want.y, w, h: size * 1.2 };
-      drawn.push({ id, kind: "text", line, props: { x: round(box.x), y: round(box.y), text, size: round(size), color: attrs.color ?? "ink", weight: 700 } });
-      placedLabels.push({ box, line, id });
+      const h = size * 1.2;
+      const box = (p: { x: number; y: number }) => ({ x: Math.max(w / 2 + 10, Math.min(ctx.width - w / 2 - 10, p.x)), y: Math.max(h, Math.min(ctx.height - h, p.y)), w, h });
+      const cost = (b: Box) => [...obstacles, ...placedLabels.map((l) => l.box)].reduce((sum, o) => sum + hits(b, o), 0);
+      const ranked = want.map(box).map((b, i) => ({ b, c: cost(b), i })).sort((a, b) => a.c - b.c || a.i - b.i);
+      const best = ranked[0]!;
+      if (best.c > 0.3 * w * h) report(line, `There is no free place for "${text}" near what it points to. Shorten it, or make more room on screen.`);
+      drawn.push({ id, kind: "text", line, props: { x: round(best.b.x), y: round(best.b.y), text, size: round(size), color: attrs.color ?? "ink", weight: 700 } });
+      placedLabels.push({ box: best.b, line, id });
     };
     const addLink = (id: string, a: Box, b: Box, line: number, head: boolean, attrs: Attrs, text?: string) => {
       const bend = (number(attrs.bend ?? "") ?? 0) * Math.hypot(a.x - b.x, a.y - b.y);
@@ -430,9 +440,11 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (head) tip(points.at(-4)!, points.at(-3)!, points.at(-2)!, points.at(-1)!, `${id}.head`);
       if (head && attrs.both) tip(points[2]!, points[3]!, points[0]!, points[1]!, `${id}.tail`);
       if (text) {
-        const c = { x: points[16]!, y: points[17]! };
-        const off = 16 + 21 * Math.max(1, env.measure(text, 42) / 200) * Math.abs(ux) ** 0;
-        label(`${id}.label`, line, text, { x: c.x - uy * (off + Math.abs(uy) * env.measure(text, 42) * 0.5), y: c.y + ux * off * (ux < 0 ? -1 : 1) * (ux < 0 ? -1 : 1) }, attrs);
+        const w = env.measure(text, 42);
+        const spots = [8, 6, 10, 4, 12].flatMap((i) => [1, -1].flatMap((side) => [34, 70].map((off) => ({ x: points[i * 2]! + side * (-uy * (off + Math.abs(uy) * w * 0.5)), y: points[i * 2 + 1]! + side * ux * off }))));
+        const both = union([a, b]);
+        const around = [{ x: both.x, y: both.y - both.h / 2 - 30 }, { x: both.x, y: both.y + both.h / 2 + 30 }, { x: both.x + both.w / 2 + w / 2 + 20, y: both.y }, { x: both.x - both.w / 2 - w / 2 - 20, y: both.y }];
+        label(`${id}.label`, line, text, [...spots, ...around], attrs);
       }
     };
     laid.links.forEach((l) => {
@@ -469,7 +481,11 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           const peak = 22;
           drawn.push({ id, kind: "path", line: c.line, props: { ...base, points: [l, y, l + 14, y + peak * 0.6, b.x - 14, y + peak * 0.6, b.x, y + peak, b.x + 14, y + peak * 0.6, r - 14, y + peak * 0.6, r, y].map(round) } });
         }
-        if (c.text) label(`${id}.label`, c.line, c.text, { x: b.x, y: c.shape === "brace" ? d + 70 : c.shape === "ring" ? b.y + rh + 34 : d + 36 }, { color });
+        if (c.text) {
+          const below = c.shape === "brace" ? d + 70 : c.shape === "ring" ? b.y + rh + 34 : d + 36;
+          const above = c.shape === "ring" ? b.y - rh - 34 : t - 36;
+          label(`${id}.label`, c.line, c.text, [{ x: b.x, y: below }, { x: b.x, y: above }, { x: b.x + b.w / 2 + 160, y: b.y }, { x: b.x - b.w / 2 - 160, y: b.y }], { color });
+        }
       }
       if (c.do === "tag") {
         const b = needBox(c.target, c.line);
@@ -483,24 +499,16 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           top: { x: b.x, y: b.y - b.h / 2 - 14 - size * 0.6, w, h: size * 1.2 },
           bottom: { x: b.x, y: b.y + b.h / 2 + 14 + size * 0.6, w, h: size * 1.2 },
         };
-        const fits = (q: Box) => q.x - q.w / 2 >= 10 && q.x + q.w / 2 <= ctx.width - 10 && !flatBoxes.some((x) => x !== b && hits(q, x) > 0) && !placedLabels.some((x) => hits(q, x.box) > 0);
-        const side = c.attrs.side ?? (["right", "left", "top", "bottom"] as const).find((k) => fits(options[k]!)) ?? "bottom";
-        const pick = options[side];
-        if (!pick) {
+        const order = (["right", "left", "top", "bottom"] as const).filter((k) => k !== c.attrs.side);
+        if (c.attrs.side && !options[c.attrs.side]) {
           report(c.line, `side must be right, left, top or bottom.`);
           continue;
         }
         const id = c.attrs.id ?? `tag.${c.target}`;
-        label(id, c.line, c.text, pick, { color: c.attrs.color ?? "ink" }, size);
+        label(id, c.line, c.text, [...(c.attrs.side ? [options[c.attrs.side]!] : []), ...order.map((k) => options[k]!)], { color: c.attrs.color ?? "ink" }, size);
       }
     }
     for (const p of drawn) parts.set(p.id, p);
-
-    // Labels placed by code must not land on text.
-    for (const l of placedLabels) {
-      const blocked = flatBoxes.find((b) => hits(l.box, b) > 0.3 * l.box.w * l.box.h);
-      if (blocked) report(l.line, `The label ${l.id} lands on other text here. Move what it points to, shorten it, or set a side.`);
-    }
 
     // Anything addressed by id: a part, a whole row or container, or everything under a prefix.
     const expandTarget = (id: string, line: number): string[] => {
@@ -522,6 +530,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
 
     const effects = new Map<string, Props>();
     const effect = (id: string, props: Props) => effects.set(id, { ...effects.get(id), ...props });
+    const kept = new Set<string>();
     const lightUp = (id: string, color: string) => {
       const p = parts.get(id);
       if (p?.kind === "text") effect(id, { color, weight: 700 });
@@ -538,10 +547,17 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (c.do === "focus") {
         colorOk(c.attrs.color, c.line);
         const lit = new Set(c.targets.flatMap((t) => expandTarget(t, c.line)));
-        for (const id of parts.keys()) {
-          const top = parts.get(id)!;
+        const touches = (a: Command) => (a.do === "arrow" ? [a.from, a.to] : a.do === "mark" ? a.targets : a.do === "tag" ? [a.target] : []);
+        const stays = (id: string) => lit.has(id) || [...lit].some((x) => x.startsWith(`${id}.`) || id.startsWith(`${x}.`));
+        // Marks, tags and arrows on a focused thing are part of it.
+        for (const a of attached) {
+          if (!touches(a).some((t) => [...lit].some((x) => x === t || x.startsWith(`${t}.`)))) continue;
+          const name = a.do === "arrow" ? a.attrs.id ?? `arrow.${a.from}.${a.to}` : a.do === "mark" ? a.attrs.id ?? `mark.${a.shape}.${a.targets[0]}` : a.do === "tag" ? a.attrs.id ?? `tag.${a.target}` : "";
+          for (const id of parts.keys()) if (id === name || id.startsWith(`${name}.`)) kept.add(id);
+        }
+        for (const [id, p] of parts) {
           if (lit.has(id)) lightUp(id, c.attrs.color ?? "accent");
-          else if (!top.parent && ![...lit].some((x) => x.startsWith(`${id}.`))) effect(id, { opacity: number(c.attrs.amount ?? "") ?? 0.25 });
+          else if (!stays(id) && !kept.has(id) && !(p.parent && !stays(p.parent))) effect(id, { opacity: number(c.attrs.amount ?? "") ?? 0.25 });
         }
       }
       if (c.do === "set") {
