@@ -88,7 +88,7 @@ const makers = new Map<string, Maker>();
 const boards = new Map<string, Board>();
 
 function boardFor(kind: string, id: string, spec: string, ctx: CompileContext): Board {
-  const key = `${kind}\u0000${id}\u0000${spec}\u0000${ctx.theme.fonts.mono ?? ""}\u0000${ctx.theme.fonts.body}`;
+  const key = `${kind}\u0000${id}\u0000${spec}\u0000${ctx.theme.fonts.mono ?? ""}\u0000${ctx.theme.fonts.body}\u0000${ctx.width}x${ctx.height}`;
   const known = boards.get(key);
   if (known) return known;
   const make = makers.get(kind);
@@ -271,3 +271,7 @@ export function truthSteps(kind: string, id: string, data: Record<string, unknow
   const { w: _w, h: _h, ...rest } = data;
   return boardFor(kind, id, JSON.stringify(rest), ctx).steps.map((s) => s.say);
 }
+
+// The story of a truth thing already made, by the kind and spec its root group carries, for layout to see where its
+// parts go while it plays.
+export const storyOf = (kind: string, id: string, spec: string, ctx: CompileContext): Board => boardFor(kind, id, spec, ctx);

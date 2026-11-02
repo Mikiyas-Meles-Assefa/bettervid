@@ -9,6 +9,7 @@ import { dijkstraKit } from "./dijkstra.ts";
 import { KITS } from "./index.ts";
 import { linalgKit, linalgPart } from "./linalg.ts";
 import { sortKit, sortPart } from "./sort.ts";
+import { truthSteps } from "./steps.ts";
 import { traceKit, tracePart } from "./trace.ts";
 
 const words = Array.from({ length: 80 }, (_, i) => ({ start: i * 0.5 }));
@@ -133,6 +134,34 @@ test("a sort ends with every value in its sorted place", async () => {
     assert.equal(at(s, end(s), sortPart.shape("s", 1)).stroke, "#ffff00", `${algo} marks finished places`);
     assert.equal(at(s, end(s), sortPart.value("s", 1)).color, "#ffff00", `${algo} keeps finished values readable`);
   }
+});
+
+test("on a tall frame merge sort is drawn by level: halves go down a level, merges come back, the tree stays drawn", async () => {
+  const data = [7, 3, 6, 4, 2, 1, 8, 5];
+  const s = await ok(`@0\nsort s data=[${data}] algo=merge order=levels show=boxes\ndo steps s until=@60\n`);
+  const item = (k: number, f: number) => at(s, f, sortPart.item("s", k));
+  // Part way through, the values stand on four different levels, each further down.
+  // (Heights where values rest, not the ones they pass through while moving.)
+  const count = new Map<number, number>();
+  for (let f = 0; f < end(s); f++) for (let i = 1; i <= data.length; i++) count.set(Math.round(item(i, f).y as number), (count.get(Math.round(item(i, f).y as number)) ?? 0) + 1);
+  const levels = [...count].filter(([, c]) => c > 40).map(([y]) => y).sort((p, q) => p - q);
+  assert.equal(levels.length, 4, `levels at ${levels}`);
+  assert.ok(levels[0] === 0 && levels.every((y, i) => !i || y > levels[i - 1]!));
+  const end1 = end(s);
+  const order = data.map((v, i) => ({ v, x: item(i + 1, end1).x as number })).sort((a, b) => a.x - b.x).map((o) => o.v);
+  assert.deepEqual(order, [1, 2, 3, 4, 5, 6, 7, 8]);
+  for (let i = 1; i <= data.length; i++) assert.equal(item(i, end1).y, 0, "back at the first level");
+  // The places the values left stay as faint outlines.
+  assert.ok(Number(at(s, end1, sortPart.place("s", 3, 0)).opacity) > 0, "the last level is outlined");
+  // Across: the levels side by side, the values of a level in a column; sorted top to bottom.
+  const a = await ok(`@0\nsort s data=[${data}] algo=merge show=boxes form=across\ndo steps s until=@60\n`);
+  const down = data.map((v, i) => ({ v, y: at(a, end(a), sortPart.item("s", i + 1)).y as number })).sort((p, q) => p.y - q.y).map((o) => o.v);
+  assert.deepEqual(down, [1, 2, 3, 4, 5, 6, 7, 8]);
+  // The steps are the same in every form, so a scene's from= and to= mean the same thing whatever the frame.
+  const says = (form: string) => truthSteps("sort", "s", { data, algo: "merge", show: "boxes", form }, ctx);
+  assert.deepEqual(says("down"), says("row"));
+  assert.deepEqual(says("across"), says("row"));
+  assert.match(await bad(`@0\nsort s data=[3,1] algo=bubble form=down\n`), /form=down draws a merge sort of boxes/);
 });
 
 test("a trace lights each line and shows the real variables and output", async () => {

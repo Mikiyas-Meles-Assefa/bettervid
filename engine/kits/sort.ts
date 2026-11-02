@@ -13,9 +13,67 @@ export const sortPart = {
   value: (s: string, k: number) => `${s}.item.${k}.value`,
   pointer: (s: string) => `${s}.pointer`,
   finger: (s: string, side: "a" | "b") => `${s}.finger.${side}`, // merge: the front of the left run (a) and the right run (b)
+  place: (s: string, level: number, p: number) => `${s}.place.${level}.${p + 1}`, // merge by level: a place a value left
 };
 
-function sortBoard(id: string, d: Record<string, unknown>): Board {
+// Forms a sort can take. `row`: every value in one row, as it would sit on a wide screen. `down` and `across` (merge
+// with boxes): the runs are laid out by level, as the split tree a person draws by hand: each cut moves the two halves
+// one level on, and each merge takes the values back into the level of the run they came from, so the process itself
+// fills the frame. `down` puts the levels under each other, the values of a level side by side; `across` puts the
+// levels side by side, the values of a level under each other, which on a tall frame leaves more room for each value.
+export const SORT_FORMS = ["auto", "row", "down", "across"] as const;
+const GAP_TREE = 0.35; // between runs of one level, in boxes
+const PITCH_TREE = 1.08; // from one value to the next in a run, in boxes
+// From one level to the next, in boxes: at least room for the fingers beside a level, and at most this much, so the
+// levels spread over the room the values leave rather than bunching at the top.
+const STEP_LEAST = { down: 2.1, across: 1.9 };
+const STEP_MOST = 3.4;
+
+// The levels of a merge sort: how deep each run is, and for each level the runs a position belongs to there.
+function levelsOf(n: number, log: SortEvent[]) {
+  const depth = new Map<string, number>([[`0-${n - 1}`, 0]]);
+  for (const e of log) {
+    if (e.type !== "divide") continue;
+    const d = depth.get(`${e.lo}-${e.hi}`) ?? 0;
+    depth.set(`${e.lo}-${e.mid}`, d + 1);
+    depth.set(`${e.mid + 1}-${e.hi}`, d + 1);
+  }
+  const runs = [...depth].map(([k, d]) => ({ lo: Number(k.split("-")[0]), hi: Number(k.split("-")[1]), d }));
+  const deepest = Math.max(...runs.map((r) => r.d));
+  // At level L a position belongs to the deepest run that holds it and is no deeper than L.
+  const owners = Array.from({ length: deepest + 1 }, (_, L) => Array.from({ length: n }, (_, p) => runs.filter((r) => r.lo <= p && p <= r.hi && r.d <= L).sort((a, b) => b.d - a.d)[0]!));
+  const block = owners.map((owner) => {
+    const ids = new Map<string, number>();
+    return owner.map((r) => ids.get(`${r.lo}-${r.hi}`) ?? ids.set(`${r.lo}-${r.hi}`, ids.size).get(`${r.lo}-${r.hi}`)!);
+  });
+  // Whether a value ever sits at position p of level L: only where a run of exactly that depth holds it.
+  const reached = (L: number, p: number) => owners[L]![p]!.d === L;
+  return { depth: (lo: number, hi: number) => depth.get(`${lo}-${hi}`) ?? 0, deepest, block, reached };
+}
+
+// The form a sort takes, and for a form by level the step between levels. When the scene leaves the form to the kit, a
+// merge of boxes on a tall frame is drawn by level, down or across, whichever lets each value be larger (down, the
+// familiar picture, unless across is clearly larger); otherwise in a row.
+type Shape = { form: "row" } | { form: "down" | "across"; step: number };
+function shapeFor(asked: string, algo: SortName, show: string, n: number, log: SortEvent[], ctx: { width: number; height: number }): Shape {
+  if (asked === "row" || (asked === "auto" && (algo !== "merge" || show !== "boxes" || ctx.height <= ctx.width * 1.2))) return { form: "row" };
+  const { deepest, block } = levelsOf(n, log);
+  const along = n * PITCH_TREE + Math.max(...block.map((b) => Math.max(...b))) * GAP_TREE;
+  // The room a sort may have: the frame's safe width, and three quarters of its safe height, the rest for words.
+  const [w, h] = [ctx.width * 0.87, ctx.height * 0.765 * 0.75];
+  // The size of a value each way, and the step that spreads the levels over the room left the other way.
+  const fit = (form: "down" | "across") => {
+    const [wide, deep] = form === "down" ? [w, h] : [h, w];
+    const least = STEP_LEAST[form];
+    const cell = Math.min(wide / along, deep / (deepest * least + 1));
+    return { form, cell, step: Math.max(least, Math.min(STEP_MOST, (deep / cell - 1) / Math.max(1, deepest))) };
+  };
+  const [down, across] = [fit("down"), fit("across")];
+  const pick = asked === "down" ? down : asked === "across" ? across : across.cell > down.cell * 1.2 ? across : down;
+  return { form: pick.form, step: pick.step };
+}
+
+function sortBoard(id: string, d: Record<string, unknown>, ctx: { width: number; height: number }): Board {
   if (!Array.isArray(d.data)) throw new Error(`sort needs data, a list of numbers, as in sort s data=[5,2,8,1] algo=bubble`);
   const values = d.data.map((v) => (typeof v === "string" && v.trim() !== "" ? Number(v) : v)) as number[];
   if (values.length < 2 || values.length > 16) throw new Error(`sort shows 2 to 16 values, not ${values.length}`);
@@ -27,6 +85,11 @@ function sortBoard(id: string, d: Record<string, unknown>): Board {
   if (order !== "calls" && order !== "levels") throw new Error(`order must be calls or levels, not ${order}`);
   if (order === "levels" && algo !== "merge") throw new Error(`order=levels is for algo=merge, which can cut every run first and then merge level by level`);
   const log = sort(values, algo, order);
+  const asked = String(d.form ?? "auto");
+  if (!(SORT_FORMS as readonly string[]).includes(asked)) throw new Error(`form must be one of ${SORT_FORMS.join(", ")}, not ${asked}`);
+  if ((asked === "down" || asked === "across") && (algo !== "merge" || show !== "boxes")) throw new Error(`form=${asked} draws a merge sort of boxes level by level: use algo=merge show=boxes, or form=row`);
+  const drawn = shapeFor(asked, algo, show, values.length, log, ctx);
+  if (drawn.form !== "row") return treeBoard(id, values, log, drawn.form, drawn.step);
   const n = values.length;
   const labels = values.map(String);
   const box = Math.max(SIZE * 1.7, ...labels.map((l) => textWidth(l, SIZE) + SIZE * 0.8));
@@ -184,12 +247,119 @@ function sortBoard(id: string, d: Record<string, unknown>): Board {
   return { parts, steps: s.finish() };
 }
 
+// Merge sort by level. Each run sits at the level of its depth in the split tree: a cut moves both halves one level on,
+// a merge takes each value back into the level of the run being merged, in order, while a finger under (or beside) the
+// front of each half moves on. The values end where they started, at the first level, sorted.
+function treeBoard(id: string, values: number[], log: SortEvent[], form: "down" | "across", levelStep: number): Board {
+  const n = values.length;
+  const labels = values.map(String);
+  // Boxes fit their values closely, so at any size the value is most of what is seen.
+  const box = Math.max(SIZE * 1.3, ...labels.map((l) => textWidth(l, SIZE) + SIZE * 0.45));
+  const { depth, deepest, block, reached } = levelsOf(n, log);
+  const pitch = box * PITCH_TREE;
+  const gap = box * GAP_TREE;
+  const step = box * levelStep;
+  // Where position p sits at level L: along its level, centered, with a gap between runs; and the level itself.
+  const span = (L: number) => n * pitch + Math.max(...block[L]!) * gap;
+  const along = (p: number, L: number) => p * pitch + block[L]![p]! * gap - span(L) / 2 + pitch / 2;
+  const at = (p: number, L: number) => (form === "down" ? { x: along(p, L), y: L * step } : { x: L * step, y: along(p, L) });
+  const w = box * 0.9;
+  const parts: NodeSpec[] = [{ id, kind: "group", props: {} }];
+  // The tree stays drawn: where a value leaves a place, a faint outline of that place remains, so the levels the
+  // process went through, and the places merged values come back to, are seen.
+  const outline = [-w / 2, -w / 2, w / 2, -w / 2, w / 2, w / 2, -w / 2, w / 2, -w / 2, -w / 2];
+  for (let L = 0; L <= deepest; L++) for (let p = 0; p < n; p++) if (reached(L, p)) parts.push({ id: sortPart.place(id, L, p), kind: "path", parent: id, props: { ...at(p, L), points: outline, closed: 1, fill: "none", stroke: "ink", strokeWidth: 3, opacity: 0 } });
+  const leave = (L: number, p: number, start: number) => s.set(sortPart.place(id, L, p), "opacity", 0.35, start, 0.4);
+  values.forEach((_, i) => {
+    const k = i + 1;
+    parts.push({ id: sortPart.item(id, k), kind: "group", parent: id, props: at(i, 0) });
+    parts.push({ id: sortPart.shape(id, k), kind: "path", parent: sortPart.item(id, k), props: { points: [-w / 2, -w / 2, w / 2, -w / 2, w / 2, w / 2, -w / 2, w / 2, -w / 2, -w / 2], closed: 1, fill: "paper", stroke: "ink", strokeWidth: 5 } });
+    parts.push(text(sortPart.value(id, k), sortPart.item(id, k), 0, 0, labels[i]!, SIZE, { weight: 700 }));
+  });
+  // A finger points at the front of each half being merged: under it when levels go down, beside it when they go across.
+  const f = SIZE * 0.34;
+  const fingerAt = (p: number, L: number) => {
+    const c = at(p, L);
+    return form === "down" ? { x: c.x, y: c.y + w / 2 + 6 } : { x: c.x + w / 2 + 6, y: c.y };
+  };
+  const mark = form === "down" ? [0, 0, f, f * 1.5, -f, f * 1.5, 0, 0] : [0, 0, f * 1.5, -f, f * 1.5, f, 0, 0];
+  for (const side of ["a", "b"] as const) {
+    parts.push({ id: sortPart.finger(id, side), kind: "group", parent: id, props: { ...fingerAt(0, 0), opacity: 0 } });
+    parts.push({ id: `${sortPart.finger(id, side)}.mark`, kind: "path", parent: sortPart.finger(id, side), props: { points: mark, closed: 1, fill: "accent", stroke: "accent", strokeWidth: 3 } });
+  }
+  const wide = Math.max(...block.map((_, L) => span(L)));
+  const deep = deepest * step;
+  const reach = w / 2 + 6 + f * 1.5 + 10; // room past the last level for its fingers
+  parts.push(form === "down" ? frame(`${id}.frame`, id, -wide / 2, -box / 2 - 10, wide / 2, deep + reach) : frame(`${id}.frame`, id, -box / 2 - 10, -wide / 2, deep + reach, wide / 2));
+
+  const s = new Story(parts);
+  const order = values.map((_, i) => i + 1); // order[p]: the item at position p
+  const val = (p: number) => values[order[p]! - 1]!;
+  const shape = (p: number) => sortPart.shape(id, order[p]!);
+  const vals = (lo: number, hi: number) => Array.from({ length: hi - lo + 1 }, (_, k) => val(lo + k)).join(" ");
+  const move = (item: number, to: { x: number; y: number }, start: number, dur: number) => s.set(sortPart.item(id, item), "x", to.x, start, dur).set(sortPart.item(id, item), "y", to.y, start, dur);
+  const run = { lo: 0, mid: 0, hi: 0, a: 0, b: 0, d: 0 };
+  const pending: number[] = [];
+  const finger = (side: "a" | "b", p: number, last: number) => {
+    if (p <= last) {
+      const c = fingerAt(p, run.d + 1);
+      s.set(sortPart.finger(id, side), "x", c.x, 0.5, 0.4).set(sortPart.finger(id, side), "y", c.y, 0.5, 0.4);
+    } else s.set(sortPart.finger(id, side), "opacity", 0, 0.5, 0.3);
+  };
+  let open = { started: false, moved: false };
+  const begin = (say: string) => {
+    s.step(say);
+    open = { started: true, moved: false };
+  };
+  for (let i = 0; i < log.length; i++) {
+    const e = log[i]!;
+    if (e.type === "compare") {
+      const next = log[i + 1];
+      const sign = e.result === "less" ? "<" : e.result === "greater" ? ">" : "=";
+      begin(`compare ${e.a} ${sign} ${e.b}${next?.type === "take" ? `, take ${val(next.from)}` : ""}`);
+      s.flash(shape(e.i), "stroke", "accent").flash(shape(e.j), "stroke", "accent").flash(sortPart.value(id, order[e.i]!), "color", "accent").flash(sortPart.value(id, order[e.j]!), "color", "accent");
+    } else if (e.type === "divide") {
+      begin(`split ${vals(e.lo, e.hi)} into ${vals(e.lo, e.mid)} and ${vals(e.mid + 1, e.hi)}`);
+      const L = depth(e.lo, e.hi) + 1;
+      for (let p = e.lo; p <= e.hi; p++) {
+        move(order[p]!, at(p, L), 0.1, 0.6);
+        leave(L - 1, p, 0.1);
+      }
+    } else if (e.type === "split") {
+      begin(`merge ${vals(e.lo, e.mid)} with ${vals(e.mid + 1, e.hi)}: a finger on the front of each`);
+      for (let p = e.lo; p <= e.hi; p++) s.flash(sortPart.value(id, order[p]!), "color", "accent");
+      Object.assign(run, { lo: e.lo, mid: e.mid, hi: e.hi, a: e.lo, b: e.mid + 1, d: depth(e.lo, e.hi) });
+      for (const [side, p] of [["a", e.lo], ["b", e.mid + 1]] as const) {
+        const c = fingerAt(p, run.d + 1);
+        s.set(sortPart.finger(id, side), "x", c.x, 0, 0).set(sortPart.finger(id, side), "y", c.y, 0, 0).set(sortPart.finger(id, side), "opacity", 1, 0.1, 0.4);
+      }
+      pending.length = 0;
+    } else if (e.type === "take") {
+      if (!open.started || open.moved) begin(`take ${val(e.from)}${e.from <= run.mid ? (run.b > run.hi ? ", the right side is used up" : "") : run.a > run.mid ? ", the left side is used up" : ""}`);
+      move(order[e.from]!, at(e.to, run.d), 0.35, 0.55);
+      leave(run.d + 1, e.from, 0.35);
+      if (e.from <= run.mid) finger("a", ++run.a, run.mid);
+      else finger("b", ++run.b, run.hi);
+      pending.push(order[e.from]!);
+      open.moved = true;
+    } else if (e.type === "lift") {
+      begin(`merged: ${pending.map((k) => values[k - 1]).join(" ")}`);
+      pending.forEach((item, k) => (order[e.lo + k] = item));
+      s.set(sortPart.finger(id, "a"), "opacity", 0, 0, 0.2).set(sortPart.finger(id, "b"), "opacity", 0, 0, 0.2);
+    } else if (e.type === "sorted") {
+      if (!open.started) begin(`in place: ${e.i.map(val).join(" ")}`);
+      for (const p of e.i) s.set(shape(p), "stroke", "highlight", 0.85, 0.15).set(sortPart.value(id, order[p]!), "color", "highlight", 0.85, 0.15);
+    }
+  }
+  return { parts, steps: s.finish() };
+}
+
 export const sortKit: Kit = {
   name: "sort",
-  kinds: { sort: truthKind("sort", sortBoard, ["data", "algo", "show", "order"]) },
+  kinds: { sort: truthKind("sort", sortBoard, ["data", "algo", "show", "order", "form"]) },
   behaviors: { steps: playSteps },
   docs: {
-    sort: "`sort s data=[5,2,8,1,9] algo=bubble|insertion|selection|merge|quick show=bars|boxes` runs the real sort; each comparison is a step (with its swap or move), so the count depends on the data: use `do steps s until=@N`. Merge shows the whole method: each cut of a run is a step that opens a gap between its halves; each merge starts with a step that puts a finger under the front of each half, every comparison takes the smaller value down into the merged run below while that finger moves on, and a last step lifts the merged run back up as the gap closes. `order=levels` (merge) cuts every run first, level by level, then merges level by level from the smallest; the default follows the recursion. Parts: s.item.K (the value that started at place K, from 1; it travels), s.item.K.shape, s.item.K.value, s.pointer (pivot or smallest, quick and selection), s.finger.a and s.finger.b (merge: the fronts of the two halves). Finished places turn highlight. Its steps say what each does, so a label it shows is always true",
+    sort: "`sort s data=[5,2,8,1,9] algo=bubble|insertion|selection|merge|quick show=bars|boxes` runs the real sort; each comparison is a step (with its swap or move), so the count depends on the data: use `do steps s until=@N`. Merge shows the whole method: each cut of a run is a step that opens a gap between its halves; each merge starts with a step that puts a finger under the front of each half, every comparison takes the smaller value down into the merged run below while that finger moves on, and a last step lifts the merged run back up as the gap closes. `order=levels` (merge) cuts every run first, level by level, then merges level by level from the smallest; the default follows the recursion. Parts: s.item.K (the value that started at place K, from 1; it travels), s.item.K.shape, s.item.K.value, s.pointer (pivot or smallest, quick and selection), s.finger.a and s.finger.b (merge: the fronts of the two halves), s.place.L.K (merge by level: the faint outline of place K at level L, from 0, left where a value moved away). Finished places turn highlight. `form=row|down|across` (merge with boxes): on a tall frame the kit draws merge sort by level unless told otherwise: each cut moves the halves one level on and each merge takes the values back into the level above, ending in the first level, sorted; `down` stacks the levels, `across` sets them side by side with each level's values in a column, and the kit picks whichever lets the values be larger (`row`: one row, as on a wide screen). Its steps say what each does, so a label it shows is always true",
     steps: STEPS_DOC,
   },
 };
