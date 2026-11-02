@@ -242,22 +242,32 @@ function lookStudy(p: Project, s: StyleFile, type: ImageType, spend: Spend): Pro
 type Check = { writing: boolean; face: boolean; passes: boolean; reason: string };
 
 // One look at a generated picture with the words it goes under: fake writing, a made-up face standing in for a real
-// person, or a picture a viewer would take for the real thing the story is about.
+// person, or a picture a viewer would take for the real thing the story is about. The model first names the specific
+// real thing the words single out, if any; a picture can only pass as a real thing that has been named, so an everyday
+// object (a fridge, a gull) is never refused for looking real.
 async function checkGenerated(img: Uint8Array, spend: Spend, ctx?: GenContext): Promise<Check> {
   const words = ctx ? `Video topic: ${topic(ctx.p)}\n${momentText(ctx.p, ctx.shot)}` : "No narration is given: judge only the writing.";
-  const r = await json<Check>({
+  const r = await json<{ writing: boolean; face: boolean; specific: string; passes: boolean; reason: string }>({
     system:
       "You check an AI-generated picture before it goes into a documentary explainer video. Answer:\n" +
       "- writing: does any surface show text, letters, numbers, a label, or marks imitating writing or script of any kind?\n" +
       "- face: does it show the face of a real person the narration is about, by name or as a group it names, with features a viewer would take as theirs? A made-up face standing in for a real person counts. A small figure far away or from behind does not.\n" +
-      "- passes: would a viewer hearing these words take this picture for a real photograph, painting or record of the specific real person, place, building, map, document, machine, object or event the words are about, rather than a generic picture or an illustration of an idea? A generic thing the story does not single out (a bird, a beach, a tool) is fine, and so is a picture that is plainly drawn and that no one would take for a record.\n" +
+      "- specific: the one particular real person, place, building, map, document, machine, artifact or event these words single out and the picture could be taken for (\"the first telephone\", \"the 1906 earthquake\"), or empty if the words are about a kind of thing in general (any fridge, birds, a beach).\n" +
+      "- passes: only when `specific` is not empty: would a viewer hearing these words take this picture for a real photograph, painting or record of that thing, rather than a generic picture or an illustration of an idea? A plainly drawn picture no one would take for a record does not pass.\n" +
       "- reason: one plain sentence.",
     user: [{ type: "input_image", image_url: `data:image/jpeg;base64,${Buffer.from(img).toString("base64")}` }, { type: "input_text", text: words }],
-    schema: { type: "object", additionalProperties: false, required: ["writing", "face", "passes", "reason"], properties: { writing: { type: "boolean" }, face: { type: "boolean" }, passes: { type: "boolean" }, reason: { type: "string" } } },
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["writing", "face", "specific", "passes", "reason"],
+      properties: { writing: { type: "boolean" }, face: { type: "boolean" }, specific: { type: "string" }, passes: { type: "boolean" }, reason: { type: "string" } },
+    },
     schemaName: "generated_check",
   });
   spend.usd += r.usd;
-  return ctx ? r.value : { ...r.value, face: false, passes: false };
+  const v = r.value;
+  if (!ctx) return { writing: v.writing, face: false, passes: false, reason: v.reason };
+  return { writing: v.writing, face: v.face, passes: v.passes && !!v.specific.trim(), reason: v.specific.trim() ? `${v.reason} (it would stand for: ${v.specific})` : v.reason };
 }
 
 // Muse Image refuses some prompts (content policy), e.g. disease scenes with bodies. Retry once with the neutral
@@ -402,7 +412,8 @@ async function make(p: Project, shot: Shot, s: StyleFile, spend: Spend, folder: 
   if (req.kind === "real" && req.query) {
     const found = await findReal(p, shot, spend).catch((e) => (spend.notes.push(`${shot.id} archive error: ${e.message}`), { pick: null, reason: `archive error: ${e.message}` }));
     let pick = found.pick;
-    why = found.reason;
+    // The list of what each candidate showed stays in the shot's notes; the asset keeps the plain reason.
+    why = found.reason.split(" Candidates were:")[0]!;
     // Archives sometimes refuse the full file after serving the preview; that image is simply unavailable.
     const full = pick && (await download(pick.cand.full).catch((e) => (spend.notes.push(`${shot.id} download failed: ${e.message}`), null)));
     if (pick && !full) pick = null;
