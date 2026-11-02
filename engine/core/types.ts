@@ -177,3 +177,29 @@ export type TruthEvent<T = Record<string, unknown>> = { type: string } & T;
 export type MeasureRequest = { clusters: string[]; font: string; weight: number };
 export type Measured = { edges: number[]; ascent: number; descent: number };
 export type TextMeasure = (request: MeasureRequest) => Measured;
+// What the understanding loop hands to repair. It says what went wrong and when, in words a repairer can act on. It never
+// says how to teach: `wrong` describes the failure for a viewer, and the fix is the repairer's choice.
+export type TicketProblem =
+  | "not_shown" // the thing being spoken about cannot be found on screen
+  | "left_screen" // something the viewer needs right now has gone
+  | "frozen" // the voice has moved on and the screen has not
+  | "competing" // the screen pulls attention away from what is being said
+  | "unreadable" // it is there but cannot be read or made out
+  | "viewer_lost" // a sound-off viewer stopped being able to follow
+  | "idea_missing" // an idea in the script never reached the sound-off viewer
+  | "not_learned" // a first-time learner failed a quiz question on this
+  | "false_claim" // the screen says something wrong
+  | "unsupported_claim"; // the screen says something nothing backs up
+
+export type RepairTicket = {
+  reviewer: "sound_off" | "learner" | "truth" | "sequence";
+  problem: TicketProblem;
+  at: Moment; // tied to a spoken word, so a ticket survives a change of timing
+  until: Moment;
+  from: number; // seconds in this cut, for a person reading the report
+  to: number;
+  said: string; // what the voice says here
+  seen: string; // what is on screen here
+  wrong: string; // what fails for the viewer
+  severity: 1 | 2 | 3; // 3 stops understanding, 1 is a blemish
+};
