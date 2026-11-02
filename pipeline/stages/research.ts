@@ -1,14 +1,16 @@
-// Stage 1: research. Spark 1.3 with web search builds the fact sheet (claims, each tied to sources).
+// Stage 1: research. Spark 1.3 with web search builds the fact sheet (claims, each tied to sources). It reads who the
+// video is for and why, so it looks for what this person needs rather than a default documentary.
 import type { FactSheet, Project } from "../../schemas/project.ts";
 import { factSheetSchema } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, prompt, stage, topic } from "../lib/project.ts";
+import { viewer } from "./plan.ts";
 
 export async function research(p: Project, force = false) {
   const notes = p.plan?.material
     ? `The user's own notes for this video. Treat them as leads: verify them, use what holds up, and say in the story where they are wrong:\n"""\n${p.plan.material}\n"""`
     : "";
-  const user = [`Topic for the video: ${topic(p)}`, asked(p.plan?.story ?? []), notes].filter(Boolean).join("\n\n");
+  const user = [`Topic for the video: ${topic(p)}`, viewer(p), asked(p.plan?.story ?? []), notes].filter(Boolean).join("\n\n");
   await stage(p, "research", [user, prompt("research")], 0.5, async () => {
     const r = await json<FactSheet>({
       system: prompt("research"),
