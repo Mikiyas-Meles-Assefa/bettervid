@@ -5,9 +5,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { CompileContext } from "../../engine/core/types.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
-import type { Script } from "../../schemas/project.ts";
+import type { Project, Script } from "../../schemas/project.ts";
 import { truthKindNames } from "../lib/abilities.ts";
 import { applyCues, coverage, demoSteps, problems, scriptWords, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
+import { events } from "./director.ts";
 import { SCENE_KITS } from "./scene.ts";
 
 // Words 0 to 5 in b1, 6 to 13 in b2.
@@ -155,6 +156,19 @@ test("the checks catch broken plans", () => {
   has(plan([event("e1", 0, 5), event("e1", 6, 13)]), /share the id "e1"/);
   has(plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "", data: "" }, phases: [{ from: 1, to: 2, pace: "slow", at: { word: 1, hold: "", cue: "" }, until: none, replay: false, why: "" }] } })]), /no truth thing/);
   has(plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "", data: "" }, phases: [{ from: 0, to: 0, pace: "slow", at: { word: 1, hold: "h9", cue: "" }, until: none, replay: false, why: "" }] } })]), /exactly one of word, hold or cue/);
+});
+
+test("the picture director gets each event's look and withholds, only when the plan counts the voiced words", () => {
+  const raw = plan([event("e1", 0, 5, { withhold: { what: "the right side", until: "e2" } }), event("e2", 6, 13, { reveal: { word: 12, what: "the right side" } })], [{ id: "c1", beforeWord: 6, text: "Watch this." }]);
+  const { script: out, plan: direction } = applyCues(script, raw);
+  const words = scriptWords(out).map((text, i) => ({ text, start: i, end: i + 0.5, beatId: "b" }));
+  const p = { direction, narration: { audio: "", voiceId: "", model: "", seconds: words.length, words } } as unknown as Project;
+  const text = events(p);
+  assert.match(text, /e1, words 0 to 5: a job; look: look e1/);
+  assert.match(text, /WITHHOLD "the right side" from every picture before word 6/);
+  assert.match(text, /reveals at word 14: the right side/);
+  // A voice recorded from another script: no events, rather than events pointing at the wrong words.
+  assert.equal(events({ ...p, narration: { ...p.narration!, words: words.slice(1) } }), "");
 });
 
 test("demonstrations are checked against the steps the kit really computes", () => {
