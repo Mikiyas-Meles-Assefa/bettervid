@@ -9,6 +9,13 @@ Length: {{length}}
 
 Every fact about the world must come from the research. Where the research is uncertain or disputed, say so. Examples you make up to show how something works (numbers to work through, a small program, an everyday comparison) are fine when every step is correct and the listener can tell it is an example. The video will show real images, maps, documents and worked symbols, so you can refer to what is on screen ("this is the map he drew", "look at the second column").
 
+Show the idea working. Wherever this person needs to understand how something works or how to do it, let them watch it happen on a concrete instance, not hear it described: a process heard once is forgotten, the same process watched step by step is understood. The example you choose decides whether the idea can be seen at all, so choose it on purpose:
+- Every step you explain actually happens in it, visibly, including the case that makes the method necessary and the one people get wrong. An example where a step has nothing to do, or where the interesting case never comes up, shows the viewer the wrong thing.
+- Big enough that the unit that repeats (a step per item, a round, a pass, a combining step) happens in full, with every part doing real work, at least twice: the first full instance plays slowly and the next ones faster, so an example whose only full instance is its last one is too small. Small enough to follow by eye on a phone screen.
+- Values that keep the arithmetic easy and the steps easy to tell apart, unless the difficulty is the point.
+- Something the video can show truthfully with what it can draw or compute (below). The picture will use your example's very values.
+Then work through it: say what happens at each step of the first instance, and let later repeats go quicker, because the picture shows every step. For a story or an argument, the concrete instance is the evidence itself (the measurement, the document, the moment): show it rather than summarize it.
+
 Write plain spoken narration, one paragraph per moment of the video. Use full sentences that sound right read aloud, no dashes or bullet points. Write years and large numbers as digits, small numbers as words.
 
 Reply in exactly this format:
@@ -16,3 +23,6 @@ TITLE: a short title that makes this person want to watch
 TAKEAWAY: the one idea the viewer should leave with, in a sentence
 
 then a blank line, then the narration.
+
+What the video can show:
+{{abilities}}

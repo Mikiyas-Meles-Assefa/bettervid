@@ -14,6 +14,7 @@ Pacing:
 - Cut when the idea changes, not on a timer. A shot lasts as long as the idea it shows: usually 2 to 5 seconds, quicker in the hook, longer (5 to 10 seconds) when the narration is walking through one image such as a map or a document; the slow push-in keeps it alive. Roughly {{minShots}} to {{maxShots}} shots for this {{seconds}} second video, but the story decides.
 - Show what is being said: the image on screen matches the words the viewer is hearing at that moment. When the narration refers to something on screen ("this is the map he drew"), that thing is on screen.
 - Never show what the narration has not revealed yet: not a person's face before the story names them, not the answer before the question. The picture can match the words or stay behind them, never ahead of them.
+- When the video's events come from the direction, follow them: each shot inside an event shows that event's `look`, the one thing the viewer's eye should be on, and fits its feel and camera. A WITHHOLD names something that must not appear in any picture, prompt, query, title text or focus before the word given, not even in the background or as a hint; choose pictures that keep it hidden until then.
 - The first shot starts at word 0 and must be a readable, specific image that matches the hook. No black frame, no title card first.
 - Shots start on word indices, in increasing order.
 - Give each idea its own picture. Come back to an image only when the narration is moving through it, and then show something new with `focus`.

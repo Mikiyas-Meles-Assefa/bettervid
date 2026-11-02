@@ -69,10 +69,12 @@ export type Beat = {
   visual: string; // the one visual this beat calls for, concrete
   emphasis: string[]; // words to highlight in captions
   cue?: boolean; // a short line the direction added ("Watch the first swap."), never a new fact
+  of?: string; // when a cue split a writer's beat, the later part names the beat it came from, so the split can be undone
 };
 export type Script = { title: string; takeaway: string; beats: Beat[] };
 // `notes`: for a cut, the thread and what was left out; for a review, the issues it fixed.
-export type WritingStep = { step: "draft" | "cut" | "review"; title: string; takeaway: string; narration: string; notes: string[]; key?: string }; // key: hash of the writer inputs, for resuming
+// `check` is a director's read of the demonstrations and examples (notes only, narration unchanged); `revise` acts on it.
+export type WritingStep = { step: "draft" | "cut" | "review" | "check" | "revise";title: string; takeaway: string; narration: string; notes: string[]; key?: string }; // key: hash of the writer inputs, for resuming
 
 // Stage 2b: direction. Walks the script as the viewer and writes, moment by moment, what each stretch is for and
 // what the picture and voice do about it (research/teaching-tempo.md). Word numbers are global and count the
@@ -94,7 +96,8 @@ export type DemoPhase = {
   replay?: boolean;
   why: string;
 };
-export type Demo = { what: string; phases: DemoPhase[] };
+// `truth`: the truth kit thing that computes the demonstration, with the steps it really computes, so phases name real steps.
+export type Demo = { what: string; truth?: { kind: string; data: Record<string, unknown>; steps: string[] }; phases: DemoPhase[] };
 export type DirectionEvent = {
   id: string; // "e3"
   firstWord: number;
