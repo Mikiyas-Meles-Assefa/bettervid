@@ -1,19 +1,22 @@
 // Stage 8: critic. Spark reviews one frame per shot against the words spoken over it and files tickets from a fixed menu
 // (spike S5: frames catch everything except timing, which code enforces). One fix round applies them and re-renders.
 // Engine videos are judged by the look step's judge (pipeline/lib/look.ts) on the final render, and get notes only.
+// A video with a direction plan is also checked against it (pipeline/lib/direction-check.ts).
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Project } from "../../schemas/project.ts";
 import { KITS } from "../../engine/kits/index.ts";
 import { parse } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
+import { asCritic, checkDirection, checkHoldAudio, holds, silences, type Ticket as Check } from "../lib/direction-check.ts";
 import { inventory, judgeSchema, lookFrames, measureLayout, readOf, wordsOnScreen, type Judged } from "../lib/look.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, dir, prompt, save, stage, style, topic } from "../lib/project.ts";
 import { replaceImage } from "./assets.ts";
 import { mix } from "./mix.ts";
 import { render } from "./render.ts";
+import { joinScene, SCENE_KITS } from "./scene.ts";
 import { timeline } from "./timeline.ts";
 
 type Ticket = { shotId: string; action: "swap_image" | "regenerate_image" | "remove_marks"; note: string };
@@ -99,53 +102,94 @@ async function engineCritic(p: Project, video: string) {
 
 export async function critic(p: Project, force = false) {
   const t = p.timeline!;
-  await stage(p, "critic", [t, prompt("critic"), prompt("scene-look")], 0.15, async () => {
-    const words = p.narration!.words;
-    const clips = t.clips.filter((c) => c.image);
-    if (t.clips.some((c) => c.type === "engine")) return engineCritic(p, join(dir(p), "video.mp4"));
-    if (!clips.length) return; // a board or stage has no shots to swap; each has its own checks
+  const directed = p.direction ? [p.direction, p.narration?.holds, prompt("direction-check")] : [];
+  await stage(p, "critic", [t, prompt("critic"), prompt("scene-look"), ...directed], 0.15, async () => {
     const video = join(dir(p), "video.mp4");
-    const frames = clips.flatMap((c, i) => {
-      // Late in the shot, so moves have landed and marks are drawn.
-      const at = (c.from + Math.min(c.frames * 0.85, c.frames - 3)) / t.fps;
-      mkdirSync(join(dir(p), "assets"), { recursive: true }); // a video with no pictures has no assets folder yet
-      const file = join(dir(p), "assets", `critic-${i}.jpg`);
-      execFileSync("ffmpeg", ["-y", "-v", "error", "-ss", at.toFixed(2), "-i", video, "-frames:v", "1", "-vf", "scale=432:-2", "-q:v", "4", file]);
-      const said = words.filter((w) => w.start * t.fps >= c.from && w.start * t.fps < c.from + c.frames).map((w) => w.text).join(" ");
-      return [
-        { type: "input_text", text: `${c.shotId} (${c.type}${c.credit ? ", real image" : ", generated image"}), spoken: "${said}"` },
-        { type: "input_image", image_url: `data:image/jpeg;base64,${readFileSync(file).toString("base64")}` },
-      ];
-    });
-    const wishes = asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])]);
-    const r = await json<{ verdict: string; tickets: Ticket[] }>({
-      system: prompt("critic"),
-      user: [{ type: "input_text", text: `Topic: ${topic(p)}${wishes ? `\n\n${wishes}` : ""}` }, ...frames],
-      schema,
-      schemaName: "review",
-      effort: "medium",
-    });
-    charge(p, "critic", r.usd, `${r.value.tickets.length} tickets: ${r.value.verdict.slice(0, 100)}`);
-    console.log(`  ${r.value.verdict}`);
-    const assets = new Map((p.assets ?? []).map((a) => [a.shotId, a]));
-    const tickets = r.value.tickets.filter((x) => assets.has(x.shotId));
-    p.critic = { verdict: r.value.verdict, tickets };
-    if (!tickets.length) return;
-
-    // The one fix round.
-    const s = style(p.input.style);
-    const spend = { usd: 0, notes: [] as string[] };
-    for (const x of tickets) {
-      console.log(`  ${x.shotId} ${x.action}: ${x.note}`);
-      const a = assets.get(x.shotId)!;
-      if (x.action === "remove_marks") a.marks = [];
-      else await replaceImage(p, x.shotId, x.note, s, spend);
-    }
-    for (const n of spend.notes) console.log(`  ${n}`);
-    charge(p, "critic", spend.usd, `fix round: ${tickets.length} tickets`);
-    await save(p);
-    await timeline(p, true);
-    await mix(p, true);
-    await render(p, true);
+    if (t.clips.some((c) => c.type === "engine")) await engineCritic(p, video);
+    else await shotCritic(p, video);
+    if (p.direction) await directionCritic(p, video);
   }, force);
+}
+
+// The direction check (pipeline/lib/direction-check.ts): did the video do, moment by moment, what the direction asked.
+// Measured from the compiled scene and the voice, with one text call to match the plan's words to the scene's ids and
+// one look at the opening. Its tickets join the critic's, named by event, with the stage that should act in the action
+// (`direction:<scene|voice|direction>:<kind>:<severity>`). A video without an engine scene gets the voice check only.
+async function directionCritic(p: Project, video: string) {
+  const plan = p.direction!;
+  const clip = p.timeline!.clips.find((c) => c.type === "engine" && c.scene);
+  p.critic ??= { verdict: "", tickets: [] };
+  let found: Check[];
+  if (clip?.scene && p.scene?.sections.length) {
+    const folder = join(dir(p), "critic");
+    const frames = async (at: number[]) => {
+      mkdirSync(folder, { recursive: true });
+      return at.map((s, i) => {
+        const file = join(folder, `opening-${i}.jpg`);
+        execFileSync("ffmpeg", ["-y", "-v", "error", "-ss", s.toFixed(2), "-i", video, "-frames:v", "1", "-vf", "scale=648:-2", "-q:v", "3", file]);
+        return file;
+      });
+    };
+    const kinds = SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
+    const r = await checkDirection(p, clip.scene, { source: joinScene(p.scene), kinds, frames: existsSync(video) ? frames : undefined });
+    charge(p, "critic", r.usd, `direction check: ${r.report.tickets.length} tickets`);
+    found = r.report.tickets;
+  } else {
+    found = checkHoldAudio(holds(plan, p.narration!), silences(join(dir(p), p.narration!.audio))).tickets;
+  }
+  p.critic.tickets.push(...found.map(asCritic));
+  const severe = found.filter((x) => x.severity >= 3).length;
+  p.critic.verdict = `${p.critic.verdict}${p.critic.verdict ? " " : ""}Direction: ${found.length} issues, ${severe} severe.`.trim();
+  console.log(`  direction: ${found.length} issues, ${severe} severe`);
+  for (const x of found) console.log(`  ${x.event} ${x.route}:${x.kind}:${x.severity}: ${x.note.slice(0, 200)}`);
+}
+
+// A video of shots: one frame per shot, tickets from a fixed menu, and one fix round that re-renders.
+async function shotCritic(p: Project, video: string) {
+  const t = p.timeline!;
+  const words = p.narration!.words;
+  const clips = t.clips.filter((c) => c.image);
+  if (!clips.length) return; // a board or stage has no shots to swap; each has its own checks
+  const frames = clips.flatMap((c, i) => {
+    // Late in the shot, so moves have landed and marks are drawn.
+    const at = (c.from + Math.min(c.frames * 0.85, c.frames - 3)) / t.fps;
+    mkdirSync(join(dir(p), "assets"), { recursive: true }); // a video with no pictures has no assets folder yet
+    const file = join(dir(p), "assets", `critic-${i}.jpg`);
+    execFileSync("ffmpeg", ["-y", "-v", "error", "-ss", at.toFixed(2), "-i", video, "-frames:v", "1", "-vf", "scale=432:-2", "-q:v", "4", file]);
+    const said = words.filter((w) => w.start * t.fps >= c.from && w.start * t.fps < c.from + c.frames).map((w) => w.text).join(" ");
+    return [
+      { type: "input_text", text: `${c.shotId} (${c.type}${c.credit ? ", real image" : ", generated image"}), spoken: "${said}"` },
+      { type: "input_image", image_url: `data:image/jpeg;base64,${readFileSync(file).toString("base64")}` },
+    ];
+  });
+  const wishes = asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])]);
+  const r = await json<{ verdict: string; tickets: Ticket[] }>({
+    system: prompt("critic"),
+    user: [{ type: "input_text", text: `Topic: ${topic(p)}${wishes ? `\n\n${wishes}` : ""}` }, ...frames],
+    schema,
+    schemaName: "review",
+    effort: "medium",
+  });
+  charge(p, "critic", r.usd, `${r.value.tickets.length} tickets: ${r.value.verdict.slice(0, 100)}`);
+  console.log(`  ${r.value.verdict}`);
+  const assets = new Map((p.assets ?? []).map((a) => [a.shotId, a]));
+  const tickets = r.value.tickets.filter((x) => assets.has(x.shotId));
+  p.critic = { verdict: r.value.verdict, tickets };
+  if (!tickets.length) return;
+
+  // The one fix round.
+  const s = style(p.input.style);
+  const spend = { usd: 0, notes: [] as string[] };
+  for (const x of tickets) {
+    console.log(`  ${x.shotId} ${x.action}: ${x.note}`);
+    const a = assets.get(x.shotId)!;
+    if (x.action === "remove_marks") a.marks = [];
+    else await replaceImage(p, x.shotId, x.note, s, spend);
+  }
+  for (const n of spend.notes) console.log(`  ${n}`);
+  charge(p, "critic", spend.usd, `fix round: ${tickets.length} tickets`);
+  await save(p);
+  await timeline(p, true);
+  await mix(p, true);
+  await render(p, true);
 }
