@@ -156,7 +156,7 @@ async function cutout(image: string, subject: string, out: string, spend: Spend)
   const text = r.output?.[0]?.content?.[0]?.text ?? "";
   const masks = recordsOfKind((await parseImageStream(asEvents(text)).finalResult).records, "mask") as any[];
   if (!masks.length) return false;
-  const best = masks.sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))[0];
+  const best = [...masks].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))[0]; // the parsed records are frozen
   const raster = decodeMaskToRaster(best.mask);
   const bw = (best.bounds.right - best.bounds.left) / iw;
   const bh = (best.bounds.bottom - best.bounds.top) / ih;
