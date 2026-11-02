@@ -33,6 +33,7 @@
     "fill": { "kind": "scribble", "base": 0.8 },
     "surface": { "kind": "slate", "grain": 0.3 },
     "type": { "title": "Chalkduster, \"Chalkboard SE\", \"Comic Sans MS\", \"Liberation Sans\", sans-serif", "body": "\"Chalkboard SE\", Chalkduster, \"Comic Sans MS\", \"Liberation Sans\", sans-serif", "jitter": 0.3, "grain": 0.05 },
-    "motion": { "feel": "calm" }
+    "motion": { "feel": "calm" },
+    "read": { "text": 0.036, "dim": 0.55 }
   }
 }

@@ -33,6 +33,7 @@
     "fill": { "kind": "hatch", "spacing": 9, "angle": -45, "base": 0.86 },
     "surface": { "kind": "blueprint" },
     "type": { "title": "\"Courier New\", Menlo, \"Liberation Mono\", monospace", "body": "\"Courier New\", Menlo, \"Liberation Mono\", monospace", "tracking": 0.04, "case": "upper" },
-    "motion": { "feel": "steady", "frames": 14, "ease": "linear" }
+    "motion": { "feel": "steady", "frames": 14, "ease": "linear" },
+    "read": { "text": 0.032, "dim": 0.5 }
   }
 }
