@@ -8,7 +8,10 @@ export function env(name: string): string {
   return v;
 }
 
-export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// The Python that runs pipeline/tools (needs Pillow and numpy). Set PYTHON when the default python3 lacks them.
+export const PYTHON = process.env.PYTHON ?? "python3";
+
+export const sleep =(ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function hash(...parts: unknown[]): string {
   return createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 16);

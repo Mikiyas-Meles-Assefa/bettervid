@@ -6,7 +6,7 @@ import { join } from "node:path";
 import type { BoardElement, BoardPlan, MathToken, Project, Shot } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, dir, prompt, stage, style, topic } from "../lib/project.ts";
-import { hash, write } from "../lib/util.ts";
+import { hash, PYTHON, write } from "../lib/util.ts";
 import { generate } from "./assets.ts";
 
 const str = { type: "string" } as const;
@@ -251,7 +251,7 @@ export async function board(p: Project, force = false) {
         const img = await generate(shot, s, spend);
         if (!img) return;
         const raw = await write(`${file}.raw.jpg`, img);
-        execFileSync("python3", ["-I", "pipeline/tools/trim_white.py", raw, file]);
+        execFileSync(PYTHON, ["-I", "pipeline/tools/trim_white.py", raw, file]);
       }
       e.image = rel;
     }));

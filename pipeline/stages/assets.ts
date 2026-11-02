@@ -19,7 +19,7 @@ import type { Asset, ImageType, Project, Shot, StyleFile } from "../../schemas/p
 import { download, MIN_SIDE, searchArchives, type Candidate } from "../lib/archives.ts";
 import { json, post, PRICE } from "../lib/meta.ts";
 import { asked, charge, dir, stage, style, topic } from "../lib/project.ts";
-import { hash, write } from "../lib/util.ts";
+import { hash, PYTHON, write } from "../lib/util.ts";
 
 const PARALLEL = 5;
 // Bump when picking or cutout rules change, so cached shots are redone under the new rules.
@@ -367,7 +367,7 @@ async function cutout(image: string, subject: string, out: string, spend: Spend)
   const pgm = `${out}.pgm`;
   writeFileSync(pgm, Buffer.concat([Buffer.from(`P5\n${best.mask.width} ${best.mask.height}\n255\n`), Buffer.from(raster.map((v: number) => v * 255))]));
   const b = best.bounds;
-  execFileSync("python3", ["-I", "pipeline/tools/bake_cutout.py", small, pgm, String(b.left), String(b.top), String(b.right), String(b.bottom), out]);
+  execFileSync(PYTHON, ["-I", "pipeline/tools/bake_cutout.py", small, pgm, String(b.left), String(b.top), String(b.right), String(b.bottom), out]);
   return true;
 }
 
