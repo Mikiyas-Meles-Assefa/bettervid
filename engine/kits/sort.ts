@@ -33,11 +33,12 @@ function sortBoard(id: string, d: Record<string, unknown>): Board {
   const pitch = box * 1.12;
   const big = Math.max(...values.map(Math.abs)) || 1;
   const merging = algo === "merge";
-  // Merge sort shows its runs apart: each cut opens a gap, each merge closes one. `cuts` holds b for a gap between
-  // places b and b + 1.
-  const GAP = merging ? box * 0.55 : 0;
-  const cuts = new Set<number>();
-  const slotX = (p: number, ignore?: number) => p * pitch + pitch / 2 + GAP * [...cuts].filter((b) => b < p && b !== ignore).length;
+  // Merge sort shows its runs apart: each cut opens a gap, each merge closes one, and a cut of a longer run opens a
+  // wider gap, so the halves of halves still read as one half. `cuts` maps b, a gap between places b and b + 1, to its
+  // share of the widest gap.
+  const GAP = merging ? box * 0.8 : 0;
+  const cuts = new Map<number, number>();
+  const slotX = (p: number, ignore?: number) => p * pitch + pitch / 2 + GAP * [...cuts].filter(([b]) => b < p && b !== ignore).reduce((sum, [, w]) => sum + w, 0);
   const height = (v: number) => (Math.abs(v) / big) * TALL * Math.sign(v || 1);
   // The row merged values drop to, below the rest.
   const drop = show === "bars" ? TALL + SIZE * 2.4 + (values.some((v) => v < 0) ? TALL : 0) : box * 1.6;
@@ -68,7 +69,15 @@ function sortBoard(id: string, d: Record<string, unknown>): Board {
   }
   const tallest = show === "bars" ? Math.max(...values.map((v) => (v > 0 ? height(v) : 0)), SIZE) : box / 2;
   const bottom = Math.max(merging ? drop + (show === "bars" ? SIZE * 1.2 : box / 2) : 0, usesPointer ? pointerY + SIZE * 1.5 : below);
-  parts.push(frame(`${id}.frame`, id, 0, -tallest - 10, n * pitch + GAP * (n - 1), bottom + 10));
+  // As wide as the row ever gets, so it stays centered while gaps open and close.
+  let widest = 0;
+  const gaps = new Map<number, number>();
+  for (const e of log) {
+    if (e.type === "divide") gaps.set(e.mid, Math.max(0.35, (e.hi - e.lo + 1) / n));
+    widest = Math.max(widest, [...gaps.values()].reduce((a, b) => a + b, 0));
+    if (e.type === "split") gaps.delete(e.mid); // it closes as this merge ends, and no gap opens before then
+  }
+  parts.push(frame(`${id}.frame`, id, 0, -tallest - 10, n * pitch + GAP * widest, bottom + 10));
   // Merge: a finger under the front of each run being merged, which moves on as its value is taken.
   const fingerY = show === "bars" ? SIZE * 1.15 : box * 0.5 + 4;
   if (merging) for (const side of ["a", "b"] as const) {
@@ -126,7 +135,7 @@ function sortBoard(id: string, d: Record<string, unknown>): Board {
       s.set(sortPart.pointer(id), "opacity", 1, 0.6, 0.3).set(sortPart.pointer(id), "x", slotX(e.i), 0.6, 0.35);
     } else if (e.type === "divide") {
       begin(`split ${vals(e.lo, e.hi)} into ${vals(e.lo, e.mid)} and ${vals(e.mid + 1, e.hi)}`);
-      cuts.add(e.mid);
+      cuts.set(e.mid, Math.max(0.35, (e.hi - e.lo + 1) / n)); // the frame above reserves the same widths
       place(0.1, 0.6);
     } else if (e.type === "split") {
       begin(`merge ${vals(e.lo, e.mid)} with ${vals(e.mid + 1, e.hi)}: a finger on the front of each`);
@@ -157,7 +166,12 @@ function sortBoard(id: string, d: Record<string, unknown>): Board {
       place(0.5, 0.4);
     } else if (e.type === "sorted") {
       if (!open.started) begin(`in place: ${e.i.map(val).join(" ")}`);
-      for (const p of e.i) s.set(shape(p), "fill", "highlight", 0.85, 0.15);
+      // A bar is filled, its value sits outside it. A box keeps its fill, since its value sits on it, and takes the
+      // highlight in its edge and its value, which reads on any page.
+      for (const p of e.i) {
+        if (show === "bars") s.set(shape(p), "fill", "highlight", 0.85, 0.15);
+        else s.set(shape(p), "stroke", "highlight", 0.85, 0.15).set(sortPart.value(id, at[p]!), "color", "highlight", 0.85, 0.15);
+      }
       if (usesPointer && e.i.length) s.set(sortPart.pointer(id), "opacity", 0, 0.9, 0.1);
     }
   }
