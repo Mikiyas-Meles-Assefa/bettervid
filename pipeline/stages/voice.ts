@@ -97,19 +97,22 @@ export function speechEdges(pcm: Float32Array, sr = SR): [number, number] | null
 // Joins the segments' audio with each segment's holds as silence. Cuts are made only in the quiet at a hold: a segment
 // after a hold starts PAD before its speech, a segment before one ends PAD after it, and the inserted silence is the
 // hold minus those pads, so speech to speech is exactly the hold. Returns the audio, where each segment's original
-// time 0 lands on the new clock (word times shift by this), and where each hold starts.
-export type Joined = { pcm: Float32Array; shift: number[]; holds: { id: string; afterWord: number; start: number; seconds: number }[] };
+// time 0 lands on the new clock (word times shift by this), each segment's speech on its own clock, and where each hold
+// starts.
+export type Joined = { pcm: Float32Array; shift: number[]; speech: [number, number][]; holds: { id: string; afterWord: number; start: number; seconds: number }[] };
 export function joinSegments(segs: { pcm: Float32Array; holds: Hold[]; lastWord: number }[], sr = SR): Joined {
   const pad = Math.round(PAD * sr);
   const fade = Math.round(FADE * sr);
   const parts: Float32Array[] = [];
   const shift: number[] = [];
+  const speech: [number, number][] = [];
   const holds: Joined["holds"] = [];
   let at = 0; // samples written so far
   let lead = 0; // samples of silence the next segment's head pad must take from the gap
   segs.forEach((s, i) => {
     const edges = speechEdges(s.pcm, sr);
     if (!edges) throw new Error(`voice: segment ${i + 1} has no speech in it`);
+    speech.push([edges[0] / sr, edges[1] / sr]);
     const from = i > 0 ? Math.max(0, edges[0] - pad) : 0;
     const to = s.holds.length ? Math.min(s.pcm.length, edges[1] + pad) : s.pcm.length;
     const cut = s.pcm.slice(from, to);
@@ -148,7 +151,7 @@ export function joinSegments(segs: { pcm: Float32Array; holds: Hold[]; lastWord:
     pcm.set(part, o);
     o += part.length;
   }
-  return { pcm, shift, holds };
+  return { pcm, shift, speech, holds };
 }
 
 function ffmpeg(args: string[], input?: Uint8Array): Buffer {
@@ -234,7 +237,14 @@ export async function readSegments(segs: Segment[], words: { text: string; beatI
   const out: Word[] = [];
   const lastTimed: number[] = [];
   segs.forEach((s, i) => {
-    const timed = toWords(results[i]!.alignment).map((w) => ({ ...w, start: +(w.start + joined.shift[i]!).toFixed(3), end: +(w.end + joined.shift[i]!).toFixed(3) }));
+    // At the end of a request ElevenLabs stretches the last word to the end of the audio, up to a third of a second past
+    // the speech (S15), which would leave its caption up into the hold. No word is timed outside the measured speech.
+    const [a, b] = joined.speech[i]!;
+    const shift = joined.shift[i]!;
+    const timed = toWords(results[i]!.alignment).map((w) => {
+      const start = Math.min(Math.max(w.start, a), b);
+      return { ...w, start: +(start + shift).toFixed(3), end: +(Math.max(start, Math.min(w.end, b)) + shift).toFixed(3) };
+    });
     out.push(...assignBeats(timed, words.slice(s.first, s.last + 1), ` in segment ${i + 1}`));
     lastTimed.push(out.length - 1);
   });

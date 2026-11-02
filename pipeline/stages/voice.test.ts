@@ -84,8 +84,9 @@ test("a hold after the last word leaves that much silence at the end", () => {
 });
 
 // A fake narrator: each word is 0.25 s of tone with 0.1 s between words and 0.1 s of silence at both ends, returned as
-// an MP3 (with its encoder delay in the header) and a character alignment, like ElevenLabs. `extra` adds one word to any segment that contains it.
-function fakeTts(opts: { failFirst?: string; extra?: string } = {}) {
+// an MP3 (with its encoder delay in the header) and a character alignment, like ElevenLabs. `extra` adds one word to
+// any segment that contains it; `stretch` times the last word to the end of the audio, as ElevenLabs does (S15).
+function fakeTts(opts: { failFirst?: string; extra?: string; stretch?: boolean } = {}) {
   const tmp = mkdtempSync(join(tmpdir(), "voice-test-"));
   const calls: TtsRequest[] = [];
   const failed = new Set<string>();
@@ -107,6 +108,7 @@ function fakeTts(opts: { failFirst?: string; extra?: string } = {}) {
       if (k) { characters.push(" "); starts.push(t0 - 0.1); ends.push(t0); }
       [...w].forEach((ch, c) => { characters.push(ch); starts.push(t0 + (0.25 * c) / w.length); ends.push(t0 + (0.25 * (c + 1)) / w.length); });
     });
+    if (opts.stretch) ends[ends.length - 1] = pcm.length / SR;
     const file = join(tmp, `${calls.length}.mp3`);
     await encode(pcm, file);
     return { audio: readFileSync(file), alignment: { characters, character_start_times_seconds: starts, character_end_times_seconds: ends }, credits: req.text.length };
@@ -117,7 +119,7 @@ function fakeTts(opts: { failFirst?: string; extra?: string } = {}) {
 test("segments are read with their neighbours as context, and word times land on the joined clock", async () => {
   const ws = words(9);
   const segs = splitAtHolds(ws, [hold("h1", 2, 2), hold("h2", 5, 1)]);
-  const { tts, calls } = fakeTts();
+  const { tts, calls } = fakeTts({ stretch: true });
   const r = await readSegments(segs, ws, tts);
   const byText = new Map(calls.map((c) => [c.text, c]));
   assert.deepEqual(byText.get("w3 w4 w5"), { text: "w3 w4 w5", previous_text: "w0 w1 w2", next_text: "w6 w7 w8" });
@@ -125,8 +127,8 @@ test("segments are read with their neighbours as context, and word times land on
   assert.equal(r.words.length, 9);
   assert.deepEqual(r.words.map((w) => w.text), ws.map((w) => w.text));
   assert.deepEqual(r.holds.map((h) => [h.id, h.afterWord, h.seconds]), [["h1", 2, 2], ["h2", 5, 1]]);
-  // Each hold starts when its word ends and the next word starts when the hold is over (alignment against audio
-  // within one 10 ms window).
+  // Each hold starts when its word ends, even though the alignment stretched that word into the quiet, and the next
+  // word starts when the hold is over (alignment against audio within one 10 ms window).
   for (const h of r.holds) {
     assert.ok(Math.abs(r.words[h.afterWord]!.end - h.start) < 0.015, `${h.id} starts at its word end: ${r.words[h.afterWord]!.end} vs ${h.start}`);
     assert.ok(Math.abs(r.words[h.afterWord + 1]!.start - (h.start + h.seconds)) < 0.015, `${h.id} ends at the next word`);
