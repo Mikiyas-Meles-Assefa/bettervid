@@ -79,6 +79,19 @@ Each workstream owns its files. A change outside them needs the lead's review.
 | Intent | `pipeline/stages/plan.ts`, `pipeline/stages/writer.ts`, `pipeline/stages/research.ts`, `prompts/plan.md`, `prompts/research.md`, `prompts/writer.md`, `prompts/cut.md`, `prompts/structure.md`, `prompts/review.md` |
 | Website and styles | `app/*`, `styles/*` (new files only), `pipeline/tools/style-writer.ts`, `prompts/style-writer.md` |
 
+## Wave 1: design quality (Nov 2)
+
+The first three engine videos are reviewed in `docs/reviews/2026-11-02-three-videos.md` (21 problems). The fix starts upstream: styles become real design systems, and scenes name roles instead of looks. Roles are in `engine/core/types.ts` (`ROLES`, `RoleLook`, `Theme.roles`): a scene says a thing is a `title`, `answer`, `muted`, `caption` and so on, and the style decides its color, size, surface, glow and how it steps back. Every pairing a style allows must stay readable.
+
+| Workstream | Owns |
+|---|---|
+| Style design | `styles/*.json` (all, including custom and previews), `engine/style/*`, `engine/render/theme.ts`, `pipeline/tools/style-writer.ts`, `prompts/style-writer.md`, `app/preview.ts` |
+| Layout and drawing | `engine/language/layout.ts`, `build.ts`, `syntax.ts`, `engine/render/SceneView.tsx`, `engine/core/compile.ts`, `evaluate.ts`, the syntax reference lines in `prompts/engine-language.md` for anything it adds |
+| Pictures on screen | `pipeline/lib/shots-scene.ts`, `pipeline/stages/annotate.ts`, `prompts/annotate.md` |
+| Picture choice | `pipeline/stages/assets.ts`, `pipeline/stages/director.ts`, `prompts/director.md`, picker prompts |
+| Scene writing | `prompts/engine-language.md` (all but the syntax reference lines), `prompts/scene.md`, `prompts/scene-cast.md`, `prompts/engine-repair.md`, `engine/language/author.ts`, `pipeline/stages/scene.ts` except the look step |
+| Checking | `pipeline/lib/look.ts` (new), the look step inside `pipeline/stages/scene.ts`, `prompts/scene-look.md`, `pipeline/stages/critic.ts`, `prompts/critic.md`, `engine/review/*` |
+
 ## Not yet decided
 
 The scene language Spark writes, text split into letters, measured layout, 3D, and how the engine replaces `video/Stage.tsx` and `video/Board.tsx`. The foundation is not connected to the pipeline yet.

@@ -75,6 +75,38 @@ export type Theme = {
   ease: Ease; // how motion feels in this style
   enter?: "fade" | "draw" | "pop"; // how things arrive when a step does not say
   style?: StyleSpec; // how this style draws. Without it, things are drawn plainly
+  roles?: Partial<Record<Role, RoleLook>>; // how this style shows each role; a scene names the role, the style decides the look
+};
+
+// What a thing is for, so a scene says the meaning and the style decides the look. Spark picks a role; it does not
+// pick colors, glows or cards. A style must define every role so that any pairing it allows stays readable.
+export const ROLES = [
+  "title", // the one main line of a moment
+  "heading", // a section or step name
+  "body", // ordinary words and values
+  "label", // names things on a diagram or picture
+  "note", // a quiet aside
+  "key", // what the viewer must look at now
+  "answer", // a result the moment arrives at
+  "muted", // context that stays but steps back
+  "wrong", // a mistake, a crossed-out idea
+  "code", // code and literal values
+  "panel", // a surface that groups things (a card, a strip, a board inside the board)
+  "caption", // words over a picture, always on something that keeps them readable
+  "pointer", // arrows, rings and marks that direct the eye
+] as const;
+export type Role = (typeof ROLES)[number];
+// A role's look in one style. Colors are theme color names; sizes are shares of the frame's shorter side.
+export type RoleLook = {
+  color?: string;
+  back?: string; // the surface it sits on, if it brings its own
+  size?: number;
+  weight?: number;
+  font?: "title" | "body" | "mono";
+  case?: "asis" | "upper";
+  glow?: number; // 0 to 1
+  opacity?: number; // for muted: how far back it steps (a style may instead change color, blur or thin the line)
+  stroke?: number; // line weight multiplier, for pointers and panels
 };
 
 // How a style draws: a renderer, not a color filter. Written by hand or by a model, see engine/style/format.ts.
