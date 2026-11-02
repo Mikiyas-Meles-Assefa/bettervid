@@ -1,6 +1,8 @@
 // CLI: create or resume a project and run stages in order. Cached stages are skipped.
 // New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 0, 0 = as long as the story needs; a length in the prompt wins] [--until voice]
 // Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>] [--only <stage>]
+// Visuals: the engine scene is the one visual step. `--visuals legacy` restores the old routing (teaching stage, board
+// or shots), for side-by-side tests.
 import type { Project, StageName } from "../schemas/project.ts";
 import { load, save, spent, style } from "./lib/project.ts";
 import { hash } from "./lib/util.ts";
@@ -13,12 +15,14 @@ import { mix } from "./stages/mix.ts";
 import { plan } from "./stages/plan.ts";
 import { render } from "./stages/render.ts";
 import { research } from "./stages/research.ts";
+import { scene } from "./stages/scene.ts";
 import { stage } from "./stages/stage.ts";
 import { timeline } from "./stages/timeline.ts";
 import { voice } from "./stages/voice.ts";
 import { writer } from "./stages/writer.ts";
 
-const ORDER: [StageName, (p: Project, force: boolean) => Promise<void>][] = [
+type Run = [StageName, (p: Project, force: boolean) => Promise<void>][];
+const LEGACY: Run = [
   ["plan", plan],
   ["research", research],
   ["writer", writer],
@@ -28,6 +32,23 @@ const ORDER: [StageName, (p: Project, force: boolean) => Promise<void>][] = [
   ["stage", stage],
   ["assets", assets],
   ["annotate", annotate],
+  ["timeline", timeline],
+  ["mix", mix],
+  ["render", render],
+  ["critic", critic],
+];
+// Director, assets and annotate still make pictures when the video needs them; the scene stage then builds on them.
+const ENGINE: Run = [
+  ["plan", plan],
+  ["research", research],
+  ["writer", writer],
+  ["voice", voice],
+  ["director", director],
+  ["assets", assets],
+  ["annotate", annotate],
+  ["scene", scene],
+  ["board", board],
+  ["stage", stage],
   ["timeline", timeline],
   ["mix", mix],
   ["render", render],
@@ -59,14 +80,26 @@ if (args[0] === "new") {
 }
 
 const only = flag("only") as StageName | undefined;
-// A topic that needs worked notation uses the teaching stage, in any style. Otherwise a board style plans one live
-// whiteboard, and other styles plan shots and images. Decided as stages run, because the plan comes first.
+const visuals = flag("visuals") ?? "engine";
+if (!["engine", "legacy"].includes(visuals)) throw new Error(`--visuals takes engine or legacy, not ${visuals}`);
+const ORDER = visuals === "legacy" ? LEGACY : ENGINE;
+// Legacy: a topic that needs worked notation uses the teaching stage, in any style. Otherwise a board style plans one
+// live whiteboard, and other styles plan shots and images. Decided as stages run, because the plan comes first.
 const boardStyle = style(p.input.style).motion === "board";
-function skip(name: StageName) {
-  if (only === name) return false;
+function skipLegacy(name: StageName) {
   const visuals: Record<string, string[]> = { stage: ["stage"], board: ["board"], shots: ["director", "assets", "annotate"] };
   const mine = p.plan?.notation ? "stage" : boardStyle ? "board" : "shots";
   return Object.entries(visuals).some(([k, list]) => k !== mine && list.includes(name));
+}
+// Engine: the scene stage draws every video. Pictures are made unless the topic is worked notation, which the engine
+// draws itself. The old teaching stage and board only run when asked for with --only.
+function skipEngine(name: StageName) {
+  if (name === "board" || name === "stage") return true;
+  return ["director", "assets", "annotate"].includes(name) && !!p.plan?.notation;
+}
+function skip(name: StageName) {
+  if (only === name) return false;
+  return visuals === "legacy" ? skipLegacy(name) : skipEngine(name);
 }
 const until = flag("until") as StageName | undefined;
 const force = flag("force") as StageName | undefined;
