@@ -343,6 +343,20 @@ function pictures(p: Project, names?: Record<string, string>): Picture[] {
 
 const describe = (list: Picture[]) => list.map((x) => `- ${x.name}${x.size ? `, ${x.size[0]} by ${x.size[1]}` : ""}: ${x.about}${x.words ? ` (the director planned it for words ${x.words[0]} to ${x.words[1]})` : ""}`).join("\n");
 
+// Shots the director chose to have drawn rather than shown as a picture (no honest picture exists, or a drawing
+// explains better). The scene draws them at their words with the engine, from facts in the narration only.
+function drawings(p: Project): string {
+  const words = p.narration?.words ?? [];
+  const lines = (p.assets ?? []).filter((a) => a.draw).map((a) => {
+    const shot = p.shots?.find((s) => s.id === a.shotId);
+    const first = shot ? words.findIndex((w) => w.start >= shot.start - 0.01) : -1;
+    const last = shot ? words.findLastIndex((w) => w.start < shot.end) : -1;
+    return `- ${first >= 0 && last >= first ? `words ${first} to ${last}` : "somewhere fitting"}: ${a.draw}`;
+  });
+  return lines.length ? `\n\nThe director asked for these to be drawn by you with the engine, not shown as pictures, using only facts the narration gives:\n${lines.join("\n")}` : "";
+}
+
+
 // A small JPEG as a data URL, so a still can load it without a server.
 function dataUrl(path: string, cache: string): string {
   const out = join(cache, `${hash(path).slice(0, 10)}.jpg`);
@@ -667,7 +681,7 @@ export async function lookAgain(p: Project, sectionId: string, assets: Record<st
   const header = [`Topic: ${topic(p)}`, p.plan?.intent ? `Why the viewer wants this: ${p.plan.intent}` : "", asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])])].filter(Boolean).join("\n\n") + "\n\n";
   const pics = pictures(p, p.scene!.assets);
   const opts = sceneBuildOptions(p, assets);
-  const job: Job = { p, range: ranges[i]!, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system: languagePrompt(opts), request: requestFor(p, ranges, i, cast, header, describe(pics)), opts, folder: join(dir(p), "scene", sectionId), log: (l) => console.log(l) };
+  const job: Job = { p, range: ranges[i]!, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system: languagePrompt(opts), request: requestFor(p, ranges, i, cast, header, (describe(pics) + drawings(p))), opts, folder: join(dir(p), "scene", sectionId), log: (l) => console.log(l) };
   const start = await check(job, section.source);
   if (start.problems.length || !start.result.scene) throw new Error(`${sectionId} does not build: ${start.problems.slice(0, 3).join(" | ")}`);
   const looks: string[] = [];
@@ -787,13 +801,13 @@ export async function scene(p: Project, force = false) {
     const spent = { usd: 0 };
     try {
       // The first pass, cached on its own so a resumed run plans the same hand-offs.
-      const castKey = hash(VERSION, ranges, words.map((w) => w.text), header, describe(pics), prompt("scene-cast"));
+      const castKey = hash(VERSION, ranges, words.map((w) => w.text), header, (describe(pics) + drawings(p)), prompt("scene-cast"));
       const castFile = join(root, "cast.json");
       let cast: CastPart[];
       const known = existsSync(castFile) ? JSON.parse(readFileSync(castFile, "utf8")) : undefined;
       if (!force && known?.key === castKey) cast = known.cast;
       else {
-        const r = await planCast(p, ranges, header, describe(pics));
+        const r = await planCast(p, ranges, header, (describe(pics) + drawings(p)));
         spent.usd += r.usd;
         cast = r.cast;
         writeFileSync(castFile, JSON.stringify({ key: castKey, cast }, null, 1));
@@ -812,7 +826,7 @@ export async function scene(p: Project, force = false) {
       const worker = async () => {
         for (let i = nextJob++; i < ranges.length; i = nextJob++) {
           const range = ranges[i]!;
-          const request = requestFor(p, ranges, i, cast, header, describe(pics));
+          const request = requestFor(p, ranges, i, cast, header, (describe(pics) + drawings(p)));
           const carry = i ? cast[i - 1]!.handoff : [];
           const handoff = cast[i]!.handoff;
           const key = hash(VERSION, request, drafts[i], carry, handoff, system);
