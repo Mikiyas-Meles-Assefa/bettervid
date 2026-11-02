@@ -344,7 +344,7 @@ export const sectionsOf = (p: Project): Range[] => splitSections(p.narration!.wo
 // The whole scene document, ready for `build()`.
 export const joinScene = (plan: ScenePlan) => joinSections(plan.sections);
 
-const kitKinds = () => SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
+export const kitKinds = () => SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Pictures: the director's images, offered to Spark by name.
