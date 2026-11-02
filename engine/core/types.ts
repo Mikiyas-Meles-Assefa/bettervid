@@ -15,6 +15,33 @@ export type Track = { target: string; prop: string; keys: Key[] };
 
 export type Primitive = "group" | "path" | "text" | "image";
 
+// Everything the renderer reads beyond position, size and fade. All optional, all plain values, so all animate.
+// Any paint (fill, stroke, color, background) may be a gradient string; see parseGradient in engine/core/evaluate.ts.
+export type BlendMode = "normal" | "multiply" | "screen" | "overlay" | "darken" | "lighten" | "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" | "exclusion" | "hue" | "saturation" | "color" | "luminosity" | "plus-lighter";
+export type RenderProps = {
+  // Any primitive: order
+  z: number; // order among siblings, higher in front
+  layer: number; // not 0: lifted out of its group and drawn over (or, below 0, under) the whole scene
+  // Any primitive: light and color
+  blur: number; glow: number; glowColor: string; glowOpacity: number;
+  shadowX: number; shadowY: number; shadowBlur: number; shadowColor: string; shadowOpacity: number;
+  brightness: number; saturation: number; contrast: number; hue: number; tint: string; tintAmount: number;
+  // Any primitive: compositing
+  blend: BlendMode; isolate: number;
+  clip: number[]; clipSmooth: number; feather: number; // a shape in the part's own coordinates
+  mask: string; maskMode: "alpha" | "luminance"; maskInvert: number; // the id of the part to use as a matte
+  // Paths and text
+  strokeOpacity: number;
+  // Paths
+  d: string; fillOpacity: number; fillRule: "nonzero" | "evenodd";
+  dash: number[]; dashOffset: number; lineCap: "round" | "butt" | "square"; lineJoin: "round" | "miter" | "bevel"; trimStart: number; trimEnd: number;
+  // Text
+  tracking: number;
+  // Images
+  crop: number[]; srcW: number; srcH: number; fit: "contain" | "cover" | "fill"; // crop is [x, y, w, h] as fractions
+  shader: string; params: number[]; time: number; density: number; colorA: string; colorB: string; colorC: string;
+};
+
 // What a planner or kit writes. `kind` is a primitive or a kit's kind. A node's id may use dots to name its parts.
 export type NodeSpec = { id: string; kind: string; parent?: string; props?: Props; data?: Record<string, unknown> };
 export type SceneNode = { id: string; kind: Primitive; parent?: string; props: Props };
