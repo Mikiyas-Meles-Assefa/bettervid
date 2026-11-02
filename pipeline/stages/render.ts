@@ -5,6 +5,7 @@ import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import type { Project, Timeline } from "../../schemas/project.ts";
 import { dir, stage } from "../lib/project.ts";
+import { imageCredits } from "./timeline.ts";
 
 // H.264 quality: 18 (the default) made a 5:40 video 378 MB. 23 is the usual choice for video on the web.
 const CRF = Number(process.env.RENDER_CRF ?? 23);
@@ -13,8 +14,10 @@ const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? 4);
 
 // What the composition gets. Remotion hands the props to the page for every frame, so their size costs on every frame:
 // a 1.8 MB scene (6 minutes) rendered at 18 frames/s against 27 for the same frames with small props. Each engine
-// scene goes into a JSON file in the project folder instead, and the player loads it once per browser tab.
-export function playerProps(p: Project): { timeline: Timeline; scenes: Record<string, string> } {
+// scene goes into a JSON file in the project folder instead, and the player loads it once per browser tab. Call it
+// before bundling, since the bundle takes a copy of the project folder.
+// `imageCredits`: the source line of each real image, shown while the scene has that image on screen.
+export function playerProps(p: Project): { timeline: Timeline; scenes: Record<string, string>; imageCredits: Record<string, string> } {
   const scenes: Record<string, string> = {};
   const clips = p.timeline!.clips.map((c) => {
     if (c.type !== "engine" || !c.scene) return c;
@@ -24,14 +27,15 @@ export function playerProps(p: Project): { timeline: Timeline; scenes: Record<st
     const { scene: _, ...rest } = c;
     return rest;
   });
-  return { timeline: { ...p.timeline!, clips }, scenes };
+  return { timeline: { ...p.timeline!, clips }, scenes, imageCredits: imageCredits(p) };
 }
 
 export async function render(p: Project, force = false) {
   await stage(p, "render", [p.timeline], 0, async () => {
     const t0 = Date.now();
-    const serveUrl = await bundle({ entryPoint: resolve("video/index.ts"), publicDir: resolve(dir(p)) });
+    // Scene files first: the bundle copies the public dir as it is when bundling.
     const inputProps = playerProps(p);
+    const serveUrl = await bundle({ entryPoint: resolve("video/index.ts"), publicDir: resolve(dir(p)) });
     // A Chrome to use instead of the one Remotion downloads, e.g. a shared chrome-headless-shell for worktrees.
     const browserExecutable = process.env.BETTERVID_CHROME || null;
     const composition = await selectComposition({ serveUrl, id: "Bettervid", inputProps, browserExecutable });

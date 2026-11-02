@@ -8,7 +8,7 @@ import { Marks } from "./marks.tsx";
 import { EngineCredits, EngineShot } from "./Engine.tsx";
 
 // `sceneFile`: for an engine clip whose scene was left out of the props, the JSON file in the project folder that holds it.
-type ShotProps = { clip: Clip; style: StyleFile; index: number; sceneFile?: string };
+type ShotProps = { clip: Clip; style: StyleFile; index: number; sceneFile?: string; imageCredits?: Record<string, string> };
 
 const Paper: React.FC<{ style: StyleFile; children?: React.ReactNode }> = ({ style, children }) => (
   <AbsoluteFill style={{ backgroundColor: style.palette.paper }}>

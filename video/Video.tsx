@@ -51,7 +51,8 @@ const Caption: React.FC<{ words: { text: string; highlight: boolean }[]; look: L
 };
 
 // `scenes`: engine scenes kept out of the props, by clip, as files in the project folder (pipeline/stages/render.ts).
-export const Video: React.FC<{ timeline: Timeline; scenes?: Record<string, string> }> = ({ timeline: t, scenes }) => {
+// `imageCredits`: source lines of real images by project path, which an engine scene shows while the image is on screen.
+export const Video: React.FC<{ timeline: Timeline; scenes?: Record<string, string>; imageCredits?: Record<string, string> }> = ({ timeline: t, scenes, imageCredits }) => {
   const frame = useCurrentFrame();
   const engine = t.clips.find((c) => c.type === "engine" && c.theme);
   const look = useMemo(() => (engine ? sceneLook(engine.theme!) : photoLook(t)), [engine, t]);
@@ -63,7 +64,7 @@ export const Video: React.FC<{ timeline: Timeline; scenes?: Record<string, strin
           return (
             <Sequence key={c.shotId} from={c.from} durationInFrames={c.frames} layout="none">
               <AbsoluteFill>
-                <Shot clip={c} style={t.style} index={i} sceneFile={scenes?.[c.shotId]} />
+                <Shot clip={c} style={t.style} index={i} sceneFile={scenes?.[c.shotId]} imageCredits={imageCredits} />
                 {c.credit && <div style={{ position: "absolute", top: 72, right: 60, maxWidth: 760, textAlign: "right", fontFamily: t.style.fonts.body, fontSize: 24, color: "white", opacity: 0.8, textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>{c.credit}</div>}
               </AbsoluteFill>
             </Sequence>

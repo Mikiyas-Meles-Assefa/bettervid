@@ -10,9 +10,9 @@ import { playerProps } from "../../pipeline/stages/render.ts";
 const [folder, a, b, conc] = process.argv.slice(2);
 if (!folder || !a || !b) throw new Error("usage: speed.ts <projectDir> <first> <last> [concurrency]");
 const p = JSON.parse(readFileSync(join(folder, "project.json"), "utf8"));
-const serveUrl = await bundle({ entryPoint: resolve("video/index.ts"), publicDir: resolve(folder) });
-// INLINE=1 keeps engine scenes in the props, to compare with the scene file the pipeline uses.
+// INLINE=1 keeps engine scenes in the props, to compare with the scene file the pipeline uses (written before bundling).
 const inputProps = process.env.INLINE ? { timeline: p.timeline } : playerProps(p);
+const serveUrl = await bundle({ entryPoint: resolve("video/index.ts"), publicDir: resolve(folder) });
 const browserExecutable = process.env.BETTERVID_CHROME || null;
 const t0 = Date.now();
 const composition = await selectComposition({ serveUrl, id: "Bettervid", inputProps, browserExecutable });

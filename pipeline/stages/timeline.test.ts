@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Scene } from "../../engine/core/types.ts";
 import type { Project, SceneSection } from "../../schemas/project.ts";
-import { credits, engineScene, usedAssets } from "./timeline.ts";
+import { credits, engineScene, imageCredits, titleShots, usedAssets } from "./timeline.ts";
 
 const section = (id: string, firstWord: number, lastWord: number, source: string): SceneSection => ({ id, firstWord, lastWord, source, ok: true, rounds: 0, usd: 0 });
 
@@ -53,4 +53,13 @@ test("images a scene shows are credited from their records, and an unknown one s
   assert.deepEqual(credits(p, usedAssets(p, scene("assets/board.jpg")), false).images, ["Illustrations made with Muse Image"]);
   assert.deepEqual(credits(p, []).sources, ["Pub"]);
   assert.throws(() => usedAssets(p, scene("assets/nobody.jpg")), /cannot be credited/);
+  assert.deepEqual(imageCredits(p), { "assets/a.jpg": "Jane Doe, Wikimedia Commons, CC BY 4.0" });
+});
+
+test("captions stay off title shots, which last until the next shot shown", () => {
+  const p = project([]);
+  const shot = (id: string, type: "kinetic_title" | "photo_kenburns", start: number) => ({ id, beatId: "b1", type, start, end: start + 1 });
+  p.shots = [shot("t1", "kinetic_title", 0.4), shot("p1", "photo_kenburns", 1), shot("t2", "kinetic_title", 2), shot("gone", "photo_kenburns", 3), shot("p2", "photo_kenburns", 4)];
+  p.assets = [{ shotId: "p1", kind: "real", path: "assets/p1.jpg" }, { shotId: "gone", kind: "none", missing: true }, { shotId: "p2", kind: "generated", path: "assets/p2.jpg", override: { type: "kinetic_title", text: "BIG" } }];
+  assert.deepEqual(titleShots(p, 200), [[0, 30], [60, 120], [120, 200]]);
 });

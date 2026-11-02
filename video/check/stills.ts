@@ -10,8 +10,8 @@ import { playerProps } from "../../pipeline/stages/render.ts";
 const [folder, ...at] = process.argv.slice(2);
 if (!folder || !at.length) throw new Error("usage: stills.ts <projectDir> <frame> [...]");
 const p = JSON.parse(readFileSync(join(folder, "project.json"), "utf8"));
+const inputProps = playerProps(p); // writes the scene file, so before bundling
 const serveUrl = await bundle({ entryPoint: resolve("video/index.ts"), publicDir: resolve(folder) });
-const inputProps = playerProps(p);
 const browserExecutable = process.env.BETTERVID_CHROME || null;
 const composition = await selectComposition({ serveUrl, id: "Bettervid", inputProps, browserExecutable });
 mkdirSync(join(folder, "stills"), { recursive: true });

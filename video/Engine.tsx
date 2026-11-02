@@ -1,7 +1,8 @@
 // The engine in the video: one compiled scene for the whole story, and the end card drawn on the same surface.
 import React, { useEffect, useMemo, useState } from "react";
 import { AbsoluteFill, cancelRender, continueRender, delayRender, interpolate, staticFile, useCurrentFrame } from "remotion";
-import type { Scene, Theme, Value } from "../engine/core/types.ts";
+import { evaluate } from "../engine/core/evaluate.ts";
+import type { Resolved, Scene, Theme, Value } from "../engine/core/types.ts";
 import { SceneView } from "../engine/render/SceneView.tsx";
 import { Surface } from "../engine/style/draw.tsx";
 import type { Clip } from "../schemas/project.ts";
@@ -69,11 +70,42 @@ function useScene(clip: Clip, file?: string): Scene | null {
   return inline ?? loaded;
 }
 
-export const EngineShot: React.FC<{ clip: Clip; sceneFile?: string }> = ({ clip, sceneFile }) => {
+// Images on screen at this frame: shown through every group above them.
+function showing(scene: Scene, frame: number): string[] {
+  const out = new Set<string>();
+  const walk = (r: Resolved, seen: number) => {
+    const o = seen * Number(r.props.opacity ?? 1);
+    if (o <= 0.2) return;
+    if (r.kind === "image" && typeof r.props.src === "string") out.add(r.props.src);
+    for (const c of r.children) walk(c, o);
+  };
+  for (const r of evaluate(scene, frame)) walk(r, 1);
+  return [...out];
+}
+
+// The source line of each real image while it is on screen, low and small under the captions, in the scene's ink.
+const ImageCredit: React.FC<{ scene: Scene; theme: Theme; frame: number; credits: Record<string, string> }> = ({ scene, theme, frame, credits }) => {
+  const byServed = useMemo(() => new Map(Object.entries(credits).map(([file, text]) => [served(file), text])), [credits]);
+  const lines = [...new Set(showing(scene, frame).flatMap((src) => byServed.get(src) ?? []))];
+  if (!lines.length) return null;
+  const c = theme.colors;
+  return (
+    <div style={{ position: "absolute", left: 90, right: 160, top: 1822, textAlign: "center", fontFamily: theme.fonts.body, fontSize: 22, lineHeight: 1.25, color: c.ink, opacity: 0.75, WebkitTextStroke: `5px ${c.paper}`, paintOrder: "stroke fill" }}>
+      {lines.join(" · ")}
+    </div>
+  );
+};
+
+export const EngineShot: React.FC<{ clip: Clip; sceneFile?: string; imageCredits?: Record<string, string> }> = ({ clip, sceneFile, imageCredits }) => {
   const frame = useCurrentFrame();
   const scene = useScene(clip, sceneFile);
   if (!scene) return <AbsoluteFill style={{ backgroundColor: clip.theme!.colors.paper }} />;
-  return <SceneView scene={scene} theme={clip.theme!} frame={frame} />;
+  return (
+    <AbsoluteFill>
+      <SceneView scene={scene} theme={clip.theme!} frame={frame} />
+      {imageCredits && Object.keys(imageCredits).length > 0 && <ImageCredit scene={scene} theme={clip.theme!} frame={frame} credits={imageCredits} />}
+    </AbsoluteFill>
+  );
 };
 
 // The end card in the scene's style: its surface, title font and colors.

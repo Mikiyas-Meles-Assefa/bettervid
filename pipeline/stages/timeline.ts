@@ -74,7 +74,7 @@ export async function timeline(p: Project, force = false) {
         { shotId: "engine", type: "engine", from: 0, frames: story, scene, theme },
         { shotId: "credits", type: "credits", from: story, frames: CREDITS * FPS, credits: credits(p, used, false), theme },
       ];
-      p.timeline = { fps: FPS, width: 1080, height: 1920, frames, audio: p.narration!.audio, style: s, clips, captions: captions(p, []) };
+      p.timeline = { fps: FPS, width: 1080, height: 1920, frames, audio: p.narration!.audio, style: s, clips, captions: captions(p, titleShots(p, story)) };
       return;
     }
     if (p.stagePlan && p.plan?.notation) {
@@ -157,6 +157,27 @@ export async function engineScene(p: Project, story: number) {
     throw new Error(`timeline: the scene does not build in style ${p.input.style}:\n${r.problems.map((x) => `- ${where(x.line)}: ${x.message}`).join("\n")}`);
   }
   return { scene: r.scene, theme: opts.ctx.theme, used: usedAssets(p, r.scene) };
+}
+
+// Frame ranges of the director's title shots, which the scene draws as big words (pipeline/lib/shots-scene.ts), so
+// captions stay off them. Same rule as shots-scene: a title shot, or a shot with words and no picture, lasting until
+// the next shot that is shown.
+export function titleShots(p: Project, story: number): [number, number][] {
+  const shots = p.shots ?? [];
+  const assets = new Map((p.assets ?? []).map((a) => [a.shotId, a]));
+  const shown = shots.filter((s) => !assets.get(s.id)?.missing);
+  return shown.flatMap((shot, i): [number, number][] => {
+    const a = assets.get(shot.id);
+    const title = (a?.override?.type ?? shot.type) === "kinetic_title" || (!a?.path && !!(a?.override?.text ?? shot.text));
+    if (!title) return [];
+    const next = shown[i + 1];
+    return [[i ? Math.round(shot.start * FPS) : 0, next ? Math.round(next.start * FPS) : story]];
+  });
+}
+
+// What each real image shows as its source line while it is on screen, by its path in the project folder.
+export function imageCredits(p: Project): Record<string, string> {
+  return Object.fromEntries((p.assets ?? []).filter((a) => a.kind === "real").flatMap((a) => [a.path, a.cutout].filter((f): f is string => !!f).map((f) => [f, line(a)])));
 }
 
 // The image files a compiled scene shows, matched to their asset records for the credits. An image with no record
