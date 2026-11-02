@@ -375,7 +375,8 @@ export function issuesFrom(judged: Judged["issues"], measured: { frame: number; 
     }
   });
   let i = 0;
-  for (const [kind, e] of byKind) out.push({ id: `m${++i}`, frames: e.frames, kind: "measured", what: `${kind.replace("_", " ")}: ${e.notes.join(" | ")}`, want: WANT[kind as FindingKind], severity: e.severity as Issue["severity"], source: "measured" });
+  // A lighter finding on one frame alone is left out: it may be a passing moment, and fixing it is not worth a rewrite.
+  for (const [kind, e] of byKind) if (e.severity >= 3 || e.frames.length >= 2) out.push({ id: `m${++i}`, frames: e.frames, kind: "measured", what: `${kind.replace("_", " ")}: ${e.notes.join(" | ")}`, want: WANT[kind as FindingKind], severity: e.severity as Issue["severity"], source: "measured" });
   return out;
 }
 

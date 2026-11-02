@@ -121,6 +121,8 @@ test("issuesFrom keeps what matters and groups measured findings by kind across 
   assert.equal(issues[0]!.kind, "words");
   assert.deepEqual(issues[1]!.frames, [1, 2]);
   assert.equal(issues[1]!.severity, 3);
+  const once = issuesFrom([], [{ frame: 10, findings: [{ kind: "empty", ids: [], note: "empty", severity: 2 }] }, { frame: 20, findings: [] }]);
+  assert.equal(once.length, 0);
 });
 
 test("a fix is kept only when it is better and breaks nothing badly", () => {
