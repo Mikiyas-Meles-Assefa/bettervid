@@ -215,7 +215,7 @@ test("exact errors: bad ids, words, colors, behaviors and duplicates", async () 
   assert.match(await bad(`@999\nbig: a=1\n`), /no spoken word 999; the last word is 59/);
   assert.match(await bad(`@0\nbig: a=1\nlight ab\n`), /"ab" is not on the board/);
   assert.match(await bad(`@0\nbox a "x" fill=purple\n`), /"purple" is not a color here/);
-  assert.match(await bad(`@0\nbig: a=1\ndo wiggle a\n`), /no behavior called wiggle/);
+  assert.match(await bad(`@0\nbig: a=1\ndo levitate a\n`), /no behavior called levitate/);
   assert.match(await bad(`@0\nbig: a=1\nnormal: a=2\n`), /on the board twice/);
   assert.match(await bad(`@0\nimage p asset=x\n`), /assets/);
   assert.match(await bad(`@0\nset a src=http://x\nbig: a=1\n`), /set cannot change "src"/);
