@@ -2,7 +2,7 @@
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
 import type { Scene, Theme } from "../engine/core/types.ts";
 
-export type StageName = "plan" | "research" | "writer" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "plan" | "research" | "writer" | "direction" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
@@ -12,6 +12,7 @@ export type Project = {
   factSheet?: FactSheet;
   writing?: WritingStep[]; // the writer's prose at each step (draft, cut, review), kept for the trail
   script?: Script;
+  direction?: DirectionPlan; // the moment-by-moment plan, written after the script and before the voice
   narration?: Narration;
   shots?: Shot[];
   board?: BoardPlan;
@@ -67,14 +68,57 @@ export type Beat = {
   claimIds: string[];
   visual: string; // the one visual this beat calls for, concrete
   emphasis: string[]; // words to highlight in captions
+  cue?: boolean; // a short line the direction added ("Watch the first swap."), never a new fact
 };
 export type Script = { title: string; takeaway: string; beats: Beat[] };
 // `notes`: for a cut, the thread and what was left out; for a review, the issues it fixed.
 export type WritingStep = { step: "draft" | "cut" | "review"; title: string; takeaway: string; narration: string; notes: string[]; key?: string }; // key: hash of the writer inputs, for resuming
 
+// Stage 2b: direction. Walks the script as the viewer and writes, moment by moment, what each stretch is for and
+// what the picture and voice do about it (research/teaching-tempo.md). Word numbers are global and count the
+// final script's words, cue lines included, which are the words the voice will time.
+export type HoldPurpose = "look" | "predict" | "settle" | "recap" | "reveal";
+export type Hold = {
+  id: string; // "h2"
+  afterWord: number; // the silence begins when this word ends
+  seconds: number;
+  purpose: HoldPurpose;
+  does: string; // what the picture does during it
+  shows?: string; // an on-screen prompt, for a predict hold
+};
+export type DemoPhase = {
+  steps?: [number, number]; // which truth steps, from 1; omitted for a program or a replay
+  pace: "slow" | "normal" | "fast";
+  at: { word: number } | { hold: string };
+  until?: { word: number } | { hold: string };
+  replay?: boolean;
+  why: string;
+};
+export type Demo = { what: string; phases: DemoPhase[] };
+export type DirectionEvent = {
+  id: string; // "e3"
+  firstWord: number;
+  lastWord: number;
+  job: string; // this moment's purpose in plain words
+  knows: string; // what the viewer knows by the end of it
+  waiting: string; // the open question or stake carried through it, "" if none
+  look: string; // the one thing the eye should be on
+  feel: string;
+  rhythm: "long" | "short";
+  reveal?: { word: number; what: string };
+  withhold?: { what: string; until: string }; // must not be shown or said before event `until`
+  holds?: Hold[];
+  demo?: Demo;
+  sound?: string;
+  camera?: string;
+};
+export type Cue = { beforeWord: number; text: string }; // beforeWord counts the script before cues were added
+export type DirectionPlan = { goal: string; promise: string; arc: string; events: DirectionEvent[]; cues: Cue[] };
+
 // Stage 3: voice
 export type Word = { text: string; start: number; end: number; beatId: string };
-export type Narration = { audio: string; voiceId: string; model: string; seconds: number; words: Word[] };
+// `holds`: the silences the voice left for the direction's holds, in seconds on the narration clock.
+export type Narration = { audio: string; voiceId: string; model: string; seconds: number; words: Word[]; holds?: { id: string; afterWord: number; start: number; seconds: number }[] };
 
 // Stage 4: director (shot types are the build order in docs/PLAN.md section 5)
 export type ShotType = "photo_kenburns" | "cutout_on_paper" | "receipt" | "kinetic_title" | "credits" | "board" | "stage" | "engine";
