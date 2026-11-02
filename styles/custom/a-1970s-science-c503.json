@@ -1,0 +1,68 @@
+{
+  "name": "custom/a-1970s-science-c503",
+  "label": "70s Science Textbook",
+  "palette": {
+    "paper": "#f1e6c2",
+    "ink": "#2a2013",
+    "accent": "#b94a12",
+    "highlight": "#67742e"
+  },
+  "fonts": {
+    "title": "Rockwell",
+    "body": "Charter",
+    "caption": "Arial Rounded MT Bold"
+  },
+  "art": {
+    "scene": "1970s school science textbook plate, flat retro lithograph with subtle halftone print grain, clean dark brown ink outlines, limited vintage palette of burnt orange, avocado green and mustard on warm cream paper, subject large, clear and instantly recognizable.",
+    "object": "One single object shown whole and centered on warm cream textbook paper, drawn as a 1970s science illustration with thick brown outline and flat burnt orange and avocado fills with light print texture.",
+    "diagram": "Precise 1970s textbook diagram, thin brown drafting lines, flat orange and green shapes with dotted orbits and arrows, minimal retro educational style on warm cream, one idea only."
+  },
+  "realAssets": "proof",
+  "surface": {
+    "filter": "sepia(0.28) saturate(0.82) contrast(0.96)",
+    "paper": 0.18
+  },
+  "grain": 0.35,
+  "vignette": 0.18,
+  "hand": {
+    "wobble": 0.6,
+    "weight": 1.1
+  },
+  "render": {
+    "line": {
+      "pen": "drafting",
+      "weight": 1.2,
+      "wobble": 0.4,
+      "overshoot": 2.5
+    },
+    "fill": {
+      "kind": "solid",
+      "base": 0.92,
+      "outline": 1
+    },
+    "surface": {
+      "kind": "paper",
+      "grain": 0.4,
+      "smudge": 0.05,
+      "light": 0.2
+    },
+    "type": {
+      "title": "Rockwell, \"Liberation Serif\", serif",
+      "body": "Charter, \"Liberation Serif\", serif",
+      "mono": "\"Courier New\", \"Liberation Mono\", monospace",
+      "bold": 800,
+      "tracking": 0.02,
+      "case": "upper"
+    },
+    "motion": {
+      "feel": "steady",
+      "frames": 18,
+      "enter": "draw"
+    }
+  },
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  },
+  "description": "a 1970s science textbook"
+}

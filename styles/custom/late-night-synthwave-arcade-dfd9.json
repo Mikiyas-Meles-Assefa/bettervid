@@ -1,0 +1,69 @@
+{
+  "name": "custom/late-night-synthwave-arcade-dfd9",
+  "label": "Neon Arcade",
+  "palette": {
+    "paper": "#0E0623",
+    "ink": "#F2EDFF",
+    "accent": "#FF2E88",
+    "highlight": "#00E5FF"
+  },
+  "fonts": {
+    "title": "Phosphate",
+    "body": "Avenir Next",
+    "caption": "Arial Black"
+  },
+  "art": {
+    "scene": "Glowing synthwave illustration on a dark purple night: chrome surfaces with pink and cyan neon rim light, retro sun and glowing perspective grid horizon, smooth airbrush gradients, no text.",
+    "object": "Single chrome arcade-era object shown whole centered on dark purple-black background: reflective metallic surface with hot pink and cyan neon edge glow, small glowing grid floor beneath it, no text.",
+    "diagram": "Neon arcade diagram on dark purple-black background: simple glowing pink and cyan lines and chrome shapes with soft outer glow, perspective grid floor, one clear idea, no text."
+  },
+  "realAssets": "proof",
+  "surface": {
+    "filter": "saturate(1.4) contrast(1.15)",
+    "paper": 0.15
+  },
+  "grain": 0.25,
+  "vignette": 0.55,
+  "hand": {
+    "wobble": 0,
+    "weight": 1.8
+  },
+  "render": {
+    "line": {
+      "pen": "neon",
+      "weight": 1.8,
+      "glow": 0.9
+    },
+    "fill": {
+      "kind": "solid",
+      "glow": 0.65,
+      "outline": 1
+    },
+    "surface": {
+      "kind": "night",
+      "grid": 48,
+      "major": 4,
+      "light": 0.6,
+      "grain": 0.3
+    },
+    "type": {
+      "title": "\"Phosphate\", Impact, \"Arial Black\", \"Liberation Sans\", sans-serif",
+      "body": "\"Avenir Next\", Avenir, \"Helvetica Neue\", \"Liberation Sans\", sans-serif",
+      "mono": "\"Andale Mono\", Menlo, \"Liberation Mono\", monospace",
+      "bold": 800,
+      "tracking": 0.06,
+      "case": "upper",
+      "glow": 0.8
+    },
+    "motion": {
+      "feel": "snappy",
+      "frames": 12,
+      "enter": "pop"
+    }
+  },
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  },
+  "description": "late night synthwave arcade, glowing grids and chrome"
+}

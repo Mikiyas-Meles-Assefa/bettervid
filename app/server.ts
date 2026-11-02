@@ -1,6 +1,8 @@
-// The web app: a small server around the real pipeline. It starts runs, reports each stage as it happens, and serves
-// finished videos. There is no login, so when public (HOST set) it limits new videos and turns off editing.
+// The web app: a small server around the real pipeline. It starts runs, reports each step in plain words as it
+// happens, serves finished videos and style previews, and lets a visitor describe a new style in words.
+// There is no login, so when public (HOST set) it limits what costs money and turns off editing.
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { join, resolve } from "node:path";
@@ -10,43 +12,95 @@ import type { Project } from "../schemas/project.ts";
 const PORT = Number(process.env.PORT ?? 4173);
 const HOST = process.env.HOST ?? "127.0.0.1";
 const PUBLIC_SITE = HOST !== "127.0.0.1";
-// Limits on new videos, which cost real money. The pipeline's BUDGET_USD is the hard stop behind these.
-const PER_DAY = Number(process.env.RUNS_PER_DAY ?? (PUBLIC_SITE ? 20 : Infinity));
-const PER_VISITOR = Number(process.env.RUNS_PER_VISITOR ?? (PUBLIC_SITE ? 2 : Infinity));
+// Limits on what costs real money. The pipeline's BUDGET_USD is the hard stop behind these.
+const LIMITS = {
+  video: { day: Number(process.env.RUNS_PER_DAY ?? (PUBLIC_SITE ? 20 : Infinity)), visitor: Number(process.env.RUNS_PER_VISITOR ?? (PUBLIC_SITE ? 2 : Infinity)), what: "new videos" },
+  style: { day: Number(process.env.STYLES_PER_DAY ?? (PUBLIC_SITE ? 30 : Infinity)), visitor: Number(process.env.STYLES_PER_VISITOR ?? (PUBLIC_SITE ? 3 : Infinity)), what: "new styles" },
+};
 const PUBLIC = resolve("app/public");
+const PREVIEWS = resolve("styles/previews");
 const MAX_PROMPT = 8000;
+const MAX_LOOK = 400;
 const LENGTHS: Record<string, number> = { auto: 0, short: 50, medium: 120, long: 240, longer: 390 };
 const ID = /^[a-z0-9-]{1,80}$/;
-const names = (folder: string) => readdirSync(folder).filter((f) => f.endsWith(".json")).map((f) => f.replace(".json", ""));
+const names = (folder: string) => (existsSync(folder) ? readdirSync(folder).filter((f) => f.endsWith(".json")).map((f) => f.replace(".json", "")).sort() : []);
+// Styles in the picker: the built-in files, then the ones visitors described (styles/custom, read as "custom/<slug>").
+const styleNames = () => [...names("styles"), ...names("styles/custom").map((n) => `custom/${n}`)];
+const readStyle = (name: string) => JSON.parse(readFileSync(`styles/${name}.json`, "utf8"));
 
-type Job = { id?: string; stage: string; log: string[]; done: boolean; error?: string };
+// What each pipeline step is called on the page. A step this list does not know still shows, under its own name.
+const LABELS: Record<string, string> = {
+  plan: "Reading your request", research: "Researching the story", writer: "Writing the script", voice: "Recording the narration",
+  director: "Planning the shots", board: "Planning the board", stage: "Laying out the worked steps", scene: "Building the scenes",
+  assets: "Finding and making images", annotate: "Drawing on the images", timeline: "Cutting it together", mix: "Mixing the sound",
+  render: "Rendering the video", critic: "Watching it back and fixing",
+};
+const VISUALS = new Set(["director", "board", "stage", "scene", "assets", "annotate"]);
+const USUAL = ["plan", "research", "writer", "voice", "visuals", "timeline", "mix", "render", "critic"];
+const label = (k: string) => LABELS[k] ?? (k === "visuals" ? "Making the visuals" : k[0]!.toUpperCase() + k.slice(1));
+
+type Step = { key: string; label: string; state: "done" | "now" | "next" | "failed"; seconds?: number; reused?: boolean; percent?: number; details: string[] };
+type Job = { id?: string; stage: string; log: string[]; steps: Step[]; done: boolean; error?: string };
 const jobs = new Map<string, Job>();
 let running: Job | undefined;
+type StyleJob = { id: string; steps: string[]; done: boolean; error?: string; notes?: string; style?: string; started: number };
+const styleJobs = new Map<string, StyleJob>();
+let styling: StyleJob | undefined;
 let day = "";
-let today = 0;
-const visitors = new Map<string, number>();
+const used = { video: { today: 0, visitors: new Map<string, number>() }, style: { today: 0, visitors: new Map<string, number>() } };
 
-// Why a new video may not start, or undefined. Counts reset each day.
-function limit(req: IncomingMessage): string | undefined {
+// Why something that costs money may not start, or undefined. Counts reset each day.
+function limit(req: IncomingMessage, kind: keyof typeof LIMITS): string | undefined {
   const now = new Date().toISOString().slice(0, 10);
-  if (now !== day) [day, today] = [now, (visitors.clear(), 0)];
+  if (now !== day) {
+    day = now;
+    for (const u of Object.values(used)) [u.today, u.visitors] = [0, new Map()];
+  }
   const who = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0]!.trim();
-  if (today >= PER_DAY) return "Today's new videos are used up. You can still watch any finished video, or replay how it was made.";
-  if ((visitors.get(who) ?? 0) >= PER_VISITOR) return "You have reached today's limit for new videos. You can still watch and replay the gallery.";
-  today++;
-  visitors.set(who, (visitors.get(who) ?? 0) + 1);
+  const [cap, u] = [LIMITS[kind], used[kind]];
+  if (u.today >= cap.day) return `Today's ${cap.what} are used up. You can still watch any finished video and use every style.`;
+  if ((u.visitors.get(who) ?? 0) >= cap.visitor) return `You have reached today's limit for ${cap.what}. You can still watch the gallery and use every style.`;
+  u.today++;
+  u.visitors.set(who, (u.visitors.get(who) ?? 0) + 1);
 }
 
-const NODE = [...(existsSync(".env") ? ["--env-file=.env"] : []), "--experimental-strip-types", "pipeline/run.ts"];
+const NODE = [...(existsSync(".env") ? ["--env-file=.env"] : []), "--experimental-strip-types"];
+const FRIENDLY_BUDGET = "The budget for new work is used up. You can still watch any finished video, or replay how it was made.";
 
 function start(prompt: string, style: string, persona: string, length: string): Promise<string> {
-  return run([...NODE, "new", prompt, "--style", style, "--persona", persona, "--seconds", String(LENGTHS[length] ?? 0)], "plan");
+  // APP_UNTIL stops runs after one stage, for testing the page without paying for a whole video.
+  const until = process.env.APP_UNTIL ? ["--until", process.env.APP_UNTIL] : [];
+  return run([...NODE, "pipeline/run.ts", "new", prompt, "--style", style, "--persona", persona, "--seconds", String(LENGTHS[length] ?? 0), ...until], "plan");
+}
+
+// A log line from the pipeline, turned into what a viewer wants to know. Costs, retries and stack traces stay out.
+const QUIET = /\bmeta\b|retry|ETIMEDOUT|ECONN|terminated|\$\d|total spent|^\s+at |node:|Warning|experimental/i;
+function follow(job: Job, line: string) {
+  const step = (key: string) => {
+    let s = job.steps.find((x) => x.key === key);
+    if (!s) job.steps.push((s = { key, label: label(key), state: "now", details: [] }));
+    return s;
+  };
+  const current = job.steps.findLast((s) => s.state === "now");
+  let m: RegExpExecArray | null;
+  if ((m = /^- (\w+): running/.exec(line))) {
+    job.stage = m[1]!;
+    Object.assign(step(m[1]!), { state: "now" });
+  } else if ((m = /^- (\w+): done in ([\d.]+) s/.exec(line))) Object.assign(step(m[1]!), { state: "done", seconds: Math.round(Number(m[2])) });
+  else if ((m = /^- (\w+): cached/.exec(line))) Object.assign(step(m[1]!), { state: "done", reused: true });
+  else if ((m = /^\s+render (\d+)%/.exec(line)) && current) current.percent = Number(m[1]);
+  else if (/^\s+\S/.test(line) && current && !QUIET.test(line)) {
+    let text = line.trim().replace(/^shot(\d+)\s+/, "Shot $1: ").replace(/\s+/g, " ");
+    text = text[0]!.toUpperCase() + text.slice(1);
+    current.details.push(plain(text, 180));
+    if (current.details.length > 6) current.details.shift();
+  }
 }
 
 // Runs the pipeline as a child process and follows its log. Only one run at a time.
 function run(args: string[], stage: string, id?: string): Promise<string> {
   const child = spawn(process.execPath, args, { stdio: ["ignore", "pipe", "pipe"] });
-  const job: Job = { id, stage, log: [], done: false };
+  const job: Job = { id, stage, log: [], steps: [], done: false };
   running = job;
   if (id) jobs.set(id, job);
   return new Promise((ok, fail) => {
@@ -61,8 +115,7 @@ function run(args: string[], stage: string, id?: string): Promise<string> {
           jobs.set(job.id, job);
           ok(job.id);
         }
-        const stage = /^- (\w+): running/.exec(line);
-        if (stage) job.stage = stage[1]!;
+        follow(job, line);
       }
     };
     child.stdout.on("data", read);
@@ -70,9 +123,10 @@ function run(args: string[], stage: string, id?: string): Promise<string> {
     child.on("close", (code) => {
       job.done = true;
       job.stage = code ? "failed" : "done";
+      for (const s of job.steps) if (s.state === "now") s.state = code ? "failed" : "done";
       if (code) {
         const why = job.log.filter((l) => /budget:|rror/.test(l)).at(-1) ?? "The run stopped.";
-        job.error = why.includes("budget:") ? "The budget for new videos is used up. You can still watch any finished video, or replay how it was made." : why;
+        job.error = why.includes("budget:") ? FRIENDLY_BUDGET : why.replace(/^\s*\w*Error:\s*/, "");
       }
       if (running === job) running = undefined;
       if (!job.id) fail(new Error(job.error));
@@ -80,24 +134,92 @@ function run(args: string[], stage: string, id?: string): Promise<string> {
   });
 }
 
+// Model words for the page: no em dashes, and short.
+const plain = (s: string, max = 220) => {
+  const t = s.replace(/\s*[—–]\s*/g, ", ").replace(/\s+-\s+/g, ", ").trim();
+  return t.length > max ? `${t.slice(0, max - 3)}...` : t;
+};
+
+// Writes a style from a description in a child process, so a crash there never takes the site down.
+function makeStyle(description: string): StyleJob {
+  const job: StyleJob = { id: randomBytes(6).toString("hex"), steps: [], done: false, started: Date.now() };
+  styleJobs.set(job.id, job);
+  styling = job;
+  const child = spawn(process.execPath, [...NODE, "pipeline/tools/style-writer.ts", description], { stdio: ["ignore", "pipe", "pipe"] });
+  const log: string[] = [];
+  const read = (chunk: Buffer) => {
+    for (const line of chunk.toString().split("\n").filter(Boolean)) {
+      log.push(line);
+      const step = /^step: (.*)$/.exec(line);
+      if (step && !/^Done for/.test(step[1]!)) job.steps.push(plain(step[1]!.replace(/; .*$/, "")));
+      const notes = /^notes: (.*)$/.exec(line);
+      if (notes) job.notes = plain(notes[1]!);
+      const made = /^style (custom\/[a-z0-9-]+)$/.exec(line);
+      if (made) job.style = made[1]!;
+    }
+  };
+  child.stdout.on("data", read);
+  child.stderr.on("data", read);
+  child.on("close", (code) => {
+    job.done = true;
+    if (code || !job.style) {
+      const why = log.filter((l) => /budget:|Error/.test(l)).at(-1) ?? "It stopped before the style was ready.";
+      job.error = why.includes("budget:") ? FRIENDLY_BUDGET : why.replace(/^\s*\w*Error:\s*/, "").replace(/^style writer:\s*/, "");
+    }
+    if (styling === job) styling = undefined;
+  });
+  return job;
+}
+
+function styleCard(name: string) {
+  const s = readStyle(name);
+  const has = (ext: string) => existsSync(join(PREVIEWS, `${name}.${ext}`));
+  return { name, label: s.label, custom: name.startsWith("custom/"), description: s.description, still: has("jpg") ? `/previews/${name}.jpg` : undefined, loop: has("webm") ? `/previews/${name}.webm` : undefined, paper: s.palette?.paper, ink: s.palette?.ink, accent: s.palette?.accent };
+}
+
+// The steps of a run that is not followed live (finished, or made before the server started), from the project file.
+function stepsFrom(p: Project): Step[] {
+  return Object.entries(p.stages)
+    .sort(([, a], [, b]) => a.at.localeCompare(b.at))
+    .map(([key, s]) => ({ key, label: label(key), state: "done" as const, seconds: Math.round(s.ms / 1000), details: [] }));
+}
+
+// Done and current steps, then the usual ones still to come, so a viewer sees how far along it is.
+function withNext(steps: Step[], finished: boolean): Step[] {
+  if (finished) return steps;
+  const seen = new Set(steps.map((s) => (VISUALS.has(s.key) ? "visuals" : s.key)));
+  const last = Math.max(-1, ...steps.map((s) => USUAL.indexOf(VISUALS.has(s.key) ? "visuals" : s.key)));
+  const next = USUAL.slice(last + 1).filter((k) => !seen.has(k)).map((key) => ({ key, label: label(key), state: "next" as const, details: [] }));
+  return [...steps, ...next];
+}
+
 // What the page shows for a project: only what the viewer needs, never the raw file.
 function summary(p: Project) {
   const job = jobs.get(p.id);
   const assets = p.assets ?? [];
+  const live = !!job && !job.done;
+  const steps = job?.steps.length ? job.steps : stepsFrom(p);
+  let style: { name: string; label: string } | undefined;
+  try {
+    style = { name: p.input.style, label: readStyle(p.input.style).label };
+  } catch {}
+  const draft = p.writing?.at(-1);
   return {
     id: p.id,
     createdAt: p.createdAt,
     prompt: p.input.prompt,
-    style: p.input.style,
-    title: p.script?.title ?? p.writing?.at(-1)?.title ?? p.plan?.topic ?? p.input.prompt,
+    style: style?.label ?? p.input.style,
+    title: p.script?.title ?? draft?.title ?? p.plan?.topic ?? p.input.prompt,
     takeaway: p.script?.takeaway,
     plan: p.plan,
     stages: Object.keys(p.stages),
+    steps: withNext(steps, !live),
     stage: job?.stage ?? (p.render ? "done" : "stopped"),
-    running: !!job && !job.done,
+    running: live,
     error: job?.error,
     writing: p.writing?.map((w) => ({ step: w.step, words: w.narration.split(/\s+/).length, notes: w.notes })),
-    narration: p.writing?.at(-1)?.narration,
+    narration: draft?.narration,
+    scriptStep: p.script ? "final" : draft?.step,
     seconds: p.narration ? Math.round(p.narration.seconds) : undefined,
     facts: p.factSheet ? { claims: p.factSheet.claims.length, sources: p.factSheet.sources.map((s) => ({ title: s.publisher || s.title, url: s.url })) } : undefined,
     shots: p.timeline?.clips.filter((c) => c.type !== "credits").length,
@@ -112,29 +234,41 @@ function summary(p: Project) {
 }
 
 function projects() {
+  if (!existsSync(ROOT)) return [];
   return readdirSync(ROOT, { withFileTypes: true })
     .filter((d) => d.isDirectory() && existsSync(join(ROOT, d.name, "project.json")))
-    .map((d) => summary(load(d.name)))
+    .flatMap((d) => {
+      try {
+        return [summary(load(d.name))];
+      } catch {
+        return []; // a project file mid-write; it shows on the next refresh
+      }
+    })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 const send = (res: ServerResponse, code: number, body: unknown) => {
-  res.writeHead(code, { "content-type": "application/json" });
+  res.writeHead(code, { "content-type": "application/json", "cache-control": "no-store" });
   res.end(JSON.stringify(body));
 };
 
-function video(req: IncomingMessage, res: ServerResponse, id: string) {
-  const file = join(ROOT, id, "video.mp4");
-  if (!existsSync(file)) return send(res, 404, { error: "No video yet." });
+// A file with byte ranges, so video starts playing before it has all arrived and the viewer can seek.
+function stream(req: IncomingMessage, res: ServerResponse, file: string, type: string, cache = "no-cache") {
+  if (!existsSync(file)) return send(res, 404, { error: "Not found." });
   const size = statSync(file).size;
-  const range = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? "");
-  if (!range) {
-    res.writeHead(200, { "content-type": "video/mp4", "content-length": size, "accept-ranges": "bytes" });
+  const range = /bytes=(\d*)-(\d*)/.exec(req.headers.range ?? "");
+  const head = { "content-type": type, "accept-ranges": "bytes", "cache-control": cache };
+  if (!range || (!range[1] && !range[2])) {
+    res.writeHead(200, { ...head, "content-length": size });
     return void createReadStream(file).pipe(res);
   }
-  const from = Number(range[1]);
-  const to = range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
-  res.writeHead(206, { "content-type": "video/mp4", "content-range": `bytes ${from}-${to}/${size}`, "content-length": to - from + 1, "accept-ranges": "bytes" });
+  const from = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+  const to = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+  if (from >= size || from > to) {
+    res.writeHead(416, { "content-range": `bytes */${size}` });
+    return void res.end();
+  }
+  res.writeHead(206, { ...head, "content-range": `bytes ${from}-${to}/${size}`, "content-length": to - from + 1 });
   createReadStream(file, { start: from, end: to }).pipe(res);
 }
 
@@ -150,19 +284,44 @@ async function body(req: IncomingMessage): Promise<any> {
 createServer(async (req, res) => {
   try {
     const path = new URL(req.url ?? "/", "http://x").pathname;
-    if (path === "/api/options") return send(res, 200, { styles: names("styles").map((n) => ({ name: n, label: JSON.parse(readFileSync(`styles/${n}.json`, "utf8")).label })), personas: names("personas").map((n) => ({ name: n, label: JSON.parse(readFileSync(`personas/${n}.json`, "utf8")).label })) });
+    if (path === "/api/options") {
+      const cards = styleNames().flatMap((n) => {
+        try {
+          return [styleCard(n)];
+        } catch {
+          return [];
+        }
+      });
+      return send(res, 200, { styles: cards, personas: names("personas").map((n) => ({ name: n, label: JSON.parse(readFileSync(`personas/${n}.json`, "utf8")).label })), busy: !!running, styling: styling?.id });
+    }
     if (path === "/api/videos" && req.method === "GET") return send(res, 200, projects());
     if (path === "/api/videos" && req.method === "POST") {
       const b = await body(req);
       const prompt = String(b.prompt ?? "").trim();
       if (!prompt) return send(res, 400, { error: "Tell it what the video is about." });
       if (prompt.length > MAX_PROMPT) return send(res, 400, { error: "That message is too long." });
-      if (running) return send(res, 409, { error: "A video is already being made. It takes a few minutes." });
-      const blocked = limit(req);
+      if (running) return send(res, 409, { error: "A video is already being made. It takes a few minutes. You can watch it from the gallery." });
+      const blocked = limit(req, "video");
       if (blocked) return send(res, 429, { error: blocked });
-      const style = names("styles").includes(b.style) ? b.style : "collage";
+      const style = styleNames().includes(b.style) ? b.style : "collage";
       const persona = names("personas").includes(b.persona) ? b.persona : "auto";
       return send(res, 200, { id: await start(prompt, style, persona, b.length) });
+    }
+    if (path === "/api/styles" && req.method === "POST") {
+      const b = await body(req);
+      const description = String(b.description ?? "").trim().replace(/\s+/g, " ");
+      if (description.length < 3) return send(res, 400, { error: "Describe the look in a few words." });
+      if (description.length > MAX_LOOK) return send(res, 400, { error: `Keep it under ${MAX_LOOK} characters.` });
+      if (styling) return send(res, 409, { error: "Another style is being made right now. It takes about a minute." });
+      const blocked = limit(req, "style");
+      if (blocked) return send(res, 429, { error: blocked });
+      return send(res, 200, { job: makeStyle(description).id });
+    }
+    const sj = /^\/api\/styles\/jobs\/([a-f0-9]{12})$/.exec(path);
+    if (sj) {
+      const job = styleJobs.get(sj[1]!);
+      if (!job) return send(res, 404, { error: "That style job is gone. The server may have restarted." });
+      return send(res, 200, { steps: job.steps, done: job.done, error: job.error, notes: job.notes, style: job.style && existsSync(`styles/${job.style}.json`) ? styleCard(job.style) : undefined });
     }
     const one = /^\/api\/videos\/([a-z0-9-]+)$/.exec(path);
     if (one && ID.test(one[1]!) && existsSync(join(ROOT, one[1]!, "project.json"))) return send(res, 200, summary(load(one[1]!)));
@@ -180,12 +339,14 @@ createServer(async (req, res) => {
         if (words.length) c.words = words.map((text, k) => ({ text, highlight: !!c.words[k]?.highlight }));
       });
       await save(p);
-      return send(res, 200, { id: await run([...NODE, p.id, "--only", "render"], "render", p.id) });
+      return send(res, 200, { id: await run([...NODE, "pipeline/run.ts", p.id, "--only", "render"], "render", p.id) });
     }
     const mp4 = /^\/videos\/([a-z0-9-]+)\.mp4$/.exec(path);
-    if (mp4 && ID.test(mp4[1]!)) return video(req, res, mp4[1]!);
+    if (mp4 && ID.test(mp4[1]!)) return stream(req, res, join(ROOT, mp4[1]!, "video.mp4"), "video/mp4");
+    const shown = /^\/previews\/((?:custom\/)?[a-z0-9-]+)\.(jpg|webm)$/.exec(path);
+    if (shown) return stream(req, res, join(PREVIEWS, `${shown[1]}.${shown[2]}`), shown[2] === "jpg" ? "image/jpeg" : "video/webm", "public, max-age=600");
     if (path === "/" || path === "/index.html") {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
       return void createReadStream(join(PUBLIC, "index.html")).pipe(res);
     }
     send(res, 404, { error: "Not found." });
