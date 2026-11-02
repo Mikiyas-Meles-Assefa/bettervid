@@ -52,3 +52,22 @@ export function roleLook(theme: Theme, role: Role): RoleLook {
 
 // Whether the style itself says how this role looks (not the palette fallback).
 export const styleHas = (theme: Theme, role: Role) => !!theme.roles?.[role];
+
+// What a role adds to a drawn part that did not set these itself, for parts that carry a `role` prop (a kit or program
+// can name a role and leave the look to the style). Colors come back as real colors, ready to draw.
+export function roleProps(theme: Theme, role: string, kind: string, props: Record<string, unknown>): Record<string, string | number> {
+  if (!isRole(role)) return {};
+  const look = roleLook(theme, role);
+  const out: Record<string, string | number> = {};
+  const color = colorOf(theme, look.color);
+  if (kind === "text") {
+    if (props.color === undefined && color) out.color = color;
+    if (props.weight === undefined && look.weight !== undefined) out.weight = look.weight;
+    if (props.font === undefined && look.font) out.font = look.font === "mono" ? (theme.fonts.mono ?? "Menlo, monospace") : theme.fonts[look.font];
+    if (look.case === "upper" && typeof props.text === "string") out.text = props.text.toUpperCase();
+  }
+  if (kind === "path" && props.stroke === undefined && color) out.stroke = color;
+  if (props.glow === undefined && look.glow && color) Object.assign(out, { glow: look.glow * 12, glowColor: color });
+  if (props.opacity === undefined && look.opacity !== undefined) out.opacity = look.opacity;
+  return out;
+}

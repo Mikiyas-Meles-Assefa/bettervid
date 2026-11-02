@@ -49,7 +49,7 @@ const n = (v: string | undefined, d: number) => (v === undefined || !Number.isFi
 const SHAPE_KINDS = ["box", "circle", "pill", "diamond", "dot", "tri"];
 const CONTAINER_KINDS = ["row", "stack", "grid", "ring", "chain", "free"];
 // How far the gaps of the outer stack may open to spread a state over the frame, as a share of the safe height.
-const SPREAD = 0.12;
+const SPREAD = 0.22;
 const round = (v: number) => Math.round(v * 10) / 10;
 const NUMERIC = new Set(["weight", "opacity", "rotate", "strokeWidth"]);
 const look = (item: Item, keys: string[]): Props => Object.fromEntries(keys.filter((k) => item.attrs[k] !== undefined).map((k) => [k, NUMERIC.has(k) ? n(item.attrs[k], 0) : item.attrs[k]!]));
@@ -287,12 +287,23 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
 
   // Fill the frame: a state that fits by its width leaves the height empty. The outer stack (or the one stack it holds)
   // opens its gaps so the state spreads over the safe area, up to a limit, so its parts still read as one picture.
-  let spreadIn: Item = root;
-  while (spreadIn.children.length === 1 && spreadIn.children[0]!.kind === "stack" && !backOf(spreadIn.children[0]!)) spreadIn = spreadIn.children[0]!;
+  // Every stack down the main column (stacks inside stacks, not panels) shares the room, so things inside a group get
+  // room around them too, for the tags and marks that come later.
+  const column: Item[] = [];
+  const down = (item: Item) => {
+    if (item.kind !== "stack" || (item !== root && backOf(item))) return;
+    if (item.children.length > 1) column.push(item);
+    item.children.forEach(down);
+  };
+  down(root);
+  const gaps = column.reduce((sum, x) => sum + x.children.length - 1, 0);
   const room = env.safe.h - box.h;
-  if (spreadIn.kind === "stack" && spreadIn.children.length > 1 && room > 1) {
-    const extra = Math.min((room * 0.8) / (spreadIn.children.length - 1), env.safe.h * SPREAD);
-    spreadIn.attrs = { ...spreadIn.attrs, gap: String(n(spreadIn.attrs.gap, 44) + extra / s) };
+  if (gaps && room > 1) {
+    // Outer gaps open more than inner ones, so groups still read as groups.
+    const weight = (x: Item) => (x === root || (root.children.length === 1 && root.children[0] === x) ? 2 : 1);
+    const total = column.reduce((sum, x) => sum + (x.children.length - 1) * weight(x), 0);
+    const unit = Math.min((room * 0.6) / total, (env.safe.h * SPREAD) / 2);
+    for (const x of column) x.attrs = { ...x.attrs, gap: String(n(x.attrs.gap, 44) + (unit * weight(x)) / s) };
     box = sizeOf(root, s);
   }
 

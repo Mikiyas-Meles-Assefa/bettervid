@@ -148,6 +148,10 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const readable = (p: Part, k: number): Part => (p.kind === "text" && typeof p.props.size === "number" && p.props.size * k < minText ? { ...p, props: { ...p.props, size: round(minText / k) } } : p);
 
   const safe = safeArea(ctx.width, ctx.height);
+  // One context for expanding kits and for compiling, so a kit that registers its parts while it expands (for become,
+  // each and swell) is found again by its behaviors.
+  const kitsMade: Kit = { name: "programs", behaviors: {} };
+  const kitCtx: CompileContext = { ...ctx, kits: [...allKits, kitsMade] };
   const expansions = new Map<string, { nodes: NodeSpec[]; box: ReturnType<typeof bounds>; errors: { line: number; message: string }[] }>();
 
   const expandKit = (item: Item) => {
@@ -172,14 +176,15 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       for (const [k, v] of Object.entries(item.attrs)) {
         if (["at", "into", "before", "after"].includes(k)) continue;
         try {
-          data[k] = /^[{[]/.test(v) ? JSON.parse(v) : (number(v) ?? v);
+          // A lone backslash is kept as written, so math such as \frac needs no doubling; a doubled one still works.
+          data[k] = /^[{[]/.test(v) ? JSON.parse(v.replace(/\\\\|\\(?!["/])/g, (m) => (m.length === 2 ? m : "\\\\"))) : (number(v) ?? v);
         } catch {
           fail(item.line, `The setting ${k} of ${item.id} is not valid JSON.`);
         }
       }
       spec = { id: item.id, kind: item.kind, data };
     }
-    const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, ctx) ?? []).flatMap(expand));
+    const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, kitCtx) ?? []).flatMap(expand));
     let nodes: NodeSpec[] = [];
     try {
       nodes = expand(spec);
@@ -388,7 +393,6 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   // A program that failed has already been reported. Its parts being missing is not a second problem.
   const failed = new Set<string>();
   const fromFailed = (id: string) => [...failed].some((m) => id === m || id.startsWith(`${m}.`));
-  const kitsMade: Kit = { name: "programs", behaviors: {} };
   let laterPlay: NonNullable<Step["play"]> = []; // program motion, played once its parts exist
 
   // Steady sizes: a plain state and the keep states after it are one stretch, laid out at one scale, the one that fits
@@ -620,8 +624,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       drawnWords.push({ id, box: { x: abs.x, y: abs.y, w, h: size * 1.15 }, line, what: "text", text, laid: false, ...(chip ? { back: chip, chip: true } : {}), ...(parent ? { holder: parent } : {}) });
     };
     const label = (id: string, line: number, text: string, want: { x: number; y: number }[], attrs: Attrs, size = labelSize) => {
-      const w = env.measure(text, size);
-      const h = size * 1.2;
+      // Room for the card the words may sit on, so nothing near them is covered by it either.
+      const w = env.measure(text, size) + size * 0.9;
+      const h = size * 1.55;
       // Attached words stay in the safe area, clear of the captions, however far out their target is.
       const box = (p: { x: number; y: number }) => ({ x: Math.max(w / 2 + 10, Math.min(ctx.width - w / 2 - 10, p.x)), y: Math.max(safe.y - safe.h / 2 + h / 2, Math.min(safe.y + safe.h / 2 - h / 2, p.y)), w, h });
       const inWords = (b: Box) => [...laidWords, ...slotWords].reduce((sum, o) => sum + hits(b, o.box), 0);
@@ -634,8 +639,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       // words are a problem, because then neither can be read.
       const onLabels = placedLabels.reduce((sum, l) => sum + hits(best.b, l.box), 0);
       if (onLabels > 0.3 * w * h) report(line, `"${text}" would sit on top of other attached words, because everything around what it points to is full. Shorten it, drop an earlier tag or mark label, or give that thing room with space, a row or a stack.`);
-      else if (inWords(best.b) > 0.15 * w * h) {
-        const under = [...laidWords, ...slotWords].find((o) => hits(best.b, o.box) > 0.05 * w * h);
+      else if (inWords(best.b) > 0.08 * w * h) {
+        const under = [...laidWords, ...slotWords].sort((a, b) => hits(best.b, b.box) - hits(best.b, a.box))[0];
         report(line, `"${text}" would sit on top of the words "${under?.text ?? ""}", because everything around what it points to is full. Shorten it, attach it to the other side with side=, drop something, or give that thing room with space, a row or a stack.`);
       }
       const crowded = best.over > 0.3 * w * h && attrs.back !== "none";
@@ -1052,6 +1057,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (!part || opacity <= 0.05 || told.has(w.item ?? w.id)) continue;
       const back = behind(w);
       if (back.startsWith("picture:")) {
+        // Laid-out words over a placed picture are a crowding problem, reported below with what to do about it.
+        if (w.laid && laid.fields.some((f) => `picture:${f.id}` === back && !f.frame)) continue;
         if (once(w)) report(w.line, `"${w.text}" sits straight on the picture ${back.slice(8)} with nothing behind it, so it cannot read on every part of a photo. Put it on a panel (a stack with role=panel or back=COLOR), give it role=caption, or move it off the picture.`);
         continue;
       }
@@ -1189,7 +1196,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const goneBoxes = [...before].filter(([id]) => !parts.has(id)).map(([, b]) => b);
     const comingBoxes = [...now].filter(([id]) => fresh.has(id) || returning.has(id)).map(([, b]) => b);
     const crossing = !s.cut && goneBoxes.some((g) => comingBoxes.some((c) => hits(g, c) > 0.1 * Math.min(g.w * g.h, c.w * c.h)));
-    const delay = crossing ? Math.max(4, Math.round(ctx.fps * 0.25)) : 0;
+    // Never past the next state, which may already change what arrives here.
+    const nextAt = index + 1 < doc.states.length ? when(doc.states[index + 1]!.at, ctx) : Infinity;
+    const delay = crossing ? Math.max(0, Math.min(Math.max(4, Math.round(ctx.fps * 0.25)), nextAt - at - 2)) : 0;
     const enterAt = at + delay;
     before = now;
 
@@ -1263,7 +1272,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
 
   const sceneDoc: SceneDoc = { background: doc.background ?? "paper", steps };
   try {
-    const scene = settle(compile(sceneDoc, { ...ctx, kits: [...allKits, kitsMade] }));
+    const scene = settle(compile(sceneDoc, kitCtx));
     for (const f of [0, Math.floor(ctx.frames / 2), ctx.frames - 1]) evaluate(scene, f);
     stats.parts = scene.nodes.length;
     const truth = [...expansions.entries()].flatMap(([id, e]) => {
@@ -1278,7 +1287,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     });
     return { problems: [], doc: sceneDoc, scene, ...(truth.length ? { truth } : {}), stats };
   } catch (e) {
-    return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], stats };
+    return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }
 }
 

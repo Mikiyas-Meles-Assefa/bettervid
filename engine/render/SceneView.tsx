@@ -7,6 +7,7 @@ import type { Props, Resolved, Scene, Theme, Value } from "../core/types.ts";
 import { blendOf, bounds, filterOf, gradientGeometry, IDENTITY, inverse, line, list, matrixOf, n, safeId, themed, times, tintMatrix, transformOf, type Box, type Matrix } from "./effects.ts";
 import { ShaderLayer } from "./ShaderLayer.tsx";
 import { StyleDefs, StyledPath, StyledText, Surface } from "../style/draw.tsx";
+import { roleProps } from "../core/roles.ts";
 
 // Masks and tints cover everything their part could touch. Browsers trim these to what is on screen.
 const WIDE = { x: -20000, y: -20000, width: 40000, height: 40000 };
@@ -154,8 +155,10 @@ function Clip({ a, id, children }: { a: Props; id: string; children: React.React
   );
 }
 
-const Item: React.FC<{ r: Resolved; ctx: Ctx; direct?: boolean }> = ({ r, ctx, direct }) => {
-  if (!direct && ctx.away.has(r.id)) return null;
+const Item: React.FC<{ r: Resolved; ctx: Ctx; direct?: boolean }> = ({ r: given, ctx, direct }) => {
+  if (!direct && ctx.away.has(given.id)) return null;
+  // A part that names a role and leaves its look open takes the look from the style's roles.
+  const r = typeof given.props.role === "string" ? { ...given, props: { ...given.props, ...roleProps(ctx.theme, given.props.role, given.kind, given.props) } } : given;
   const a = r.props;
   const opacity = n(a.opacity, 1);
   // Hidden parts are not drawn. Players keep every picture decoded for the life of the tab, so a picture that comes
