@@ -27,7 +27,7 @@ const SHARP = 2.6;
 const BACKDROP = "blur=40 brightness=0.38 saturation=0.9 contrast=1.15 scaleX=1.5 scaleY=1.5";
 // Words over a picture name their role, so the style gives them a designed backing. The language accepts `role=` once
 // the layout workstream merges it; until then the engine's own card under words on pictures does this job.
-const ROLES_READY = false;
+const ROLES_READY = true;
 const caption = ROLES_READY ? " role=caption" : "";
 
 type Moment = { word: number; offset: number };

@@ -113,6 +113,8 @@ export type Asset = {
   look?: string; // what the viewer should look at here, for the annotate stage
   focus?: Box; // where that is in the image
   zoom?: boolean; // whether the camera moves in on the focus, or the whole image stays in view
+  subject?: Box; // what the picture really shows, so a crop to the phone shape keeps it
+  pan?: boolean; // a wide scene the camera travels across instead of cropping
   marks?: Mark[];
   title?: string;
   source?: string;

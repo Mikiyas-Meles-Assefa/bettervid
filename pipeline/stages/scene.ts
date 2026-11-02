@@ -640,7 +640,7 @@ async function look(job: Job, start: Written, log: string[]): Promise<{ w: Writt
 
 async function writeSection(job: Job, draft: string): Promise<Written & { looks: string[] }> {
   job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing`);
-  let w = await compose(job, undefined, draft ? `${job.request}\n\nA first draft of your part, made from the director's shots. Keep its pictures where they serve the words and build on it:\n${draft}` : job.request);
+  let w = await compose(job, undefined, draft ? `${job.request}\n\nA first draft of your part, made from the director's shots. Keep its pictures where they serve the words and build on it. Its camera lines frame each picture on its subject, measured for this frame, so keep them unless you move the picture; words you add over a picture take role=caption:\n${draft}` : job.request);
   let usd = w.usd;
   let rounds = w.rounds;
   const looks: string[] = [];
