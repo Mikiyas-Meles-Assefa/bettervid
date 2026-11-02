@@ -7,6 +7,7 @@ import { SceneView } from "./SceneView.tsx";
 type Props = { scene: Scene; theme: Theme };
 
 // An SVG image draws whenever it arrives, which could be after a frame is captured. Hold every frame until all are in.
+const kept: HTMLImageElement[] = [];
 function useImagesReady(scene: Scene) {
   const [handle] = useState(() => delayRender("loading scene images"));
   useEffect(() => {
@@ -16,6 +17,7 @@ function useImagesReady(scene: Scene) {
     Promise.all([...sources].map((src) => {
       const img = new Image();
       img.src = src;
+      kept.push(img); // held for the life of the tab, so a picture that is hidden and shown again draws at once
       return img.decode();
     })).then(() => continueRender(handle), cancelRender);
   }, [scene, handle]);

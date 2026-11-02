@@ -16,7 +16,6 @@ type Ctx = { surface: string; theme: Theme; time: number; prefix: string; places
 
 const inOrder = (list: Resolved[]) => (list.some((r) => n(r.props.z) !== 0) ? [...list].sort((a, b) => n(a.props.z) - n(b.props.z)) : list);
 
-const holdsImage = (r: Resolved): boolean => r.kind === "image" || r.children.some(holdsImage);
 const worldOf = (p: Place | undefined): Matrix => (p ? times(worldOf(p.parent), matrixOf(p.r.props)) : IDENTITY);
 const matrixAttr = (m: Matrix) => `matrix(${m.join(" ")})`;
 
@@ -159,7 +158,9 @@ const Item: React.FC<{ r: Resolved; ctx: Ctx; direct?: boolean }> = ({ r, ctx, d
   if (!direct && ctx.away.has(r.id)) return null;
   const a = r.props;
   const opacity = n(a.opacity, 1);
-  if (opacity <= 0 && !holdsImage(r)) return null; // images stay mounted so they never have to load again mid-render
+  // Hidden parts are not drawn. Players keep every picture decoded for the life of the tab, so a picture that comes
+  // back draws at once; keeping hidden pictures mounted made picture-heavy scenes render several times slower.
+  if (opacity <= 0) return null;
   const id = `${ctx.prefix}${safeId(r.id)}${ctx.depth ? `-m${ctx.depth}` : ""}`;
   const defs: React.ReactNode[] = [];
   // Called directly, not as elements, because they add to defs and that has to be full before it is read below.

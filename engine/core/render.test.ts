@@ -321,9 +321,9 @@ test("layer lifts a part out of its group, above or below everything, and keeps 
   assert.equal(html.match(/filter:blur/g)!.length, 1); // lifted parts step out of the group's effects
 });
 
-test("hidden parts draw nothing, except images, which stay loaded", () => {
+test("hidden parts draw nothing, images included (players keep pictures decoded themselves)", () => {
   assert.ok(!draw([path("a", { opacity: 0 })]).includes("<path"));
-  assert.ok(draw([{ id: "a", kind: "image", props: { src: "x.png", w: 4, h: 4, opacity: 0 } }]).includes("<image"));
+  assert.ok(!draw([{ id: "a", kind: "image", props: { src: "x.png", w: 4, h: 4, opacity: 0 } }]).includes("<image"));
 });
 
 test("text carries an outline and tracking", () => {

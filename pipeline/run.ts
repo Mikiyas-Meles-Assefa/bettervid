@@ -83,6 +83,9 @@ const only = flag("only") as StageName | undefined;
 const visuals = flag("visuals") ?? "engine";
 if (!["engine", "legacy"].includes(visuals)) throw new Error(`--visuals takes engine or legacy, not ${visuals}`);
 const ORDER = visuals === "legacy" ? LEGACY : ENGINE;
+// The timeline plays an engine scene whenever one exists, so legacy drops it. The scene stage keeps its sections in the
+// project folder, so switching back to the engine resumes without paying again.
+if (visuals === "legacy") delete p.scene;
 // Legacy: a topic that needs worked notation uses the teaching stage, in any style. Otherwise a board style plans one
 // live whiteboard, and other styles plan shots and images. Decided as stages run, because the plan comes first.
 const boardStyle = style(p.input.style).motion === "board";
