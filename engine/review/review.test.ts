@@ -5,12 +5,12 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { RepairTicket } from "../core/types.ts";
 import { BENCHMARK } from "./benchmark.ts";
-import { learnerReview } from "./learner.ts";
+import { learnerReview, quoted, sitQuiz, takeNotes } from "./learner.ts";
 import type { Ask, Part } from "./model.ts";
 import { chunks, contentTiles, frameTimes, frozenSpans, sentenceAt, sentences, type MotionGrid } from "./moments.ts";
 import { mergeTickets, passes, repairLoop, score } from "./review.ts";
 import { compare, loadResults, runBenchmark, summarize, table } from "./scoreboard.ts";
-import { fitScore, rowTickets, sequenceReview } from "./sequence.ts";
+import { fitScore, heldScore, rowTickets, sequenceReview } from "./sequence.ts";
 import { silentReview } from "./silent.ts";
 import { truthReview } from "./truth.ts";
 import type { Cut, Report, Scores, SentenceRow, Word } from "./types.ts";
@@ -34,7 +34,7 @@ function fake(answers: Record<string, unknown | ((c: any) => unknown)>) {
   return { ask, calls };
 }
 
-const row = (id: string, o: Partial<SentenceRow> = {}): SentenceRow => ({ id, seen: "a picture", shown: "yes", gone: "", stale: "", competing: "", unreadable: "", severity: 1, ...o });
+const row = (id: string, o: Partial<SentenceRow> = {}): SentenceRow => ({ id, seen: "a picture", shown: "yes", needs: [], stale: "", competing: "", unreadable: "", severity: 1, ...o });
 
 test("sentences end on punctuation and keep word ranges", () => {
   const list = sentences(said("One two. Three four five! Six?"));
@@ -109,7 +109,7 @@ test("lines that need nothing shown do not count against fit", () => {
 
 test("each sequence problem becomes a ticket on the right words, with no fix in it", () => {
   const list = sentences(said("One two three. Four five six."));
-  const t = rowTickets([row("s2", { shown: "no", gone: "the equation", stale: "still the title", competing: "a boat", unreadable: "cut off", severity: 3 })], list);
+  const t = rowTickets([row("s2", { shown: "no", needs: [{ thing: "the equation", state: "left" }], stale: "still the title", competing: "a boat", unreadable: "cut off", severity: 3 })], list);
   assert.deepEqual(t.map((x) => x.problem).sort(), ["competing", "frozen", "left_screen", "not_shown", "unreadable"]);
   assert.ok(t.every((x) => JSON.stringify(x.at) === JSON.stringify({ word: 3 }) && JSON.stringify(x.until) === JSON.stringify({ word: 5 })));
   assert.ok(t.every((x) => !("fix" in x)));
@@ -120,10 +120,28 @@ test("the sequence review carries the screen forward so it can see across time",
   const { ask, calls } = fake({
     sequence: (c: any) => ({ rows: [], screen_claims: [{ sentence: "s1", text: "2+2=5" }], board: `board after call ${calls.length}` }),
   });
-  const r = await sequenceReview(cut(words), { ask, grabFrame: () => pic });
+  const r = await sequenceReview(cut(words), { ask, needs: { s2: ["the first result"] }, grabFrame: () => pic });
   assert.ok(calls.length > 1);
   assert.match(calls[1].user[0].text, /board after call 1/);
   assert.equal(r.claims.length, calls.length);
+  assert.ok(JSON.stringify(calls[0].user).includes("Builds on: the first result"));
+});
+
+test("running accounts and notes are added to by code, so early parts cannot be dropped", async () => {
+  const words = said(Array.from({ length: 12 }, (_, i) => `a${i} b c d e f g h i j k l m n o.`).join(" "));
+  let n = 0;
+  const { ask, calls } = fake({
+    "sound-off": () => ({ followed: [], lost: [], account: `part ${++n}` }),
+    "sound-off-grade": { recovered: [] },
+    "learner-notes-video": () => ({ notes: `note ${++n}` }),
+  });
+  const r = await silentReview(cut(words), [], { ask, silentClip: () => clipPart });
+  assert.ok(n > 1);
+  assert.match(r.account, /^part 1\n/);
+  assert.match(r.account, new RegExp(`part ${n}$`));
+  const notes = await takeNotes(cut(words), "video", () => clipPart, ask, "muse-spark-1.2");
+  assert.match(notes, new RegExp(`^note ${r.account.split("\n").length + 1}\n`));
+  assert.equal(calls.filter((c) => c.name === "learner-notes-video").length, notes.split("\n").length);
 });
 
 test("sound-off viewer gets no words and no topic, and the grader sees no video", async () => {
@@ -141,23 +159,27 @@ test("sound-off viewer gets no words and no topic, and the grader sees no video"
   assert.ok(r.tickets.some((t) => t.problem === "idea_missing" && t.from === sentences(words)[1].from));
 });
 
+const inScope = { q1: "s1", q2: "s1" };
 const quiz = { questions: [{ id: "q1", kind: "transfer" as const, question: "Q one", answer: "A" }, { id: "q2", kind: "why" as const, question: "Q two", answer: "B" }] };
 
 // Grades depend on which notes were used, so each arm can be told apart.
 function learnerFake() {
   return fake({
-    "learner-notes-video": { notes: "VIDEO" },
-    "learner-notes-narration": { notes: "AUDIO" },
-    "learner-answer": (c: any) => ({ answers: [{ id: "q1", answer: c.user.includes("VIDEO") ? "bad" : c.user.includes("AUDIO") ? "good" : "not covered" }, { id: "q2", answer: "good" }] }),
+    "learner-notes-video": { notes: "VIDEONOTES" },
+    "learner-notes-narration": { notes: "AUDIONOTES" },
+    "learner-answer": (c: any) => {
+      const notes = /Notes:\n(.*)\n\nQuestions/s.exec(c.user)![1];
+      return { answers: [{ id: "q1", quote: notes, answer: notes === "VIDEONOTES" ? "bad" : "good" }, { id: "q2", quote: notes, answer: "good" }] };
+    },
     "learner-grade": (c: any) => ({
-      grades: [{ id: "q1", score: c.user.includes("Given answer: good") && c.user.indexOf("Given answer: good") < c.user.indexOf("q2\n") ? 1 : 0, sentence: "s1" }, { id: "q2", score: 1, sentence: "s1" }],
+      grades: c.user.split("\n\n").map((p: string) => ({ id: p.replace("Papers:\n", "").split("\n")[0], score: p.includes("Given answer: good") ? 1 : 0 })),
     }),
   });
 }
 
 test("the learner answers from its notes alone, and every arm sits the same quiz", async () => {
   const { ask, calls } = learnerFake();
-  const r = await learnerReview(cut(said("One two three.")), quiz, { ask, videoClip: () => clipPart, audioClip: () => clipPart, silentNotes: "SILENT" });
+  const r = await learnerReview(cut(said("One two three.")), quiz, inScope, { ask, videoClip: () => clipPart, audioClip: () => clipPart, silentNotes: "SILENTNOTES" });
   const answers = calls.filter((c) => c.name === "learner-answer");
   assert.equal(answers.length, 4);
   assert.ok(answers.every((c) => typeof c.user === "string" && !c.user.includes("input_video")));
@@ -167,16 +189,42 @@ test("the learner answers from its notes alone, and every arm sits the same quiz
 
 test("a question lost to the picture but passed on audio alone is the worst kind of ticket", async () => {
   const { ask } = learnerFake();
-  const r = await learnerReview(cut(said("One two three.")), quiz, { ask, videoClip: () => clipPart, audioClip: () => clipPart });
+  const r = await learnerReview(cut(said("One two three.")), quiz, inScope, { ask, videoClip: () => clipPart, audioClip: () => clipPart });
   const t = r.tickets.find((x) => x.wrong.includes("Q one"))!;
   assert.equal(t.severity, 3);
   assert.match(t.wrong, /made this worse/);
   assert.ok(!r.tickets.some((x) => x.wrong.includes("Q two")));
 });
 
+test("an answer whose quote is not in the notes counts as not covered, so empty notes score nothing", async () => {
+  const { ask, calls } = fake({
+    "learner-answer": { answers: [{ id: "q1", quote: "the rule says add the two sides", answer: "from memory" }, { id: "q2", quote: "", answer: "from memory" }] },
+    "learner-grade": { grades: [{ id: "q1", score: 0 }, { id: "q2", score: 0 }] },
+  });
+  await sitQuiz(quiz, "", ask);
+  assert.equal(calls.at(-1).user.match(/Given answer: not covered/g).length, 2);
+  assert.ok(quoted("Add  the TWO sides.", "first, add the two sides, then stop"));
+  assert.ok(!quoted("x", "x"));
+});
+
+test("questions outside the narration are set aside and listed, not failed", async () => {
+  const { ask, calls } = learnerFake();
+  const r = await learnerReview(cut(said("One two three.")), quiz, { q2: "s1" }, { ask, videoClip: () => clipPart });
+  assert.deepEqual(Object.keys(r.arms.video!.byQuestion), ["q2"]);
+  assert.deepEqual(r.outOfScope, ["Q one"]);
+  assert.ok(calls.filter((c) => c.name === "learner-answer").every((c) => !c.user.includes("Q one")));
+});
+
+test("held counts only what is on screen now, and sentences needing nothing do not dilute it", () => {
+  const list = sentences(said("One two three. Four five six. Seven eight nine."));
+  const h = heldScore([row("s1"), row("s2", { needs: [{ thing: "a", state: "on_screen" }, { thing: "b", state: "left" }] }), row("s3", { needs: [{ thing: "c", state: "never" }] })], list);
+  assert.ok(Math.abs(h - 0.25) < 1e-9);
+  assert.equal(heldScore([row("s1")], list), 1);
+});
+
 test("shared arms are reused, not paid for again", async () => {
   const { ask, calls } = learnerFake();
-  await learnerReview(cut(said("One two three.")), quiz, {
+  await learnerReview(cut(said("One two three.")), quiz, inScope, {
     ask,
     videoClip: () => clipPart,
     audioClip: () => clipPart,
@@ -223,12 +271,12 @@ test("touching tickets of one kind merge, keeping the worst severity, and severe
 });
 
 test("score is a plain mean, and truth errors block a pass however good the mean", () => {
-  const s = score({ silent: { score: 0.6 } as any, learner: { arms: { video: { score: 0.9, byQuestion: {} } } } as any, sequence: { fit: 0.6 } as any, truth: { falseClaims: 1 } as any, tickets: [] });
+  const s = score({ silent: { score: 0.6 } as any, learner: { arms: { video: { score: 0.9, byQuestion: {} } } } as any, sequence: { fit: 0.6, held: 0.7 } as any, truth: { falseClaims: 1 } as any, tickets: [] });
   assert.ok(Math.abs(s.overall - 0.7) < 1e-9);
   assert.equal(passes(s), false);
 });
 
-const scores = (overall: number, truthErrors = 0, worst = 0): Scores => ({ overall, soundOff: overall, learned: overall, audioAlone: 0.5, nothing: 0, fit: overall, truthErrors, worst, tickets: 0 });
+const scores = (overall: number, truthErrors = 0, worst = 0): Scores => ({ overall, soundOff: overall, learned: overall, audioAlone: 0.5, nothing: 0, fit: overall, held: overall, silentQuiz: null, truthErrors, worst, tickets: 0 });
 const report = (s: Scores): Report => ({ cut: "c", request: "r", at: "", usd: 0.1, scores: s, tickets: [ticket({})] });
 
 test("repair loop stops on a pass", async () => {
@@ -312,5 +360,5 @@ test("compare uses shared requests only, ignores noise, and flags new truth erro
 
 test("the scoreboard prints a row per version", () => {
   const t = table([summarize({ version: "v1", entries: [{ id: "1", kit: "math", scores: { ...scores(0.5), learned: 0.7 } }, { id: "2", kit: "math", failed: "x" }] })]);
-  assert.match(t, /\| v1 \| 1 \| 1 \| 0\.50 \| 0\.50 \| 0\.70 \| 0\.50 \| 100% \|/);
+  assert.match(t, /\| v1 \| 1 \| 1 \| 0\.50 \| 0\.50 \| 0\.70 \| 0\.50 \| 0\.50 \| 100% \|/);
 });

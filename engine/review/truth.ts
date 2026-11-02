@@ -26,7 +26,7 @@ const checkSchema = {
   },
 };
 
-const CONFIRM = `A checker believes a claim on screen is wrong. You see frames from around that moment at full size. Read what is actually there once it has settled, ignoring frames caught part way through a change. Decide whether the settled screen really says the wrong thing.`;
+const CONFIRM = `A checker read a claim off the screen and believes it is wrong. The checker's reasoning is not yours to judge. You see frames from around that moment at full size. Read what is actually there once it has settled, ignoring frames caught part way through a change. Set wrong to true if the settled screen really says what the claim says, and false if the claim was a misread or only appears mid-change.`;
 
 const confirmSchema = { type: "object", additionalProperties: false, required: ["reads", "wrong"], properties: { reads: { type: "string" }, wrong: { type: "boolean" } } };
 

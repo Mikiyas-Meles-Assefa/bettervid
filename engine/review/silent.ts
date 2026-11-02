@@ -11,7 +11,7 @@ const VIEWER = `You are watching a video with the sound off. You have no script 
 For this stretch of video:
 - followed: each thing the screen itself made clear, in order, with the second it became clear, counted from the start of this clip.
 - lost: each moment you could not tell what was going on or why something happened, with the second and what you could not work out. A picture you can describe but whose point you cannot tell is a place you were lost.
-- account: rewrite your running account of what the video has taught so far. Include only what you could actually work out from the screen, step by step, with any specifics you saw. Say plainly where there are gaps.`;
+- account: what this stretch added to your understanding. It will be added to your account so far, so do not repeat that. Include only what you could actually work out from the screen, step by step, with any specifics you saw. Say plainly where there are gaps.`;
 
 const viewerSchema = {
   type: "object",
@@ -52,7 +52,7 @@ type Viewer = { followed: { second: number; what: string }[]; lost: { second: nu
 
 export async function silentReview(cut: Cut, ideas: Idea[], d: { ask: Ask; silentClip: (c: Chunk) => Part }): Promise<SilentResult> {
   const list = sentences(cut.words);
-  let account = "Nothing yet: the video is starting.";
+  let account = ""; // kept by code and only ever added to: a model rewriting it each time quietly drops the early parts
   const tickets: RepairTicket[] = [];
   const ticket = (s: Sentence, problem: RepairTicket["problem"], seen: string, wrong: string, severity: 1 | 2 | 3): RepairTicket => ({
     reviewer: "sound_off",
@@ -71,10 +71,10 @@ export async function silentReview(cut: Cut, ideas: Idea[], d: { ask: Ask; silen
       name: "sound-off",
       effort: "low",
       system: VIEWER,
-      user: [text(`Your account so far: ${account}`), d.silentClip(c), text(`This clip lasts ${(c.to - c.from).toFixed(0)} seconds.`)],
+      user: [text(`Your account so far: ${account || "nothing yet, the video is starting."}`), d.silentClip(c), text(`This clip lasts ${(c.to - c.from).toFixed(0)} seconds.`)],
       schema: viewerSchema,
     });
-    account = r.account;
+    account = [account, r.account].filter(Boolean).join("\n");
     for (const l of r.lost) tickets.push(ticket(sentenceAt(list, c.from + l.second), "viewer_lost", "", `With the sound off: ${l.what}`, 2));
   }
   const g = await d.ask<{ recovered: SilentResult["recovered"] }>({

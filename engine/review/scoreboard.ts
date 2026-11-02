@@ -55,7 +55,7 @@ export async function runBenchmark(o: RunOptions): Promise<Results> {
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
-export type Row = { version: string; run: number; failed: number; overall: number; soundOff: number; learned: number; fit: number; beatsAudio: number; truthErrors: number; worst: number; usd: number };
+export type Row = { version: string; run: number; failed: number; overall: number; soundOff: number; learned: number; fit: number; held: number; beatsAudio: number; truthErrors: number; worst: number; usd: number };
 
 export function summarize(r: Results): Row {
   const ok = r.entries.flatMap((e) => (e.scores ? [e.scores] : []));
@@ -68,6 +68,7 @@ export function summarize(r: Results): Row {
     soundOff: mean(ok.map((s) => s.soundOff)),
     learned: mean(ok.map((s) => s.learned)),
     fit: mean(ok.map((s) => s.fit)),
+    held: mean(ok.map((s) => s.held)),
     beatsAudio: compared.length ? compared.filter((s) => s.learned > s.audioAlone!).length / compared.length : 0,
     truthErrors: ok.reduce((a, s) => a + s.truthErrors, 0),
     worst: ok.reduce((a, s) => a + s.worst, 0),
@@ -91,8 +92,8 @@ export function compare(a: Results, b: Results, noise = 0.08) {
 }
 
 export function table(rows: Row[]): string {
-  const head = "| Version | Run | Failed | Overall | Sound off | Learned | Fit | Beats audio | Truth errors | Severe tickets | Cost |\n|---|---|---|---|---|---|---|---|---|---|---|";
+  const head = "| Version | Run | Failed | Overall | Sound off | Learned | Fit | Held | Beats audio | Truth errors | Severe tickets | Cost |\n|---|---|---|---|---|---|---|---|---|---|---|---|";
   const pct = (x: number) => x.toFixed(2);
-  const line = (r: Row) => `| ${r.version} | ${r.run} | ${r.failed} | ${pct(r.overall)} | ${pct(r.soundOff)} | ${pct(r.learned)} | ${pct(r.fit)} | ${Math.round(r.beatsAudio * 100)}% | ${r.truthErrors} | ${r.worst} | $${r.usd.toFixed(2)} |`;
+  const line = (r: Row) => `| ${r.version} | ${r.run} | ${r.failed} | ${pct(r.overall)} | ${pct(r.soundOff)} | ${pct(r.learned)} | ${pct(r.fit)} | ${pct(r.held)} | ${Math.round(r.beatsAudio * 100)}% | ${r.truthErrors} | ${r.worst} | $${r.usd.toFixed(2)} |`;
   return [head, ...rows.map(line)].join("\n");
 }

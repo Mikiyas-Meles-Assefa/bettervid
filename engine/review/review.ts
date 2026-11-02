@@ -8,7 +8,7 @@ import type { Ask } from "./model.ts";
 import { sequenceReview } from "./sequence.ts";
 import { silentReview } from "./silent.ts";
 import { truthReview } from "./truth.ts";
-import type { Cut, Idea, Quiz, Report, Scores } from "./types.ts";
+import type { Cut, Idea, Needs, Quiz, Report, Scope, Scores } from "./types.ts";
 
 // Same problem from the same reviewer in touching stretches is one ticket. Worst first, then in order of time.
 export function mergeTickets(all: RepairTicket[], gap = 1): RepairTicket[] {
@@ -35,13 +35,16 @@ export function score(r: Pick<Report, "sequence" | "silent" | "learner" | "truth
   const soundOff = r.silent?.score ?? 0;
   const learned = r.learner?.arms.video?.score ?? 0;
   const fit = r.sequence?.fit ?? 0;
+  const held = r.sequence?.held ?? 0;
   return {
-    overall: (soundOff + learned + fit) / 3,
+    overall: (soundOff + learned + fit + held) / 4,
     soundOff,
     learned,
     audioAlone: r.learner?.arms.audio?.score ?? null,
     nothing: r.learner?.arms.nothing?.score ?? null,
     fit,
+    held,
+    silentQuiz: r.learner?.arms.silent?.score ?? null,
     truthErrors: r.truth?.falseClaims ?? 0,
     worst: r.tickets.filter((t) => t.severity === 3).length,
     tickets: r.tickets.length,
@@ -71,6 +74,8 @@ export type ReviewOptions = {
   ask: Ask;
   ideas: Idea[];
   quiz: Quiz;
+  scope: Scope;
+  needs: Needs;
   shared?: LearnerDeps["shared"]; // arms that do not depend on the picture, so versions of one narration reuse them
   meter?: { usd: number };
 };
@@ -79,11 +84,11 @@ export async function review(cut: Cut, o: ReviewOptions): Promise<Report> {
   const start = o.meter?.usd ?? 0;
   const { ask } = o;
   const [sequence, silent] = await Promise.all([
-    sequenceReview(cut, { ask, grabFrame: (t) => frame(cut.video, t), motion: () => motion(cut.video) }),
+    sequenceReview(cut, { ask, needs: o.needs, grabFrame: (t) => frame(cut.video, t), motion: () => motion(cut.video) }),
     silentReview(cut, o.ideas, { ask, silentClip: (c) => clip(cut.video, c.from, c.to, false) }),
   ]);
   const [learner, truth] = await Promise.all([
-    learnerReview(cut, o.quiz, {
+    learnerReview(cut, o.quiz, o.scope, {
       ask,
       videoClip: (c) => clip(cut.video, c.from, c.to, true),
       audioClip: (c) => soundOnly(cut.video, c.from, c.to),

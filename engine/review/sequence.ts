@@ -4,16 +4,16 @@ import type { RepairTicket } from "../core/types.ts";
 import type { Ask, Part } from "./model.ts";
 import { text } from "./model.ts";
 import { chunks, frameTimes, frozenSpans, sentences, wordMoment, type MotionGrid } from "./moments.ts";
-import type { Cut, Sentence, SentenceRow, SequenceResult, ScreenClaim } from "./types.ts";
+import type { Cut, Needs, Sentence, SentenceRow, SequenceResult, ScreenClaim } from "./types.ts";
 
 const SYSTEM = `You review an explainer video the way a careful viewer experiences it: in order, with the voice and the screen together. You get numbered sentences of narration, and frames from the moment each sentence is spoken.
 
 For every sentence, fill one row.
 - seen: what is on screen, briefly, as a viewer would describe it.
 - shown: can a viewer looking at the screen right now find what the voice is talking about? "yes", "partly", or "no". Use "na" only when the sentence needs nothing shown (a greeting, an aside). A picture does not need to be literal: it counts if a viewer would connect it to the words without being told. A picture that merely decorates the sentence's vocabulary does not count.
-- gone: if the sentence depends on something shown or said earlier that the viewer needs in front of them to follow, and it is no longer on screen, name it. Otherwise "".
+- needs: each sentence comes with a list of earlier things it builds on. For every item say where it is during this sentence, judged only from this sentence's frames: "on_screen" if the viewer can see it in them, "left" if it was on screen earlier and is not now, "never" if it has not been shown at all. Copy the items as given. Do not give credit for something a viewer could remember.
 - stale: if the voice has moved to a new point and the screen still shows the old one, say so. Otherwise "". Holding still while the voice is still on the same thing is fine.
-- competing: if something on screen pulls attention away from the words, has nothing to do with them, or would mislead, name it. Otherwise "".
+- competing: if something on screen pulls attention away from the words, or would mislead, name it. Test every drawing or picture: if a different picture could stand there and the viewer would lose nothing, it is decoration, and it competes with the voice for the eyes, so name it here. Otherwise "".
 - unreadable: if the key thing is present but cut off, too small, overlapping, or caught half way through a change for long enough to matter, say so. Otherwise "".
 - severity: 3 if this stops a viewer understanding, 2 if it makes it clearly harder, 1 if it is a blemish or there is no problem.
 
@@ -24,12 +24,12 @@ Judge only whether a viewer can follow. Many ways of teaching work; do not prefe
 const row = {
   type: "object",
   additionalProperties: false,
-  required: ["id", "seen", "shown", "gone", "stale", "competing", "unreadable", "severity"],
+  required: ["id", "seen", "shown", "needs", "stale", "competing", "unreadable", "severity"],
   properties: {
     id: { type: "string" },
     seen: { type: "string" },
     shown: { type: "string", enum: ["yes", "partly", "no", "na"] },
-    gone: { type: "string" },
+    needs: { type: "array", items: { type: "object", additionalProperties: false, required: ["thing", "state"], properties: { thing: { type: "string" }, state: { type: "string", enum: ["on_screen", "left", "never"] } } } },
     stale: { type: "string" },
     competing: { type: "string" },
     unreadable: { type: "string" },
@@ -49,6 +49,35 @@ const schema = {
 
 type Reply = { rows: SentenceRow[]; screen_claims: ScreenClaim[]; board: string };
 
+const NEEDS = `You map how an explanation depends on itself. For each numbered sentence, list the specific earlier things it builds on or refers back to: a result, a definition, a named thing, an event, a step, an example. List only what a viewer must have in mind for this sentence to make sense, and only what came in earlier sentences. Name each one in plain words so it could be recognised on a screen, never by its sentence number. Most sentences need 0 to 4 items. An opening line needs none.`;
+
+const needsSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["sentences"],
+  properties: { sentences: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "needs"], properties: { id: { type: "string" }, needs: { type: "array", items: { type: "string" } } } } } },
+};
+
+// Written from the narration alone, so every version of a video is held to the same list.
+export async function needsOf(cut: Cut, ask: Ask): Promise<Needs> {
+  const r = await ask<{ sentences: { id: string; needs: string[] }[] }>({ name: "needs", effort: "low", system: NEEDS, user: sentences(cut.words).map((s) => `${s.id}: ${s.text}`).join("\n"), schema: needsSchema });
+  return Object.fromEntries(r.sentences.map((s) => [s.id, s.needs]));
+}
+
+// Of the things each sentence builds on, the share still in front of the viewer, weighted by time. 1 if nothing was needed.
+export function heldScore(rows: SentenceRow[], list: Sentence[]): number {
+  const seconds = new Map(list.map((s) => [s.id, s.to - s.from]));
+  let total = 0;
+  let sum = 0;
+  for (const r of rows) {
+    if (!r.needs.length) continue;
+    const w = seconds.get(r.id) ?? 0;
+    total += w;
+    sum += (w * r.needs.filter((n) => n.state === "on_screen").length) / r.needs.length;
+  }
+  return total ? sum / total : 1;
+}
+
 // How well the screen serves the voice, weighted by time. 0 means the screen adds nothing, which is what audio alone scores.
 export function fitScore(rows: SentenceRow[], list: Sentence[]): number {
   const seconds = new Map(list.map((s) => [s.id, s.to - s.from]));
@@ -58,7 +87,6 @@ export function fitScore(rows: SentenceRow[], list: Sentence[]): number {
     if (r.shown === "na") continue;
     const w = seconds.get(r.id) ?? 0;
     let v = r.shown === "yes" ? 1 : r.shown === "partly" ? 0.5 : 0;
-    if (r.gone) v -= 0.5;
     if (r.stale) v -= 0.5;
     if (r.competing) v -= 0.5;
     total += w;
@@ -74,7 +102,8 @@ export function rowTickets(rows: SentenceRow[], list: Sentence[]): RepairTicket[
     if (!s) return [];
     const base = { reviewer: "sequence" as const, at: wordMoment(s.first), until: wordMoment(s.last), from: s.from, to: s.to, said: s.text, seen: r.seen, severity: r.severity };
     const out: RepairTicket[] = [];
-    if (r.gone) out.push({ ...base, problem: "left_screen", wrong: r.gone });
+    const missing = r.needs.filter((n) => n.state !== "on_screen");
+    if (missing.length) out.push({ ...base, problem: "left_screen", wrong: `Needed now but not on screen: ${missing.map((n) => `${n.thing} (${n.state === "left" ? "has left" : "never shown"})`).join("; ")}.` });
     if (r.stale) out.push({ ...base, problem: "frozen", wrong: r.stale });
     if (r.competing) out.push({ ...base, problem: "competing", wrong: r.competing });
     if (r.unreadable) out.push({ ...base, problem: "unreadable", wrong: r.unreadable });
@@ -84,7 +113,7 @@ export function rowTickets(rows: SentenceRow[], list: Sentence[]): RepairTicket[
   });
 }
 
-export type SequenceDeps = { ask: Ask; grabFrame: (at: number) => Part; motion?: () => MotionGrid };
+export type SequenceDeps = { ask: Ask; needs: Needs; grabFrame: (at: number) => Part; motion?: () => MotionGrid };
 
 export async function sequenceReview(cut: Cut, d: SequenceDeps): Promise<SequenceResult> {
   const list = sentences(cut.words);
@@ -94,7 +123,7 @@ export async function sequenceReview(cut: Cut, d: SequenceDeps): Promise<Sequenc
   for (const c of chunks(list)) {
     const parts: Part[] = [text(`Screen so far: ${board}`)];
     for (const s of c.sentences) {
-      parts.push(text(`${s.id} [${s.from.toFixed(1)}s to ${s.to.toFixed(1)}s]: "${s.text}"`));
+      parts.push(text(`${s.id} [${s.from.toFixed(1)}s to ${s.to.toFixed(1)}s]: "${s.text}"\nBuilds on: ${d.needs[s.id]?.length ? d.needs[s.id].join("; ") : "nothing"}`));
       for (const at of frameTimes(s).slice(0, 5)) parts.push(text(`frame at ${at.toFixed(1)}s`), d.grabFrame(at));
     }
     const r = await d.ask<Reply>({ name: "sequence", effort: "low", system: SYSTEM, user: parts, schema });
@@ -122,5 +151,5 @@ export async function sequenceReview(cut: Cut, d: SequenceDeps): Promise<Sequenc
       });
     }
   }
-  return { rows, claims, fit: fitScore(rows, list), frozenSeconds, tickets };
+  return { rows, claims, fit: fitScore(rows, list), held: heldScore(rows, list), frozenSeconds, tickets };
 }

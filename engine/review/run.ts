@@ -5,12 +5,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { BENCHMARK } from "./benchmark.ts";
-import { writeQuiz } from "./learner.ts";
+import { scopeOf, writeQuiz } from "./learner.ts";
 import { metaAsk, type Ask } from "./model.ts";
 import { cutFromProject, review } from "./review.ts";
 import { compare, listVersions, loadResults, runBenchmark, summarize, table } from "./scoreboard.ts";
+import { needsOf } from "./sequence.ts";
 import { ideasOf } from "./silent.ts";
-import type { Cut, Idea, LearnerResult, Quiz } from "./types.ts";
+import type { Cut, Idea, LearnerResult, Needs, Quiz, Scope } from "./types.ts";
 
 const ROOT = process.env.PROJECTS_DIR ?? "projects";
 const OUT = join(ROOT, "review");
@@ -28,7 +29,18 @@ async function kept<T>(name: string, make: () => Promise<T>): Promise<T> {
 }
 
 const quizFor = (request: string, ask: Ask) => kept<Quiz>(`quiz-${hashless(request)}`, () => writeQuiz(request, ask));
-const ideasFor = (cut: Cut, ask: Ask) => kept<Idea[]>(`ideas-${hashless(cut.topic)}-${cut.words.length}`, () => ideasOf(cut, ask));
+const narration = (cut: Cut) => `${hashless(cut.topic)}-${cut.words.length}`;
+
+// Everything held fixed for a narration, so versions of a video are measured against the same yardstick.
+async function yardstick(cut: Cut, request: string, ask: Ask) {
+  const quiz = await quizFor(request, ask);
+  const [ideas, needs, scope] = await Promise.all([
+    kept<Idea[]>(`ideas-${narration(cut)}`, () => ideasOf(cut, ask)),
+    kept<Needs>(`needs-${narration(cut)}`, () => needsOf(cut, ask)),
+    kept<Scope>(`scope-${narration(cut)}`, () => scopeOf(quiz, cut, ask)),
+  ]);
+  return { quiz, ideas, needs, scope };
+}
 
 const flag = (args: string[], name: string, or: string) => {
   const i = args.indexOf(`--${name}`);
@@ -42,21 +54,20 @@ async function reviewProject(args: string[]) {
   const { ask, meter } = metaAsk({ project: "engine-review", cap: Number(flag(args, "cap", "1")) });
   const list = files.length ? files : ["video.mp4"];
   const first = cutFromProject(dir, list[0]);
-  const ideas = await ideasFor(first, ask);
-  const quiz = await quizFor(first.request, ask);
+  const fixed = await yardstick(first, first.request, ask);
   for (let run = 1; run <= repeat; run++) {
     // The narration is the same across renders, so one pass of the picture-free arms serves them all.
     let shared: Partial<Record<"audio" | "nothing", { notes: string; result: NonNullable<LearnerResult["arms"]["audio"]> }>> | undefined;
     for (const file of list) {
       const cut = cutFromProject(dir, file);
-      const report = await review(cut, { ask, ideas, quiz, shared, meter });
+      const report = await review(cut, { ask, ...fixed, shared, meter });
       const a = report.learner!;
       shared ??= { audio: { notes: a.notes.audio!, result: a.arms.audio! }, nothing: { notes: "", result: a.arms.nothing! } };
       const out = join(OUT, basename(dir));
       mkdirSync(out, { recursive: true });
       writeFileSync(join(out, `${basename(file, ".mp4")}-run${run}.json`), JSON.stringify(report, null, 1));
       const s = report.scores;
-      console.log(`${file} run ${run}: overall ${s.overall.toFixed(2)} soundOff ${s.soundOff.toFixed(2)} learned ${s.learned.toFixed(2)} audio ${s.audioAlone?.toFixed(2)} silentQuiz ${a.arms.silent?.score.toFixed(2)} nothing ${s.nothing?.toFixed(2)} fit ${s.fit.toFixed(2)} truth ${s.truthErrors} severe ${s.worst} tickets ${s.tickets} $${report.usd.toFixed(3)} (total $${meter.usd.toFixed(3)})`);
+      console.log(`${file} run ${run}: overall ${s.overall.toFixed(2)} soundOff ${s.soundOff.toFixed(2)} learned ${s.learned.toFixed(2)} audio ${s.audioAlone?.toFixed(2)} silentQuiz ${s.silentQuiz?.toFixed(2)} nothing ${s.nothing?.toFixed(2)} fit ${s.fit.toFixed(2)} held ${s.held.toFixed(2)} truth ${s.truthErrors} severe ${s.worst} tickets ${s.tickets} $${report.usd.toFixed(3)} (total $${meter.usd.toFixed(3)})`);
     }
   }
 }
@@ -72,7 +83,7 @@ async function bench(args: string[]) {
     dir: SCORES,
     requests: only.length ? BENCHMARK.filter((r) => only.includes(r.id)) : BENCHMARK,
     make: async (r) => (map[r.id] ? cutFromProject(map[r.id]) : null),
-    review: async (cut, r) => review(cut, { ask, ideas: await ideasFor(cut, ask), quiz: await quizFor(r.prompt, ask), meter }),
+    review: async (cut, r) => review(cut, { ask, ...(await yardstick(cut, r.prompt, ask)), meter }),
     stopped: () => (meter.usd >= cap ? `cap of $${cap} reached` : null),
   });
   console.log(table([summarize(results)]));
