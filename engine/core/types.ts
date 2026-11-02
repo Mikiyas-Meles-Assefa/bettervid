@@ -54,6 +54,7 @@ export type CompileContext = {
   theme: Theme;
   words?: { start: number }[];
   kits?: Kit[];
+  measure?: TextMeasure;
 };
 
 // A kit adds kinds of thing and behaviors. It can never add a new primitive, which is what keeps everything blendable.
@@ -66,3 +67,9 @@ export type Behavior = (a: { target: string; start: number; args: Record<string,
 
 // A truth engine does real work and reports what happened, in order. Animations follow this record, so they cannot lie.
 export type TruthEvent<T = Record<string, unknown>> = { type: string } & T;
+
+// Real text measurement, in ems. `clusters` are the pieces drawn on their own, and `edges` holds the kerned width up to
+// the end of each. Compile may pass its own measure; otherwise kits ask the browser that renders the video.
+export type MeasureRequest = { clusters: string[]; font: string; weight: number };
+export type Measured = { edges: number[]; ascent: number; descent: number };
+export type TextMeasure = (request: MeasureRequest) => Measured;
