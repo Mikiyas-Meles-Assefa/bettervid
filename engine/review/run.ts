@@ -1,17 +1,18 @@
 // Command line for the understanding loop.
 //   review <projectDir> [files...] [--repeat n] [--cap dollars]   review renders of one project; versions share ideas and quiz
 //   bench <version> --map map.json [--only id,id] [--cap dollars]  run the benchmark on finished projects (map: request id to project dir)
+//   rescore <projectDir>                                           re-sit the quiz from saved notes after a grading change, no re-watching
 //   board [versionA versionB]                                      print the scoreboard, and a comparison if two versions are named
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { BENCHMARK } from "./benchmark.ts";
-import { scopeOf, writeQuiz } from "./learner.ts";
+import { scopeOf, sitQuiz, writeQuiz } from "./learner.ts";
 import { metaAsk, type Ask } from "./model.ts";
-import { cutFromProject, review } from "./review.ts";
+import { cutFromProject, mergeTickets, review, score } from "./review.ts";
 import { compare, listVersions, loadResults, runBenchmark, summarize, table } from "./scoreboard.ts";
 import { needsOf } from "./sequence.ts";
 import { ideasOf } from "./silent.ts";
-import type { Cut, Idea, LearnerResult, Needs, Quiz, Scope } from "./types.ts";
+import type { Condition, Cut, Idea, LearnerResult, Needs, Quiz, Report, Scope } from "./types.ts";
 
 const ROOT = process.env.PROJECTS_DIR ?? "projects";
 const OUT = join(ROOT, "review");
@@ -95,8 +96,29 @@ function board(args: string[]) {
   if (args.length === 2) console.log(JSON.stringify(compare(loadResults(SCORES, args[0]), loadResults(SCORES, args[1])), null, 2));
 }
 
+async function rescore(args: string[]) {
+  const dir = args[0];
+  const { ask, meter } = metaAsk({ project: "engine-review", cap: Number(flag(args, "cap", "0.3")) });
+  const first = cutFromProject(dir);
+  const fixed = await yardstick(first, first.request, ask);
+  const quiz = { questions: fixed.quiz.questions.filter((q) => fixed.scope[q.id]) };
+  const out = join(OUT, basename(dir));
+  for (const f of readdirSync(out).filter((x) => x.endsWith(".json")).sort()) {
+    const r: Report = JSON.parse(readFileSync(join(out, f), "utf8"));
+    if (!r.learner) continue;
+    for (const [arm, notes] of Object.entries(r.learner.notes)) r.learner.arms[arm as Condition] = await sitQuiz(quiz, notes ?? "", ask);
+    // Learner tickets depend on the grades, so they are dropped here rather than left stale; a full review rebuilds them.
+    r.tickets = mergeTickets(r.tickets.filter((t) => t.reviewer !== "learner"));
+    r.scores = score(r);
+    writeFileSync(join(out, f), JSON.stringify(r, null, 1));
+    const s = r.scores;
+    console.log(`${f}: overall ${s.overall.toFixed(2)} soundOff ${s.soundOff.toFixed(2)} learned ${s.learned.toFixed(2)} audio ${s.audioAlone?.toFixed(2)} silentQuiz ${s.silentQuiz?.toFixed(2)} fit ${s.fit.toFixed(2)} held ${s.held.toFixed(2)} truth ${s.truthErrors} (total $${meter.usd.toFixed(3)})`);
+  }
+}
+
 const [command, ...rest] = process.argv.slice(2);
 if (command === "review") await reviewProject(rest);
 else if (command === "bench") await bench(rest);
 else if (command === "board") board(rest);
-else console.log("usage: run.ts review|bench|board");
+else if (command === "rescore") await rescore(rest);
+else console.log("usage: run.ts review|bench|rescore|board");

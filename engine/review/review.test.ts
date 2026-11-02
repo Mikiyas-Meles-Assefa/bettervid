@@ -169,7 +169,7 @@ function learnerFake() {
     "learner-notes-narration": { notes: "AUDIONOTES" },
     "learner-answer": (c: any) => {
       const notes = /Notes:\n(.*)\n\nQuestions/s.exec(c.user)![1];
-      return { answers: [{ id: "q1", quote: notes, answer: notes === "VIDEONOTES" ? "bad" : "good" }, { id: "q2", quote: notes, answer: "good" }] };
+      return { answers: [{ id: "q1", quotes: [notes], answer: notes === "VIDEONOTES" ? "bad" : "good" }, { id: "q2", quotes: [notes], answer: "good" }] };
     },
     "learner-grade": (c: any) => ({
       grades: c.user.split("\n\n").map((p: string) => ({ id: p.replace("Papers:\n", "").split("\n")[0], score: p.includes("Given answer: good") ? 1 : 0 })),
@@ -181,7 +181,7 @@ test("the learner answers from its notes alone, and every arm sits the same quiz
   const { ask, calls } = learnerFake();
   const r = await learnerReview(cut(said("One two three.")), quiz, inScope, { ask, videoClip: () => clipPart, audioClip: () => clipPart, silentNotes: "SILENTNOTES" });
   const answers = calls.filter((c) => c.name === "learner-answer");
-  assert.equal(answers.length, 4);
+  assert.equal(answers.length, 3); // the nothing arm has no notes, so it needs no call
   assert.ok(answers.every((c) => typeof c.user === "string" && !c.user.includes("input_video")));
   assert.deepEqual(Object.keys(r.arms).sort(), ["audio", "nothing", "silent", "video"]);
   assert.equal(calls.find((c) => c.name.startsWith("learner-notes")).model, "muse-spark-1.2");
@@ -196,15 +196,28 @@ test("a question lost to the picture but passed on audio alone is the worst kind
   assert.ok(!r.tickets.some((x) => x.wrong.includes("Q two")));
 });
 
-test("an answer whose quote is not in the notes counts as not covered, so empty notes score nothing", async () => {
+test("an answer whose quote is not in the notes counts as not covered", async () => {
   const { ask, calls } = fake({
-    "learner-answer": { answers: [{ id: "q1", quote: "the rule says add the two sides", answer: "from memory" }, { id: "q2", quote: "", answer: "from memory" }] },
+    "learner-answer": { answers: [{ id: "q1", quotes: ["the rule says add the two sides"], answer: "from memory" }, { id: "q2", quotes: [], answer: "from memory" }] },
     "learner-grade": { grades: [{ id: "q1", score: 0 }, { id: "q2", score: 0 }] },
   });
-  await sitQuiz(quiz, "", ask);
+  await sitQuiz(quiz, "some notes about other things", ask);
   assert.equal(calls.at(-1).user.match(/Given answer: not covered/g).length, 2);
-  assert.ok(quoted("Add  the TWO sides.", "first, add the two sides, then stop"));
-  assert.ok(!quoted("x", "x"));
+});
+
+test("quotes stitched from several excerpts still count, and scraps do not", () => {
+  const notes = "Step one: add the two sides.\nThen divide by the total\n- STOP IF ZERO";
+  assert.ok(quoted(["Add  the TWO sides."], notes));
+  assert.ok(quoted("then divide by the total, STOP IF ZERO, made up words here", notes));
+  assert.ok(!quoted(["stop", "x"], notes));
+  assert.ok(!quoted([], notes));
+});
+
+test("empty notes score nothing without a model call", async () => {
+  const { ask, calls } = fake({});
+  const r = await sitQuiz(quiz, "  ", ask);
+  assert.equal(r.score, 0);
+  assert.equal(calls.length, 0);
 });
 
 test("questions outside the narration are set aside and listed, not failed", async () => {
@@ -232,6 +245,7 @@ test("shared arms are reused, not paid for again", async () => {
   });
   assert.equal(calls.filter((c) => c.name === "learner-notes-narration").length, 0);
   assert.equal(calls.filter((c) => c.name === "learner-answer").length, 1);
+  assert.equal(calls.filter((c) => c.name === "learner-notes-video").length, 1);
 });
 
 test("truth: a flagged claim that fails a second look is not reported false", async () => {

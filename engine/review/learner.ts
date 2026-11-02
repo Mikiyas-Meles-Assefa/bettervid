@@ -42,13 +42,13 @@ Return only the new notes from this stretch. They will be added to your notes so
 
 const notesSchema = { type: "object", additionalProperties: false, required: ["notes"], properties: { notes: { type: "string" } } };
 
-const ANSWERER = `You answer a quiz using only the notes below, which are everything you know. For each question, copy into quote the exact words from the notes that your answer rests on, then work the answer out from them. If no line in the notes helps, leave quote empty and answer "not covered". Using anything outside the notes is cheating.`;
+const ANSWERER = `You answer a quiz using only the notes below, which are everything you know. For each question, copy into quotes the lines from the notes that your answer rests on, each one an exact excerpt, then work the answer out from them. If no line in the notes helps, leave quotes empty and answer "not covered". Using anything outside the notes is cheating.`;
 
 const answersSchema = {
   type: "object",
   additionalProperties: false,
   required: ["answers"],
-  properties: { answers: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "quote", "answer"], properties: { id: { type: "string" }, quote: { type: "string" }, answer: { type: "string" } } } } },
+  properties: { answers: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "quotes", "answer"], properties: { id: { type: "string" }, quotes: { type: "array", items: { type: "string" } }, answer: { type: "string" } } } } },
 };
 
 const GRADER = `You grade quiz answers against model answers. Score 1 if correct with sound reasoning, 0.5 if partly right, 0 if wrong or "not covered".`;
@@ -81,8 +81,13 @@ export async function scopeOf(quiz: Quiz, cut: Cut, ask: Ask): Promise<Scope> {
 
 const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-// A quote counts only if it is really in the notes and long enough to mean something.
-export const quoted = (quote: string, notes: string) => squash(quote).length >= 6 && squash(notes).includes(squash(quote));
+// An answer counts only if it rests on something really in the notes. Models stitch excerpts together, so each piece between
+// separators is checked on its own, and at least one piece long enough to mean something must be found.
+export function quoted(quotes: string | string[], notes: string): boolean {
+  const n = squash(notes);
+  const pieces = [quotes].flat().flatMap((q) => q.split(/\.\.\.|…|[,;|\n/]/)).map(squash).filter((p) => p.length >= 6);
+  return pieces.some((p) => n.includes(p));
+}
 
 // Watches one condition chunk by chunk, keeping notes as it goes.
 export async function takeNotes(cut: Cut, what: string, source: (c: Chunk) => Part, ask: Ask, model: "muse-spark-1.2" | "muse-spark-1.3"): Promise<string> {
@@ -95,10 +100,11 @@ export async function takeNotes(cut: Cut, what: string, source: (c: Chunk) => Pa
 }
 
 export async function sitQuiz(quiz: Quiz, notes: string, ask: Ask): Promise<QuizResult> {
-  if (!quiz.questions.length) return { score: 0, byQuestion: {} };
+  // With no notes nothing can be quoted, so the answer is known without asking.
+  if (!quiz.questions.length || !notes.trim()) return { score: 0, byQuestion: Object.fromEntries(quiz.questions.map((q) => [q.id, 0])) };
   const questions = quiz.questions.map((q) => `${q.id}: ${q.question}`).join("\n");
-  const a = await ask<{ answers: { id: string; quote: string; answer: string }[] }>({ name: "learner-answer", effort: "low", system: ANSWERER, user: `Notes:\n${notes || "(empty)"}\n\nQuestions:\n${questions}`, schema: answersSchema });
-  const answers = new Map(a.answers.filter((x) => quoted(x.quote, notes)).map((x) => [x.id, x.answer]));
+  const a = await ask<{ answers: { id: string; quotes: string[]; answer: string }[] }>({ name: "learner-answer", effort: "low", system: ANSWERER, user: `Notes:\n${notes || "(empty)"}\n\nQuestions:\n${questions}`, schema: answersSchema });
+  const answers = new Map(a.answers.filter((x) => quoted(x.quotes, notes)).map((x) => [x.id, x.answer]));
   const paper = quiz.questions.map((q) => `${q.id}\nQuestion: ${q.question}\nModel answer: ${q.answer}\nGiven answer: ${answers.get(q.id) ?? "not covered"}`).join("\n\n");
   const g = await ask<{ grades: { id: string; score: number }[] }>({ name: "learner-grade", effort: "low", system: GRADER, user: `Papers:\n${paper}`, schema: gradesSchema });
   const byQuestion = Object.fromEntries(quiz.questions.map((q) => [q.id, g.grades.find((x) => x.id === q.id)?.score ?? 0]));
