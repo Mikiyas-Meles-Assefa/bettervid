@@ -91,8 +91,10 @@ export type Shot = {
 // `focus`: the part of the image the narration is talking about ("the brewery"); the shot zooms to it and circles it.
 // `mustBeReal`: a real document, map, person or place (or the user asked for real images only), so no generated stand-in.
 // `idea`: an honest illustration of the idea behind a must-be-real shot, with no likeness or fake document, for when the real thing cannot be found.
+// `draw`: what the scene step should draw itself (a map, diagram, chart, timeline), for `kind` "drawn", or as the honest
+// fallback of a real shot whose image is not found.
 export type ImageType = "scene" | "object" | "diagram";
-export type AssetRequest = { kind: "real" | "generated"; query: string; broadQuery?: string; prompt: string; idea?: string; imageType?: ImageType; subject?: string; focus?: string; mustBeReal?: boolean };
+export type AssetRequest = { kind: "real" | "generated" | "drawn"; query: string; broadQuery?: string; prompt: string; idea?: string; draw?: string; imageType?: ImageType; subject?: string; focus?: string; mustBeReal?: boolean };
 // A drawn mark. Points are fractions of the image; `word` is the index of the spoken word it starts on.
 export type MarkTool = "ring" | "box" | "underline" | "arrow" | "line" | "dots" | "label" | "path";
 export type Mark = { tool: MarkTool; points: [number, number][]; word: number; text?: string; color?: "accent" | "highlight" | "ink" };
@@ -109,6 +111,8 @@ export type Asset = {
   override?: { type: ShotType; text?: string };
   cutout?: string; // PNG with outline and shadow baked in
   missing?: boolean; // no honest image could be found or made; the timeline holds the previous shot instead
+  draw?: string; // no image: the scene step draws this here instead (a map, diagram, chart). Set together with `missing`, so older paths hold the previous shot
+  why?: string; // why this picture was chosen, or why none was, in plain words
   size?: [number, number]; // image width and height in pixels
   look?: string; // what the viewer should look at here, for the annotate stage
   focus?: Box; // where that is in the image

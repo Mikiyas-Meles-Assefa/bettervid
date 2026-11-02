@@ -36,8 +36,9 @@ export async function post(path: string, body: unknown, tries = 5): Promise<any>
     try {
       res = await fetch(`${BASE}${path}`, {
         method: "POST",
-        headers: { authorization: `Bearer ${env("META_API_KEY")}`, "content-type": "application/json" },
-        body: JSON.stringify(body),
+        // A FormData body (multipart, as /images/edits needs) sets its own content type.
+        headers: { authorization: `Bearer ${env("META_API_KEY")}`, ...(body instanceof FormData ? {} : { "content-type": "application/json" }) },
+        body: body instanceof FormData ? body : JSON.stringify(body),
         signal: AbortSignal.timeout(10 * 60_000),
       });
       // Read the body inside the try: on this network a connection can drop mid-response ("terminated", read ETIMEDOUT).
