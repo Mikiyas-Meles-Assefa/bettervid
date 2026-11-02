@@ -106,6 +106,17 @@ A theme from `themeFrom` carries `design` (`Theme.design`, `engine/style/design.
 - **Pictures.** Every image takes `design.picture` (saturation, contrast, brightness, tint). A picture placed on the page also gets its border, shadow and an alternating lean up to `rotate`; one shown whole (`frame=fit`) gets the border and shadow; one filling the frame only the color. The blurred copy behind a picture shown whole (`pipeline/lib/shots-scene.ts`) uses `elements.backdrop`, which a style file may give and which is otherwise worked out from its page and picture treatment (`backdropOf`).
 - **Tables, highlights, pointers.** A grid of words is a table: its first row takes `elements.table.header`, with rules (`lines`, `rule`, `ruleWidth`) and stripes (`zebra`). `mark highlight` draws `elements.highlight` (a marker band whose words take its ink, an underline, ring, box, or a glow on the words). Arrows and marks use `elements.pointer` (width, open, solid or no heads, hand or clean rings) and the pointer role's color, stroke and glow.
 
+### Frame fixes after the reruns (Nov 2)
+
+- **Measured in real fonts.** `engine/language/measure.ts` measures each character of the style's title, body and mono fonts once in the render browser (cached on disk); the scene step lays out with it, so wide faces keep the side margins.
+- **Changes between states.** What leaves where something arrives (new, returning or moving in, kits included) goes in a fast fade, and what arrives comes up quickly a frame or two later: the board is never bare and old words never sit under new ones.
+- **Attached words converge.** Words too wide for the view break onto two lines or come down to the readable size; with no room beside their target they go to the nearest free place with a short line back to it; captions at points never cover each other and keep the margins. A camera set earlier follows (pans, then pulls back as little as it must) when words arrive under it. What still cannot fit is reported with the camera line, a zoom that holds it, or how many characters fit.
+- **Order.** `NodeSpec.under` places a part just beneath another that already exists, so a card added later sits under its words.
+- **Tables.** In a grid, a line holding exactly as many values as the grid has columns is one row: each value gets a cell, and the line's id names the row. Rows typed as separate lines get a note toward a grid.
+- **Formulas** take their role's color, and typeset symbols get the style's type treatment (grain, glow).
+- **Rings** in tight places hug what they ring. Build results carry `notes` for states crowded with sentences or mostly empty.
+- **The look step** rewrites a section once when the version it kept is still severely broken, and reports what remains (`!!!` in the log, `severe on screen` in its notes).
+
 ## Not yet decided
 
 The scene language Spark writes, text split into letters, measured layout, 3D, and how the engine replaces `video/Stage.tsx` and `video/Board.tsx`. The foundation is not connected to the pipeline yet.

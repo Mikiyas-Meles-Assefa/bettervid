@@ -102,6 +102,15 @@ Indent to put things inside an arrangement, which can nest. Everything goes in `
 [[looks]]
 `back=COLOR` on a row, stack or grid sets it on a panel, like a card.
 [[/looks]]
+Values in rows and columns are a table: put them in a grid, one line per row. A line with exactly as many values as the grid has columns puts each value in its own cell, so the columns line up; the first row is the header, in the style's table look. The line's id names the whole row, and each value keeps its own id:
+
+    grid times cols=3
+      small head: h1=Train h2=Leaves h3=Platform
+      normal t1: n1=Express d1=9:05 p1=4
+      normal t2: n2=Local d2=9:20 p2=2
+
+A row of words (`row r3` holding three `text` lines) works the same way. Values typed into one line with spaces or bars between them never line up.
+
 `into=ID`, `before=ID` and `after=ID` on any line place it relative to something in a keep state. An arrangement's id can be used anywhere a thing's id can, and means everything inside it.
 
 # Attached to things
@@ -119,6 +128,8 @@ These find their own place and follow what they touch.
     mark pointer a side=top                     a short arrow pointing at it, from the side with room
 
 An arrow from a thing to itself (`arrow a -> a "turns"`) circles around it.
+
+Attached words go beside what they name when there is room. When everything around it is full they go to the nearest free place, with a short line back to it, and words too long for one line break onto two. When even that cannot be done, the build says how many characters fit.
 
 `at=` puts a mark or a tag at a place inside a thing, in that thing's own coordinates: x,y pairs from its top left (0,0) to its bottom right (1,1). Inside a picture they belong to the picture: they move, zoom and leave with it, and keep their size on screen.
 
@@ -216,6 +227,8 @@ What the language can do is above. This is what tends to make it work on a phone
 **Everything on screen competes for the eye.** Keep in view what the coming words build on (the table being filled in, the diagram the steps run on, the line being rewritten) and remove what the words have left behind. A picture that fills the frame is the subject while it is up: words and shapes over it should be about it, and leave when it changes. A heading, a list or a running count that stays over picture after picture stops being read and starts hiding the picture.
 
 **Computed beats typed.** When a thing in your guide works a process out for real ({{truthKinds}}), use it rather than drawing the process by hand: every step is right, every part can be pointed at, and `do steps` ties each step to the words that say it, slow or fast. A copy typed by hand can disagree with the truth and has no steps to play. The same holds for math: a formula with a root over something, a fraction inside something, a bar or hat on a letter, a sum, powers or indices is set for real by `math` when your guide lists it, and every symbol is its own part; characters typed for marks (a bar over a letter, a root over a fraction) can drop out or sit wrong. Atom lines suit short arithmetic whose terms move one by one. A program can compute what no kit covers.
+
+**One frame, one thought.** A phone screen holds the main thing and about three short lines of words. More sentences than that are not read while the voice goes on; give each its own state as the words reach it, and drop what the words have left. An ending is one takeaway, said large, not a summary of everything. The opposite fails too: one small thing in an empty frame looks unfinished, so make the main thing big enough to fill its space.
 
 **Tempo follows understanding.** The first time a process happens, give each step its own state on the words that say it, slow enough to watch. When the words say it happens again the same way, let it run faster, several steps under one phrase, and then show the whole. Build a table, list or diagram as the words reach each part (a column, a row, a branch) rather than all at once, and keep it in view while later steps use it. Show a result after the work that produces it, not before.
 

@@ -46,7 +46,8 @@ export type RenderProps = {
 };
 
 // What a planner or kit writes. `kind` is a primitive or a kit's kind. A node's id may use dots to name its parts.
-export type NodeSpec = { id: string; kind: string; parent?: string; props?: Props; data?: Record<string, unknown> };
+// `under`: drawn just beneath that node when it already exists, so a card added after its words still sits behind them.
+export type NodeSpec = { id: string; kind: string; parent?: string; props?: Props; data?: Record<string, unknown>; under?: string };
 export type SceneNode = { id: string; kind: Primitive; parent?: string; props: Props };
 
 // One moment in a scene document. Everything is optional: a step can change one color or build a whole diagram.

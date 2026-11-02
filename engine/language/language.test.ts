@@ -428,7 +428,7 @@ test("the guide has every blank filled, teaches what exists, and its own example
 
 test("the repair loop sends errors back until the scene builds", async () => {
   const seen: string[] = [];
-  const replies = [`@0\nboxx a "hi"\n`, `@0\nbox a "hi"\nlight b\n`, `@0\nbox a "hi"\nlight a\n`];
+  const replies = [`@0\nboxx a "hi"\n`, `@0\nbox a "hi"\nlight b\n`, `@0\nbox a "hi" w=900 h=1400\nlight a\n`];
   const ask = async (_: string, user: string) => {
     seen.push(user);
     return { value: replies[seen.length - 1]!, usd: 0.01 };

@@ -121,7 +121,7 @@ export function compile(doc: SceneDoc, ctx: CompileContext): Scene {
     for (const spec of s.add ?? []) {
       for (const n of expand(spec)) {
         const props = paint({ ...DEFAULTS, ...n.props });
-        place(n, props);
+        place(n, props, n.under && known.has(n.under) && parents.get(n.under) === (n.parent ?? (camera && !props.screen ? CAMERA : undefined)) ? n.under : undefined);
         const enter = s.enter ?? ctx.theme.enter ?? "fade";
         if (enter === "none") continue;
         const final = enter === "draw" && n.kind === "path" ? "drawn" : "opacity";

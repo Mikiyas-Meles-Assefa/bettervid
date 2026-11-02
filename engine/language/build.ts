@@ -26,7 +26,9 @@ export type BuildOptions = {
   measure?: Measure;
 };
 // `truth`: each thing a truth kit computed, with its numbered steps, so a writer can bind steps to the words that speak them.
-export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; truth?: { id: string; kind: string; steps: string[] }[]; stats: { states: number; parts: number; programs: number; programMs: number } };
+// `notes`: how states read, which is not an error but a writer may act on: a frame crowded with sentences, or one that
+// leaves most of the frame empty for a while.
+export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; truth?: { id: string; kind: string; steps: string[] }[]; notes?: string[]; stats: { states: number; parts: number; programs: number; programMs: number } };
 type Live = { kind: string; parent?: string; props: Props; alive: boolean; line: number };
 
 const STATE_ENTERS = ["fade", "draw", "pop", "none"];
@@ -116,6 +118,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   const kitNames = Object.keys(kinds).filter((k) => k !== "graph");
   const { doc, problems } = parse(source, kitNames);
   const stats = { states: doc.states.length, parts: 0, programs: 0, programMs: 0 };
+  const notes: string[] = [];
   if (problems.length) return { problems, stats };
 
   const behaviors = new Set([...Object.keys(BEHAVIORS), ...allKits.flatMap((k) => Object.keys(k.behaviors ?? {}))]);
@@ -191,6 +194,12 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           fail(item.line, `The setting ${k} of ${item.id} is not valid JSON.`);
         }
       }
+      // A kit's drawing takes its role's color, as words do, unless the scene names a color: a formula that is the
+      // answer is drawn in the answer's color, not left in plain ink beside it.
+      if (data.color === undefined && isRole(item.attrs.role)) {
+        const color = roleLook(ctx.theme, item.attrs.role).color;
+        if (color) data.color = color;
+      }
       spec = { id: item.id, kind: item.kind, data };
     }
     const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, kitCtx) ?? []).flatMap(expand));
@@ -235,7 +244,8 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
   type View = { panX: number; panY: number; zoom: number };
   const REST: View = { panX: ctx.width / 2, panY: ctx.height / 2, zoom: 1 };
   let view: View = REST;
-  const shots: { at: number; frames: number; ease: Ease; view: View; drift: number; line: number }[] = [];
+  const shots: { at: number; frames: number; ease: Ease; view: View; drift: number; line: number; zoomBy: number }[] = [];
+  let framed: Box | undefined; // what the camera last framed, for following it in later states
   // What a view shows, in the scene's own coordinates: the whole frame, and the part of it words may use (inside the
   // edges and above the captions).
   const EDGE = 4;
@@ -453,6 +463,18 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
 
     const laid = layout(board, env, stretchScale[index]);
     problems.push(...laid.problems.slice(0, 6).map((p) => ({ ...p, line: p.line || s.line })));
+    // How the state reads once it settles: sentences crowding one frame, or a frame left mostly empty.
+    const lasts = (index + 1 < doc.states.length ? when(doc.states[index + 1]!.at, ctx) : ctx.frames) - momentOf(s.at, s.line);
+    if (lasts >= ctx.fps * 1.5) {
+      const sentences = laid.texts.filter((t) => t.text.trim().split(/\s+/).length >= 3);
+      if (sentences.length >= 6) notes.push(`The state at line ${s.line} shows ${sentences.length} lines of sentences at once, which a viewer cannot read while listening. Keep about three short lines beside the main thing: split the rest over states as the words reach them, or drop what the words have moved past.`);
+      const tops = board.filter((i) => i.attrs.frame === undefined).map((i) => laid.boxes.get(i.id)).filter((b): b is Box => !!b);
+      if (tops.length) {
+        const all = union(tops);
+        const share = (Math.min(all.h, safe.h) * Math.min(all.w, safe.w)) / (safe.w * safe.h);
+        if (share < 0.3 && all.h < safe.h * 0.55 && !laid.fields.some((f) => f.frame)) notes.push(`The state at line ${s.line} fills only ${Math.round(share * 100)}% of the frame${index + 1 < doc.states.length ? ` for ${(lasts / ctx.fps).toFixed(1)} s` : ""}, so it looks empty. Make the main thing bigger (a larger size, or w= and h= on shapes and pictures), or show what the words describe beside it.`);
+      }
+    }
 
     // Parts for this state: laid-out parts, then kits and programs in their slots, then everything attached to them.
     // A picture that may be see-through (a PNG, such as a cut-out) gets no mat: a border would fill in around its shape.
@@ -519,7 +541,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       }
       const size = Number(p.props.size ?? 60) * k;
       // Text grows from its anchor: to the right of x, to the left of it, or around it.
-      const w = env.measure(String(p.props.text ?? ""), size, typeof p.props.font === "string" && /mono|menlo|courier/i.test(p.props.font) ? "mono" : undefined);
+      const w = env.measure(String(p.props.text ?? ""), size, typeof p.props.font === "string" && /mono|menlo|courier/i.test(p.props.font) ? "mono" : p.props.font === ctx.theme.fonts.title ? "title" : undefined);
       return { x: p.props.anchor === "start" ? x + w / 2 : p.props.anchor === "end" ? x - w / 2 : x, y, w, h: size * 1.2 };
     };
     const needBox = (id: string, line: number): Box | undefined => {
@@ -591,8 +613,9 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     } else if (!s.keep && view !== REST) next = REST;
     if (next) {
       const frames = s.cut ? 1 : number(cam?.attrs.frames ?? "") ?? number(s.attrs.move ?? "") ?? Math.max(ctx.theme.moveFrames, Math.round(ctx.fps * 0.8));
-      shots.push({ at: cameraAt, frames, ease: (cam?.attrs.ease as Ease) ?? "smooth", view: next, drift: number(cam?.attrs.drift ?? "") ?? 0, line: cam?.line ?? s.line });
+      shots.push({ at: cameraAt, frames, ease: (cam?.attrs.ease as Ease) ?? "smooth", view: next, drift: number(cam?.attrs.drift ?? "") ?? 0, line: cam?.line ?? s.line, zoomBy: number(cam?.attrs.zoom ?? "") ?? 1 });
       view = next;
+      framed = region;
     }
     // Words and marks are sized for the screen, so a closer camera does not blow them up.
     const z = view.zoom;
@@ -623,14 +646,20 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     // The card under words that need one: the style's label card (design.elements.label.back), else the caption back.
     const captionBack = design ? design.elements.label.back : roleLook(ctx.theme, "caption").back ?? "paper";
     const chipOf = (b: Box, attrs: Attrs) => (attrs.back === "none" ? undefined : attrs.back ?? roleOf(attrs)?.back ?? (onPicture(b) ? captionBack : undefined));
-    const words = (id: string, line: number, text: string, at: { x: number; y: number }, size: number, attrs: Attrs, chip: string | undefined, parent?: string) => {
+    // Words as they are drawn: a role that writes in capitals changes them, and so their width; its font does too.
+    const wordLook = (attrs: Attrs) => (design ? roleLook(ctx.theme, isRole(attrs.role) && attrs.role !== "panel" && attrs.role !== "pointer" ? attrs.role : "label") : roleOf(attrs));
+    const shownText = (text: string, attrs: Attrs) => (wordLook(attrs)?.case === "upper" ? text.toUpperCase() : text);
+    const wordFont = (attrs: Attrs) => (wordLook(attrs)?.font === "title" ? "title" : wordLook(attrs)?.font === "mono" ? "mono" : undefined);
+    // `rows`: the words broken over lines, when one line would not fit across the view.
+    const words = (id: string, line: number, text: string, at: { x: number; y: number }, size: number, attrs: Attrs, chip: string | undefined, parent?: string, rows: string[] = [text]) => {
       // A pointer is drawn, not typed: an emoji comes out small, in the system's emoji font, and off the style.
       if (EMOJI_ONLY.test(text)) report(line, `"${text}" is only emoji or symbols. To point at something use mark pointer ID side=top (or an arrow); attached words are for words. If a picture of an emoji is really wanted, give it its own line of text at size big or larger.`);
       // Attached words are labels unless they name a role; with a design layer they take the role's look on the card.
       const role = isRole(attrs.role) && attrs.role !== "panel" && attrs.role !== "pointer" ? attrs.role : "label";
       const look = design ? roleLook(ctx.theme, role, chip) : roleOf(attrs);
-      const shown = look?.case === "upper" ? text.toUpperCase() : text;
-      const w = env.measure(shown, size);
+      const lines = rows.map((r) => (look?.case === "upper" ? r.toUpperCase() : r));
+      const w = Math.max(...lines.map((l) => env.measure(l, size, wordFont(attrs))));
+      const more = (lines.length - 1) * size * 1.2; // the extra height of lines after the first
       const where = { x: round(at.x), y: round(at.y) };
       let lean = chip ? -1.5 : 0;
       let shift = 0;
@@ -638,52 +667,163 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         // A caption: the style's strip, with its rule, padding and lean.
         const e = design.elements.caption;
         const ruled = e.rule !== "none" && e.ruleWidth > 0;
-        const [pw, ph] = [w + size * e.pad * 2 + (ruled ? e.ruleWidth : 0), size * (1 + e.pad * 2)];
+        const [pw, ph] = [w + size * e.pad * 2 + (ruled ? e.ruleWidth : 0), size * (1 + e.pad * 2) + more];
         lean = e.rotate;
-        drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, rotate: lean, points: rect(pw, ph), closed: 1, fill: chip, stroke: e.edge === "none" ? "none" : e.edge, strokeWidth: 3, glowLevel: 0 } });
-        if (ruled) drawn.push({ id: `${id}.rule`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, rotate: lean, points: rect(e.ruleWidth, ph, -pw / 2 + e.ruleWidth / 2), closed: 1, fill: e.rule, stroke: "none" } });
+        drawn.push({ id: `${id}.back`, kind: "path", line, under: id, ...(parent ? { parent } : {}), props: { ...where, rotate: lean, points: rect(pw, ph), closed: 1, fill: chip, stroke: e.edge === "none" ? "none" : e.edge, strokeWidth: 3, glowLevel: 0 } });
+        if (ruled) drawn.push({ id: `${id}.rule`, kind: "path", line, under: id, ...(parent ? { parent } : {}), props: { ...where, rotate: lean, points: rect(e.ruleWidth, ph, -pw / 2 + e.ruleWidth / 2), closed: 1, fill: e.rule, stroke: "none" } });
         shift = ruled ? e.ruleWidth / 2 : 0;
       } else if (chip && design) {
         // A label card: the style's label back, square and flat, as the style's specimen draws it.
-        drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, points: rect(w + size, size * 1.6), closed: 1, fill: chip, stroke: "none", glowLevel: 0 } });
+        drawn.push({ id: `${id}.back`, kind: "path", line, under: id, ...(parent ? { parent } : {}), props: { ...where, points: rect(w + size, size * 1.6 + more), closed: 1, fill: chip, stroke: "none", glowLevel: 0 } });
         lean = 0;
       } else if (chip) {
-        const [pw, ph] = [w + size * 0.9, size * 1.55];
-        drawn.push({ id: `${id}.back`, kind: "path", line, ...(parent ? { parent } : {}), props: { ...where, points: roundedBox(pw, ph, ph * 0.18).map(round), closed: 1, fill: chip, stroke: "none", rotate: -1.5, shadowY: round(size * 0.08), shadowBlur: round(size * 0.25), shadowOpacity: 0.35, shadowColor: "#000000" } });
+        const [pw, ph] = [w + size * 0.9, size * 1.55 + more];
+        drawn.push({ id: `${id}.back`, kind: "path", line, under: id, ...(parent ? { parent } : {}), props: { ...where, points: roundedBox(pw, ph, ph * 0.18).map(round), closed: 1, fill: chip, stroke: "none", rotate: -1.5, shadowY: round(size * 0.08), shadowBlur: round(size * 0.25), shadowOpacity: 0.35, shadowColor: "#000000" } });
       }
       const own = look?.color && (!chip || readability(ctx.theme, look.color, chip) >= MIN_CONTRAST) ? look.color : undefined;
       const color = attrs.color ?? own ?? (chip ? readableOn(chip, ctx.theme) : "ink");
       const font: Props = look?.font === "title" ? { font: ctx.theme.fonts.title } : look?.font === "mono" ? { font: ctx.theme.fonts.mono ?? "Menlo, monospace" } : {};
       const glow: Props = design ? { glowLevel: look?.glow ?? 0 } : {};
       // A turned card turns its words with it, about the card's middle.
-      const [tx, ty] = [at.x + shift * Math.cos((lean * Math.PI) / 180), at.y + shift * Math.sin((lean * Math.PI) / 180)];
-      drawn.push({ id, kind: "text", line, ...(parent ? { parent } : {}), props: { x: round(tx), y: round(ty), text: shown, size: round(size), color, weight: look?.weight ?? 700, ...font, ...glow, ...(lean ? { rotate: lean } : {}) } });
+      const [cos, sin] = [Math.cos((lean * Math.PI) / 180), Math.sin((lean * Math.PI) / 180)];
+      lines.forEach((l, i) => {
+        const dy = (i - (lines.length - 1) / 2) * size * 1.2;
+        const [tx, ty] = [at.x + shift * cos - dy * sin, at.y + shift * sin + dy * cos];
+        drawn.push({ id: i ? `${id}.l${i + 1}` : id, kind: "text", line, ...(parent ? { parent } : {}), props: { x: round(tx), y: round(ty), text: l, size: round(size), color, weight: look?.weight ?? 700, ...font, ...glow, ...(lean ? { rotate: lean } : {}) } });
+      });
       const holder = parent ? boxOf(parent) : undefined;
       const abs = holder ? { x: holder.x + at.x, y: holder.y + at.y } : at;
-      drawnWords.push({ id, box: { x: abs.x, y: abs.y, w, h: size * 1.15 }, line, what: "text", text, laid: false, ...(chip ? { back: chip, chip: true } : {}), ...(parent ? { holder: parent } : {}) });
+      drawnWords.push({ id, box: { x: abs.x, y: abs.y, w, h: size * 1.15 + more }, line, what: "text", text, laid: false, ...(chip ? { back: chip, chip: true } : {}), ...(parent ? { holder: parent } : {}) });
     };
-    const label = (id: string, line: number, text: string, want: { x: number; y: number }[], attrs: Attrs, size = labelSize) => {
+    // Where attached words may go now: inside the view the camera shows, clear of its edges and the captions.
+    const roomNow = (): { l: number; r: number; t: number; d: number } => {
+      const a = allowedIn(view);
+      // The style's side margins hold on screen however close the camera is, so words never run to the frame's edge.
+      const margin = ((ctx.width - safe.w) / 2) * 0.8;
+      return { l: Math.max(a.x - a.w / 2, 0) + margin / view.zoom, r: Math.min(a.x + a.w / 2, ctx.width) - margin / view.zoom, t: Math.max(a.y - a.h / 2, safe.y - safe.h / 2), d: Math.min(a.y + a.h / 2, safe.y + safe.h / 2) };
+    };
+    // Words that would not fit across the view at their size come down to fit it, never below the readable size. What
+    // still does not fit is reported with how many characters do.
+    const fitWords = (text: string, size: number, attrs: Attrs, line: number, pad = 1): { size: number; rows: string[] } => {
+      const room = roomNow();
+      const across = room.r - room.l;
+      const font = wordFont(attrs);
+      const shown = (t: string) => shownText(t, attrs);
+      const need = (t: string, k: number) => env.measure(shown(t), k, font) + k * pad;
+      if (need(text, size) <= across) return { size, rows: [text] };
+      // Two lines, balanced, at the size asked for or as close to it as fits; then one line brought down to fit.
+      const floor = minText / view.zoom;
+      const halves = (k: number) => {
+        const words = text.split(/\s+/).filter(Boolean);
+        let best: string[] | undefined;
+        for (let i = 1; i < words.length; i++) {
+          const pair = [words.slice(0, i).join(" "), words.slice(i).join(" ")];
+          const wide = Math.max(...pair.map((t) => need(t, k)));
+          if (wide <= across && (!best || wide < Math.max(...best.map((t) => need(t, k))))) best = pair;
+        }
+        return best;
+      };
+      for (const k of [size, Math.max(floor, size * 0.85), floor]) {
+        const pair = halves(k);
+        if (pair) return { size: round(k), rows: pair };
+      }
+      const fit = Math.max(floor, (size * across) / need(text, size));
+      if (need(text, fit) > across + 1) {
+        const chars = Math.max(4, Math.floor(([...text].length * across * 2) / need(text, floor)) - 2);
+        report(line, `"${text}" is too long to fit across the frame${view.zoom > 1.01 ? ` with the camera this close (zoom ${view.zoom.toFixed(2)})` : ""}, even on two lines at the smallest readable size. Shorten it to ${chars} characters or fewer, or split it into two tags on two places.`);
+      }
+      return { size: round(fit), rows: [text] };
+    };
+    // A short line from words placed away from their target back to it, the way a callout points.
+    const leader = (id: string, line: number, from: Box, to: Box, attrs: Attrs) => {
+      const a = edgePoint(from, to, 6);
+      const b = edgePoint(to, from, MARK_PAD);
+      if (Math.hypot(a.x - b.x, a.y - b.y) < 24) return;
+      const { color, glow } = pen(attrs);
+      drawn.push({ id: `${id}.lead`, kind: "path", line, props: { points: [a.x, a.y, b.x, b.y].map(round), stroke: color, strokeWidth: round(Math.max(3, (design ? design.elements.pointer.width : 6) * 0.6) / view.zoom), ...glow } });
+    };
+    // Splits words into two balanced lines, for a place that is tall enough but not wide enough for one.
+    const twoLines = (text: string, size: number, attrs: Attrs): string[] | undefined => {
+      const list = text.split(/\s+/).filter(Boolean);
+      let best: { pair: string[]; wide: number } | undefined;
+      for (let i = 1; i < list.length; i++) {
+        const pair = [list.slice(0, i).join(" "), list.slice(i).join(" ")];
+        const wide = Math.max(...pair.map((t) => env.measure(shownText(t, attrs), size, wordFont(attrs))));
+        if (!best || wide < best.wide) best = { pair, wide };
+      }
+      return best?.pair;
+    };
+    const label = (id: string, line: number, text: string, want: { x: number; y: number }[], attrs: Attrs, given = labelSize, near?: Box) => {
+      const fitted = fitWords(text, given, attrs, line, 0.9);
+      const size = fitted.size;
+      let rows = fitted.rows;
       // Room for the card the words may sit on, so nothing near them is covered by it either.
-      const w = env.measure(text, size) + size * 0.9;
-      const h = size * 1.55;
-      // Attached words stay in the safe area, clear of the captions, however far out their target is.
-      const box = (p: { x: number; y: number }) => ({ x: Math.max(w / 2 + 10, Math.min(ctx.width - w / 2 - 10, p.x)), y: Math.max(safe.y - safe.h / 2 + h / 2, Math.min(safe.y + safe.h / 2 - h / 2, p.y)), w, h });
+      const dims = (r: string[]) => ({ w: Math.max(...r.map((t) => env.measure(shownText(t, attrs), size, wordFont(attrs)))) + size * 0.9, h: size * 1.55 + (r.length - 1) * size * 1.2 });
+      let { w, h } = dims(rows);
+      // Attached words stay in view, clear of the captions, however far out their target is.
+      const room = roomNow();
+      const box = (p: { x: number; y: number }) => ({ x: Math.max(room.l + w / 2, Math.min(room.r - w / 2, p.x)), y: Math.max(room.t + h / 2, Math.min(room.d - h / 2, p.y)), w, h });
       const inWords = (b: Box) => [...laidWords, ...slotWords].reduce((sum, o) => sum + hits(b, o.box), 0);
+      const onLabels = (b: Box) => placedLabels.reduce((sum, l) => sum + hits(b, l.box), 0);
       // Covering words costs most, since then neither can be read; covering a shape costs less, as words can sit on a card.
       const cost = (b: Box) => [...obstacles, ...placedLabels.map((l) => l.box)].reduce((sum, o) => sum + hits(b, o), 0) + inWords(b) * 2;
       // A spot pushed back onto the canvas is no longer beside its target, so it counts against that spot.
       const ranked = want.map((p) => ({ b: box(p), p })).map(({ b, p }, i) => ({ b, over: cost(b), c: cost(b) + (Math.abs(b.x - p.x) > 2 || Math.abs(b.y - p.y) > 2 ? w * h * 0.25 : 0), i })).sort((a, b) => a.c - b.c || a.i - b.i);
-      const best = ranked[0]!;
+      let best: { b: Box; over: number } = ranked[0]!;
+      let away = false;
+      let fits: number | undefined;
+      // When everything around the target is full, the words go to the nearest free place in view, with a line back to
+      // what they name, as a callout does; on two lines if that is what fits there.
+      if (near && (onLabels(best.b) > 0.08 * w * h || inWords(best.b) > 0.08 * w * h || best.over > 0.3 * w * h)) {
+        // How many words a line from a place back to the target would run through.
+        const through = (b: Box) => [...laidWords, ...slotWords].filter((o) => hits(o.box, near) < 0.5 * o.box.w * o.box.h && Array.from({ length: 11 }, (_, i) => i / 10).some((t) => Math.abs(b.x + (near.x - b.x) * t - o.box.x) < o.box.w / 2 && Math.abs(b.y + (near.y - b.y) * t - o.box.y) < o.box.h / 2)).length;
+        const search = (bw: number, bh: number) => {
+          const spots: { b: Box; over: number; far: number }[] = [];
+          const stepX = Math.max(24, bw / 5);
+          const stepY = Math.max(20, bh * 0.4);
+          for (let y = room.t + bh / 2; y <= room.d - bh / 2 + 1; y += stepY) {
+            for (let x = room.l + bw / 2; x <= room.r - bw / 2 + 1; x += stepX) {
+              const b = { x, y, w: bw, h: bh };
+              if (hits(b, near) > 0 || onLabels(b) > 0 || inWords(b) > 0) continue;
+              spots.push({ b, over: cost(b), far: Math.hypot(x - near.x, y - near.y) + through(b) * ctx.width });
+            }
+          }
+          // A clear place nearest the target; else the place covering least, where the words sit on a card.
+          return spots.filter((x) => x.over <= 0.05 * bw * bh).sort((a, b) => a.far - b.far)[0] ?? spots.sort((a, b) => a.over - b.over || a.far - b.far)[0];
+        };
+        let pick = search(w, h);
+        const pair = rows.length === 1 ? twoLines(text, size, attrs) : undefined;
+        if (pair && (!pick || pick.over > 0.05 * w * h)) {
+          const d2 = dims(pair);
+          const other = search(d2.w, d2.h);
+          if (other && (!pick || other.over < pick.over)) {
+            pick = other;
+            rows = pair;
+            ({ w, h } = d2);
+          }
+        }
+        if (pick) {
+          best = pick;
+          away = true;
+        } else {
+          // Nowhere at all: say how many characters the largest free place takes, so a shorter version fits.
+          for (let k = 0.9; k >= 0.2; k -= 0.1) {
+            if (!search(w * k, size * 1.55)) continue;
+            fits = Math.max(3, Math.floor([...text].length * k) - 1);
+            break;
+          }
+        }
+      }
       // With no free place, the words sit on a card over what they cover, so they still read. Words on top of other
       // words are a problem, because then neither can be read.
-      const onLabels = placedLabels.reduce((sum, l) => sum + hits(best.b, l.box), 0);
-      if (onLabels > 0.3 * w * h) report(line, `"${text}" would sit on top of other attached words, because everything around what it points to is full. Shorten it, drop an earlier tag or mark label, or give that thing room with space, a row or a stack.`);
+      if (onLabels(best.b) > 0.3 * w * h) report(line, `"${text}" would sit on top of other attached words, and there is no free place left in view for it. ${fits ? `The largest free place left holds about ${fits} characters: shorten it to that,` : "Shorten it,"} drop an earlier tag or mark label, or give that thing room with space, a row or a stack.`);
       else if (inWords(best.b) > 0.08 * w * h) {
         const under = [...laidWords, ...slotWords].sort((a, b) => hits(best.b, b.box) - hits(best.b, a.box))[0];
-        report(line, `"${text}" would sit on top of the words "${under?.text ?? ""}", because everything around what it points to is full. Shorten it, attach it to the other side with side=, drop something, or give that thing room with space, a row or a stack.`);
+        report(line, `"${text}" would sit on top of the words "${under?.text ?? ""}", and there is no free place left in view for it. ${fits ? `The largest free place left holds about ${fits} characters: shorten it to that` : "Shorten it to a word or two"}, drop something, or put less on screen in this state.`);
       }
       const crowded = best.over > 0.3 * w * h && attrs.back !== "none";
-      words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs) ?? (crowded ? captionBack : undefined));
+      words(id, line, text, best.b, size, attrs, chipOf(best.b, attrs) ?? (crowded ? captionBack : undefined), undefined, rows);
+      if (away && near) leader(id, line, best.b, near, attrs);
       placedLabels.push({ box: best.b, line, id });
     };
     // How arrows and marks are drawn: the pointer look (or the role named), at the style's pointer width, with its glow.
@@ -713,7 +853,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           const [px, py, qx, qy] = pts.slice(-4) as [number, number, number, number];
           drawn.push({ id: `${id}.head`, kind: "path", line, props: { x: qx, y: qy, rotate: round((Math.atan2(qy - py, qx - px) * 180) / Math.PI), ...shape, stroke: color, strokeWidth: width, ...glow } });
         }
-        if (text) label(`${id}.label`, line, text, [{ x: a.x, y: a.y - ry - 40 }, { x: a.x + rx + 120, y: a.y }, { x: a.x, y: a.y + ry + 40 }, { x: a.x - rx - 120, y: a.y }], attrs);
+        if (text) label(`${id}.label`, line, text, [{ x: a.x, y: a.y - ry - 40 }, { x: a.x + rx + 120, y: a.y }, { x: a.x, y: a.y + ry + 40 }, { x: a.x - rx - 120, y: a.y }], attrs, labelSize, a);
         return;
       }
       const len = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
@@ -756,11 +896,11 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (head) tip(points.at(-4)!, points.at(-3)!, points.at(-2)!, points.at(-1)!, `${id}.head`);
       if (head && attrs.both) tip(points[2]!, points[3]!, points[0]!, points[1]!, `${id}.tail`);
       if (text) {
-        const w = env.measure(text, labelSize);
+        const w = env.measure(shownText(text, attrs), labelSize, wordFont(attrs));
         const spots = [8, 6, 10, 4, 12].flatMap((i) => [1, -1].flatMap((side) => [34, 70].map((off) => ({ x: points[i * 2]! + side * (-uy * (off + Math.abs(uy) * w * 0.5)), y: points[i * 2 + 1]! + side * ux * off }))));
         const both = union([a, b]);
         const around = [{ x: both.x, y: both.y - both.h / 2 - 30 }, { x: both.x, y: both.y + both.h / 2 + 30 }, { x: both.x + both.w / 2 + w / 2 + 20, y: both.y }, { x: both.x - both.w / 2 - w / 2 - 20, y: both.y }];
-        label(`${id}.label`, line, text, [...spots, ...around], attrs);
+        label(`${id}.label`, line, text, [...spots, ...around], attrs, labelSize, { x: points[16]!, y: points[17]!, w: 8, h: 8 });
       }
     };
     // Something attached in an earlier state leaves with the thing it touches.
@@ -813,7 +953,14 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           design?.elements.pointer.ring === "clean"
             ? add(pid, { x: b.x, y: b.y, points: Array.from({ length: 49 }, (_, i) => [Math.cos((i / 48) * Math.PI * 2) * rw, Math.sin((i / 48) * Math.PI * 2) * rh]).flat().map(round), closed: 1 })
             : add(pid, { x: b.x, y: b.y, points: Array.from({ length: 53 }, (_, i) => [Math.cos((i / 48) * Math.PI * 2 - 2) * rw * (1 + i * 0.0008), Math.sin((i / 48) * Math.PI * 2 - 2) * rh]).flat().map(round) });
-        if (c.shape === "ring" || hl?.kind === "ring") ringAt(id);
+        // A ring in a tight place, where its oval would run through the words of something beside it, becomes a
+        // rounded loop that hugs what it rings.
+        const tight = !at && [...laidWords, ...slotWords, ...drawnWords].some((o) => {
+          if (hits(o.box, whole) > 0.5 * o.box.w * o.box.h) return false; // its own words
+          return hits(o.box, { x: b.x, y: b.y, w: rw * 2, h: rh * 2 }) > 0.04 * o.box.w * o.box.h;
+        });
+        if ((c.shape === "ring" || hl?.kind === "ring") && tight) add(id, { x: b.x, y: b.y, points: roundedBox(r - l, d - t, Math.min(r - l, d - t) * 0.32).map(round), closed: 1 });
+        else if (c.shape === "ring" || hl?.kind === "ring") ringAt(id);
         if (c.shape === "box" || hl?.kind === "box") add(id, { points: [l, t, r, t, r, d, l, d, l, t].map(round) });
         if (c.shape === "underline" || hl?.kind === "underline") add(id, { points: (pts && pts.length >= 4 ? pts : [l, d, r, d]).map(round) });
         if (c.shape === "line" || c.shape === "path") add(id, { points: pts!.map(round), ...(c.shape === "path" ? { smooth: 1 } : {}) });
@@ -842,7 +989,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           if (lines.length) {
             lines.forEach((p, i) => {
               const size = Number(p.props.size ?? 60);
-              const w = env.measure(String(p.props.text ?? ""), size);
+              const w = env.measure(String(p.props.text ?? ""), size, p.props.font === ctx.theme.fonts.title ? "title" : undefined);
               const x0 = Number(p.props.x ?? 0) - (p.props.anchor === "start" ? 0 : p.props.anchor === "end" ? w : w / 2);
               drawn.push({ id: i ? `${id}.${i + 1}` : id, kind: "path", line: c.line, parent: c.targets[0]!, props: { points: [x0 - size * 0.15, Number(p.props.y ?? 0), x0 + w + size * 0.15, Number(p.props.y ?? 0)].map(round), stroke: color, strokeWidth: round(size * 0.82), lineCap: "butt", strokeOpacity: hl?.opacity ?? 0.85, z: -1, ...glow } });
               if (design && readability(ctx.theme, String(p.props.color ?? "ink"), color) < MIN_CONTRAST) parts.set(p.id, { ...p, props: { ...p.props, color: readableOn(color, ctx.theme), glowLevel: 0 } });
@@ -871,7 +1018,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           placedLabels.push({ box: { ...spanOf([...tip, ...tail]), w: Math.max(30 / z, Math.abs(tip[0] - tail[0])), h: Math.max(30 / z, Math.abs(tip[1] - tail[1])) }, line: c.line, id });
           if (c.text) {
             const away = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] }[side as "top"]!;
-            const w = env.measure(c.text, labelSize);
+            const w = env.measure(shownText(c.text, {}), labelSize);
             label(`${id}.label`, c.line, c.text, [{ x: tail[0] + away[0]! * (w / 2 + 12), y: tail[1] + away[1]! * labelSize * 0.8 }], { color });
           }
           continue;
@@ -888,7 +1035,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         if (c.text) {
           const below = c.shape === "brace" ? d + 70 : c.shape === "ring" ? b.y + rh + 34 : d + 36;
           const above = c.shape === "ring" ? b.y - rh - 34 : t - 36;
-          label(`${id}.label`, c.line, c.text, [{ x: b.x, y: below }, { x: b.x, y: above }, { x: b.x + b.w / 2 + 160, y: b.y }, { x: b.x - b.w / 2 - 160, y: b.y }], { color });
+          label(`${id}.label`, c.line, c.text, [{ x: b.x, y: below }, { x: b.x, y: above }, { x: b.x + b.w / 2 + 160, y: b.y }, { x: b.x - b.w / 2 - 160, y: b.y }], { color }, labelSize, b);
         }
       }
       if (c.do === "tag") {
@@ -903,17 +1050,34 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         if (at === null) continue;
         if (at) {
           // At a point inside the thing. Inside a picture it belongs to the picture, and sits on a card unless told not to.
-          const [x, y] = pointsIn(b, at) as [number, number];
+          const [x0, y0] = pointsIn(b, at) as [number, number];
           const holder = parts.get(c.target)?.kind === "image" ? c.target : undefined;
-          const chip = c.attrs.back === "none" ? undefined : c.attrs.back ?? (design ? roleOf(c.attrs)?.back : undefined) ?? (holder || onPicture({ x, y, w: 1, h: 1 }) ? (design ? captionBack : "paper") : undefined);
-          words(id, c.line, c.text, holder ? { x: x - b.x, y: y - b.y } : { x, y }, size, c.attrs, chip, holder);
-          if (holder) popped.set(id, "").set(`${id}.back`, "").set(`${id}.rule`, "");
+          const chip = c.attrs.back === "none" ? undefined : c.attrs.back ?? (design ? roleOf(c.attrs)?.back : undefined) ?? (holder || onPicture({ x: x0, y: y0, w: 1, h: 1 }) ? (design ? captionBack : "paper") : undefined);
+          const fitted = fitWords(c.text, size, c.attrs, c.line, chip ? 1.4 : 0.2);
+          // Words at points that would land on words placed at points before them step down (or up) until clear, so
+          // two captions on one picture never cover each other.
+          const tall = fitted.size * (1.6 + (fitted.rows.length - 1) * 1.2);
+          const wide = Math.max(...fitted.rows.map((r) => env.measure(shownText(r, c.attrs), fitted.size, wordFont(c.attrs)))) + fitted.size;
+          // Words at a point near the edge slide in to keep the style's margins.
+          const span = roomNow();
+          const x = wide <= span.r - span.l ? Math.min(Math.max(x0, span.l + wide / 2), span.r - wide / 2) : x0;
+          const cardOf = (o: Seen): Box => (o.chip ? { ...o.box, w: o.box.w + o.box.h * 0.8, h: o.box.h + (o.box.h / 1.15) * 0.5 } : o.box);
+          const clear = (yy: number) => !drawnWords.some((o) => !placedLabels.some((l) => l.id === o.id) && hits({ x, y: yy, w: wide, h: tall }, cardOf(o)) > 0.01 * wide * tall);
+          let y = y0;
+          if (!clear(y)) {
+            const room = roomNow();
+            const step = tall * 0.25;
+            const tries = Array.from({ length: 24 }, (_, i) => y0 + (i % 2 ? -1 : 1) * step * Math.ceil((i + 1) / 2)).filter((v) => v - tall / 2 >= room.t && v + tall / 2 <= room.d);
+            y = tries.find(clear) ?? y0;
+          }
+          words(id, c.line, c.text, holder ? { x: x - b.x, y: y - b.y } : { x, y }, fitted.size, c.attrs, chip, holder, fitted.rows);
+          if (holder) popped.set(id, "").set(`${id}.back`, "").set(`${id}.rule`, "").set(`${id}.l2`, "");
           // Words on a picture belong to it but are never covered by what lies beside it: a caption that runs past
           // the picture's edge stays over its neighbor, as a strip laid across two prints does.
-          if (holder && design) for (const p of drawn) if (p.id === id || p.id === `${id}.back` || p.id === `${id}.rule`) p.props.layer = 1;
+          if (holder && design) for (const p of drawn) if (p.id === id || p.id === `${id}.back` || p.id === `${id}.rule` || p.id === `${id}.l2`) p.props.layer = 1;
           continue;
         }
-        const w = env.measure(c.text, size);
+        const w = env.measure(shownText(c.text, c.attrs), size, wordFont(c.attrs));
         const beside = (dist: number): Record<string, Box> => ({
           right: { x: b.x + b.w / 2 + dist + w / 2, y: b.y, w, h: size * 1.2 },
           left: { x: b.x - b.w / 2 - dist - w / 2, y: b.y, w, h: size * 1.2 },
@@ -927,7 +1091,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
           continue;
         }
         const further = [70, 120].flatMap((d) => (["right", "left", "top", "bottom"] as const).map((k) => beside(d)[k]!));
-        label(id, c.line, c.text, [...(c.attrs.side ? [options[c.attrs.side]!] : []), ...order.map((k) => options[k]!), ...further], c.attrs, size);
+        label(id, c.line, c.text, [...(c.attrs.side ? [options[c.attrs.side]!] : []), ...order.map((k) => options[k]!), ...further], c.attrs, size, b);
       }
     }
     for (const p of drawn) parts.set(p.id, p);
@@ -947,24 +1111,27 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     // this state shifts as little as it must so each cut thing is wholly in or wholly out, keeping what it frames.
     const keyWords = [...laidWords, ...slotWords, ...drawnWords].filter((w) => Number(parts.get(w.id)?.props.opacity ?? 1) > 0.05);
     let cut = cutBy(view, keyWords);
-    // Words tagged at a point slide along, as far as the point stays under them, to sit whole inside the view.
+    // Words tagged at a point slide along, as far as they must, to sit whole inside the view.
     for (const w of cut) {
       if (w.laid || w.slot || placedLabels.some((l) => l.id === w.id)) continue;
       const a = allowedIn(view);
-      const dx = Math.min(Math.max(0, a.x - a.w / 2 - (w.box.x - w.box.w / 2)), w.box.w * 0.45) || -Math.min(Math.max(0, w.box.x + w.box.w / 2 - (a.x + a.w / 2)), w.box.w * 0.45);
-      const dy = Math.min(Math.max(0, a.y - a.h / 2 - (w.box.y - w.box.h / 2)), w.box.h * 0.45) || -Math.min(Math.max(0, w.box.y + w.box.h / 2 - (a.y + a.h / 2)), w.box.h * 0.45);
+      const dx = Math.max(0, a.x - a.w / 2 - (w.box.x - w.box.w / 2)) || -Math.max(0, w.box.x + w.box.w / 2 - (a.x + a.w / 2));
+      const dy = Math.max(0, a.y - a.h / 2 - (w.box.y - w.box.h / 2)) || -Math.max(0, w.box.y + w.box.h / 2 - (a.y + a.h / 2));
       const moved = { ...w.box, x: w.box.x + dx, y: w.box.y + dy };
       if (cutBy(view, [{ ...w, box: moved }]).length) continue;
-      for (const id of [w.id, `${w.id}.back`, `${w.id}.rule`]) {
+      for (const id of [w.id, `${w.id}.back`, `${w.id}.rule`, `${w.id}.l2`]) {
         const p = parts.get(id);
         if (p) parts.set(id, { ...p, props: { ...p.props, x: round(Number(p.props.x ?? 0) + dx), y: round(Number(p.props.y ?? 0) + dy) } });
       }
       w.box = moved;
     }
     cut = cutBy(view, keyWords);
-    if (cut.length && cam && next && region) {
+    // A camera that moves in this state shifts as little as it must; a camera set earlier follows, with a small move of
+    // its own in this state, so words that arrive under it are held whole.
+    const holding = cam && next && region ? region : !cam && framed && (view.zoom > 1.0001 || view.panX !== REST.panX || view.panY !== REST.panY) ? framed : undefined;
+    if (cut.length && holding) {
       let v = view;
-      const cover = (x: View) => hits(region, allowedIn(x)) / Math.max(1, region.w * region.h);
+      const cover = (x: View) => hits(holding, allowedIn(x)) / Math.max(1, holding.w * holding.h);
       const want = cover(v);
       for (let round = 0; round < 8 && cut.length; round++) {
         const f = frameIn(v);
@@ -980,12 +1147,47 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         v = tried[0]!.x;
         cut = cutBy(v, keyWords);
       }
+      // Moving across is not enough: the camera pulls back, as little as it must, toward the middle of what is cut and
+      // what it frames, until the words are whole.
+      if (cut.length && v.zoom > 1.0001) {
+        const both = union([holding, ...cut.map((w) => w.box)]);
+        for (let k = 0.95; k >= 0.3; k -= 0.05) {
+          const zoom = Math.max(1, v.zoom * k);
+          const tries = [clampView({ ...v, zoom }), clampView({ panX: both.x, panY: both.y - (safe.y - ctx.height / 2) / zoom, zoom })];
+          const hit = tries.find((x) => !cutBy(x, keyWords).length);
+          if (hit) {
+            v = hit;
+            cut = [];
+            break;
+          }
+          if (zoom === 1) break;
+        }
+      }
       if (v !== view) {
         view = v;
-        shots.at(-1)!.view = v;
+        if (cam) shots.at(-1)!.view = v;
+        else shots.push({ at, frames: number(s.attrs.move ?? "") ?? Math.max(ctx.theme.moveFrames, Math.round(ctx.fps * 0.6)), ease: "smooth", view: v, drift: 0, line: s.line, zoomBy: shots.at(-1)?.zoomBy ?? 1 });
       }
     }
-    for (const w of cut) report(w.line, `With the camera where it is at this state, "${w.text}" is cut off at the edge of the frame or sits under the captions. Frame a place that holds it whole or leaves it out, or move or drop it.`);
+    // What is still cut is reported with exactly what to change: the camera line and a zoom that holds the words, or how
+    // far they run over and how many characters fit.
+    for (const w of cut) {
+      const f = frameIn(view);
+      const a = allowedIn(view);
+      const over = { left: a.x - a.w / 2 - (w.box.x - w.box.w / 2), right: w.box.x + w.box.w / 2 - (a.x + a.w / 2), top: a.y - a.h / 2 - (w.box.y - w.box.h / 2), bottom: w.box.y + w.box.h / 2 - (a.y + a.h / 2) };
+      const [side, by] = Object.entries(over).sort((p, q) => q[1] - p[1])[0]!;
+      const where = side === "bottom" && w.box.y + w.box.h / 2 <= f.y + f.h / 2 ? "into the captions at the bottom" : `past the ${side} edge`;
+      const shot = shots.at(-1);
+      const moved = view.zoom > 1.0001 && shot ? shot : undefined;
+      let hint = "";
+      if (moved) {
+        let k = 0.95;
+        for (; k >= 0.35; k -= 0.05) if (!cutBy(clampView({ ...view, zoom: Math.max(1, view.zoom * k) }), [w]).length) break;
+        hint = k >= 0.35 && view.zoom * k >= 1 ? ` Give the camera on line ${moved.line} zoom=${(moved.zoomBy * k).toFixed(2)} so the view holds it, or` : ` Use camera zoom=1 at line ${moved.line} (the whole frame), or`;
+      }
+      const chars = Math.max(4, Math.floor(([...(w.text ?? "")].length * a.w) / Math.max(1, w.box.w)) - 2);
+      report(w.line, `With the camera where it is at this state${moved ? ` (zoom ${view.zoom.toFixed(2)}, from line ${moved.line})` : ""}, "${w.text}" runs ${where} by ${Math.round(by * view.zoom)} pixels.${hint || ""}${hint ? " shorten" : " Shorten"} it to ${w.box.w > a.w ? `${chars} characters or fewer` : "fewer words"}, or attach it elsewhere (another side=, or at= nearer the middle), or drop it.`);
+    }
     seenAt.push({ at, list: keyWords });
 
     // Anything addressed by id: a part, a whole row or container, or everything under a prefix.
@@ -1014,7 +1216,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     const key = roleLook(ctx.theme, "key").color ?? "accent";
     const keyGlow = roleLook(ctx.theme, "key").glow ?? 0;
     const lightOn = (id: string): string => {
-      const w = wordsById.get(id);
+      const w = wordsById.get(id) ?? wordsById.get(id.replace(/\.l\d+$/, ""));
       const back = w ? behind(w) : surface;
       if (back.startsWith("picture:")) return key;
       return [key, "accent", "highlight"].find((x) => ctx.theme.colors[x] && readability(ctx.theme, x, back) >= MIN_CONTRAST) ?? bestOn(ctx.theme, back, ["accent", "highlight", "ink", "paper"]);
@@ -1022,9 +1224,11 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     // Lighting a whole thing colors its lines; words inside it that the color would not read on keep their color and
     // only grow bold. Words lit by their own id take the color as asked, and build checks it.
     const lightUp = (id: string, asked: string | undefined, target = id) => {
+      // The card under attached words is their surface, not something to light.
+      if (/\.(back|rule)$/.test(id) && parts.get(id.replace(/\.(back|rule)$/, ""))?.kind === "text") return;
       const p = parts.get(id);
       const color = asked ?? (p?.kind === "text" ? lightOn(id) : key);
-      const back = wordsById.get(id)?.back;
+      const back = (wordsById.get(id) ?? wordsById.get(id.replace(/\.l\d+$/, "")))?.back;
       if (p?.kind === "text" && asked && target !== id && back && readability(ctx.theme, asked, back) < MIN_CONTRAST) effect(id, { weight: 700 });
       else if (p?.kind === "text") effect(id, { color, weight: 700, ...(design ? { glowLevel: Math.max(keyGlow, Number(p.props.glowLevel ?? 0)) } : {}) });
       if (p?.kind === "path") effect(id, { ...(p.props.stroke && p.props.stroke !== "none" ? { stroke: color, strokeWidth: Number(p.props.strokeWidth ?? 6) * 1.5 } : { fill: color }), ...(design ? { glowLevel: Math.max(keyGlow, Number(p.props.glowLevel ?? 0)) } : {}) });
@@ -1271,7 +1475,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         was.alive = true;
         continue;
       }
-      const spec: NodeSpec = { id, kind: part.kind, props, ...(part.parent ? { parent: part.parent } : {}) };
+      const spec: NodeSpec = { id, kind: part.kind, props, ...(part.parent ? { parent: part.parent } : {}), ...(part.under ? { under: part.under } : {}) };
       live.set(id, { kind: part.kind, parent: part.parent, props, alive: true, line: part.line });
       const entrance = enterOf.get(id) ?? (part.parent ? enterOf.get(part.parent) : undefined);
       const withParent = !!part.parent && fresh.has(part.parent) && !enterOf.has(id);
@@ -1303,16 +1507,23 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
       if (!(l.parent && !parts.has(l.parent))) remove.push(id);
       overrides.delete(id);
     }
-    // Leaving things that sit where entering things arrive go first, quickly, so old words never fade out under new ones.
+    // Leaving things that sit where entering things arrive go first, quickly, so old words never fade out under new ones;
+    // the new ones start in before the old are quite gone, so the board is never empty between two states that both
+    // have something on it. Leaving things under something that moves into their place also go quickly.
     const now = new Map<string, Box>();
     for (const w of [...laidWords, ...drawnWords]) now.set(w.id, w.box);
     for (const f of laid.fields) if (!f.frame) now.set(f.id, f.box);
+    for (const [id, b] of laid.boxes) if (!now.has(id) && parts.has(id) && (parts.get(id)!.kind !== "group" || parts.has(`${id}.shape`) || laid.slots.some((x) => x.item.id === id))) now.set(id, b);
     const goneBoxes = [...before].filter(([id]) => !parts.has(id)).map(([, b]) => b);
     const comingBoxes = [...now].filter(([id]) => fresh.has(id) || returning.has(id)).map(([, b]) => b);
-    const crossing = !s.cut && goneBoxes.some((g) => comingBoxes.some((c) => hits(g, c) > 0.1 * Math.min(g.w * g.h, c.w * c.h)));
+    const movingBoxes = [...now].filter(([id, b]) => !fresh.has(id) && before.has(id) && (Math.abs(before.get(id)!.x - b.x) > 4 || Math.abs(before.get(id)!.y - b.y) > 4)).map(([, b]) => b);
+    const meets = (list: Box[]) => goneBoxes.some((g) => list.some((c) => hits(g, c) > 0.1 * Math.min(g.w * g.h, c.w * c.h)));
+    const crossing = !s.cut && meets(comingBoxes);
+    const quick = !s.cut && (crossing || meets(movingBoxes));
     // Never past the next state, which may already change what arrives here.
     const nextAt = index + 1 < doc.states.length ? when(doc.states[index + 1]!.at, ctx) : Infinity;
-    const delay = crossing ? Math.max(0, Math.min(Math.max(4, Math.round(ctx.fps * 0.25)), nextAt - at - 2)) : 0;
+    const leave = quick ? Math.max(2, Math.min(Math.max(4, Math.round(ctx.fps * 0.2)), nextAt - at - 2)) : 0;
+    const delay = crossing ? Math.max(1, Math.round(leave / 3)) : 0;
     const enterAt = at + delay;
     before = now;
 
@@ -1320,16 +1531,18 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     // once: what leaves is gone and what moves is in place on the frame the cut lands.
     if (Object.keys(preset).length) steps.push({ at: Math.max(0, at - 1), move: { frames: 1 }, set: preset });
     const moved = s.cut ? { move: { frames: 1 } } : Object.keys(move).length ? { move } : {};
+    // After a crossing, what arrives comes up quickly, so the board is not left bare between the two.
+    const arriving = crossing ? { move: { frames: s.attrs.move ? Number(s.attrs.move) : Math.min(ctx.theme.moveFrames, Math.round(ctx.fps * 0.4)), ease: (s.attrs.ease as Ease) ?? "out" } } : moved;
     // Something that simply appears is still hidden until its moment: it fades in over the single frame before it.
     const appear = (add: NodeSpec[]) => steps.push({ at: enterAt - 1, move: { frames: 1 }, enter: "fade", add });
     const mainEnter = s.attrs.enter ?? (s.cut ? "none" : undefined);
     if (addScaled.length) {
       if (s.attrs.enter === "none" || s.cut) appear(addScaled);
-      else steps.push({ at: enterAt, enter: "fade", add: addScaled });
+      else steps.push({ at: enterAt, ...(crossing ? arriving : {}), enter: "fade", add: addScaled });
     }
     if (addMain.length) {
       if (mainEnter === "none") appear(addMain);
-      else steps.push({ at: enterAt, ...moved, ...(mainEnter ? { enter: mainEnter as Step["enter"] } : {}), add: addMain });
+      else steps.push({ at: enterAt, ...arriving, ...(mainEnter ? { enter: mainEnter as Step["enter"] } : {}), add: addMain });
     }
     for (const [enter, list] of addOwn) {
       if (enter === "none") appear(list);
@@ -1341,10 +1554,11 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
     if (addQuiet.length) steps.push({ at: enterAt, enter: "none", add: addQuiet });
     const change: Step = { at: s.cut ? at - 1 : at, ...moved };
     if (Object.keys(set).length) change.set = set;
-    if (remove.length && !delay) change.remove = remove;
+    if (remove.length && !leave) change.remove = remove;
     if (change.set || change.remove) steps.push(change);
-    if (remove.length && delay) steps.push({ at, move: { frames: delay }, remove });
-    if (Object.keys(comeBack).length) steps.push({ at: s.cut ? at - 1 : enterAt, ...moved, set: comeBack });
+    // A quick leave drops fast at first, so what is going is mostly gone by the time anything new is in.
+    if (remove.length && leave) steps.push({ at, move: { frames: leave, ease: "out" }, remove });
+    if (Object.keys(comeBack).length) steps.push({ at: s.cut ? at - 1 : enterAt, ...arriving, set: comeBack });
     const acts: Step = { at: enterAt, ...moved };
     if (play.length || arrivals.length) acts.play = [...arrivals, ...play];
     if (emit.length) acts.emit = emit;
@@ -1407,7 +1621,7 @@ export async function build(source: string, opts: BuildOptions): Promise<BuildRe
         return [];
       }
     });
-    return { problems: [], doc: sceneDoc, scene, ...(truth.length ? { truth } : {}), stats };
+    return { problems: [], doc: sceneDoc, scene, ...(truth.length ? { truth } : {}), ...(notes.length ? { notes: [...new Set(notes)].slice(0, 6) } : {}), stats };
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }

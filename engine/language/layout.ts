@@ -126,9 +126,9 @@ export function pictureLook(theme: Theme, id: string, placed: "page" | "fit" | "
 export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   const { measure, theme } = env;
   const short = Math.min(env.W, env.H);
-  const atomWidth = (a: Atom, size: number) => measure(a.text, size);
-  const list = (a: Atom[], size: number) => a.reduce((sum, x) => sum + atomWidth(x, size), 0) + size * 0.16 * Math.max(0, a.length - 1);
-  const columns = (rows: Atom[][], size: number) => rows[0]!.map((_, c) => Math.max(...rows.map((r) => atomWidth(r[c]!, size))) + size * 0.5);
+  const atomWidth = (a: Atom, size: number, font?: string) => measure(a.text, size, font);
+  const list = (a: Atom[], size: number, font?: string) => a.reduce((sum, x) => sum + atomWidth(x, size, font), 0) + size * 0.16 * Math.max(0, a.length - 1);
+  const columns = (rows: Atom[][], size: number, font?: string) => rows[0]!.map((_, c) => Math.max(...rows.map((r) => atomWidth(r[c]!, size, font))) + size * 0.5);
 
   // Roles: the scene says what a thing is for, and the style decides how it looks. An arrangement's role is the role
   // of everything inside it that does not name its own, except a panel, which is only the surface itself.
@@ -155,7 +155,9 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   };
   const fontOf = (item: Item) => item.attrs.font ?? wordLook(item)?.font;
   const mono = (item: Item) => (fontOf(item) === "mono" ? "mono" : undefined);
-  const textLines = (item: Item) => wrap(item.text ?? "", fontSize(item, TEXT_SIZE.normal!), n(item.attrs.w, env.safe.w), measure, mono(item));
+  // Which of the style's fonts a thing's words are measured in.
+  const fontKey = (item: Item) => mono(item) ?? (fontOf(item) === "title" ? "title" : undefined);
+  const textLines = (item: Item) => wrap(item.text ?? "", fontSize(item, TEXT_SIZE.normal!), n(item.attrs.w, env.safe.w), measure, fontKey(item));
   const textSize = (item: Item) => (item.kind === "atoms" ? TEXT_SIZE[item.size!]! : fontSize(item, TEXT_SIZE.normal!));
   // The surface a thing brings with it: a panel's back, or the back of a role such as caption.
   // With a design layer a panel is the style's panel: back=paper (a card the color of the page) is the panel, and a
@@ -196,7 +198,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   const shapeSize = (item: Item, s: number) => {
     const size = fontSize(item, TEXT_SIZE.small!) * s;
     const label = item.text ? wrap(item.text, size, 460 * s, measure) : [];
-    const tw = Math.max(0, ...label.map((l) => measure(l, size)));
+    const tw = Math.max(0, ...label.map((l) => measure(l, size, fontKey(item))));
     const th = label.length * size * 1.2;
     if (item.kind === "dot") return { w: n(item.attrs.w, 36) * s, h: n(item.attrs.h, n(item.attrs.w, 36)) * s, label, size };
     const round = item.kind === "circle" || item.kind === "diamond";
@@ -233,13 +235,13 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         let w = 0;
         let h = size * 1.2;
         for (const p of item.parts!) {
-          if (p.type === "text") w += atomWidth(p.atom, size);
+          if (p.type === "text") w += atomWidth(p.atom, size, fontKey(item));
           if (p.type === "frac") {
-            w += Math.max(list(p.num, size), list(p.den, size)) + size * 0.3;
+            w += Math.max(list(p.num, size, fontKey(item)), list(p.den, size, fontKey(item))) + size * 0.3;
             h = Math.max(h, size * 2.5);
           }
           if (p.type === "matrix") {
-            w += columns(p.rows, size).reduce((a, b) => a + b, 0) + size * 0.5;
+            w += columns(p.rows, size, fontKey(item)).reduce((a, b) => a + b, 0) + size * 0.5;
             h = Math.max(h, p.rows.length * size * 1.3 + size * 0.3);
           }
         }
@@ -248,7 +250,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       case "text": {
         const size = fontSize(item, TEXT_SIZE.normal!) * s;
         const lines = textLines(item);
-        return { w: Math.max(...lines.map((l) => measure(l, size, mono(item)))), h: lines.length * size * 1.25 };
+        return { w: Math.max(...lines.map((l) => measure(l, size, fontKey(item)))), h: lines.length * size * 1.25 };
       }
       case "code": {
         const size = fontSize(item, CODE_SIZE) * s;
@@ -316,7 +318,25 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   const framed: Item[] = [];
   // A grid of words is a table, and with a design layer it is drawn the style's way: a header row, rules, stripes.
   const cols = (item: Item) => Math.max(1, n(item.attrs.cols, 2));
-  const isTable = (item: Item) => !!design && item.kind === "grid" && item.children.length > cols(item) && item.children.every((c) => (c.kind === "text" || c.kind === "atoms") && !c.attrs.back);
+  const isTable = (item: Item, kids = item.children) => !!design && item.kind === "grid" && kids.length > cols(item) && kids.every((c) => (c.kind === "text" || c.kind === "atoms") && !c.attrs.back);
+  // Inside a grid, a line that holds exactly as many values as the grid has columns is one row of it: an atom line
+  // puts each atom in its own cell, and a row of words puts each word in its own cell. So a table is written a row per
+  // line and its columns still line up. The line's id still names the whole row.
+  const rowsOf = new Map<string, string[]>();
+  const spread = (grid: Item): Item[] =>
+    grid.children.flatMap((c) => {
+      const n = cols(grid);
+      if (n < 2) return [c];
+      if (c.kind === "atoms" && c.parts!.length === n && c.parts!.every((p) => p.type === "text")) {
+        rowsOf.set(c.id, c.parts!.map((p) => (p as { atom: Atom }).atom.id));
+        return c.parts!.map((p) => ({ ...c, id: (p as { atom: Atom }).atom.id, parts: [p], children: [] }));
+      }
+      if (c.kind === "row" && c.children.length === n && c.children.every((x) => x.kind === "text" || x.kind === "atoms")) {
+        rowsOf.set(c.id, c.children.map((x) => x.id));
+        return c.children.map((x) => ({ ...x, attrs: { ...(c.attrs.role && !x.attrs.role ? { role: c.attrs.role } : {}), ...x.attrs } }));
+      }
+      return [c];
+    });
   const upper = (a: Atom): Atom => ({ ...a, text: a.text.toUpperCase() });
   const pull = (list: Item[], role?: string): Item[] =>
     list.flatMap((i) => {
@@ -324,7 +344,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       if (!attrs.role && role) attrs.role = role;
       const pass = attrs.role && attrs.role !== "panel" ? attrs.role : undefined;
       // A table's first row is its header, in the style's header role, unless a cell names its own.
-      const kids = isTable(i) ? i.children.map((c, k) => (k < cols(i) && !c.attrs.role ? { ...c, attrs: { ...c.attrs, role: design!.elements.table.header } } : c)) : i.children;
+      const cells = i.kind === "grid" ? spread(i) : i.children;
+      const kids = isTable(i, cells) ? cells.map((c, k) => (k < cols(i) && !c.attrs.role ? { ...c, attrs: { ...c.attrs, role: design!.elements.table.header } } : c)) : cells;
       const copy: Item = { ...i, attrs, children: pull(kids, pass) };
       const wr = wordRole(copy);
       if (wr && roleLook(theme, wr).case === "upper") {
@@ -377,7 +398,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     seen(size, item.line);
     const props: Props = { x: round(x), y: round(y), text: content, size: round(size), color: "ink", weight: 400, ...extra };
     out.parts.push({ id, kind: "text", line: item.line, ...(parent ? { parent } : {}), props });
-    const w = measure(content, size, typeof props.font === "string" && /mono|menlo|courier/i.test(props.font) ? "mono" : undefined);
+    const w = measure(content, size, typeof props.font === "string" && /mono|menlo|courier/i.test(props.font) ? "mono" : props.font === theme.fonts.title ? "title" : undefined);
     const ax = origin.x + x;
     const mid = props.anchor === "start" ? ax + w / 2 : props.anchor === "end" ? ax - w / 2 : ax;
     out.texts.push({ id, box: { x: mid, y: origin.y + y, w, h: size * 1.15 }, line: item.line, text: content, size, item: item.id, ...(back ? { back } : {}) });
@@ -424,7 +445,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         const ink = String(extra.color ?? "ink");
         const ids: string[] = [];
         const put = (a: Atom, x: number, y: number) => {
-          const w = atomWidth(a, fs);
+          const w = atomWidth(a, fs, fontKey(item));
           ids.push(a.id);
           text(a.id, item, a.text, x + w / 2, y, fs, extra, undefined, undefined, back);
           out.boxes.set(a.id, { x: x + w / 2, y, w, h: fs * 1.15 });
@@ -434,15 +455,15 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         for (const p of item.parts!) {
           if (p.type === "text") {
             put(p.atom, x, cy);
-            x += atomWidth(p.atom, fs);
+            x += atomWidth(p.atom, fs, fontKey(item));
           }
           if (p.type === "frac") {
-            const fw = Math.max(list(p.num, fs), list(p.den, fs)) + fs * 0.3;
+            const fw = Math.max(list(p.num, fs, fontKey(item)), list(p.den, fs, fontKey(item))) + fs * 0.3;
             const row = (a: Atom[], y: number) => {
-              let ax = x + (fw - list(a, fs)) / 2;
+              let ax = x + (fw - list(a, fs, fontKey(item))) / 2;
               for (const t of a) {
                 put(t, ax, y);
-                ax += atomWidth(t, fs) + fs * 0.16;
+                ax += atomWidth(t, fs, fontKey(item)) + fs * 0.16;
               }
             };
             row(p.num, cy - fs * 0.68);
@@ -453,7 +474,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
             x += fw;
           }
           if (p.type === "matrix") {
-            const cols = columns(p.rows, fs);
+            const cols = columns(p.rows, fs, fontKey(item));
             const tw = cols.reduce((a, b) => a + b, 0) + fs * 0.5;
             const th = p.rows.length * fs * 1.3;
             const top = cy - th / 2;
@@ -465,7 +486,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
             p.rows.forEach((r, ri) => {
               let c = x + fs * 0.25;
               r.forEach((a, ci) => {
-                const w = atomWidth(a, fs);
+                const w = atomWidth(a, fs, fontKey(item));
                 put(a, c + (cols[ci]! - w) / 2, top + (ri + 0.5) * fs * 1.3);
                 c += cols[ci]!;
               });
@@ -648,6 +669,15 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     item.children.forEach(walk);
   };
   items.forEach(walk);
+  // A row spread over a grid's cells is still one thing: its id names all of its cells and the box around them.
+  for (const [row, cells] of rowsOf) {
+    const boxes = cells.map((c) => out.boxes.get(c)).filter((b): b is Box => !!b);
+    if (!boxes.length) continue;
+    out.members.set(row, cells.flatMap((c) => out.members.get(c) ?? [c]));
+    const [l, r] = [Math.min(...boxes.map((b) => b.x - b.w / 2)), Math.max(...boxes.map((b) => b.x + b.w / 2))];
+    const [t, d] = [Math.min(...boxes.map((b) => b.y - b.h / 2)), Math.max(...boxes.map((b) => b.y + b.h / 2))];
+    out.boxes.set(row, { x: (l + r) / 2, y: (t + d) / 2, w: r - l, h: d - t });
+  }
   return out;
 }
 

@@ -60,6 +60,6 @@ test("typed copies of computed numbers are named in the review, and a clean scen
   assert.deepEqual(r.problems, []);
   assert.deepEqual(typedResults(src, r.truth!, ["sort"]), [`line 6: "10 20 30"`]);
   assert.match(reviewText(src, r, { kitKinds: ["sort"] }), /type numbers that the truth things compute/);
-  const plain = `@0\ntext a "hello"\n`;
+  const plain = `@0\nbox a "hello" w=900 h=1400\n`;
   assert.equal(reviewText(plain, await build(plain, { ctx }), { math: true, truthKinds: ["sort"] }), "");
 });

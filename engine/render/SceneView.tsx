@@ -8,6 +8,7 @@ import { blendOf, bounds, filterOf, gradientGeometry, IDENTITY, inverse, line, l
 import { ShaderLayer } from "./ShaderLayer.tsx";
 import { StyleDefs, StyledPath, StyledText, Surface } from "../style/draw.tsx";
 import { roleProps } from "../core/roles.ts";
+import { paintText } from "../style/paint.ts";
 
 // Masks and tints cover everything their part could touch. Browsers trim these to what is on screen.
 const WIDE = { x: -20000, y: -20000, width: 40000, height: 40000 };
@@ -85,6 +86,17 @@ function pathBody(r: Resolved, ctx: Ctx, id: string, defs: React.ReactNode[]) {
   const box = points ? bounds(points) : undefined;
   const width = n(a.strokeWidth, 6);
   const pen = ctx.theme.style;
+  // A typeset symbol is writing, so it takes the style's type treatment (its dry grain, its glow) rather than staying
+  // a crisp print among chalk or neon words.
+  if (pen && points && a.glyph && typeof a.fill === "string" && !parseGradient(a.fill) && (pen.type.grain > 0 || pen.type.glow > 0)) {
+    const t = paintText({ ...a, size: Math.max(8, box!.h), text: "", color: a.fill }, r.id, ctx.theme, pen, ctx.surface);
+    return (
+      <>
+        {t.glow.map((g, i) => <path key={i} d={d} fill="none" stroke={t.color} strokeWidth={g.width} strokeLinejoin="round" opacity={g.opacity} />)}
+        <path d={d} fill={t.color} fillOpacity={n(a.fillOpacity, 1)} filter={t.dry ? "url(#sg-dry-text)" : undefined} />
+      </>
+    );
+  }
   // The style draws plain lines and fills. A part with its own gradient or dash pattern keeps exactly what it asked for.
   if (pen && points && !a.glyph && !parseGradient(a.fill) && !parseGradient(a.stroke) && a.dash === undefined && a.trimStart === undefined && a.trimEnd === undefined) {
     const p = n(a.pulse, -1);

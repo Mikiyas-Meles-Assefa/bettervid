@@ -169,6 +169,42 @@ function reordered(states: State[]): { first: number; then: number; before: stri
   return undefined;
 }
 
+// Rows of a table written as separate lines outside a grid (atom lines or rows with the same number of values, or
+// words split by bars or wide gaps), whose columns cannot line up. The first such run, as lines and its column count.
+export function tableRows(states: State[]): { from: number; to: number; cols: number } | undefined {
+  const cellsOf = (i: Item): number => {
+    if (i.kind === "atoms" && (i.parts ?? []).every((p) => p.type === "text")) return i.parts!.length;
+    if (i.kind === "row" && i.children.length > 1 && i.children.every((c) => c.kind === "text" || c.kind === "atoms")) return i.children.length;
+    if (i.kind === "text" && i.text) {
+      const bars = i.text.split("|").length;
+      if (bars >= 3) return bars;
+      const wide = i.text.trim().split(/\s{2,}/).length;
+      if (wide >= 3) return wide;
+    }
+    return 0;
+  };
+  const look = (list: Item[], inGrid: number): { from: number; to: number; cols: number } | undefined => {
+    for (let a = 0; a < list.length; a++) {
+      const n = cellsOf(list[a]!);
+      if (n < 2) continue;
+      let b = a;
+      while (b + 1 < list.length && cellsOf(list[b + 1]!) === n) b++;
+      if (b - a >= 2 && inGrid !== n) return { from: list[a]!.line, to: list[b]!.line, cols: n };
+      a = b;
+    }
+    for (const i of list) {
+      const deep = look(i.children, i.kind === "grid" ? Number(i.attrs.cols ?? 2) : 0);
+      if (deep) return deep;
+    }
+    return undefined;
+  };
+  for (const s of states) {
+    const hit = look(s.items, 0);
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
 export function craftNotes(source: string, opts: { kitKinds?: string[]; truthKinds?: string[]; math?: boolean } = {}): string[] {
   const { doc } = parse(source, opts.kitKinds ?? []);
   const notes: string[] = [];
@@ -187,6 +223,9 @@ export function craftNotes(source: string, opts: { kitKinds?: string[]; truthKin
       notes.push(`These are formulas typed as characters: ${shown}. Typed marks such as a bar over a letter or a root over a fraction can drop out or sit wrong, and the symbols cannot be pointed at one by one. \`math id latex="..."\` typesets them for real. Keep characters only where it is plain words with a symbol in passing.`);
     }
   }
+  // Rows of values typed as lines, when a grid would line their columns up.
+  const rows = tableRows(doc.states);
+  if (rows) notes.push(`Lines ${rows.from} to ${rows.to} are rows of a table written as separate lines, so their columns cannot line up and the values crowd together. Put the rows in \`grid id cols=${rows.cols}\`, one line per row: an atom line or a row with ${rows.cols} values puts each value in its own cell, the first row is the header in the style's table look, and each line's id still names its whole row (to light, tag or mark it).`);
   // Values put in a new order by hand, when a kit can work the process out.
   const truth = (opts.truthKinds ?? []).filter((k) => !kinds.has(k));
   const moved = truth.length && truth.length === (opts.truthKinds ?? []).length ? reordered(doc.states) : undefined;
@@ -281,7 +320,7 @@ export function truthText(truth: NonNullable<BuildResult["truth"]>, source?: str
 // What goes back to the writer once a scene builds: computed steps to bind, craft notes to weigh, or both. Empty when
 // there is nothing to say. `extra` adds notes only the caller can see, such as how the part sits with its pictures.
 export function reviewText(source: string, result: BuildResult, opts: { kitKinds?: string[]; truthKinds?: string[]; math?: boolean; extra?: string[] } = {}): string {
-  const notes = [...craftNotes(source, opts), ...(opts.extra ?? [])];
+  const notes = [...craftNotes(source, opts), ...(result.notes ?? []), ...(opts.extra ?? [])];
   const parts = [
     result.truth?.length ? truthText(result.truth, source, opts.kitKinds) : "",
     notes.length ? `Notes on how the scene reads. They are not errors: act on a note where it makes the scene serve its words better, and leave the scene as it is where your choice already does:\n${notes.map((n) => `- ${n}`).join("\n")}` : "",

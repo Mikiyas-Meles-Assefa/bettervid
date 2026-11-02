@@ -349,3 +349,21 @@ test("shaders are data: named or inline, and they name no real colors and read n
   assert.ok(wrapShader("vec4 shade(vec2 uv) { return vec4(1.0); }").includes("void main()"));
   assert.ok(!/Date|Math\.random|iTime|gl_FragCoord/.test(wrapShader(SHADERS.rays!)));
 });
+
+test("a typeset symbol takes the style's type treatment: the dry grain and the glow its words have", async () => {
+  const { themeFrom } = await import("../render/theme.ts");
+  const chalk = themeFrom("chalkboard");
+  const neon = themeFrom("neon");
+  const glyph = (t: Theme) => draw([{ id: "g", kind: "path", props: { glyph: 1, points: shape, closed: 1, fill: t.colors.accent! } }], 0, t);
+  assert.match(glyph(chalk), /filter="url\(#sg-dry-text\)"/);
+  // Neon words glow, so its symbols carry glow strokes around the fill too.
+  assert.ok((glyph(neon).match(/<path/g) ?? []).length > 1);
+  // With no style, a symbol is the plain fill it always was.
+  assert.ok(!draw([{ id: "g", kind: "path", props: { glyph: 1, points: shape, closed: 1, fill: "ink" } }]).includes("sg-dry"));
+});
+
+test("a part added later with under= is drawn beneath the one it names, so a card never covers its own words", () => {
+  const scene = compile({ steps: [{ at: 0, enter: "none", add: [{ id: "w", kind: "text", props: { text: "hi" } }, { id: "other", kind: "text", props: { text: "x" } }] }, { at: 5, enter: "none", add: [{ id: "w.back", kind: "path", under: "w", props: { points: shape, closed: 1, fill: "ink" } }] }] }, ctx);
+  const order = scene.nodes.map((n) => n.id);
+  assert.ok(order.indexOf("w.back") < order.indexOf("w"), order.join(","));
+});
