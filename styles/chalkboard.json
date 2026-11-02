@@ -1,0 +1,38 @@
+{
+  "name": "chalkboard",
+  "label": "Chalkboard",
+  "palette": {
+    "paper": "#26332e",
+    "ink": "#f1eee3",
+    "accent": "#f4c95d",
+    "highlight": "#f29a8e"
+  },
+  "fonts": {
+    "caption": "Arial Black",
+    "title": "Chalkduster",
+    "body": "Chalkboard SE"
+  },
+  "art": {
+    "scene": "Chalk drawing on a dark green classroom chalkboard: confident white chalk lines, simple shapes, a little soft yellow chalk, the subject sharp and instantly recognizable.",
+    "object": "Chalk drawing of a single object shown whole on a plain dark green chalkboard: confident white lines, one soft yellow accent, nothing around it.",
+    "diagram": "Chalk diagram on a clean dark green chalkboard: white lines, one soft yellow accent, simple clear shapes, one idea only."
+  },
+  "realAssets": "proof",
+  "grain": 0,
+  "vignette": 0,
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  },
+  "hand": {
+    "wobble": 2.4,
+    "weight": 1.15
+  },
+  "render": {
+    "line": { "pen": "chalk" },
+    "fill": { "kind": "scribble", "base": 0.8 },
+    "surface": { "kind": "slate", "grain": 0.3 },
+    "type": { "title": "Chalkduster, \"Chalkboard SE\", \"Comic Sans MS\", \"Liberation Sans\", sans-serif", "body": "\"Chalkboard SE\", Chalkduster, \"Comic Sans MS\", \"Liberation Sans\", sans-serif", "jitter": 0.3, "grain": 0.05 },
+    "motion": { "feel": "calm" }
+  }
+}

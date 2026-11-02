@@ -1,0 +1,38 @@
+{
+  "name": "blueprint",
+  "label": "Blueprint",
+  "palette": {
+    "paper": "#14457f",
+    "ink": "#eaf3ff",
+    "accent": "#ffd257",
+    "highlight": "#8fd3ff"
+  },
+  "fonts": {
+    "caption": "Arial Black",
+    "title": "Courier New",
+    "body": "Courier New"
+  },
+  "art": {
+    "scene": "Technical blueprint drawing: precise thin white lines on deep blue paper, measured construction lines, one yellow accent, the subject sharp and instantly recognizable.",
+    "object": "Blueprint line drawing of a single object shown whole on plain deep blue paper: precise thin white lines, one yellow accent, nothing around it.",
+    "diagram": "Clean blueprint diagram on deep blue paper: precise thin white lines, one yellow accent, simple clear shapes, one idea only."
+  },
+  "realAssets": "proof",
+  "grain": 0,
+  "vignette": 0,
+  "voice": {
+    "id": "JBFqnCBsd6RMkjVDRZzb",
+    "model": "eleven_v4"
+  },
+  "hand": {
+    "wobble": 0,
+    "weight": 0.7
+  },
+  "render": {
+    "line": { "pen": "drafting" },
+    "fill": { "kind": "hatch", "spacing": 9, "angle": -45, "base": 0.86 },
+    "surface": { "kind": "blueprint" },
+    "type": { "title": "\"Courier New\", Menlo, \"Liberation Mono\", monospace", "body": "\"Courier New\", Menlo, \"Liberation Mono\", monospace", "tracking": 0.04, "case": "upper" },
+    "motion": { "feel": "steady", "frames": 14, "ease": "linear" }
+  }
+}

@@ -24,7 +24,7 @@ const log = dijkstra(NODES.map((n) => n.id), EDGES, "A", "F");
 const distId = (n: string) => `dist.${n}`;
 const distAt = (n: (typeof NODES)[number]) => ({ x: n.x, y: n.y - 96 });
 
-function scene(): { steps: Step[]; frames: number } {
+export function scene(): { steps: Step[]; frames: number } {
   const steps: Step[] = [];
   let t = 10;
   steps.push({ at: t, enter: "draw", move: { frames: 30 }, add: [{ id: G, kind: "graph", data: { nodes: NODES, edges: EDGES } }] });
@@ -60,16 +60,18 @@ function scene(): { steps: Step[]; frames: number } {
   return { steps, frames: t };
 }
 
-const [out, ...styles] = process.argv.slice(2);
-const { steps, frames } = scene();
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
-for (const name of styles) {
-  const theme = themeFrom(name);
-  const built = compile({ steps }, { fps: 30, width: 1080, height: 1920, frames, theme, kits: [graphKit] });
-  const inputProps = { scene: built, theme };
-  const composition = await selectComposition({ serveUrl, id: "Scene", inputProps });
-  const t0 = Date.now();
-  await renderMedia({ serveUrl, composition, inputProps, codec: "h264", imageFormat: "jpeg", concurrency: 2, crf: 23, outputLocation: join(out!, `${name}.mp4`) });
-  console.log(`${name}: ${(frames / 30).toFixed(1)} s, ${built.nodes.length} parts, ${built.tracks.length} tracks, rendered in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+if (import.meta.main) {
+  const [out, ...styles] = process.argv.slice(2);
+  const { steps, frames } = scene();
+  const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+  for (const name of styles) {
+    const theme = themeFrom(name);
+    const built = compile({ steps }, { fps: 30, width: 1080, height: 1920, frames, theme, kits: [graphKit] });
+    const inputProps = { scene: built, theme };
+    const composition = await selectComposition({ serveUrl, id: "Scene", inputProps });
+    const t0 = Date.now();
+    await renderMedia({ serveUrl, composition, inputProps, codec: "h264", imageFormat: "jpeg", concurrency: 2, crf: 23, outputLocation: join(out!, `${name}.mp4`) });
+    console.log(`${name}: ${(frames / 30).toFixed(1)} s, ${built.nodes.length} parts, ${built.tracks.length} tracks, rendered in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  }
+  console.log(JSON.stringify(log.at(-1)));
 }
-console.log(JSON.stringify(log.at(-1)));
