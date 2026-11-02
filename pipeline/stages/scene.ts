@@ -294,13 +294,16 @@ export function overPictures(source: string, scene: Scene, from: number, to: num
 // Building: the same context and options for checking a section, the whole scene, and the player.
 
 // Real math typesetting joins the scene's kits here, with the guide line a writer needs, so a formula is set for real
-// rather than typed as characters. Its part behaviors (become, each, swell) stay out until the language can reach a
-// kit's parts from `do`: a guide must not teach what fails.
+// rather than typed as characters. Its part behaviors work through `do` now that kits expand in compile's context.
 const mathFormulas: Kit = {
   name: "math",
   kinds: mathKit.kinds,
+  behaviors: mathKit.behaviors,
   docs: {
-    math: "`math f latex=\"\\bar{x} = \\frac{1}{n}\\sum x_i\"` real typeset math from LaTeX, as in a good textbook: fractions, roots that reach over what they cover, bars and hats, sums, powers and indices, matrices. Write each backslash once. Every symbol is its own part, and the whole formula can be lit, tagged, ringed, marked and moved like any thing. To change a formula, repeat its line with the same id and new latex, and it changes in place",
+    math: "`math f latex=\"\\bar{x} = \\frac{1}{n}\\sum x_i\"` real typeset math from LaTeX, as in a good textbook: fractions, roots that reach over what they cover, bars and hats, sums, powers and indices, matrices. Write each backslash once. Every symbol is its own part, and the whole formula can be lit, tagged, ringed, marked and moved like any thing. To change a formula, repeat its line with the same id and new latex, and it changes in place. For a derivation, give `states=[\"...\",\"...\"]` and step through them with `do become f state=N`: symbols that stay travel to their new places",
+    become: "`do become f state=1 frames=20`: a formula with `states=` moves to that state; matching symbols travel, the rest appear or fade",
+    each: "`do each f part=frac.0.num color=accent stagger=4`: recolor, fade (opacity=) or nudge (dx= dy=) every symbol of a named part at once. Parts: word.N, line.N, frac.N.num, frac.N.den, matrix.N.row.R, matrix.N.col.C, char.X",
+    swell: "`do swell f part=matrix.0.col.1 size=1.2`: a set of symbols swells and settles together, to point at it",
   },
 };
 export const SCENE_KITS: Kit[] = [...KITS, mathFormulas];
