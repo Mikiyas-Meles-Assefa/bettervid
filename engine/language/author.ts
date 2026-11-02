@@ -21,12 +21,33 @@ export type AuthorRequest = { topic: string; words: { text: string; start: numbe
 
 const list = (items: string[]) => (items.length ? items.map((x) => `- ${x}`).join("\n") : "- none yet");
 
+// What each motion behavior does and the settings it takes, read from the comment above it in engine/motion, so the
+// guide never falls behind the code and a model does not have to guess a behavior's settings.
+let motionCache: Record<string, string> | undefined;
+export function motionDocs(): Record<string, string> {
+  if (motionCache) return motionCache;
+  const out: Record<string, string> = {};
+  for (const file of ["moves.ts", "parts.ts", "effects.ts"]) {
+    let src = "";
+    try {
+      src = readFileSync(join(PROMPTS, "..", "engine", "motion", file), "utf8");
+    } catch {
+      continue;
+    }
+    for (const m of src.matchAll(/((?:^ {2}\/\/.*\n)+)^ {2}(\w+): /gm)) {
+      const text = m[1]!.split("\n").map((l) => l.replace(/^\s*\/\/\s?/, "").trim()).filter(Boolean).join(" ");
+      out[m[2]!] = `\`do ${m[2]} id key=value\`: ${text.replace(/\bargs:/, "Settings:")}`;
+    }
+  }
+  return (motionCache = out);
+}
+
 // The language guide, filled in with what this engine can really do right now, so new abilities reach Spark by themselves.
 export function languagePrompt(opts: BuildOptions): string {
   const { ctx } = opts;
   const kits = ctx.kits ?? [];
   const kinds = kits.flatMap((k) => Object.keys(k.kinds ?? {}).map((name) => ({ name, doc: k.docs?.[name] })));
-  const docs: Record<string, string> = { flow: "`do flow id color=accent frames=20`: a pulse of color runs along a line", pulse: "`do pulse id size=1.25 frames=16`: a quick grow and return", shake: "`do shake id size=14`: a short shake" };
+  const docs: Record<string, string> = { ...motionDocs(), flow: "`do flow id color=accent frames=20`: a pulse of color runs along a line", pulse: "`do pulse id size=1.25 frames=16`: a quick grow and return", shake: "`do shake id size=14`: a short shake" };
   const behaviors = [...Object.keys(BEHAVIORS).map((name) => docs[name] ?? `\`do ${name} id\``), ...kits.flatMap((k) => Object.keys(k.behaviors ?? {}).map((name) => k.docs?.[name] ?? `\`do ${name} id\``))];
   const assets = Object.keys(opts.assets ?? {});
   const fill: Record<string, string> = {
@@ -67,6 +88,8 @@ export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" 
   let usd = 0;
   let result: BuildResult = { problems: [], stats: { states: 0, parts: 0, programs: 0, programMs: 0 } };
   let next = user;
+  let aligned = false;
+  let built: Authored | undefined; // the last scene that built, kept in case the alignment round breaks it
   for (let round = 1; round <= (opts.rounds ?? 4); round++) {
     let reply: { value: string; usd: number };
     try {
@@ -86,8 +109,23 @@ export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" 
     rounds.push({ round, states: result.stats.states, programs: result.stats.programs, problems, usd: reply.usd, chars: source.length });
     log(`  round ${round}: ${result.stats.states} states, ${result.stats.programs} programs, ${problems.length} problems, $${reply.usd.toFixed(3)}`);
     for (const p of problems.slice(0, 5)) log(`    ${p.slice(0, 180)}`);
-    if (!problems.length) return { source, result, rounds, usd, ok: true };
+    if (!problems.length) {
+      // Once, the steps that truth things really computed go back to the writer, numbered, so it can bind each step to
+      // the words that speak it and point at computed parts instead of typing results.
+      if (aligned || !result.truth?.length || round >= (opts.rounds ?? 4)) return { source, result, rounds, usd, ok: true };
+      aligned = true;
+      built = { source, result, rounds: [...rounds], usd, ok: true };
+      next = `${user}\n\nYour scene builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${truthText(result.truth)}`;
+      continue;
+    }
     next = `${user}\n\nYour scene, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${read("engine-repair.md")}\nProblems:\n${formatProblems(result.problems.slice(0, MAX_PROBLEMS))}`;
   }
+  if (built) return { ...built, rounds, usd };
   return { source, result, rounds, usd, ok: false };
+}
+
+// The numbered steps of every truth thing in a scene, for one alignment round.
+export function truthText(truth: NonNullable<BuildResult["truth"]>): string {
+  const list = truth.map((t) => `${t.kind} ${t.id}:\n${t.steps.map((s, i) => `  ${i + 1}. ${s}`).join("\n")}`).join("\n");
+  return `These are the steps the truth things in your scene really compute, in order:\n${list}\n\nCheck that each \`do steps\` plays these steps on the spoken words that talk about them (at=, or from= and to= across states), and that tags, marks and lights point at the parts that show computed results rather than writing results as text yourself. Change only what needs it, and return the whole scene again, with no commentary.`;
 }

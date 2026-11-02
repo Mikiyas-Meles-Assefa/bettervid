@@ -15,15 +15,25 @@ export type Env = {
   theme: Theme;
   measure: Measure;
   natural: (item: Item) => { w: number; h: number }; // size of a kit, graph or program before scaling
+  minText: number; // the smallest readable text, in pixels
 };
 export type Slot = { item: Item; box: Box; scale: number };
 export type Laid = { parts: Part[]; boxes: Map<string, Box>; members: Map<string, string[]>; slots: Slot[]; links: { from: string; to: string; line: number }[]; problems: Problem[]; scale: number; smallest: number };
 
+// Where content may go: clear of the edges, with the bottom left for captions. The camera frames into this area too.
+export function safeArea(W: number, H: number): Box {
+  const margin = W * 0.065;
+  const top = H * 0.047;
+  const usable = H * 0.765;
+  return { x: W / 2, y: top + usable / 2, w: W - margin * 2, h: usable };
+}
+
 export const CHAR = 0.56; // average character width, in em
-export const estimate: Measure = (text, size, font) => Math.max(0.6, [...text].length) * size * (font === "mono" ? 0.6 : CHAR);
+// Capitals and digits are wider than the average letter and spaces narrower, so words in capitals are not underestimated.
+const charWidth = (c: string) => (/[A-Z0-9MW]/.test(c) ? 0.68 : c === " " ? 0.3 : CHAR);
+export const estimate: Measure = (text, size, font) => (font === "mono" ? Math.max(0.6, [...text].length) * size * 0.6 : Math.max(0.6 * CHAR, [...text].reduce((sum, c) => sum + charWidth(c), 0)) * size);
 const TEXT_SIZE: Record<string, number> = { huge: 136, big: 96, normal: 70, small: 50, note: 40 };
 const CODE_SIZE = 40;
-const MIN_TEXT = 26; // pixels on a 1080 wide canvas
 const MAX_SCALE = 1.6;
 const MIN_SCALE = 0.4;
 
@@ -107,7 +117,14 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     return { w, h, label, size };
   };
 
+  // A container with `back` sits on a panel of that color, with room around its contents.
+  const padOf = (item: Item, s: number) => (item.attrs.back && item.attrs.back !== "none" ? 48 * s : 0);
   const sizeOf = (item: Item, s: number): { w: number; h: number } => {
+    const inner = innerSize(item, s);
+    const pad = padOf(item, s);
+    return pad ? { w: inner.w + pad * 2, h: inner.h + pad * 2 } : inner;
+  };
+  const innerSize = (item: Item, s: number): { w: number; h: number } => {
     const gap = n(item.attrs.gap, 44) * s;
     switch (item.kind) {
       case "atoms": {
@@ -194,6 +211,15 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
     return { widths, heights };
   };
 
+  // Things that fill the frame take no room in the arrangement. They sit behind it, centered on the frame.
+  const framed: Item[] = [];
+  const pull = (list: Item[]): Item[] =>
+    list.flatMap((i) => {
+      if (i.attrs.frame === undefined) return [{ ...i, children: pull(i.children) }];
+      framed.push(i);
+      return [];
+    });
+  items = pull(items);
   const root: Item = { kind: "stack", id: "board", line: 0, attrs: {}, children: items };
   let s = cap;
   let box = sizeOf(root, s);
@@ -206,7 +232,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   }
   const seen = (size: number, line: number) => {
     if (size < out.smallest) out.smallest = size;
-    if (size < MIN_TEXT) out.problems.push({ line, message: `Text here comes out only ${Math.round(size)} pixels tall, too small to read, because this state holds too much to fit. Put less on screen at once or use shorter lines.` });
+    if (size < env.minText - 0.5) out.problems.push({ line, message: `Text here comes out only ${Math.round(size)} pixels tall; the smallest readable is ${Math.round(env.minText)}. This state holds too much to fit at a readable size: put less on screen at once, use shorter lines, or use a bigger size for this text.` });
   };
   const text = (id: string, item: Item, content: string, x: number, y: number, size: number, extra: Props = {}, parent?: string) => {
     seen(size, item.line);
@@ -215,8 +241,11 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
   const rule = (id: string, points: number[], line: number) => out.parts.push({ id, kind: "path", line, props: { points: points.map(round), stroke: "ink", strokeWidth: 6 } });
 
   const place = (item: Item, cx: number, cy: number, s: number) => {
-    const size = sizeOf(item, s);
-    out.boxes.set(item.id, { x: cx, y: cy, w: size.w, h: size.h });
+    const outer = sizeOf(item, s);
+    out.boxes.set(item.id, { x: cx, y: cy, w: outer.w, h: outer.h });
+    const pad = padOf(item, s);
+    if (pad) out.parts.push({ id: `${item.id}.back`, kind: "path", line: item.line, props: { x: round(cx), y: round(cy), points: roundedBox(outer.w, outer.h, Math.min(outer.w, outer.h) * 0.06).map(round), closed: 1, fill: item.attrs.back!, stroke: "none", z: -1, shadowY: round(14 * s), shadowBlur: round(36 * s), shadowOpacity: 0.3, shadowColor: "#000000" } });
+    const size = pad ? innerSize(item, s) : outer;
     const gap = n(item.attrs.gap, 44) * s;
     const members = (ids: string[]) => out.members.set(item.id, ids);
     switch (item.kind) {
@@ -303,7 +332,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
         return;
       }
       case "image":
-        out.parts.push({ id: item.id, kind: "image", line: item.line, props: { x: round(cx), y: round(cy), w: round(size.w), h: round(size.h), src: item.attrs.asset ?? "", ...look(item, ["opacity"]) } });
+        out.parts.push({ id: item.id, kind: "image", line: item.line, props: { x: round(cx), y: round(cy), w: round(size.w), h: round(size.h), src: item.attrs.asset ?? "", ...look(item, ["opacity", "rotate"]) } });
         return;
       case "space":
         return;
@@ -387,6 +416,30 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE): Laid {
       }
     }
   };
+  for (const f of framed) {
+    const mode = f.attrs.frame;
+    if (mode !== "fill" && mode !== "fit") {
+      out.problems.push({ line: f.line, message: `frame is fill (cover the whole frame, cropping what spills over) or fit (show all of it as large as it goes), not ${mode}.` });
+      continue;
+    }
+    const isShape = ["box", "circle", "pill", "diamond", "dot", "tri"].includes(f.kind);
+    if (f.kind !== "image" && !isShape) {
+      out.problems.push({ line: f.line, message: `Only images and shapes can fill the frame; ${f.id} is a ${f.kind}.` });
+      continue;
+    }
+    const [w0, h0] = [n(f.attrs.w, env.W), n(f.attrs.h, env.H)];
+    const k = mode === "fill" ? Math.max(env.W / w0, env.H / h0) : Math.min(env.W / w0, env.H / h0);
+    const [w, h] = isShape && mode === "fill" ? [env.W, env.H] : [w0 * k, h0 * k];
+    const [cx, cy] = [env.W / 2, env.H / 2];
+    out.boxes.set(f.id, { x: cx, y: cy, w, h });
+    if (f.kind === "image") out.parts.push({ id: f.id, kind: "image", line: f.line, props: { x: cx, y: cy, w: round(w), h: round(h), src: f.attrs.asset ?? "", z: -2, ...look(f, ["opacity", "rotate"]) } });
+    else {
+      const fill = f.attrs.fill ?? "paper";
+      out.parts.push({ id: f.id, kind: "group", line: f.line, props: { x: cx, y: cy, z: -2, ...look(f, ["opacity"]) } });
+      out.parts.push({ id: `${f.id}.shape`, kind: "path", parent: f.id, line: f.line, props: { points: (f.kind === "box" ? [-w / 2, -h / 2, w / 2, -h / 2, w / 2, h / 2, -w / 2, h / 2, -w / 2, -h / 2] : shapePoints(f.kind, w, h)).map(round), closed: 1, fill, stroke: f.attrs.stroke ?? "none", strokeWidth: n(f.attrs.strokeWidth, 6) } });
+      if (f.text) text(`${f.id}.label`, f, f.text, 0, 0, fontSize(f, TEXT_SIZE.big!), { ...(f.attrs.color ? {} : { color: readableOn(fill, env.theme) }), ...look(f, ["color", "weight"]) }, f.id);
+    }
+  }
   // Content sits a little above the middle, with the free space shared around it.
   const { safe } = env;
   place(root, safe.x, safe.y - Math.max(0, safe.h - box.h) * 0.08, s);

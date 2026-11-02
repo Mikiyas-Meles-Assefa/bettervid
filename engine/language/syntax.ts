@@ -30,43 +30,49 @@ export type Command =
   | { do: "light" | "dim" | "focus" | "drop"; line: number; targets: string[]; attrs: Attrs }
   | { do: "set"; line: number; targets: string[]; attrs: Attrs }
   | { do: "play"; line: number; behavior: string; targets: string[]; attrs: Attrs }
-  | { do: "emit"; line: number; name: string; attrs: Attrs };
+  | { do: "emit"; line: number; name: string; attrs: Attrs }
+  | { do: "camera"; line: number; target?: string; attrs: Attrs };
 
-export type State = { line: number; at: Time; keep: boolean; attrs: Attrs; items: Item[]; commands: Command[] };
+// `cut`: everything changes at once, with no fades or moves, as a film cuts.
+export type State = { line: number; at: Time; keep: boolean; cut: boolean; attrs: Attrs; items: Item[]; commands: Command[] };
 export type ProgramDef = { name: string; line: number; params: Attrs; doc?: string; source: string };
-export type Document = { background?: string; programs: ProgramDef[]; states: State[] };
+// `read` overrides the style's readability settings for this scene: text (smallest text, share of the frame) and dim.
+export type Document = { background?: string; read?: Attrs; programs: ProgramDef[]; states: State[] };
 
 export const SIZES = ["huge", "big", "normal", "small", "note"];
 export const SHAPES = ["box", "circle", "pill", "diamond", "dot", "tri"];
-export const MARKS = ["ring", "box", "underline", "cross", "brace"];
+export const MARKS = ["ring", "box", "underline", "cross", "brace", "highlight", "line", "arrow", "dots", "path"];
+export const ENTERS = ["fade", "draw", "pop", "none", "slide", "slide-left", "rise", "slam"];
 const CONTAINERS = ["row", "stack", "grid", "ring", "chain", "free"];
 const PLACING = ["at", "into", "before", "after"];
 const LOOK = ["color", "fill", "stroke", "weight", "opacity", "rotate", "strokeWidth"];
 const ATTRS: Record<string, string[]> = {
-  row: ["gap", "align", ...PLACING],
-  stack: ["gap", "align", ...PLACING],
-  grid: ["cols", "gap", ...PLACING],
-  ring: ["size", "arrows", ...PLACING],
-  chain: ["dir", "gap", ...PLACING],
-  free: ["w", "h", ...PLACING],
-  atoms: ["gap", ...PLACING, ...LOOK],
-  text: ["size", "w", "font", "align", ...PLACING, ...LOOK],
-  code: ["size", ...PLACING],
-  image: ["asset", "w", "h", ...PLACING, "opacity"],
+  row: ["gap", "align", "back", "enter", ...PLACING],
+  stack: ["gap", "align", "back", "enter", ...PLACING],
+  grid: ["cols", "gap", "back", "enter", ...PLACING],
+  ring: ["size", "arrows", "enter", ...PLACING],
+  chain: ["dir", "gap", "enter", ...PLACING],
+  free: ["w", "h", "enter", ...PLACING],
+  atoms: ["gap", "enter", ...PLACING, ...LOOK],
+  text: ["size", "w", "font", "align", "enter", ...PLACING, ...LOOK],
+  code: ["size", "enter", ...PLACING],
+  image: ["asset", "w", "h", "frame", "enter", "rotate", ...PLACING, "opacity"],
   graph: ["w", "h", "radius", ...PLACING],
-  shape: ["w", "h", "size", ...PLACING, ...LOOK],
+  shape: ["w", "h", "size", "frame", "enter", ...PLACING, ...LOOK],
   space: ["h", ...PLACING],
   arrow: ["id", "bend", "color", "strokeWidth", "both"],
-  mark: ["id", "color", "strokeWidth", "side"],
-  tag: ["id", "side", "color", "size"],
+  mark: ["id", "color", "strokeWidth", "side", "at"],
+  tag: ["id", "side", "color", "size", "at", "back"],
+  camera: ["at", "zoom", "frames", "ease", "drift"],
   light: ["color"],
   dim: ["amount"],
   focus: ["color", "amount"],
   state: ["enter", "move", "ease"],
+  read: ["text", "dim"],
 };
-const COMMANDS = ["arrow", "link", "mark", "tag", "light", "dim", "focus", "drop", "set", "do", "emit"];
+const COMMANDS = ["arrow", "link", "mark", "tag", "light", "dim", "focus", "drop", "set", "do", "emit", "camera"];
 const LEAVES = ["text", "code", "image", "graph", "run", "space", ...SHAPES];
-const WORDS = [...CONTAINERS, ...SIZES, ...COMMANDS, ...LEAVES, "program", "bg"];
+const WORDS = [...CONTAINERS, ...SIZES, ...COMMANDS, ...LEAVES, "program", "bg", "read"];
 export const ID = /^[A-Za-z0-9][\w-]*(\.[\w-]+)*$/;
 const BAD_IDS = new Set(["constructor", "prototype"]);
 
@@ -238,6 +244,14 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
       continue;
     }
 
+    if (head === "read") {
+      const { plain, attrs } = split(toks.slice(1), ATTRS.read!, "read", fail);
+      if (plain.length || !Object.keys(attrs).length) fail(`read takes settings only, as in read text=0.04 dim=0.5`);
+      for (const [k, v] of Object.entries(attrs)) if (!(Number(v) > 0 && Number(v) <= 1)) fail(`read ${k} is a share between 0 and 1, not ${v}.`);
+      doc.read = { ...doc.read, ...attrs };
+      continue;
+    }
+
     if (head === "program") {
       const { plain, attrs } = split(toks.slice(1), null, "program", fail);
       const name = plain[0];
@@ -266,9 +280,9 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
         continue;
       }
       const { plain, attrs } = split(toks.slice(1), ATTRS.state!, "A state", fail);
-      const extra = plain.filter((p) => p !== "keep");
-      if (extra.length) fail(`A state line only takes "keep" and settings, not "${extra[0]}". Put content on the lines below it.`);
-      state = { line: number, at, keep: plain.includes("keep"), attrs, items: [], commands: [] };
+      const extra = plain.filter((p) => p !== "keep" && p !== "cut");
+      if (extra.length) fail(`A state line only takes "keep", "cut" and settings, not "${extra[0]}". Put content on the lines below it.`);
+      state = { line: number, at, keep: plain.includes("keep"), cut: plain.includes("cut"), attrs, items: [], commands: [] };
       doc.states.push(state);
       stack = [];
       auto = 0; // unnamed lines count per state, so an unnamed line in a later plain state is the same line
@@ -417,6 +431,8 @@ function command(head: string, toks: string[], line: number, fail: Fail, state: 
     }
     const targets = targetList(words.slice(1), fail);
     if (!targets.length) fail(`mark ${shape} needs something to mark, as in mark ${shape} a1`);
+    if (attrs.at !== undefined && targets.length !== 1) fail(`mark with at= marks a place inside one thing, so it takes one id, as in mark ${shape} photo at=0.2,0.3,0.4,0.5`);
+    if (attrs.at === undefined && ["line", "arrow", "dots", "path"].includes(shape)) fail(`mark ${shape} needs at= with points inside the thing, as in mark ${shape} photo at=0.2,0.3,0.6,0.5`);
     const label = plain.find(isQuoted);
     return { do: "mark", line, shape, targets, attrs, ...(label ? { text: unquote(label) } : {}) };
   }
@@ -451,6 +467,13 @@ function command(head: string, toks: string[], line: number, fail: Fail, state: 
       return;
     }
     return { do: "play", line, behavior: plain[0]!, targets: targetList(plain.slice(1), fail), attrs };
+  }
+  if (head === "camera") {
+    const { plain, attrs } = split(toks, ATTRS.camera!, "camera", fail);
+    if (plain.length > 1) fail(`camera takes at most one id to frame, then settings, as in camera photo at=0.2,0.3,0.6,0.5 zoom=1.1`);
+    if (plain[0]) checkId(plain[0], fail);
+    if (attrs.at !== undefined && !plain[0]) fail(`camera at= frames a place inside one thing, so it needs that thing's id, as in camera photo at=0.2,0.3,0.6,0.5`);
+    return { do: "camera", line, ...(plain[0] ? { target: plain[0] } : {}), attrs };
   }
   const { plain, attrs } = split(toks, null, "emit", fail);
   if (!plain[0]) {

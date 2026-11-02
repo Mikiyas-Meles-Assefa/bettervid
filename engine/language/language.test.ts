@@ -127,9 +127,60 @@ test("a tag finds free space, also among a kit's parts", async () => {
 test("focus keeps what is attached and dims the rest, also inside a kit", async () => {
   const s = await ok(`@0\ntext title "title"\ngraph g: A-B A-C\ntag g.node.A "start"\n@2 keep\nfocus g.node.A\n`);
   assert.equal(at(s, 60, "tag.g.node.A")!.props.opacity, 1);
-  assert.equal(at(s, 60, "g.node.B")!.props.opacity, 0.25);
+  assert.equal(at(s, 60, "g.node.B")!.props.opacity, 0.45);
   assert.equal(at(s, 60, "g.node.A")!.props.opacity, 1);
-  assert.equal(at(s, 60, "title")!.props.opacity, 0.25);
+  assert.equal(at(s, 60, "title")!.props.opacity, 0.45);
+});
+
+test("dimming stops where the style says the rest stays readable, and a scene can say otherwise", async () => {
+  const deep = await ok(`@0
+big: a=1 b=2
+@2 keep
+dim a amount=0.1
+`);
+  assert.equal(at(deep, 60, "a")!.props.opacity, 0.45);
+  const style = { ...ctx, theme: { ...ctx.theme, style: { read: { text: 0.03, dim: 0.6 } } as never } };
+  const r = await build(`@0
+big: a=1 b=2
+@2 keep
+focus b
+`, { ctx: style });
+  assert.equal(at(r.scene!, 60, "a")!.props.opacity, 0.6);
+  const own = await ok(`read dim=0.2
+@0
+big: a=1 b=2
+@2 keep
+dim a amount=0.1
+`);
+  assert.equal(at(own, 60, "a")!.props.opacity, 0.2);
+});
+
+test("no text comes out below the readable size: laid-out text is reported, a kit's text and tags are raised", async () => {
+  const sizes = (s: Scene) => {
+    const out: number[] = [];
+    const walk = (list: Resolved[], k: number) => list.forEach((r) => {
+      const kk = k * Number(r.props.scaleX ?? 1);
+      if (r.kind === "text") out.push(Number(r.props.size) * kk);
+      walk(r.children, kk);
+    });
+    walk(evaluate(s, 80), 1);
+    return out;
+  };
+  const s = await ok(`@0
+graph g: A-B:4 B-C:2 C-D:7 D-A:1 A-C:3
+tag g.node.A "start"
+`);
+  assert.ok(Math.min(...sizes(s)) >= 0.03 * 1080 - 0.5, String(Math.min(...sizes(s))));
+  const big = await ok(`read text=0.05
+@0
+graph g: A-B:4 B-C:2
+tag g.node.A "start"
+`);
+  assert.ok(Math.min(...sizes(big)) >= 0.05 * 1080 - 0.5, String(Math.min(...sizes(big))));
+  assert.match(await bad(`read text=0.08
+@0
+text t "${"many words here ".repeat(30)}" size=small
+`), /smallest readable is 86/);
 });
 
 const allText = (list: Resolved[]): string[] => list.flatMap((r) => [...(r.kind === "text" ? [String(r.props.text)] : []), ...allText(r.children)]);
@@ -304,6 +355,7 @@ test("the library takes a tested program and refuses a bad one", async () => {
 
 test("every word in the language builds together", async () => {
   await ok(`bg paper
+read text=0.025 dim=0.3
 program bars n=3 doc="Some bars."
   for (let i = 0; i < args.n; i++) path("b" + i, { points: rect(i * 50, 0, 40, H), fill: "accent" });
 end

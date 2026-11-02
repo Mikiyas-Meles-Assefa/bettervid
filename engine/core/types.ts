@@ -124,7 +124,12 @@ export type TypeStyle = {
 };
 export type MotionFeel = "springy" | "calm" | "snappy" | "steady";
 export type MotionStyle = { feel: MotionFeel; frames: number; ease: Ease; enter: "fade" | "draw" | "pop" };
-export type StyleSpec = { line: LineStyle; fill: FillStyle; surface: SurfaceStyle; type: TypeStyle; motion: MotionStyle };
+// What keeps a frame readable. A scene may override either for itself.
+export type ReadStyle = {
+  text: number; // the smallest text, as a share of the frame's shorter side. Nothing the engine places is drawn smaller
+  dim: number; // 0 to 1: the lowest opacity that dim and focus take the rest of the frame to, so it stays readable
+};
+export type StyleSpec = { line: LineStyle; fill: FillStyle; surface: SurfaceStyle; type: TypeStyle; motion: MotionStyle; read?: ReadStyle };
 
 export type CompileContext = {
   fps: number;

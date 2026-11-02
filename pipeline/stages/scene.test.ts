@@ -100,6 +100,14 @@ test("a whole-video draft is sliced by the word each state starts on", () => {
   assert.equal(parts[2], "");
 });
 
+test("a section that begins inside a shot opens with that shot's cut", () => {
+  const draft = `@0 cut\nimage s1 asset=p frame=fill\ncamera s1 zoom=1.2\n@4 keep\nmark ring s1 at=0.5,0.5\n@7 keep\ntag s1 "x" at=0.2,0.2\n@9 cut\nimage s2 asset=q frame=fill\n`;
+  const parts = sliceSource(draft, [{ id: "s1", firstWord: 0, lastWord: 5 }, { id: "s2", firstWord: 6, lastWord: 12 }]);
+  const second = pieces(parts[1]!).states;
+  assert.deepEqual(second.map((s) => s.word), [6, 7, 9]);
+  assert.match(second[0]!.text, /^@6 cut\nimage s1 asset=p frame=fill\ncamera s1 zoom=1.2/);
+});
+
 test("the contract catches states outside the range, a keep first state and a missing carried thing", () => {
   const range = { id: "s2", firstWord: 6, lastWord: 12 };
   assert.deepEqual(contract(`@6\ntext moon "Moon"\nnormal: a=1 b=2\n@9 keep\ntag moon "x"\n`, range, [{ id: "moon", what: "a disc" }, { id: "b", what: "an atom" }]), []);

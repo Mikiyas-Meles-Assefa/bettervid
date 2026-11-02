@@ -11,7 +11,7 @@ import { when } from "../../engine/core/compile.ts";
 import { evaluate } from "../../engine/core/evaluate.ts";
 import type { CompileContext, Resolved, Scene, Theme } from "../../engine/core/types.ts";
 import { KITS } from "../../engine/kits/index.ts";
-import { languagePrompt, numbered } from "../../engine/language/author.ts";
+import { languagePrompt, numbered, truthText } from "../../engine/language/author.ts";
 import { build, formatProblems, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
 import { loadLibrary } from "../../engine/language/library.ts";
 import { parse, type Item, type State } from "../../engine/language/syntax.ts";
@@ -165,9 +165,14 @@ export function joinSections(sections: { id: string; firstWord: number; source: 
 export function sliceSource(source: string, ranges: Range[]): string[] {
   const p = pieces(source);
   const out: string[][] = ranges.map(() => []);
+  const isCut = (text: string) => /^\s*@\S+\s+cut\b/m.test(text);
+  let lastCut: string | undefined;
   for (const s of p.states) {
     let k = ranges.findIndex((r) => s.word >= r.firstWord && s.word <= r.lastWord);
     if (k < 0) k = s.word < (ranges[0]?.firstWord ?? 0) ? 0 : ranges.length - 1;
+    // A section that begins inside a shot opens with that shot's cut, moved to its first word, so it stands on its own.
+    if (!out[k]!.length && !isCut(s.text) && lastCut) out[k]!.push(lastCut.replace(/^(\s*)@\S+/m, `$1@${ranges[k]!.firstWord}`));
+    if (isCut(s.text)) lastCut = s.text;
     out[k]!.push(s.text);
   }
   return out.map((states) => {
@@ -389,6 +394,20 @@ async function compose(job: Job, start: string | undefined, prior: string): Prom
     if (!all.length) break;
     if (!last.problems.length && round >= 2) break; // builds and is sound; a hand-off still missed after a repair is reported
     next = `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${prompt("engine-repair")}\nProblems:\n${all.slice(0, MAX_PROBLEMS).join("\n")}`;
+  }
+  // Computed steps are only known once the part builds, so Spark sees them once to tie each step to the right words.
+  // The aligned version is kept only if it is still sound.
+  if (last && !last.problems.length && last.result.truth?.length) {
+    try {
+      const r = await text({ system: job.system, user: `${job.request}\n\nYour part builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${truthText(last.result.truth)}`, effort: "medium", maxOutput: 32000 });
+      usd += r.usd;
+      const aligned = await check(job, r.value);
+      job.log(`    ${job.range.id} steps aligned: ${aligned.problems.length} problems`);
+      if (!aligned.problems.length) [source, last] = [r.value, aligned];
+    } catch (e) {
+      usd += (e as { usd?: number }).usd ?? 0;
+      job.log(`    ${job.range.id} step alignment failed: ${(e as Error).message.slice(0, 160)}`);
+    }
   }
   return { source, result: last?.result ?? { problems: [], stats: { states: 0, parts: 0, programs: 0, programMs: 0 } }, problems: last ? last.problems : ["the model never answered"], warnings: last?.warnings ?? [], usd, rounds: Math.min(round, BUILD_ROUNDS) };
 }

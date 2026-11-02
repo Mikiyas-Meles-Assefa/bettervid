@@ -2,7 +2,7 @@
 // pick a named pen, fill, surface and feel, then override any number. Everything left out comes from the preset.
 // `render` is separate from the older fields (palette, fonts, art, surface, motion, grain, vignette), which the
 // pipeline still reads and which mean something else there.
-import type { Ease, FillKind, FillStyle, LineStyle, MotionFeel, MotionStyle, Pen, StyleSpec, SurfaceKind, SurfaceStyle, TypeStyle } from "../core/types.ts";
+import type { Ease, FillKind, FillStyle, LineStyle, MotionFeel, MotionStyle, Pen, ReadStyle, StyleSpec, SurfaceKind, SurfaceStyle, TypeStyle } from "../core/types.ts";
 import { contrast } from "./color.ts";
 
 export const PENS: Record<Pen, Omit<LineStyle, "pen">> = {
@@ -45,6 +45,8 @@ const FILL: Record<string, Range> = { base: [0.6, 1], spacing: [0, 60], angle: [
 const SURFACE: Record<string, Range> = { grain: R01, smudge: R01, light: R01, grid: [0, 400], major: [0, 20] };
 const TYPE: Record<string, Range> = { bold: [100, 900], tracking: [-0.1, 0.4], jitter: R01, grain: [0, 0.5], glow: R01 };
 const MOTION: Record<string, Range> = { frames: [1, 90] };
+const READ: Record<string, Range> = { text: [0.015, 0.08], dim: [0.15, 1] };
+export const READ_DEFAULT: ReadStyle = { text: 0.03, dim: 0.45 };
 
 type Raw = Record<string, unknown>;
 const oneOf = (what: string, value: unknown, list: readonly string[]): string => {
@@ -86,7 +88,7 @@ export function checkPalette(p: Record<string, string> | undefined): void {
 export function resolveStyle(file: StyleFileLike): StyleSpec {
   checkPalette(file.palette);
   const r = file.render ?? {};
-  for (const key of Object.keys(r)) oneOf("render key", key, ["line", "fill", "surface", "type", "motion"]);
+  for (const key of Object.keys(r)) oneOf("render key", key, ["line", "fill", "surface", "type", "motion", "read"]);
   const part = (name: string) => (r[name] ?? {}) as Raw;
 
   const pen = oneOf("line.pen", part("line").pen ?? "vector", Object.keys(PENS)) as Pen;
@@ -111,7 +113,9 @@ export function resolveStyle(file: StyleFileLike): StyleSpec {
   const feel = oneOf("motion.feel", part("motion").feel ?? "steady", Object.keys(FEELS)) as MotionFeel;
   const motion = merge<MotionStyle>("motion", { feel, ...FEELS[feel] }, part("motion"), MOTION, { feel: (v) => v, ease: (v) => oneOf("motion.ease", v, EASES), enter: (v) => oneOf("motion.enter", v, ["fade", "draw", "pop"]) });
 
-  return { line, fill, surface, type, motion };
+  const read = merge<ReadStyle>("read", READ_DEFAULT, part("read"), READ, {});
+
+  return { line, fill, surface, type, motion, read };
 }
 
 // Given to a model that turns a person's description into a style file.
@@ -124,6 +128,7 @@ render.fill:    kind = ${Object.keys(FILLS).join(" | ")}. Optional: base, spacin
 render.surface: kind = ${Object.keys(SURFACES).join(" | ")}. Optional: grain, smudge, light, grid, major.
 render.type:    title, body and mono are CSS font stacks ending in a safe font. Optional: bold, tracking, case, jitter, grain, glow.
 render.motion:  feel = ${Object.keys(FEELS).join(" | ")}. Optional: frames, ease, enter.
+render.read:    optional. text = the smallest text, as a share of the frame's shorter side (default ${READ_DEFAULT.text}); dim = the lowest opacity that dimmed things fall to (default ${READ_DEFAULT.dim}). Thin or textured fonts and dark surfaces need more of both.
 
 Texture goes on the surface and on colored shapes. Images are never touched, and nothing is ever laid over the whole frame.
 
