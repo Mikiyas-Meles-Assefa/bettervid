@@ -3,11 +3,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Scene } from "../../engine/core/types.ts";
-import { build } from "../../engine/language/build.ts";
 import type { Asset, Clip, Credits, Project, Timeline } from "../../schemas/project.ts";
 import { dir, stage, style, topic } from "../lib/project.ts";
 import { PYTHON } from "../lib/util.ts";
-import { joinScene, sceneBuildOptions } from "./scene.ts";
+import { sceneBuildOptions, wholeScene } from "./scene.ts";
 
 const FPS = 30;
 const TAIL = 0.6; // seconds of picture after the last word
@@ -150,10 +149,11 @@ export async function engineScene(p: Project, story: number) {
   for (const [name, file] of Object.entries(plan.assets)) {
     if (!existsSync(join(dir(p), file))) throw new Error(`timeline: scene asset ${name} points to ${file}, which is not in the project folder`);
   }
-  // The same document and options the scene stage checked, with the real length of the story.
-  const source = joinScene(plan);
+  // The same document and options the scene stage checked, with the real length of the story; parts the design brain
+  // composed are laid over it, each in its own window.
   const opts = sceneBuildOptions(p, plan.assets);
-  const r = await build(source, { ...opts, ctx: { ...opts.ctx, frames: story } });
+  const r = await wholeScene(p, plan.assets, story);
+  const source = r.source;
   if (!r.scene) {
     const lines = source.split("\n");
     const where = (n: number) => (n ? `line ${n} (${lines[n - 1]?.trim().slice(0, 80)})` : "scene");

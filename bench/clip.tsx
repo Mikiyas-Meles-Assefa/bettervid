@@ -26,15 +26,21 @@ const Clip: React.FC<Props> = ({ scene, theme, captions }) => {
   useImagesReady(scene);
   const frame = useCurrentFrame();
   const look = sceneLook(theme);
+  // The captions are laid out for a 1080 by 1920 frame, in a band near its bottom. On any other shape that layout is
+  // scaled by the frame's short side (words keep their size against the frame) and its band sits as near the bottom.
+  const k = Math.min(scene.width, scene.height) / 1080;
+  const band = { left: (scene.width - 1080 * k) / 2, top: scene.height - 1920 * k };
   return (
     <AbsoluteFill>
       <SceneView scene={scene} theme={theme} frame={frame} />
-      {captions.map((c, i) => (
-        <Sequence key={i} from={c.startFrame} durationInFrames={Math.max(1, c.endFrame - c.startFrame)} layout="none">
-          <Caption words={c.words} look={look} />
-        </Sequence>
-      ))}
-      <div style={{ position: "absolute", top: 24, left: 28, fontFamily: "monospace", fontSize: 44, color: "white", background: "rgba(0,0,0,0.55)", padding: "2px 12px", borderRadius: 8 }}>
+      <div style={{ position: "absolute", left: band.left, top: band.top, width: 1080, height: 1920, transform: `scale(${k})`, transformOrigin: "0 0" }}>
+        {captions.map((c, i) => (
+          <Sequence key={i} from={c.startFrame} durationInFrames={Math.max(1, c.endFrame - c.startFrame)} layout="none">
+            <Caption words={c.words} look={look} />
+          </Sequence>
+        ))}
+      </div>
+      <div style={{ position: "absolute", top: 24 * k, left: 28 * k, fontFamily: "monospace", fontSize: 44 * k, color: "white", background: "rgba(0,0,0,0.55)", padding: `${2 * k}px ${12 * k}px`, borderRadius: 8 * k }}>
         {(frame / scene.fps).toFixed(2)} s
       </div>
     </AbsoluteFill>

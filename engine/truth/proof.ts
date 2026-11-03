@@ -4,7 +4,7 @@
 // ONLY=sort,trace limits the scenes. STILLS=n writes n frames per scene instead of a video.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import type { CompileContext } from "../core/types.ts";
 import { KITS } from "../kits/index.ts";
@@ -72,7 +72,7 @@ const only = process.env.ONLY?.split(",");
 const stills = Number(process.env.STILLS ?? 0);
 const words = Array.from({ length: WORDS }, (_, i) => ({ start: 0.2 + i * 0.4 }));
 const frames = Math.ceil((words.at(-1)!.start + 1.5) * 30);
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
 const browserExecutable = process.env.BETTERVID_CHROME || undefined;
 for (const [name, source] of Object.entries(SCENES)) {
   if (only && !only.includes(name)) continue;

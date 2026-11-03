@@ -1,0 +1,17 @@
+{"things": [
+{"thing": "840 support tickets (last quarter total)", "as": "word", "sheet": 2, "note": "A counter rolls up to 840 in a yellow box with 'tickets' under it; only the number is written. Later (sheet 7) an 840-dot grid gives the total itself as units."},
+{"thing": "login problems, 412 tickets", "as": "itself", "sheet": 3, "note": "Real proportional orange bar labelled Login with 412; later the top block of the dot grid in orange."},
+{"thing": "almost half", "as": "itself", "sheet": 7, "note": "Sheet 3 only adds an 'almost half' tag; sheet 7 shows it as the login dots filling just under the HALF: 420 line on the 840-dot grid."},
+{"thing": "billing, 268 tickets", "as": "itself", "sheet": 4, "note": "Proportional grey bar labelled Billing with 268."},
+{"thing": "shipping and everything else, 160 tickets", "as": "itself", "sheet": 6, "note": "Small Shipping (97) and Other (63) bars, and the box 'Shipping + other = 160'."},
+{"thing": "the support queue", "as": "itself", "sheet": 7, "note": "Grid of 840 dots, one per ticket."},
+{"thing": "login fix", "as": "word", "sheet": 7, "note": "Only the heading 'Fix login'; no fix is pictured."}
+],
+"changes": [
+{"change": "ticket count builds to 840", "as": "told", "sheet": 1, "note": "Only a number counts up (648, 831, 840)."},
+{"change": "login bar grows to 412", "as": "shown", "sheet": 3, "note": "Bar grows from zero to its length, then the 412 value appears."},
+{"change": "billing bar grows to 268", "as": "shown", "sheet": 4, "note": "Bar grows in beside Login."},
+{"change": "shipping and other bars appear and sum to 160", "as": "shown", "sheet": 5, "note": "Two small bars grow in; the sum itself is told by the box changing from '?' to '160' (sheet 7)."},
+{"change": "login tickets fill the queue up to almost half", "as": "shown", "sheet": 7, "note": "Orange dots fill the 840-dot grid row by row up to just under the HALF: 420 line."},
+{"change": "half the queue goes away once login is fixed", "as": "missing", "sheet": 8, "note": "The login dots only recolour from orange to dark navy and stay in place; nothing leaves the queue. The words 'half the queue goes away' carry it."}
+]}

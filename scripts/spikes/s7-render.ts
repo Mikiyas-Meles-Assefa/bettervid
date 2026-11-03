@@ -2,14 +2,14 @@
 // Assets come from media/spikes/s7/public (backgrounds, pre-outlined cutouts, grain).
 // Usage: npm run spike scripts/spikes/s7-render.ts [concurrency ...]
 import { cpus } from "node:os";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../../engine/render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 
 const DIR = "media/spikes/s7";
 const runs = process.argv.slice(2).length ? process.argv.slice(2).map(Number) : [cpus().length];
 
 let t0 = Date.now();
-const serveUrl = await bundle({ entryPoint: "video/spike/index.ts", publicDir: `${DIR}/public` });
+const serveUrl = await bundled("video/spike/index.ts", { publicDir: `${DIR}/public` });
 console.log(JSON.stringify({ step: "bundle", ms: Date.now() - t0 }));
 
 const composition = await selectComposition({ serveUrl, id: "S7Test" });

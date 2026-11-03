@@ -1,0 +1,16 @@
+[
+{"sheet":1,"looking":"'Insertion sort' title over four boxes: 4 1 3 2","waiting":"how they get sorted","confusing":""},
+{"sheet":2,"looking":"a 'SORTED' bracket under the 4","waiting":"the next card to join","confusing":"why a lone 4 counts as 'sorted' is not explained"},
+{"sheet":3,"looking":"the same row, nothing moving","waiting":"the first move","confusing":"the playing-card comparison is spoken but the boxes don't look like cards"},
+{"sheet":4,"looking":"an arrow appearing under the 1, the SORTED bracket fading","waiting":"where the 1 goes","confusing":""},
+{"sheet":5,"looking":"4 and 1 turning orange and swapping to 1 4","waiting":"the next card","confusing":"the swap happens before the narration says the one slides in front, and the arrow stays under the 4 instead of following the 1"},
+{"sheet":6,"looking":"row 1 4 3 2, SORTED bracket returning under 1 and 4","waiting":"the 3","confusing":""},
+{"sheet":7,"looking":"arrow moving under the 3","waiting":"the 3 to move","confusing":"the SORTED bracket disappears again as soon as the arrow arrives"},
+{"sheet":8,"looking":"4 and 3 swapping to 1 3 4 2","waiting":"whether the 3 keeps going","confusing":""},
+{"sheet":9,"looking":"1 and 3 flashing orange, nothing moves","waiting":"the 2","confusing":"the arrow is under the 4, not the 3, so it's unclear which card is the one stopping"},
+{"sheet":10,"looking":"the 2 jumping left past the 4 and 3 to make 1 2 3 4","waiting":"the end","confusing":"the 2's moves happen fast and the second swap is easy to miss"},
+{"sheet":11,"looking":"all four boxes turning yellow with 'sorted'","waiting":"the takeaway","confusing":"yellow outlines and numbers on a cream background are faint and hard to read"},
+{"sheet":12,"looking":"headline 'Each card is compared only with cards already sorted'","waiting":"nothing","confusing":"the headline repeats the narration word for word"},
+{"sheet":13,"looking":"the same final screen held","waiting":"nothing","confusing":""},
+{"sheet":14,"looking":"final hold, end","waiting":"nothing","confusing":""}
+]

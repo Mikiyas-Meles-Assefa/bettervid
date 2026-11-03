@@ -4,7 +4,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderStill, selectComposition } from "@remotion/renderer";
 import { compile } from "../core/compile.ts";
 import { circle } from "../kits/shapes.ts";
@@ -20,7 +20,7 @@ ffmpeg("-f", "lavfi", "-i", `testsrc2=size=${SIZE}x${SIZE}:rate=1`, "-frames:v",
 const source = raw(picture, "null");
 const src = `data:image/png;base64,${readFileSync(picture).toString("base64")}`;
 const [x, y] = [540, 960];
-const serveUrl = await bundle({ entryPoint: resolve("engine/proof/styles-preview.tsx") });
+const serveUrl = await bundled(resolve("engine/proof/styles-preview.tsx"));
 let worst = 0;
 for (const name of named.length ? named : styleNames()) {
   const theme = themeFrom(name);

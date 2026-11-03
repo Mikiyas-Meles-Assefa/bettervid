@@ -2,7 +2,7 @@
 // motion on ordinary parts. No model is involved and no world knows it is a demo.
 // Usage: node --experimental-strip-types engine/proof/motion.ts <outDir> <style> [<style> ...]
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { compile } from "../core/compile.ts";
 import type { NodeSpec, Step } from "../core/types.ts";
@@ -119,7 +119,7 @@ function scene(): { steps: Step[]; frames: number } {
 const [out, ...styles] = process.argv.slice(2);
 if (!out || !styles.length) throw new Error("usage: motion.ts <outDir> <style> [<style> ...]");
 const { steps, frames } = scene();
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
 for (const name of styles) {
   const theme = themeFrom(name);
   const t = Date.now();

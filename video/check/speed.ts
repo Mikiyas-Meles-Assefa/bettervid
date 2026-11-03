@@ -3,7 +3,7 @@
 // Prints frames per second for the whole call (including browser start) and for frames alone.
 import { readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../../engine/render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { playerProps } from "../../pipeline/stages/render.ts";
 
@@ -12,7 +12,7 @@ if (!folder || !a || !b) throw new Error("usage: speed.ts <projectDir> <first> <
 const p = JSON.parse(readFileSync(join(folder, "project.json"), "utf8"));
 // INLINE=1 keeps engine scenes in the props, to compare with the scene file the pipeline uses (written before bundling).
 const inputProps = process.env.INLINE ? { timeline: p.timeline } : playerProps(p);
-const serveUrl = await bundle({ entryPoint: resolve("video/index.ts"), publicDir: resolve(folder) });
+const serveUrl = await bundled(resolve("video/index.ts"), { publicDir: resolve(folder) });
 const browserExecutable = process.env.BETTERVID_CHROME || null;
 const t0 = Date.now();
 const composition = await selectComposition({ serveUrl, id: "Bettervid", inputProps, browserExecutable });

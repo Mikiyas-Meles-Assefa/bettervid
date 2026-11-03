@@ -1,7 +1,7 @@
 // Spike S11: can Spark write a simulation that runs, syncs to cues and fits a style? Usage: node ... scripts/s11/run.ts <outDir> [traffic|waves] [spentSoFar]
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../../engine/render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { text } from "../../pipeline/lib/meta.ts";
 import { loadSim, SAFE, seeded } from "./kit.ts";
@@ -121,7 +121,7 @@ console.log(`final measurements:\n${table(code)}`);
 writeFileSync(join(out, "sim.js"), code);
 console.log(`spent $${usd.toFixed(3)}`);
 
-const serveUrl = await bundle({ entryPoint: resolve("scripts/s11/Sim.tsx") });
+const serveUrl = await bundled(resolve("scripts/s11/Sim.tsx"));
 for (const name of ["collage", "whiteboard"]) {
   const inputProps = { code, cues, style: JSON.parse(readFileSync(`styles/${name}.json`, "utf8")) };
   const composition = await selectComposition({ serveUrl, id: "Sim", inputProps });

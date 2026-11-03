@@ -1,0 +1,2767 @@
+{
+ "run": "2026-11-03-baseline-opus",
+ "overall": {
+  "cases": 8,
+  "built": 8,
+  "passed": 8,
+  "overall": 0.792,
+  "eye": 0.81,
+  "lag": 0.915,
+  "pace": 0.607,
+  "load": 0.983,
+  "holds": 0.709,
+  "reveal": 0.875,
+  "read": 0.49,
+  "learner": 0.927,
+  "wordsOnly": 0.564,
+  "gain": 0.364,
+  "hard": 0.875,
+  "hardWordsOnly": 0.167,
+  "hardGap": 0.708,
+  "depictFree": 0.948,
+  "depictSeen": 0.676,
+  "depict": 0.785,
+  "pictureQuestions": 0.865,
+  "pictureQuestionsWordsOnly": 0.146,
+  "followOnLook": 0.822,
+  "followWaiting": 0.818,
+  "followConfused": 0.551,
+  "designer": 4.125,
+  "scrollKept": 0.769,
+  "scrollRemembers": 0.75,
+  "materialCases": 4,
+  "learnerMaterial": 0.984,
+  "learnerPrompt": 0.871
+ },
+ "cases": [
+  {
+   "id": "titration-lab",
+   "use": "a lab procedure step, from a handout",
+   "style": "chalkboard",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.798,
+   "scores": {
+    "lag": 0.925,
+    "pace": 0.333,
+    "load": 0.96,
+    "read": 0.244,
+    "depict": 1,
+    "eye": 0.926,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.9375,
+   "wordsOnly": 0.6875,
+   "gain": 0.25,
+   "pictureQuestions": 0.8333333333333334,
+   "pictureQuestionsWordsOnly": 0.3333333333333333,
+   "hard": 0.8333333333333334,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 1,
+   "depictSeen": 0.8055555555555556,
+   "depict": 0.8833333333333333,
+   "follow": {
+    "onLook": 0.8846153846153846,
+    "waiting": 0.7692307692307693,
+    "confused": 0.6153846153846154
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 4,
+    "motion": 4,
+    "hierarchy": 5,
+    "consistency": 4,
+    "issues": [
+     "Sheets 05-13: the 'pink' is never pink. The flash where the drop lands is a mustard-yellow ellipse and the endpoint fill is olive/khaki; the one visual fact the clip exists to teach (faint pink that lasts) is shown in the wrong color, actively mis-teaching what to look for",
+     "Sheets 01-13: the apparatus is a small thin-line burette and flask pinned mid-frame occupying maybe a quarter of the 9:16 canvas; the bottom third is empty chalkboard and the flask (where all the action happens) is tiny, so drops and the color change are hard to see on a phone",
+     "Sheets 06-10: the flash/fade/linger cycle reads as the same blob appearing and dimming; there is no visible difference between 'flashes then fades' and 'starts to linger', no swirl motion, and no visible slowing of drop rate for 'drop by drop', so motion does not carry the narration's meaning"
+    ]
+   },
+   "scroller": {
+    "kept": 0.15384615384615385,
+    "remembers": 0
+   },
+   "material": true,
+   "tickets": [
+    "demo_unsettled: Phase 1 of e2's demo (fast, 6.5 to 13.4 s) should end on the finished state, but \"additions into the flask\" is still changing at 13.3 s, 0.00 s before it ends; it never rests on the result.",
+    "demo_unsettled: Phase 1 of e3's demo (slow, 13.4 to 18.1 s) should end on the finished state, but \"additions into the flask\" is still changing at 18.0 s, 0.00 s before it ends; it never rests on the result."
+   ],
+   "raw": {
+    "seconds": 25.3,
+    "things": 7,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.81,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.9,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 20,
+     "in_time": 14,
+     "late": 5,
+     "already": 1,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": -0.5
+     }
+    ],
+    "tempo": {
+     "cv": 0.32,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.62
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.44
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 1.06
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.77
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 6.87,
+      "beats": 3,
+      "settled": 0
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 4.7,
+      "beats": 3,
+      "settled": 0
+     }
+    ],
+    "slowThenFaster": 0,
+    "load": {
+     "seconds": 25,
+     "overNew": 0,
+     "overPull": 1,
+     "peakNew": 2,
+     "peakPull": 4,
+     "newPerSecond": 0.27,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_rig",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_rig runs s1_lab"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "still": false,
+      "work": 0.97,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
+    "read": {
+     "frames": 50,
+     "score": 0.244,
+     "words": 0.269,
+     "density": 1,
+     "subject": 0.544,
+     "space": 0.925,
+     "broken": 0,
+     "smallShare": 0.871,
+     "faintShare": 0,
+     "filledShare": 0.457,
+     "emptyBand": 0.155,
+     "examples": [
+      "small \"0\" 39 px",
+      "small \"10\" 39 px",
+      "small \"20\" 39 px",
+      "small \"30\" 39 px"
+     ],
+     "worst": [
+      {
+       "t": 18,
+       "words": 0.15,
+       "density": 1,
+       "subject": 0.53,
+       "space": 0.86,
+       "broken": false,
+       "score": 0.13,
+       "chars": 23,
+       "small": [
+        "\"0\" 39 px",
+        "\"10\" 39 px",
+        "\"20\" 39 px",
+        "\"30\" 39 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 18.5,
+       "words": 0.15,
+       "density": 1,
+       "subject": 0.53,
+       "space": 0.86,
+       "broken": false,
+       "score": 0.13,
+       "chars": 23,
+       "small": [
+        "\"0\" 39 px",
+        "\"10\" 39 px",
+        "\"20\" 39 px",
+        "\"30\" 39 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12,
+       "words": 0.16,
+       "density": 1,
+       "subject": 0.53,
+       "space": 0.96,
+       "broken": false,
+       "score": 0.14,
+       "chars": 49,
+       "small": [
+        "\"0\" 39 px",
+        "\"10\" 39 px",
+        "\"20\" 39 px",
+        "\"30\" 39 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 51,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose",
+      "why": "students refreshing before lab"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
+    }
+   }
+  },
+  {
+   "id": "support-tickets",
+   "use": "a meeting slide turned into a clip",
+   "style": "flat",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.637,
+   "scores": {
+    "lag": 0.934,
+    "pace": 0.5,
+    "load": 0.944,
+    "read": 0.288,
+    "depict": 0.833,
+    "eye": 0.599,
+    "holds": 1,
+    "reveal": 0
+   },
+   "learner": 1,
+   "wordsOnly": 0.4375,
+   "gain": 0.5625,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 1,
+   "hardWordsOnly": 0,
+   "depictFree": 0.833,
+   "depictSeen": 0.6904761904761905,
+   "depict": 0.7474857142857143,
+   "follow": {
+    "onLook": 0.8333333333333334,
+    "waiting": 0.8888888888888888,
+    "confused": 0.6666666666666666
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 4,
+    "hierarchy": 5,
+    "consistency": 4,
+    "issues": [
+     "Sheets 08-09: the payoff 'half the queue goes away' is not shown. The login dots turn from orange to navy and stay put; nothing leaves the queue, so the climax has no visual action, and the color swap breaks the orange-equals-login code established in sheets 03-06",
+     "Sheets 07-09: the waffle's half marker is a stepped line plus a stray vertical rule with a tiny 'HALF: 420' label; it reads as a glitch, and 412 vs 420 is not legible across a room, so 'almost half' is not visibly proven",
+     "Sheets 02-06: the bar chart sits in the top third, left-aligned, longest bar about 40 percent of the width; the bottom half of a 9:16 frame is empty, and labels/values are small for a meeting-room screen"
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "competing: During e1 (0.0 to 2.9 s) the eye should be on \"the total, 840\" (s1_total), but only 37% of the change on screen is there; 2 other things pull at it: s1_head (\"Q3 SUPPORT TICKETS\") for 0.4 s, s1_totline.back, ttickets.s1_sub.1 together for 0.4 s.",
+    "promise_missing: The opening should confirm \"Where our support tickets really come from.\" (s1_chart), but none of it is on screen in the first 3 s.",
+    "hold_frozen: Hold h2 (settle, 2.0 s after word 33) should show: \"the login share stays lit as half of all tickets\". Nothing on screen changes from 15.3 to 17.3 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 17.5,
+    "things": 13,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.37,
+      "competing": 2
+     },
+     {
+      "event": "e2",
+      "share": 0.65,
+      "competing": 2
+     },
+     {
+      "event": "e3",
+      "share": 0.68,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.7,
+      "competing": 3
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 16,
+     "in_time": 15,
+     "late": 1,
+     "already": 0,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 1.47
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "reveal",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.43,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.68
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 1.67
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.76
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.72
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 18,
+     "overNew": 0,
+     "overPull": 1,
+     "peakNew": 4,
+     "peakPull": 4,
+     "newPerSecond": 0.72,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 0.667,
+     "free": 0.833,
+     "units": [
+      {
+       "id": "s1_chart",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_q",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_chart runs s1_bars",
+      "s1_q runs s1_queue"
+     ],
+     "told": [
+      "do count s1_total"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 1.5,
+      "still": true,
+      "work": 0.11,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     },
+     {
+      "id": "h2",
+      "purpose": "settle",
+      "seconds": 2,
+      "still": true,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
+    "read": {
+     "frames": 33,
+     "score": 0.288,
+     "words": 0.329,
+     "density": 1,
+     "subject": 0.35,
+     "space": 0.96,
+     "broken": 0,
+     "smallShare": 0.764,
+     "faintShare": 0.019,
+     "filledShare": 0.65,
+     "emptyBand": 0.091,
+     "examples": [
+      "faint \"Q3 SUPPORT\" 2.7:1",
+      "faint \"TICKETS\" 2.7:1",
+      "small \"tickets\" 72 px",
+      "small \"840\" 64 px",
+      "small \"Login\" 58 px",
+      "small \"TICKETS\" 64 px"
+     ],
+     "worst": [
+      {
+       "t": 8.5,
+       "words": 0.12,
+       "density": 1,
+       "subject": 0.58,
+       "space": 1,
+       "broken": false,
+       "score": 0.11,
+       "chars": 46,
+       "small": [
+        "\"840\" 64 px",
+        "\"Login\" 58 px",
+        "\"412\" 68 px",
+        "\"Billing\" 58 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 9,
+       "words": 0.12,
+       "density": 1,
+       "subject": 0.58,
+       "space": 1,
+       "broken": false,
+       "score": 0.11,
+       "chars": 46,
+       "small": [
+        "\"840\" 64 px",
+        "\"Login\" 58 px",
+        "\"412\" 68 px",
+        "\"Billing\" 58 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 9.5,
+       "words": 0.12,
+       "density": 1,
+       "subject": 0.58,
+       "space": 1,
+       "broken": false,
+       "score": 0.11,
+       "chars": 46,
+       "small": [
+        "\"840\" 64 px",
+        "\"Login\" 58 px",
+        "\"412\" 68 px",
+        "\"Billing\" 58 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.894,
+      "frames": 36,
+      "severe": 1,
+      "mild": 7,
+      "kinds": {
+       "empty": 1,
+       "dimmed": 7
+      },
+      "examples": [
+       "empty at 1.5 s: 22% of the usable frame has anything in it; the largest empty band is 69% of its height"
+      ]
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "meeting room screen",
+      "frame": "9:16",
+      "distance": "across a meeting room",
+      "attention": "watching on purpose",
+      "why": "an all-hands meeting"
+     },
+     "read": {
+      "small": 0.051,
+      "comfortable": 0.102,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1",
+       "h2"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
+    }
+   }
+  },
+  {
+   "id": "ball-drop",
+   "use": "predict, then reveal",
+   "style": "chalkboard",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.804,
+   "scores": {
+    "lag": 0.917,
+    "pace": 0.867,
+    "load": 0.957,
+    "read": 0.094,
+    "depict": 1,
+    "eye": 0.601,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.8571428571428571,
+   "wordsOnly": 0.42857142857142855,
+   "gain": 0.42857142857142855,
+   "pictureQuestions": 0.75,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.5142857142857142,
+   "depict": 0.7085714285714286,
+   "follow": {
+    "onLook": 0.7916666666666666,
+    "waiting": 0.8333333333333334,
+    "confused": 0.4166666666666667
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 5,
+    "type": 4,
+    "motion": 4,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheet 06: 'They land together' is spoken and captioned at 10.6 s while both balls are still sitting on the start line; the drop only begins about 11.5 s and the landing happens at about 15.2 s (sheet 08). The answer is told before it is shown, which kills the prediction moment the clip exists for",
+     "Sheets 06-08: the fall takes almost 4 seconds and lands under unrelated words ('the same rate'); there is no landing beat (no impact, no hold, no 'together' mark) so the key evidence slips past",
+     "Sheets 07 and 10: headline crossfades overlap into garbage text ('Which lands / mass at the same rate', 'For these twoir resistance can split them'); on a classroom screen this reads as a rendering error"
+    ]
+   },
+   "scroller": {
+    "kept": 0.3333333333333333,
+    "remembers": 0.5
+   },
+   "material": false,
+   "tickets": [
+    "withheld_early: The plan withholds \"the balls falling and which lands first\" until e3 (10.7 s), but also asks e2 (\"Ask for a prediction.\") to show s1_drop, which the scene does from 0.4 s. One of the two has to change.",
+    "hold_frozen: Hold h1 (predict, 3.0 s after word 18) should show: \"both balls hang at the top; nothing moves toward the answer\". Nothing on screen changes from 7.6 to 10.6 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 22.6,
+    "things": 8,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 0.04,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.67,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.69,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 18,
+     "in_time": 12,
+     "late": 4,
+     "already": 2,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.07
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": 0.07
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.39,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.62
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.47
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.16
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.49
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.33,
+      "beats": 1,
+      "settled": 1.57
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 23,
+     "overNew": 0,
+     "overPull": 1,
+     "peakNew": 3,
+     "peakPull": 4,
+     "newPerSecond": 0.35,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_drop",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_drop runs s1_fall"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 3,
+      "still": true,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
+    "read": {
+     "frames": 45,
+     "score": 0.094,
+     "words": 0.105,
+     "density": 1,
+     "subject": 0.411,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 1,
+     "faintShare": 0,
+     "filledShare": 0.684,
+     "emptyBand": 0.064,
+     "examples": [
+      "small \"bowling ball\" 46 px",
+      "small \"tennis ball\" 46 px",
+      "small \"same height\" 40 px",
+      "small \"Which lands\" 61 px",
+      "small \"first?\" 61 px",
+      "small \"Which lands\" 57 px"
+     ],
+     "worst": [
+      {
+       "t": 13,
+       "words": 0.04,
+       "density": 1,
+       "subject": 0.58,
+       "space": 1,
+       "broken": false,
+       "score": 0.03,
+       "chars": 67,
+       "small": [
+        "\"bowling ball\" 46 px",
+        "\"tennis ball\" 46 px",
+        "\"Gravity speeds up every\" 44 px",
+        "\"mass at the same rate\" 44 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 13.5,
+       "words": 0.04,
+       "density": 1,
+       "subject": 0.67,
+       "space": 1,
+       "broken": false,
+       "score": 0.03,
+       "chars": 67,
+       "small": [
+        "\"bowling ball\" 46 px",
+        "\"tennis ball\" 46 px",
+        "\"Gravity speeds up every\" 44 px",
+        "\"mass at the same rate\" 44 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 14,
+       "words": 0.04,
+       "density": 1,
+       "subject": 0.81,
+       "space": 1,
+       "broken": false,
+       "score": 0.03,
+       "chars": 67,
+       "small": [
+        "\"bowling ball\" 46 px",
+        "\"tennis ball\" 46 px",
+        "\"Gravity speeds up every\" 44 px",
+        "\"mass at the same rate\" 44 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.674,
+      "frames": 46,
+      "severe": 15,
+      "mild": 0,
+      "kinds": {
+       "dimmed": 14,
+       "overlap": 1
+      },
+      "examples": [
+       "dimmed at 15.5 s: 75% of what is on screen is dimmed or faded",
+       "overlap at 20.0 s: writing on top of writing: \"air resistance\" and \"For these two:\" (25% of the smaller)"
+      ]
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a prediction moment for physics students in class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
+    }
+   }
+  },
+  {
+   "id": "under-the-dock",
+   "use": "a horror beat whose subject stays hidden",
+   "style": "ink",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.969,
+   "scores": {
+    "lag": 1,
+    "pace": 0.75,
+    "load": 1,
+    "read": 1,
+    "depict": 1,
+    "eye": 1,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.75,
+   "wordsOnly": 0.5,
+   "gain": 0.25,
+   "pictureQuestions": 0.5,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 0.5,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.8571428571428572,
+   "depict": 0.9142857142857144,
+   "follow": {
+    "onLook": 0.8333333333333334,
+    "waiting": 0.5833333333333334,
+    "confused": 0.5833333333333334
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 5,
+    "consistency": 5,
+    "issues": [
+     "Sheets 01-12: the look fights the brief. A bright cream paper background with a flat brown box for the lake reads as daytime infographic, not a campfire story; there is no darkness, no night, no depth below the surface, so nothing feels like it could be hiding under the dock",
+     "Sheets 06-11: the rope 'going tight' is a single snap from a slack curve to a straight line, then nothing. No strain, no tremor, no tug, no pull on the post, no ripple at the entry point; once taut the frame is effectively a still for 12 seconds, so the 'something is holding it' feeling is never built",
+     "Sheets 08-09: the slow push-in during the silence is the one good instinct, but it reverses at about 16.9 s (sheet 09) and snaps back out to the wide shot, releasing the tension exactly when 'She didn't move' should tighten it"
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "seconds": 22.8,
+    "things": 1,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 0,
+     "in_time": 0,
+     "late": 0,
+     "already": 0,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": -0.5
+     }
+    ],
+    "tempo": {
+     "cv": 0.72,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.41
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.28
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.15
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 23,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 1,
+     "peakPull": 1,
+     "newPerSecond": 0.04,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_scene",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_scene runs s1_lake"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 3,
+      "still": false,
+      "work": 1,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     },
+     {
+      "id": "h2",
+      "purpose": "settle",
+      "seconds": 2,
+      "still": true,
+      "work": 0.87,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
+    "read": {
+     "frames": 46,
+     "score": 1,
+     "words": 1,
+     "density": 1,
+     "subject": 1,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0,
+     "faintShare": 0,
+     "filledShare": 0.849,
+     "emptyBand": 0,
+     "examples": [],
+     "worst": [
+      {
+       "t": 0.5,
+       "words": 1,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 1,
+       "chars": 0,
+       "small": [],
+       "faint": []
+      },
+      {
+       "t": 1,
+       "words": 1,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 1,
+       "chars": 0,
+       "small": [],
+       "faint": []
+      },
+      {
+       "t": 1.5,
+       "words": 1,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 1,
+       "chars": 0,
+       "small": [],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 46,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose, in the dark",
+      "why": "a story channel watched at night"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": [
+       "e3"
+      ]
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h2"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion. The thing under the water is meant to stay hidden, so the eye is not scored on it in e3, and the final hold is meant to be still."
+    }
+   }
+  },
+  {
+   "id": "canal-lock",
+   "use": "a 16:9 lesson on a TV across a room",
+   "style": "blueprint",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.81,
+   "scores": {
+    "lag": 0.893,
+    "pace": 0.271,
+    "load": 1,
+    "read": 0.462,
+    "depict": 1,
+    "eye": 0.852,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.5714285714285714,
+   "gain": 0.4285714285714286,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 1,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.875,
+   "depict": 0.925,
+   "follow": {
+    "onLook": 0.8571428571428571,
+    "waiting": 0.8214285714285714,
+    "confused": 0.5
+   },
+   "designer": {
+    "overall": 5,
+    "composition": 5,
+    "type": 5,
+    "motion": 5,
+    "hierarchy": 5,
+    "consistency": 6,
+    "issues": [
+     "Sheets 01-14: the water is painted khaki/sand while the ground under it is pale blue; the color code is inverted, so a 9-year-old reads the blue as water and the tan as land, and 'water fills the chamber' looks like the chamber filling with sand",
+     "Sheets 12-13: the upper gate opening, the final step the clip promises, is a thin dark line that simply vanishes; no swing, no gap opening, no emphasis, and 'levels match' is only a faint dashed line, so the payoff step is nearly invisible across a living room",
+     "Sheets 01-14: the bottom caption is printed directly on the diagram's base, overlapping the tiny 'LOWER CANAL / CHAMBER' labels, and is set in small tracked caps; it collides on every frame and is hard to read at 3 m"
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "flat_rhythm: The picture changes at nearly the same rate all through (e1 0.47, e2 0.85, e3 0.65, e4 0.82 steps a second; spread 0.22). The plan mixes long and short events, but the scene does not.",
+    "demo_unsettled: Phase 1 of e3's demo (slow, 14.3 to 20.3 s) should end on the finished state, but \"the chamber filling and the boat rising\" is still changing at 20.3 s, 0.00 s before it ends; it never rests on the result."
+   ],
+   "raw": {
+    "seconds": 25.8,
+    "things": 5,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.57,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.84,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 28,
+     "in_time": 16,
+     "late": 8,
+     "already": 4,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e4",
+      "what": "reveal",
+      "lag": -0.5
+     }
+    ],
+    "tempo": {
+     "cv": 0.22,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.47
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.85
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.65
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.82
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.03,
+      "beats": 1,
+      "settled": 0
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 26,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 3,
+     "newPerSecond": 0.19,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_lock",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_lock runs s1_canal"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2.5,
+      "still": false,
+      "work": 1,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
+    "read": {
+     "frames": 52,
+     "score": 0.462,
+     "words": 0.554,
+     "density": 1,
+     "subject": 1,
+     "space": 1,
+     "broken": 0.25,
+     "smallShare": 0.444,
+     "faintShare": 0.43,
+     "filledShare": 0.698,
+     "emptyBand": 0.103,
+     "examples": [
+      "small \"lower canal\" 20 px",
+      "small \"chamber\" 20 px",
+      "small \"upper canal\" 20 px",
+      "faint \"lower canal\" 1.3:1",
+      "faint \"chamber\" 1.3:1",
+      "faint \"upper canal\" 1.3:1"
+     ],
+     "worst": [
+      {
+       "t": 15,
+       "words": 0.61,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": true,
+       "score": 0.24,
+       "chars": 74,
+       "small": [
+        "\"lower canal\" 20 px",
+        "\"chamber\" 20 px",
+        "\"upper canal\" 20 px"
+       ],
+       "faint": [
+        "\"lower canal\" 1.1:1",
+        "\"chamber\" 1.1:1",
+        "\"upper canal\" 1.1:1"
+       ]
+      },
+      {
+       "t": 15.5,
+       "words": 0.61,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": true,
+       "score": 0.24,
+       "chars": 74,
+       "small": [
+        "\"lower canal\" 20 px",
+        "\"chamber\" 20 px",
+        "\"upper canal\" 20 px"
+       ],
+       "faint": [
+        "\"lower canal\" 1.1:1",
+        "\"chamber\" 1.1:1",
+        "\"upper canal\" 1.1:1"
+       ]
+      },
+      {
+       "t": 16,
+       "words": 0.61,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": true,
+       "score": 0.24,
+       "chars": 74,
+       "small": [
+        "\"lower canal\" 20 px",
+        "\"chamber\" 20 px",
+        "\"upper canal\" 20 px"
+       ],
+       "faint": [
+        "\"lower canal\" 1.1:1",
+        "\"chamber\" 1.1:1",
+        "\"upper canal\" 1.1:1"
+       ]
+      }
+     ],
+     "layout": {
+      "score": 0.75,
+      "frames": 52,
+      "severe": 13,
+      "mild": 0,
+      "kinds": {
+       "off_frame": 13
+      },
+      "examples": [
+       "off_frame at 15.0 s: cut by the frame edge: \"4. WATER POURS IN, AND THE BOAT RISES WI\" (7% outside)"
+      ]
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "TV",
+      "frame": "16:9",
+      "distance": "across a living room, about 3 m from a 1.2 m wide screen",
+      "attention": "watching on purpose, together",
+      "why": "a home-school lesson on the living room TV"
+     },
+     "read": {
+      "small": 0.014,
+      "comfortable": 0.028,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion. For a TV: a 1.2 m wide picture seen from about 3 m looks about 2.5 times as wide as a phone's 65 mm at 40 cm, so the read sizes (shares of the frame's width) are the phone's divided by 2.5."
+    }
+   }
+  },
+  {
+   "id": "urban-heat",
+   "use": "a 16:9 recap from a slide, held to a syllabus and a style note",
+   "style": "flat",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.708,
+   "scores": {
+    "lag": 0.833,
+    "pace": 0.5,
+    "load": 1,
+    "read": 0.405,
+    "depict": 1,
+    "eye": 0.927,
+    "holds": 0,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.5714285714285714,
+   "gain": 0.4285714285714286,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 1,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.5,
+   "depict": 0.7,
+   "follow": {
+    "onLook": 0.625,
+    "waiting": 0.8333333333333334,
+    "confused": 0.75
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 4,
+    "motion": 4,
+    "hierarchy": 4,
+    "consistency": 4,
+    "issues": [
+     "Sheets 07-12: the '23 °C' gap label is jammed into the bracket and overlaps the '29 °C' value label, so the clip's key number (the gap) is a collision of two orange and navy labels and hard to read at laptop size",
+     "Sheets 04-12: two charts of the same data share the frame: the original slide shrunk to an illegible thumbnail at top left (tick labels and category names a few pixels tall) and a new two-bar chart at top right; they use different colors for asphalt (green vs slate), the eye has to reconcile them, and the bottom 40 percent of the frame is empty",
+     "Sheets 11-12: the takeaway headline wraps with an orphaned 'cooling' and its second line collides with the caption beneath it ('cooling' over 'does the cooling'); the most important sentence of the clip is the messiest frame"
+    ]
+   },
+   "scroller": {
+    "kept": 0.6666666666666666,
+    "remembers": 0.5
+   },
+   "material": true,
+   "tickets": [
+    "hold_frozen: Hold h1 (look, 2.0 s after word 36) should show: \"the gap between the two bar tops is marked in orange while the figure stays readable\". Nothing on screen changes from 15.2 to 17.2 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 23.2,
+    "things": 4,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 0.71,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 15,
+     "in_time": 8,
+     "late": 1,
+     "already": 3,
+     "missing": 3,
+     "missed": [
+      "July (word 2)",
+      "afternoon, (word 3)",
+      "ground (word 5)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "reveal",
+      "lag": 0.07
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.97
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.13
+     }
+    ],
+    "tempo": {
+     "cv": 0.65,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.18
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.71
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.16
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.31
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 23,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 2,
+     "newPerSecond": 0.17,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_slide",
+       "kind": "image",
+       "as": "itself"
+      },
+      {
+       "id": "s1_chart",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_chart runs s1_ends"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "still": false,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
+    "read": {
+     "frames": 46,
+     "score": 0.405,
+     "words": 0.616,
+     "density": 1,
+     "subject": 0.761,
+     "space": 0.997,
+     "broken": 0.478,
+     "smallShare": 0.323,
+     "faintShare": 0,
+     "filledShare": 0.679,
+     "emptyBand": 0.019,
+     "examples": [
+      "small picture s1_slide 48% wide"
+     ],
+     "worst": [
+      {
+       "t": 13,
+       "words": 0.61,
+       "density": 1,
+       "subject": 0.53,
+       "space": 1,
+       "broken": true,
+       "score": 0.22,
+       "chars": 63,
+       "small": [
+        "picture s1_slide 48% wide"
+       ],
+       "faint": []
+      },
+      {
+       "t": 13.5,
+       "words": 0.61,
+       "density": 1,
+       "subject": 0.53,
+       "space": 1,
+       "broken": true,
+       "score": 0.22,
+       "chars": 63,
+       "small": [
+        "picture s1_slide 48% wide"
+       ],
+       "faint": []
+      },
+      {
+       "t": 14,
+       "words": 0.61,
+       "density": 1,
+       "subject": 0.53,
+       "space": 1,
+       "broken": true,
+       "score": 0.22,
+       "chars": 63,
+       "small": [
+        "picture s1_slide 48% wide"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.532,
+      "frames": 47,
+      "severe": 22,
+      "mild": 0,
+      "kinds": {
+       "overlap": 22
+      },
+      "examples": [
+       "overlap at 13.0 s: writing on top of writing: \"29 °C\" and \"23 °C\" (21% of the smaller)"
+      ]
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "laptop",
+      "frame": "16:9",
+      "distance": "at a desk",
+      "attention": "watching on purpose",
+      "why": "a recap posted on the course page, watched while revising at a desk"
+     },
+     "read": {
+      "small": 0.0075,
+      "comfortable": 0.015,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion. A 16:9 frame full screen on a laptop at a desk is about 330 mm wide, about 3.1 times the width a 9:16 frame gets on the same screen (off-by-one's laptop settings, 0.023 and 0.046), so the read sizes are those divided by 3.1."
+    }
+   }
+  },
+  {
+   "id": "magna-carta",
+   "use": "a history turning point, from a teacher's notes",
+   "style": "collage",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.777,
+   "scores": {
+    "lag": 0.889,
+    "pace": 1,
+    "load": 1,
+    "read": 0.745,
+    "depict": 0.875,
+    "eye": 0.705,
+    "holds": 0,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.5,
+   "gain": 0.5,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 1,
+   "hardWordsOnly": 0,
+   "depictFree": 0.875,
+   "depictSeen": 0.4041666666666667,
+   "depict": 0.5925,
+   "follow": {
+    "onLook": 0.9615384615384616,
+    "waiting": 0.8846153846153846,
+    "confused": 0.3076923076923077
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 4,
+    "hierarchy": 5,
+    "consistency": 4,
+    "issues": [
+     "Sheets 08-11: the key clause, the most important text in the clip, is set directly on top of the charter, its highlight and the seal; the seal ring cuts through 'imprisoned' and the faux text lines run behind the words, so the quote reads as a collision rather than a revealed line",
+     "Sheet 07: the push-in on the highlighted clause scales the yellow 'But one clause...' card off the bottom edge (cropped 'But one clause wil' at 13.2 s, a ghost of it still at 14.2 s); the word 'No' is spoken at 12.0 s but nothing of the clause appears until 14.5 s",
+     "Sheets 12-13: the payoff 'a king was placed under the law' is three disconnected labels (yellow 'THE LAW' card, grey 'A king', tiny 'IN WRITING' floating off the page edge) with the caption printed over the document's foot; there is no king, no relationship drawn, so 'under' is only implied by stacking"
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "hold_frozen: Hold h1 (look, 1.5 s after word 28) should show: \"the view moves along the charter toward one clause, still unread\". Nothing on screen changes from 12.4 to 13.9 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 25.7,
+    "things": 10,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.85,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.58,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.74,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.65,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 27,
+     "in_time": 15,
+     "late": 6,
+     "already": 6,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.17
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": 0.17
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.23
+     }
+    ],
+    "tempo": {
+     "cv": 0.49,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.86
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.37
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.52
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 1.35
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 26,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 3,
+     "newPerSecond": 0.42,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 0.75,
+     "free": 0.875,
+     "units": [
+      {
+       "id": "s1_doc",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_doc runs s1_charter",
+      "s1_doc runs s1_charter",
+      "s1_doc redrawn",
+      "s1_doc runs s1_charter",
+      "s1_doc redrawn",
+      "s1_doc runs s1_charter"
+     ],
+     "told": [
+      "tag \"Runnymede\" on s1_doc",
+      "tag \"in writing\" on s1_doc"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 1.5,
+      "still": false,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
+    "read": {
+     "frames": 51,
+     "score": 0.745,
+     "words": 0.782,
+     "density": 1,
+     "subject": 0.91,
+     "space": 1,
+     "broken": 0.039,
+     "smallShare": 0.035,
+     "faintShare": 0,
+     "filledShare": 0.665,
+     "emptyBand": 0.042,
+     "examples": [
+      "small \"RUNNYMEDE\" 36 px",
+      "small \"IN WRITING\" 36 px"
+     ],
+     "worst": [
+      {
+       "t": 23,
+       "words": 0.38,
+       "density": 1,
+       "subject": 0.23,
+       "space": 1,
+       "broken": false,
+       "score": 0.32,
+       "chars": 16,
+       "small": [
+        "\"IN WRITING\" 36 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 23.5,
+       "words": 0.38,
+       "density": 1,
+       "subject": 0.23,
+       "space": 1,
+       "broken": false,
+       "score": 0.32,
+       "chars": 16,
+       "small": [
+        "\"IN WRITING\" 36 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 13.5,
+       "words": 1,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": true,
+       "score": 0.4,
+       "chars": 42,
+       "small": [],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.962,
+      "frames": 52,
+      "severe": 2,
+      "mild": 0,
+      "kinds": {
+       "off_frame": 2,
+       "dimmed": 2
+      },
+      "examples": [
+       "off_frame at 13.5 s: cut by the frame edge: \"But one clause will\" (76% outside), \"outlive everything else\" (100% outside)"
+      ]
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a clip for a history class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
+    }
+   }
+  },
+  {
+   "id": "insertion-sort",
+   "use": "an algorithm's first instance slow, then faster",
+   "style": "flat",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.832,
+   "scores": {
+    "lag": 0.929,
+    "pace": 0.635,
+    "load": 1,
+    "read": 0.678,
+    "depict": 0.875,
+    "eye": 0.872,
+    "holds": 0.67,
+    "reveal": 1
+   },
+   "learner": 0.875,
+   "wordsOnly": 0.8125,
+   "gain": 0.0625,
+   "pictureQuestions": 0.8333333333333334,
+   "pictureQuestionsWordsOnly": 0.8333333333333334,
+   "hard": 1,
+   "hardWordsOnly": 1,
+   "depictFree": 0.875,
+   "depictSeen": 0.7589285714285714,
+   "depict": 0.8053571428571429,
+   "follow": {
+    "onLook": 0.7857142857142857,
+    "waiting": 0.9285714285714286,
+    "confused": 0.5714285714285714
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheets 05, 08, 09, 10: cards never move. Every 'slide' is an in-place swap of the digits inside fixed boxes, done in about a quarter second, so 'the one slides in front' and 'it passes the four' are never seen as a card travelling past others; the user's 'show the first insert slowly' is not delivered (the first insert at 8.3-8.5 s is the fastest-looking event in the clip)",
+     "Sheets 05-10: the arrow stays parked on a slot instead of riding with the card being inserted; after the first swap it points at the 4 (sheet 05, 9.0 s onward) and after the 3's insert it points at the 4 again, so the eye follows the wrong card",
+     "Sheets 05 and 08: the comparison is never shown; there is no '4 > 1' or 'stops at 1 < 3' mark, just both cards turning orange, so the viewer cannot describe one insertion's logic"
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "seconds": 26.1,
+    "things": 8,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.68,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 0.8,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 14,
+     "in_time": 10,
+     "late": 0,
+     "already": 4,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.36,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.31
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.75
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 1.03
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.82
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.67,
+      "beats": 5,
+      "steps": 1,
+      "settled": 1.07
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "normal",
+      "seconds": 4.87,
+      "beats": 5,
+      "steps": 2,
+      "settled": 1
+     },
+     {
+      "event": "e4",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 8.5,
+      "beats": 6,
+      "steps": 3,
+      "settled": 4.7
+     }
+    ],
+    "slowThenFaster": 0,
+    "load": {
+     "seconds": 26,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 3,
+     "newPerSecond": 0.3,
+     "streams": []
+    },
+    "depict": {
+     "drawn": 1,
+     "changes": 0.75,
+     "free": 0.875,
+     "units": [
+      {
+       "id": "demo1",
+       "kind": "sort",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "do steps demo1",
+      "do steps demo1",
+      "do steps demo1"
+     ],
+     "told": [
+      "tag \"sorted\" on demo1"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 1.5,
+      "still": false,
+      "work": 0.33,
+      "other": 0,
+      "answered": false,
+      "score": 0.67
+     }
+    ],
+    "read": {
+     "frames": 52,
+     "score": 0.678,
+     "words": 0.821,
+     "density": 1,
+     "subject": 0.509,
+     "space": 0.515,
+     "broken": 0,
+     "smallShare": 0.036,
+     "faintShare": 0.136,
+     "filledShare": 0.357,
+     "emptyBand": 0.302,
+     "examples": [
+      "small \"SORTED\" 46 px",
+      "faint \"4\" 2.3:1",
+      "faint \"1\" 2.3:1",
+      "faint \"3\" 2.3:1",
+      "faint \"2\" 2.3:1",
+      "faint \"4\" 1.2:1"
+     ],
+     "worst": [
+      {
+       "t": 20.5,
+       "words": 0.47,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.47,
+       "broken": false,
+       "score": 0.38,
+       "chars": 18,
+       "small": [],
+       "faint": [
+        "\"4\" 1.2:1",
+        "\"1\" 1.2:1",
+        "\"3\" 1.2:1",
+        "\"2\" 1.2:1"
+       ]
+      },
+      {
+       "t": 21,
+       "words": 0.47,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.47,
+       "broken": false,
+       "score": 0.38,
+       "chars": 18,
+       "small": [],
+       "faint": [
+        "\"4\" 1.2:1",
+        "\"1\" 1.2:1",
+        "\"3\" 1.2:1",
+        "\"2\" 1.2:1"
+       ]
+      },
+      {
+       "t": 21.5,
+       "words": 0.47,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.47,
+       "broken": false,
+       "score": 0.38,
+       "chars": 18,
+       "small": [],
+       "faint": [
+        "\"4\" 1.2:1",
+        "\"1\" 1.2:1",
+        "\"3\" 1.2:1",
+        "\"2\" 1.2:1"
+       ]
+      }
+     ],
+     "layout": {
+      "score": 0.766,
+      "frames": 53,
+      "severe": 0,
+      "mild": 31,
+      "kinds": {
+       "empty": 31
+      },
+      "examples": []
+     }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a short for an intro CS class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3,
+      "stream": {
+       "gap": 0.6,
+       "min": 3,
+       "move": 0.03,
+       "near": 0.08,
+       "sameWay": 0.8
+      }
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
+    }
+   }
+  }
+ ]
+}

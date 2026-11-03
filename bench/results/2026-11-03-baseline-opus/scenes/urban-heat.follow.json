@@ -1,0 +1,14 @@
+[
+{"sheet":1,"looking":"a green bar chart 'Surface temperature by land cover' with five bars, 52 down to 29","waiting":"what the narration will point out in it","confusing":"all five numbers appear at once before anything is said, and the axis and labels are tiny"},
+{"sheet":2,"looking":"the same static chart","waiting":"which bar matters","confusing":"nothing changes; I'm reading a small slide while the voice talks"},
+{"sheet":3,"looking":"the chart shrinking left and a new big bar rising on the right","waiting":"what the new bar is","confusing":"a ghost bar and stray 'phalt' label flash over the old chart during the move"},
+{"sheet":4,"looking":"big asphalt bar labeled 52 °C, then a tree canopy bar starting","waiting":"the canopy number","confusing":""},
+{"sheet":5,"looking":"asphalt vs tree canopy bars side by side","waiting":"the canopy temperature","confusing":""},
+{"sheet":6,"looking":"29 °C label appearing over the tree canopy bar","waiting":"what the comparison means","confusing":""},
+{"sheet":7,"looking":"an orange bracket marking the gap, '23 °C'","waiting":"why the gap matters","confusing":"the '23 °C' label overlaps the '29 °C' label and both are hard to read"},
+{"sheet":8,"looking":"the gap bracket held","waiting":"what comes next","confusing":"the same overlapping 23 and 29 labels"},
+{"sheet":9,"looking":"headline 'GRASS AND BARE SOIL SIT IN BETWEEN' appearing","waiting":"to see grass and soil on the big chart","confusing":"the big chart only shows asphalt and tree canopy; grass and soil are only on the small left chart"},
+{"sheet":10,"looking":"the headline under the big chart with the caption below it","waiting":"the conclusion","confusing":"headline and caption say the same thing twice"},
+{"sheet":11,"looking":"orange headline 'Shade, not just green, does the cooling'","waiting":"nothing","confusing":"the headline's second line 'cooling' crowds into the caption beneath it"},
+{"sheet":12,"looking":"the final orange takeaway over both charts","waiting":"nothing","confusing":"nothing in the picture shows shade versus green, so the point is only in words"}
+]

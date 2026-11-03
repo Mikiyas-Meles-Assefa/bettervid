@@ -1,0 +1,18 @@
+{"sheets": [
+{"sheet": 1, "watching": true, "noticed": "'Insertion sort' title and four boxed numbers 4 1 3 2. Plain, clearly a lesson."},
+{"sheet": 2, "watching": true, "noticed": "A little orange bracket 'SORTED' under the 4. Why is 4 alone 'sorted'? Didn't really get it."},
+{"sheet": 3, "watching": true, "noticed": "Nothing moves for a while, 'like sorting playing cards'. Getting bored, staying only because it's on in class."},
+{"sheet": 4, "watching": true, "noticed": "An arrow pops under the 1. Something is about to happen."},
+{"sheet": 5, "watching": true, "noticed": "The 4 and 1 turn orange and swap: 1 4 3 2. Okay, that's the move."},
+{"sheet": 6, "watching": true, "noticed": "Sits still a bit, then the 'SORTED' bracket grows under 1 and 4."},
+{"sheet": 7, "watching": true, "noticed": "Arrow moves to the 3. 'Now the three.'"},
+{"sheet": 8, "watching": true, "noticed": "3 swaps with the 4, both go orange. Easy to follow."},
+{"sheet": 9, "watching": true, "noticed": "1 and 3 flash orange, nothing moves. The arrow stays under the 4 now, not the 3, a bit confusing."},
+{"sheet": 10, "watching": true, "noticed": "The 2 hops left twice, fast: 1 2 3 4."},
+{"sheet": 11, "watching": true, "noticed": "All boxes turn yellow and 'sorted' appears. Yellow on cream is pale and hard to see from the back."},
+{"sheet": 12, "watching": true, "noticed": "Heading changes to 'Each card is compared only with cards already sorted'. A sentence to read, half-read it."},
+{"sheet": 13, "watching": true, "noticed": "Same end screen held. Drifting, but it's basically over."},
+{"sheet": 14, "watching": true, "noticed": "Ends on the pale sorted row."}
+],
+"swiped_at": null,
+"remembers": "Insertion sort is like sorting cards in your hand: you take each number and slide it left past the bigger ones until it's in place, and you end with 1 2 3 4."}

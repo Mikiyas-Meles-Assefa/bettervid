@@ -175,3 +175,16 @@ test("older files with only `hand` keep working", () => {
   assert.equal(s.line.wobble, 2.5);
   assert.equal(s.line.weight, 1.3);
 });
+
+test("see-through colors keep their alpha: blending keeps it, and distance from the surface is judged by what shows", () => {
+  const board = "#2f3b36";
+  // A clear, nearly white liquid over a dark board is a faint film, not a strong mark, and never black.
+  const clear = "#eaf2f566";
+  assert.ok(apart(clear, "#c0c8ca") < 0.6 * apart("#eaf2f5", "#c0c8ca"));
+  assert.ok(apart(clear, board) > 0.3 && apart(clear, "#c0c8ca") > 0);
+  assert.match(blend(clear, board, 0.2), /^#[0-9a-f]{8}$/);
+  assert.notEqual(blend(clear, board, 0.2), clear);
+  assert.equal(blend("#000000", "#ffffff", 0.5), "#808080");
+  const layers = paintPath({ ...node, stroke: "none", fill: clear }, "n", spec({ fill: { kind: "scribble", base: 0.8 } }), board, "#000000");
+  for (const l of layers) for (const c of [l.fill, l.stroke]) if (c) assert.ok(c !== "#000000" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(c), `${c} is a color the renderer reads`);
+});

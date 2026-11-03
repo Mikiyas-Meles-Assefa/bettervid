@@ -10,9 +10,10 @@ import { prompt } from "../../pipeline/lib/project.ts";
 import { kitKinds, sceneBuildOptions } from "../../pipeline/stages/scene.ts";
 import { captions } from "../../pipeline/stages/timeline.ts";
 import type { Project } from "../../schemas/project.ts";
-import { loadCase, picturesOf, type Case } from "./case.ts";
+import { frameOf, loadCase, picturesOf, type Case } from "./case.ts";
 import { failed, measureCase, type CaseMeasure } from "./measure.ts";
-import { BENCH, RESULTS, WORK, folderOf } from "./paths.ts";
+import { bundled } from "../../engine/render/bundle.ts";
+import { BENCH, BUNDLES, RESULTS, WORK, folderOf } from "./paths.ts";
 import { settingsOf } from "./settings.ts";
 
 type Step = (run: string, ids: string[], flags: Set<string>) => Promise<void>;
@@ -92,16 +93,15 @@ export const measure: Step = async (run, ids) => {
 // and a transcript cut to the same 2 s windows. Frames are deleted once tiled.
 
 const SCALE = 1 / 3;
+// A sheet's tile keeps the clip's shape: its long side 480 px, its short side 270 px for 16:9 and 9:16.
+export const tile = (s: { width: number; height: number }): [number, number] => {
+  const even = (x: number) => Math.round(x / 2) * 2;
+  return s.height >= s.width ? [even((480 * s.width) / s.height), 480] : [480, even((480 * s.height) / s.width)];
+};
 const SHEET = { fps: 4, cols: 4, rows: 2 };
 const windowSeconds = (SHEET.cols * SHEET.rows) / SHEET.fps;
 
-let bundled: string | undefined;
-async function serveUrl(): Promise<string> {
-  if (bundled) return bundled;
-  const { bundle } = await import("@remotion/bundler");
-  bundled = await bundle({ entryPoint: join(BENCH, "clip.tsx") });
-  return bundled;
-}
+const serveUrl = () => bundled(join(BENCH, "clip.tsx"), { cache: BUNDLES });
 
 // The timed words, cut into the sheets' windows, with each hold as a silence.
 export function transcript(p: Project): string[] {
@@ -137,19 +137,33 @@ export const render: Step = async (run, ids) => {
     rmSync(sheets, { recursive: true, force: true });
     mkdirSync(sheets, { recursive: true });
     // Frames are sampled at the start of each quarter second and tiled in the order they play, left to right.
-    execFileSync("ffmpeg", ["-v", "error", "-y", "-i", mp4, "-vf", `fps=${SHEET.fps}:start_time=0:round=down,scale=270:480,tile=${SHEET.cols}x${SHEET.rows}:padding=4:color=gray`, "-q:v", "5", join(sheets, "sheet-%02d.jpg")]);
+    execFileSync("ffmpeg", ["-v", "error", "-y", "-i", mp4, "-vf", `fps=${SHEET.fps}:start_time=0:round=down,scale=${tile(b.scene).join(":")},tile=${SHEET.cols}x${SHEET.rows}:padding=4:color=gray`, "-q:v", "5", join(sheets, "sheet-%02d.jpg")]);
     writeFileSync(join(folder, "transcript.txt"), transcript(b.p).join("\n") + "\n");
     writeWatchTasks(run, id, b.p);
     console.log(`${id}: ${mp4} in ${((Date.now() - t0) / 1000).toFixed(0)} s, ${readdirSync(sheets).length} sheets`);
   }
-  // The bundle is about 30 MB in the system's temp folder; it is ours alone, so it goes once the clips are made.
-  rmSync(url, { recursive: true, force: true });
-  bundled = undefined;
+  // The bundle stays in the bench's bundle cache (work/.bundles) for later cases and runs.
 };
 
 // The tasks the watch tests give their agents: the quiz without answers, and where the sheets and words are.
+// How the watch tasks name the video and where it is seen, from the case's viewing context.
+export function seenAs(c: Case): { video: string; full: string; on: string; phone: boolean } {
+  const ctx = settingsOf(c).context;
+  const [w, h] = frameOf(c);
+  const video = `${h > w ? "vertical" : w > h ? "wide" : "square"} video`;
+  const phone = /phone/i.test(ctx.screen);
+  return { video, full: `${video} (${ctx.frame}, for ${phone ? "phones" : `a ${ctx.screen}, ${ctx.distance}`})`, on: phone ? "a phone" : `a ${ctx.screen}, ${ctx.distance}`, phone };
+}
+const shaped = (text: string, c: Case) => {
+  const v = seenAs(c);
+  let out = text.replace(/short vertical video \(9:16, for phones\)/g, `short ${v.full}`).replace(/short vertical video/g, `short ${v.video}`).replace(/readability on a phone/g, `readability on ${v.on}`);
+  if (!v.phone) out = out.replace("scrolling short videos on your phone", `half watching short videos on ${v.on}`).replace("it came up in your feed", "it came on").replace("the way a scroller would", "the way a half-attentive viewer would").replace("Once you would have swiped away", "Once you would have looked away for good");
+  return out;
+};
+
 function writeWatchTasks(run: string, id: string, p: Project) {
   const c = loadCase(id);
+  const [LEARNER, DESIGNER, SCROLLER, DEPICT, FOLLOW] = [LEARNER_, DESIGNER_, SCROLLER_, DEPICT_, FOLLOW_].map((t) => shaped(t, c));
   const folder = folderOf(run, id);
   const quiz = c.quiz.map((x, i) => `${i + 1}. ${x.q}`).join("\n");
   const sheets = readdirSync(join(folder, "sheets")).sort().map((f) => join(folder, "sheets", f));
@@ -169,15 +183,15 @@ export const tasks: Step = async (run, ids) => {
   for (const id of ids) if (existsSync(join(folderOf(run, id), "sheets"))) writeWatchTasks(run, id, projectOf(run, id));
 };
 
-const LEARNER = `You are a first-time learner. You know nothing about this topic beyond what the clip shows and says. You watch a short vertical video as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds. A clock in the top left corner of each frame gives the time; the captions at the bottom are the narration. Watch every sheet in order with the words beside it, as a viewer would, then answer the quiz from what the clip showed and said. Do not use outside knowledge: if the clip did not show or say it, answer "not in the clip". Say for each answer whether you got it from the words, the picture, or both.`;
-const DESIGNER = `You are a demanding motion designer and art director who makes top short-form explainers. You judge a short vertical video (9:16, for phones) from sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions at the bottom are the video's own. Go through every sheet in order. Judge as you would a colleague's cut before it ships: composition and use of the frame, type (size, weight, line length, readability on a phone), motion (does change carry meaning, is it smooth, purposeful, well timed with the words), hierarchy (is it always clear what matters now), and consistency. Score each from 1 (amateur) to 10 (best in the field); 5 is competent but forgettable. Be specific and strict; do not grade on effort.`;
-const SCROLLER = `You are an ordinary person scrolling short videos on your phone, a little tired and distracted. You did not choose this video; it came up in your feed. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds. Glance at each sheet the way a scroller would, for a moment, noticing only what grabs you; you half hear the words. After each sheet, say honestly whether you would still be watching, and what you noticed. Once you would have swiped away, stop watching (mark the rest as not watching). At the end, say what you would tell a friend the clip said.`;
+const LEARNER_ = `You are a first-time learner. You know nothing about this topic beyond what the clip shows and says. You watch a short vertical video as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds. A clock in the top left corner of each frame gives the time; the captions at the bottom are the narration. Watch every sheet in order with the words beside it, as a viewer would, then answer the quiz from what the clip showed and said. Do not use outside knowledge: if the clip did not show or say it, answer "not in the clip". Say for each answer whether you got it from the words, the picture, or both.`;
+const DESIGNER_ = `You are a demanding motion designer and art director who makes top short-form explainers. You judge a short vertical video (9:16, for phones) from sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions at the bottom are the video's own. Go through every sheet in order. Judge as you would a colleague's cut before it ships: composition and use of the frame, type (size, weight, line length, readability on a phone), motion (does change carry meaning, is it smooth, purposeful, well timed with the words), hierarchy (is it always clear what matters now), and consistency. Score each from 1 (amateur) to 10 (best in the field); 5 is competent but forgettable. Be specific and strict; do not grade on effort.`;
+const SCROLLER_ = `You are an ordinary person scrolling short videos on your phone, a little tired and distracted. You did not choose this video; it came up in your feed. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds. Glance at each sheet the way a scroller would, for a moment, noticing only what grabs you; you half hear the words. After each sheet, say honestly whether you would still be watching, and what you noticed. Once you would have swiped away, stop watching (mark the rest as not watching). At the end, say what you would tell a friend the clip said.`;
 const WORDS_ONLY = `You are a first-time learner who only hears a short clip's narration, with no picture. You know nothing about this topic beyond the words below. Answer the quiz from the words alone. Do not use outside knowledge: if the words do not say it, answer "not in the clip".`;
-const DEPICT = `You check whether a short vertical video shows what it talks about, or only names it. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions at the bottom are the narration (ignore the captions themselves). Go through every sheet in order with the words beside it.
+const DEPICT_ = `You check whether a short vertical video shows what it talks about, or only names it. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions at the bottom are the narration (ignore the captions themselves). Go through every sheet in order with the words beside it.
 1. Things: list every concrete thing the narration names that the moment is about (an object, substance, creature, body part, place, device, person, a piece of data). For each, say how the picture gives it, at its best moment: "itself" when it is drawn so you would know it with its label covered (its shape, colour, parts, material: a flask with liquid in it, a heart shape, a map, a chart's real bars); "symbol" when a generic shape or icon stands in that you only know by convention or with help from its label (a plain circle for a cell, a dot for a drop); "word" when only its name is written (as text, or in a box or circle); "absent" when it is not on screen at all. Code, a formula or a sentence the moment is about is "itself" when it is shown as such.
 2. Changes: list every change of state the narration says happens (something moves, falls, fills, turns a colour, grows, breaks, joins, stops, wins). For each: "shown" when the picture makes the change visibly (it moves, recolours, fills, the drawing changes), "told" when only words on screen change (a label rewritten, a tag "pink" added, a counter), "missing" when the picture does not change at all.
 Be strict and literal: a box labelled FLASK is a word, not a flask; a tag that says "pink" on a grey shape is told, not shown.`;
-const FOLLOW = `You are a first-time viewer of a short vertical video. You know nothing about its topic. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions are the narration. Go through the sheets in order. For each sheet, say, as the viewer in that moment and knowing only what came before: what you are looking at (the one thing your eye goes to, in a few words), what you are waiting for (the open question or what you expect next, or "nothing"), and anything confusing (what you could not tell or follow, or "" when nothing). Be honest and plain; a clear clip gets short answers.`;
+const FOLLOW_ = `You are a first-time viewer of a short vertical video. You know nothing about its topic. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions are the narration. Go through the sheets in order. For each sheet, say, as the viewer in that moment and knowing only what came before: what you are looking at (the one thing your eye goes to, in a few words), what you are waiting for (the open question or what you expect next, or "nothing"), and anything confusing (what you could not tell or follow, or "" when nothing). Be honest and plain; a clear clip gets short answers.`;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Grading: one request per group of cases, for a grader agent that never watched anything. It marks each answer
@@ -327,4 +341,28 @@ export const report: Step = async (run, ids) => {
   const notes = rows.filter((r) => r.tickets.length).map((r) => `- **${r.id}**: ${r.tickets.slice(0, 3).join(" / ").slice(0, 600)}`);
   writeFileSync(join(out, "scores.md"), `# Bench run ${run}\n\nThe main teaching number is the **teach gap**: the video learner minus the words-only learner over the whole quiz, what the picture teaches beyond the narration. "hard gap" is the same over the hard, picture-dependent questions. Free measures are 0 to 1; "free" is their mean (depict there is the free signal only); "depict" blends the free signal with the watch test by the case's depict.watchWeight (0.6 to the watch by default); quiz scores are the share right; "confused" is the share of 2 s windows where the follow viewer reported confusion. Columns are explained in bench/README.md.\n\n${table.join("\n")}\n\n## Instrument readings\n\nRaw values behind the scores, read against each case's settings (its measure block over the defaults in bench/lib/settings.ts).\n\n${readings.join("\n")}\n\n## Direction tickets (severity 2 and 3)\n\n${notes.join("\n")}\n`);
   console.log(join(out, "scores.md"));
+};
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Material: cards from the user's files (lib/read.ts), and their requirements checked on the built scene.
+
+export { read } from "./read.ts";
+
+export const requirements: Step = async (run, ids) => {
+  const { loadCards } = await import("./read.ts");
+  const { checkRequirementsOnScene } = await import("./requirements.ts");
+  for (const id of ids) {
+    const k = loadCards(run, id);
+    if (!k?.requirements.length) continue;
+    const b = await built(run, id);
+    if (!b.scene) {
+      console.log(`${id}: no scene (${b.why})`);
+      continue;
+    }
+    const c = loadCase(id);
+    const pics = Object.fromEntries(picturesOf(b.p).map((x) => [x.name, x.src]));
+    const out = checkRequirementsOnScene(k.requirements, k.cards, b.scene, pics, settingsOf(c).read, c.requirementSettings);
+    writeFileSync(join(folderOf(run, id), "requirements.json"), JSON.stringify(out, null, 1));
+    console.log(`${id}: ${out.map((r) => `${r.id} ${r.measured === "no" ? "not measured" : r.met ? "met" : "NOT met"}`).join(", ")}`);
+  }
 };

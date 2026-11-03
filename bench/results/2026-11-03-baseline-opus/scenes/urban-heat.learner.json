@@ -1,0 +1,9 @@
+[
+  {"q": 1, "answer": "52 degrees C.", "from": "both"},
+  {"q": 2, "answer": "29 degrees C.", "from": "both"},
+  {"q": 3, "answer": "23 degrees, a few steps apart.", "from": "both"},
+  {"q": 4, "answer": "Shade, not just green.", "from": "both"},
+  {"q": 5, "answer": "Dark roof (48), after asphalt (52).", "from": "picture"},
+  {"q": 6, "answer": "41 degrees C (read from the small chart's labels, which were small and hard to read).", "from": "picture"},
+  {"q": 7, "answer": "Five: asphalt, dark roof, bare soil, grass, tree canopy.", "from": "picture"}
+]

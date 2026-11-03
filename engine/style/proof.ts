@@ -8,7 +8,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderStill, selectComposition } from "@remotion/renderer";
 import { compile } from "../core/compile.ts";
 import type { Scene, Theme } from "../core/types.ts";
@@ -36,7 +36,7 @@ const names = args.length ? args : styleNames();
 mkdirSync(out, { recursive: true });
 
 const browserExecutable = process.env.BETTERVID_CHROME || null;
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
 const ctxOf = (theme: Theme) => ({ fps: 30, width: 1080, height: 1920, frames: 2, theme });
 
 async function still(scene: Scene, theme: Theme, file: string) {

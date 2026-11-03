@@ -1,0 +1,88 @@
+program s1_bars loginName=0 loginAt=0 billAt=0 billVal=0 restAt=0 restVal=0 doc="Horizontal bars of tickets by cause; each name, bar and value arrives when it is spoken."
+  const rows = [
+    ["login", "Login", 412, args.loginName, args.loginAt, args.loginAt + 12, "accent"],
+    ["bill", "Billing", 268, args.billAt, args.billAt, args.billVal, "slate"],
+    ["ship", "Shipping", 97, args.restAt, args.restAt, args.restVal, "slate"],
+    ["other", "Other", 63, args.restAt, args.restAt, args.restVal, "slate"]
+  ];
+  const left = 30, maxW = W - 250, rowH = H / 4, barH = rowH * 0.46;
+  rows.forEach((r, i) => {
+    const y0 = i * rowH + rowH * 0.18;
+    const nm = text(r[0] + "_name", { x: left, y: y0, text: r[1], size: 58, color: "ink", weight: 600, anchor: "start", opacity: 0 });
+    key(nm, "opacity", r[3], 0);
+    key(nm, "opacity", r[3] + 8, 1, "smooth");
+    const w = maxW * r[2] / 412;
+    const bar = path(r[0] + "_bar", { x: left, y: y0 + 50, points: rect(0, 0, w, barH), closed: 1, fill: r[6], scaleX: 0.001 });
+    key(bar, "scaleX", r[4], 0.001);
+    key(bar, "scaleX", r[4] + 20, 1, "out");
+    const v = text(r[0] + "_val", { x: left + w + 24, y: y0 + 50 + barH / 2, text: String(r[2]), size: 68, weight: 700, color: "ink", anchor: "start", opacity: 0 });
+    key(v, "opacity", r[5], 0);
+    key(v, "opacity", r[5] + 8, 1, "smooth");
+  });
+end
+
+program s1_queue loginAt=0 halfAt=0 doc="840 tickets as a grid of dots, 24 by 35; login's 412 light up and a stepped line marks the exact half, 420."
+  const cols = 24, rows = 35, n = 840, login = 412;
+  const c = Math.min(W / cols, H / rows);
+  const ox = (W - c * cols) / 2, oy = (H - c * rows) / 2;
+  const r = c * 0.36;
+  const g = group("login", {});
+  for (let i = 0; i < n; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = ox + (col + 0.5) * c, y = oy + (row + 0.5) * c;
+    const d = path("d" + i, { x: x, y: y, points: circle(0, 0, r), closed: 1, fill: "slate", opacity: 0 });
+    key(d, "opacity", T0, 0);
+    key(d, "opacity", T0 + 8, 0.4, "smooth");
+    if (i < login) {
+      const a = path("l" + i, { parent: g, x: x, y: y, points: circle(0, 0, r), closed: 1, fill: "accent", opacity: 0 });
+      const ta = args.loginAt + row * 0.7;
+      key(a, "opacity", ta, 0);
+      key(a, "opacity", ta + 8, 1, "smooth");
+    }
+  }
+  const pts = [ox - 8, oy + 18 * c, ox + 12 * c, oy + 18 * c, ox + 12 * c, oy + 17 * c, ox + cols * c + 8, oy + 17 * c];
+  const line = path("half", { x: 0, y: 0, points: pts, stroke: "ink", strokeWidth: 7, drawn: 0 });
+  key(line, "drawn", args.halfAt, 0);
+  key(line, "drawn", args.halfAt + 15, 1, "smooth");
+end
+
+@0
+text s1_head "Q3 support tickets" size=big role=heading
+
+@4 keep enter=pop
+huge s1_totline: s1_total=840 role=key
+small s1_sub: "tickets"
+do count s1_total from=0 to=840 frames=18
+
+@7 move=18 ease=smooth
+normal s1_hd: s1_total=840 s1_tk=tickets s1_in=in_Q3 role=heading
+run s1_bars s1_chart loginName=@7 loginAt=@11 billAt=@14 billVal=@18 restAt=@19 restVal=@25 w=900 h=1150 until=@26
+
+@11 keep
+light s1_chart.login_bar
+
+@12 keep
+tag s1_chart.login_bar "almost half" side=bottom role=key
+
+@14 keep
+drop tag.s1_chart.login_bar
+
+@23 keep
+text s1_ask "Shipping + other = ?" size=big role=key after=s1_chart
+
+@25 keep
+text s1_ask "Shipping + other = 160" size=big role=answer
+
+@26
+text s1_fix "Fix login" size=big role=title
+run s1_queue s1_q loginAt=@27 halfAt=@29 w=900 h=1300
+
+@29 keep
+tag s1_q.half "half: 420" side=right role=pointer
+
+@31 keep
+text s1_gone "half the queue goes away" size=normal role=answer
+light s1_q.login
+
+@33+10 keep
+light s1_q.login

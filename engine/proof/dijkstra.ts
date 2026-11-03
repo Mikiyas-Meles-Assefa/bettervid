@@ -2,7 +2,7 @@
 // a kit's parts animate one by one, that truth drives motion, and that one scene renders in any style.
 // Usage: node --experimental-strip-types engine/proof/dijkstra.ts <outDir> <style> [<style> ...]
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { compile } from "../core/compile.ts";
 import type { NodeSpec, Step } from "../core/types.ts";
@@ -63,7 +63,7 @@ export function scene(): { steps: Step[]; frames: number } {
 if (import.meta.main) {
   const [out, ...styles] = process.argv.slice(2);
   const { steps, frames } = scene();
-  const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+  const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
   for (const name of styles) {
     const theme = themeFrom(name);
     const built = compile({ steps }, { fps: 30, width: 1080, height: 1920, frames, theme, kits: [graphKit] });

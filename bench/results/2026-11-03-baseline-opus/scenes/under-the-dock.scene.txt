@@ -1,0 +1,88 @@
+program s1_lake maraAt=0 tightAt=0 trembleAt=0 freezeAt=0 lastAt=0 doc="A side view of a still lake: a dock, Mara sitting at its end, a post whose slack rope snaps taut down under the dock into dark water, trembling, with rings spreading from where it enters; nothing ever surfaces."
+  const S = H * 0.6, D = H * 0.52, E = W * 0.66;
+  const world = group("world", { x: 0, y: 0 });
+  const water = path("water", { parent: world, x: 0, y: 0, points: rect(0, S, W, H - S), closed: 1, fill: "ink", opacity: 0.9 });
+  for (let k = 0; k < 6; k++) {
+    const yy = S + (H - S) * (0.35 + k * 0.11);
+    path("deep" + k, { parent: world, x: 0, y: 0, points: rect(0, yy, W, (H - S) * 0.11), closed: 1, fill: "ink", opacity: 0.25 + k * 0.12 });
+  }
+  path("surface", { parent: world, x: 0, y: 0, points: [0, S, W, S], stroke: "soft", strokeWidth: 4, opacity: 0.7 });
+  for (let k = 0; k < 4; k++) {
+    const yy = S + 40 + k * 55, x0 = W * (0.1 + 0.17 * k);
+    path("glint" + k, { parent: world, x: 0, y: 0, points: [x0, yy, x0 + 160 - k * 20, yy], stroke: "soft", strokeWidth: 3, opacity: 0.25 });
+  }
+  for (let k = 0; k < 4; k++) {
+    const px = 60 + k * (E - 120) / 3;
+    path("pile" + k, { parent: world, x: 0, y: 0, points: rect(px, D + 20, 26, S - D + 140), closed: 1, fill: "sepia", opacity: 1 });
+  }
+  path("dock", { parent: world, x: 0, y: 0, points: rect(0, D, E, 34), closed: 1, fill: "sepia" });
+  const postX = E - 230, postTop = D - 170;
+  const post = path("post", { parent: world, x: postX, y: D, points: rect(-16, -170, 32, 175), closed: 1, fill: "sepia", stroke: "ink", strokeWidth: 3 });
+  key(post, "rotate", args.tightAt, 0);
+  key(post, "rotate", args.tightAt + 3, 4, "out");
+  key(post, "rotate", args.tightAt + 16, 0, "spring");
+  const mara = group("mara", { parent: world });
+  const hx = E - 50;
+  const parts = [
+    path("mara_body", { parent: mara, x: 0, y: 0, points: [hx - 50, D, hx + 30, D, hx + 5, D - 70, hx - 10, D - 150, hx - 52, D - 150, hx - 62, D - 70], closed: 1, smooth: 1, fill: "ink" }),
+    path("mara_head", { parent: mara, x: hx - 32, y: D - 190, points: circle(0, 0, 36), closed: 1, fill: "ink" }),
+    path("mara_legs", { parent: mara, x: 0, y: 0, points: [hx - 20, D - 4, E + 30, D - 18, E + 48, D + 110, E + 74, D + 112, E + 58, D - 2, E + 20, D - 36, hx - 30, D - 34], closed: 1, smooth: 0, fill: "ink" })
+  ];
+  parts.forEach((p) => {
+    key(p, "opacity", T0, 0);
+    key(p, "opacity", args.maraAt, 0);
+    key(p, "opacity", args.maraAt + 24, 1, "smooth");
+  });
+  const entryX = postX + 110, entryY = S;
+  const slack = path("slack", { parent: world, x: 0, y: 0, points: [postX, postTop + 10, postX - 30, D - 40, postX - 10, D + 70, postX + 40, S - 6, entryX + 70, S - 2, entryX + 150, S], smooth: 1, stroke: "ochre", strokeWidth: 8 });
+  key(slack, "opacity", args.tightAt, 1);
+  key(slack, "opacity", args.tightAt + 1, 0, "step");
+  const rope = group("rope", { parent: world, x: postX, y: postTop + 10 });
+  const dx = entryX - postX, dy = entryY - postTop - 10;
+  const taut = path("taut", { parent: rope, x: 0, y: 0, points: [0, 0, dx, dy], stroke: "ochre", strokeWidth: 8 });
+  const under = [];
+  const n = 8, len = 620;
+  for (let k = 0; k < n; k++) {
+    const a = k / n, b = (k + 1) / n;
+    const ux = (t) => dx + 0.32 * len * t, uy = (t) => dy + len * t;
+    under.push(path("under" + k, { parent: rope, x: 0, y: 0, points: [ux(a), uy(a), ux(b), uy(b)], stroke: "ochre", strokeWidth: 7, opacity: 0 }));
+  }
+  [taut].concat(under).forEach((p, i) => {
+    const o = i === 0 ? 1 : Math.max(0, 0.75 - (i - 1) * 0.11);
+    key(p, "opacity", T0, 0);
+    key(p, "opacity", args.tightAt, 0);
+    key(p, "opacity", args.tightAt + 1, o, "step");
+  });
+  key(rope, "rotate", args.tightAt, -3);
+  key(rope, "rotate", args.tightAt + 4, 0.8, "out");
+  key(rope, "rotate", args.tightAt + 14, 0, "spring");
+  anim(rope, "rotate", args.trembleAt, args.freezeAt, (t, f) => (Math.sin(f * 1.9) * 0.25 + Math.sin(f * 0.7) * 0.15) * (1 - 0.6 * t), 1);
+  key(rope, "rotate", args.freezeAt + 1, 0, "smooth");
+  const rings = [];
+  for (let f = args.tightAt; f < args.freezeAt - 20; f += 28) rings.push(f);
+  rings.push(args.lastAt);
+  rings.forEach((f0, i) => {
+    const life = i === rings.length - 1 ? 70 : 80;
+    const r = path("ring" + i, { parent: world, x: entryX, y: entryY, points: circle(0, 0, 100), closed: 1, stroke: "soft", strokeWidth: 3, opacity: 0, scaleX: 0.1, scaleY: 0.02 });
+    key(r, "opacity", f0, 0);
+    key(r, "opacity", f0 + 3, i === rings.length - 1 ? 0.5 : 0.8);
+    key(r, "opacity", f0 + life, 0, "smooth");
+    anim(r, "scaleX", f0, f0 + life, (t) => 0.1 + 2.4 * (1 - Math.pow(1 - t, 2)), 1);
+    anim(r, "scaleY", f0, f0 + life, (t) => 0.02 + 0.42 * (1 - Math.pow(1 - t, 2)), 1);
+  });
+  const push = (f0, f1, s0, s1, p0, p1) => {
+    const at = (t) => { const u = smooth(t); return [lerp(s0, s1, u), lerp(p0[0], p1[0], u), lerp(p0[1], p1[1], u)]; };
+    anim(world, "scaleX", f0, f1, (t) => at(t)[0], 1);
+    anim(world, "scaleY", f0, f1, (t) => at(t)[0], 1);
+    anim(world, "x", f0, f1, (t) => at(t)[1] * (1 - at(t)[0]), 1);
+    anim(world, "y", f0, f1, (t) => at(t)[2] * (1 - at(t)[0]), 1);
+  };
+  const mFocus = [E, D], eFocus = [entryX, S + 60];
+  push(args.maraAt, args.tightAt, 1, 1.15, mFocus, mFocus);
+  push(args.tightAt + 2, args.freezeAt, 1.15, 1.35, mFocus, eFocus);
+  push(args.freezeAt, args.freezeAt + 24, 1.35, 1.15, eFocus, mFocus);
+  emit("snap", args.tightAt, {});
+end
+
+@0
+run s1_lake s1_scene maraAt=@6 tightAt=@26 trembleAt=@33+9 freezeAt=@34 lastAt=@42+9 w=1080 h=1920

@@ -1,0 +1,10 @@
+[
+  {"q": 1, "answer": "Sodium hydroxide (labelled NaOH (base)) is in the burette; the flask holds acid with a few drops of phenolphthalein (labelled acid + phenolphthalein).", "from": "both"},
+  {"q": 2, "answer": "Pink flashes where each drop lands, then fades as you swirl, so early on you can add the base quickly. (Note: on screen the flash was drawn as a yellow/gold patch, not pink, so the picture did not match the word.)", "from": "both"},
+  {"q": 3, "answer": "When the pink starts to linger instead of fading.", "from": "both"},
+  {"q": 4, "answer": "A faint pink that lasts thirty seconds. (On screen the whole liquid turned a pale olive/yellowish tint rather than pink.)", "from": "both"},
+  {"q": 5, "answer": "Stop adding base and read the volume on the burette; the clip showed a reading of 22.40 mL.", "from": "both"},
+  {"q": 6, "answer": "A pale, grey-blue, nearly colourless liquid (drawn as a light translucent fill).", "from": "picture"},
+  {"q": 7, "answer": "A circular timer counting up from 0 s to 30 s, next to the label 'must last 30 s'.", "from": "picture"},
+  {"q": 8, "answer": "Above: the burette hangs directly over the flask and drips down into it.", "from": "picture"}
+]

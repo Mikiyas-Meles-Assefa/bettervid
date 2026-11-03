@@ -1,0 +1,57 @@
+{
+ "promise": [
+  "s1_slide"
+ ],
+ "events": [
+  {
+   "id": "e1",
+   "look": [
+    "s1_slide"
+   ],
+   "lookNone": "",
+   "withhold": [],
+   "demo": [],
+   "holds": []
+  },
+  {
+   "id": "e2",
+   "look": [
+    "s1_chart"
+   ],
+   "lookNone": "",
+   "withhold": [],
+   "demo": [],
+   "holds": []
+  },
+  {
+   "id": "e3",
+   "look": [
+    "s1_chart"
+   ],
+   "lookNone": "",
+   "withhold": [],
+   "demo": [],
+   "holds": [
+    {
+     "hold": "h1",
+     "does": [
+      "s1_chart"
+     ],
+     "answer": "",
+     "ids": []
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "look": [
+    "s1_slide",
+    "s1_mid"
+   ],
+   "lookNone": "",
+   "withhold": [],
+   "demo": [],
+   "holds": []
+  }
+ ]
+}

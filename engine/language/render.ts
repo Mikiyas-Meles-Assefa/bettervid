@@ -3,7 +3,7 @@
 // With STILLS=n it writes n evenly spaced frames instead of a video, which is much faster for checking a scene.
 import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import type { CompileContext } from "../core/types.ts";
 import { themeFrom } from "../render/theme.ts";
@@ -14,7 +14,7 @@ const [dir, ...styles] = process.argv.slice(2);
 const stills = Number(process.env.STILLS ?? 0);
 const source = readFileSync(join(dir!, "scene.txt"), "utf8");
 const request = JSON.parse(readFileSync(join(dir!, "request.json"), "utf8"));
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
 for (const style of styles) {
   const theme = themeFrom(style);
   const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: request.frames, theme, words: request.words };

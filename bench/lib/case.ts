@@ -6,7 +6,8 @@ import { join } from "node:path";
 import type { DemoPhase, DirectionEvent, DirectionPlan, Hold, Project, Word } from "../../schemas/project.ts";
 import { truthSteps } from "../../engine/kits/steps.ts";
 import { SIZE, sceneContext } from "../../pipeline/stages/scene.ts";
-import type { CaseSettings } from "./settings.ts";
+import { settingsOf, type CaseSettings } from "./settings.ts";
+import type { RequireSettings } from "./requirements.ts";
 
 type Anchor = string | { hold: string };
 export type CaseEvent = Omit<DirectionEvent, "firstWord" | "lastWord" | "holds" | "reveal" | "demo"> & {
@@ -40,7 +41,20 @@ export type Case = {
   // What good means for this case: its viewing context and any measure setting that departs from the defaults
   // (lib/settings.ts). Derived once from the request, intent, audience and platform, and recorded here.
   measure?: CaseSettings;
+  // What a requirement from the material needs to count as met here (lib/requirements.ts), when the case says more than
+  // the suggestions: how long a required figure must be legible on screen, for instance. Derived as `measure` is.
+  requirementSettings?: Partial<RequireSettings> & { why?: string };
 };
+
+// The frame in pixels for the case's frame shape ("16:9", "4:5", "1:1"): the short side is the engine's 1080 px canvas.
+export function frameOf(c: { measure?: CaseSettings }): [number, number] {
+  const shape = settingsOf(c).context.frame;
+  const m = shape.match(/^\s*(\d+(?:\.\d+)?)\s*[:x/]\s*(\d+(?:\.\d+)?)\s*$/);
+  if (!m) throw new Error(`frame "${shape}" is not a shape such as 9:16 or 16:9`);
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  const long = (n: number) => Math.round((1080 * n) / 2) * 2;
+  return a >= b ? [long(a / b), 1080] : [1080, long(b / a)];
+}
 
 export const CASES = join(import.meta.dirname, "..", "cases");
 export const MATERIAL = join(CASES, "material");
@@ -128,7 +142,7 @@ export function caseProject(c: Case): Project {
   const p: Project = {
     id: c.id,
     createdAt: "2026-11-03T00:00:00.000Z",
-    input: { prompt: c.request, style: c.style, persona: "auto", mode: "explain", seconds: 0 },
+    input: { prompt: c.request, style: c.style, persona: "auto", mode: "explain", seconds: 0, frame: frameOf(c) },
     plan: { topic: c.topic, seconds: 0, story: c.asked ?? [], tone: "", intent: c.intent, visuals: [], sound: [], material: (c.material ?? []).filter((m) => m.text).map((m) => `${m.name} (${m.about}):\n${m.text}`).join("\n\n"), notation: false },
     ...(c.material?.some((m) => m.kind === "image") ? { assets: c.material.filter((m) => m.kind === "image").map((m) => ({ shotId: m.name, kind: "real" as const, path: m.file!, size: m.size, title: m.about, why: "supplied by the user" })) } : {}),
     script: { title: c.topic, takeaway: c.goal, beats: c.events.map((e) => ({ id: e.id, role: "explain", text: e.text, claimIds: [], visual: e.look, emphasis: [] })) },

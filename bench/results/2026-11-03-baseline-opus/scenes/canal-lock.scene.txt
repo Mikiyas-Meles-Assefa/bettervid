@@ -1,0 +1,87 @@
+program s1_canal enterAt=0 inAt=0 closeAt=0 sluiceAt=0 fillAt=0 matchAt=0 openAt=0 sailAt=0 doc="Side view of a canal lock: lower canal, chamber, upper canal. The boat sails into the chamber, the lower gate closes, the sluice opens, water pours in and the level and the boat rise together to the upper canal's level, the upper gate opens and the boat sails on."
+  const bed = 760, yL = 560, yU = 300, top = 230;
+  const cx0 = 700, cx1 = 1200;
+  const k = Math.min(W / 1800, H / 900);
+  const world = group("world", { x: (W - 1800 * k) / 2, y: (H - 900 * k) / 2, scaleX: k, scaleY: k });
+  path("ground_low", { parent: world, x: 0, y: 0, points: rect(0, bed, 1800, 900 - bed), closed: 1, fill: "pale" });
+  path("ground_up", { parent: world, x: 0, y: 0, points: rect(cx1, 500, 1800 - cx1, 400), closed: 1, fill: "pale" });
+  path("lowwater", { parent: world, x: 0, y: 0, points: rect(0, yL, cx0, bed - yL), closed: 1, fill: "accent", opacity: 0.8 });
+  path("upwater", { parent: world, x: 0, y: 0, points: rect(cx1, yU, 1800 - cx1, 500 - yU), closed: 1, fill: "accent", opacity: 0.8 });
+  const jet = path("jet", { parent: world, x: 0, y: 0, points: [cx1 - 4, 452, cx1 - 50, 462, cx1 - 85, 520, cx1 - 100, 640], smooth: 1, stroke: "accent", strokeWidth: 26, opacity: 0, drawn: 0 });
+  key(jet, "opacity", args.fillAt, 0);
+  key(jet, "opacity", args.fillAt + 2, 0.9);
+  key(jet, "drawn", args.fillAt, 0);
+  key(jet, "drawn", args.fillAt + 10, 1, "out");
+  anim(jet, "strokeWidth", args.fillAt, args.matchAt, (t, f) => 26 + Math.sin(f * 0.9) * 4, 2);
+  key(jet, "opacity", args.matchAt - 6, 0.9);
+  key(jet, "opacity", args.matchAt, 0, "smooth");
+  const h0 = bed - yL, h1 = bed - yU;
+  const cw = path("chamberwater", { parent: world, x: cx0, y: bed, points: rect(0, -h0, cx1 - cx0, h0), closed: 1, fill: "accent", opacity: 0.8 });
+  const ease = (t) => 1 - Math.pow(1 - t, 2.2);
+  const level = (f) => f <= args.fillAt ? yL : (f >= args.matchAt ? yU : yL - (yL - yU) * ease((f - args.fillAt) / (args.matchAt - args.fillAt)));
+  anim(cw, "scaleY", args.fillAt, args.matchAt, (t, f) => (bed - level(f)) / h0, 1);
+  const dash = group("dash", { parent: world });
+  for (let x = cx0 + 10; x < cx1 - 20; x += 44) {
+    const d = path("dash" + x, { parent: dash, x: 0, y: 0, points: [x, yU, x + 24, yU], stroke: "ink", strokeWidth: 6, opacity: 0 });
+    key(d, "opacity", args.sluiceAt, 0);
+    key(d, "opacity", args.sluiceAt + 12, 0.8, "smooth");
+  }
+  const lowgate = path("lowgate", { parent: world, x: cx0, y: 0, points: rect(-14, top, 28, bed - top), closed: 1, fill: "deep", opacity: 0.12 });
+  key(lowgate, "opacity", args.closeAt, 0.12);
+  key(lowgate, "opacity", args.closeAt + 14, 1, "smooth");
+  const upgate = path("upgate", { parent: world, x: cx1, y: 0, points: rect(-14, top, 28, bed - top), closed: 1, fill: "deep", opacity: 1 });
+  key(upgate, "opacity", args.openAt, 1);
+  key(upgate, "opacity", args.openAt + 18, 0.12, "smooth");
+  const sl = path("sluice", { parent: world, x: cx1, y: 0, points: rect(-16, 432, 32, 40), closed: 1, fill: "highlight", opacity: 0 });
+  key(sl, "opacity", args.sluiceAt - 12, 0);
+  key(sl, "opacity", args.sluiceAt, 1, "smooth");
+  const boat = group("boat", { parent: world, x: 320, y: yL });
+  path("hull", { parent: boat, x: 0, y: 0, points: [-130, -22, 130, -22, 100, 32, -100, 32], closed: 1, fill: "red", stroke: "ink", strokeWidth: 4 });
+  path("cabin", { parent: boat, x: 0, y: 0, points: rect(-60, -86, 90, 64), closed: 1, fill: "highlight", stroke: "ink", strokeWidth: 4 });
+  key(boat, "x", args.enterAt, 320);
+  key(boat, "x", args.inAt, 950, "smooth");
+  anim(boat, "y", args.fillAt, args.matchAt, (t, f) => level(f), 1);
+  key(boat, "x", args.sailAt, 950);
+  key(boat, "x", args.sailAt + 50, 1560, "smooth");
+  anim(boat, "rotate", T0, T1, (t, f) => Math.sin(f * 0.12) * 1.2, 2);
+  text("lbl_low", { parent: world, x: 330, y: 830, text: "lower canal", size: 54, color: "ink" });
+  text("lbl_ch", { parent: world, x: 950, y: 830, text: "chamber", size: 54, color: "ink" });
+  text("lbl_up", { parent: world, x: 1520, y: 580, text: "upper canal", size: 54, color: "ink" });
+end
+
+@0
+text s1_cap "A boat can't sail uphill" size=big role=title
+run s1_canal s1_lock enterAt=@16 inAt=@19+10 closeAt=@22 sluiceAt=@31 fillAt=@34 matchAt=@44 openAt=@48 sailAt=@53 w=1700 h=760
+
+@4 keep
+arrow s1_lock.lowwater -> s1_lock.upwater "uphill" bend=-0.3 role=pointer id=s1_up
+
+@5 keep
+drop s1_up
+text s1_cap "So a canal lock lifts it, with nothing but water" size=big role=title
+
+@15 keep
+text s1_cap "1. The boat goes into the chamber" size=big role=heading
+light s1_lock.boat
+
+@20 keep
+text s1_cap "2. The gates close behind it" size=big role=heading
+tag s1_lock.lowgate "gates" side=top role=label
+
+@26 keep
+drop tag.s1_lock.lowgate
+text s1_cap "3. A sluice in the upper gate opens" size=big role=heading
+
+@31 keep
+tag s1_lock.sluice "sluice" side=right role=label
+
+@34 keep
+drop tag.s1_lock.sluice
+text s1_cap "4. Water pours in, and the boat rises with it" size=big role=heading
+
+@44 keep
+text s1_cap "5. Levels match, so the upper gates open" size=big role=heading
+light s1_lock.dash
+
+@51 keep
+text s1_cap "The boat sails on, higher" size=big role=answer

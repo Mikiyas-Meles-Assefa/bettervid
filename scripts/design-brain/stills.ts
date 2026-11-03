@@ -3,7 +3,7 @@
 // Writes <outDir>/<scene base>-<frame>.jpg.
 import { mkdirSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../../engine/render/bundle.ts";
 import { renderStill, selectComposition } from "@remotion/renderer";
 import { themeFrom } from "../../engine/render/theme.ts";
 
@@ -11,7 +11,7 @@ const [outDir, scaleArg, ...jobs] = process.argv.slice(2);
 const browserExecutable = process.env.BETTERVID_CHROME;
 const theme = themeFrom(process.env.STYLE ?? "flat");
 mkdirSync(outDir!, { recursive: true });
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
 for (const job of jobs) {
   const [file, list] = job.split(":");
   const scene = JSON.parse(readFileSync(file!, "utf8"));

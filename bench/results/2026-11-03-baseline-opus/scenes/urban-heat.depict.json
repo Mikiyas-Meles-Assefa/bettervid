@@ -1,0 +1,19 @@
+{"things": [
+{"thing": "July afternoon", "as": "word", "sheet": 1, "note": "Only the subtitle 'Same city block, July, 2 p.m.' and later 'ground surface, July afternoon'; no sun, sky or time cue drawn."},
+{"thing": "the ground in one city block", "as": "word", "sheet": 2, "note": "Only named in the chart subtitle; no block, street or map is drawn."},
+{"thing": "temperature by surface (the source chart)", "as": "itself", "sheet": 1, "note": "A real bar chart with axis, five proportional bars (52, 48, 41, 33, 29) and category names; later shrunk to the left corner."},
+{"thing": "asphalt at 52 degrees", "as": "itself", "sheet": 4, "note": "A tall slate bar on its own baseline labelled 52 °C; known as asphalt only by its label (no road texture), but the data itself is a real bar."},
+{"thing": "tree canopy ground at 29 degrees", "as": "itself", "sheet": 5, "note": "A shorter teal bar beside asphalt, height in proportion, labelled 29 °C; no tree drawn."},
+{"thing": "the 23 degree gap", "as": "itself", "sheet": 7, "note": "A shaded bracket spanning from the canopy bar top to the asphalt bar top, marked 23 °C."},
+{"thing": "a few steps apart (distance)", "as": "absent", "sheet": 8, "note": "Nothing shows the two spots being close in space; only the bars stand side by side."},
+{"thing": "grass and bare soil", "as": "word", "sheet": 9, "note": "Only the heading 'GRASS AND BARE SOIL SIT IN BETWEEN'; their bars (41, 33) exist only as tiny bars in the shrunken source chart in the corner and are not added to the main comparison."},
+{"thing": "shade", "as": "word", "sheet": 11, "note": "Only the sentence 'Shade, not just green, does the cooling', which overlaps the captions; no shadow or canopy drawn."},
+{"thing": "green (vegetation)", "as": "word", "sheet": 11, "note": "Only named in the sentence; grass vs tree is not contrasted in the picture."}
+],
+"changes": [
+{"change": "asphalt reaches fifty-two degrees", "as": "shown", "sheet": 4, "note": "Asphalt bar is pulled out of the chart and grows to full height, then '52 °C' appears."},
+{"change": "ground under canopy stays at twenty-nine", "as": "shown", "sheet": 4, "note": "Canopy bar grows from zero to its height beside asphalt (7.7 to 8.2 s), the 29 °C label follows in sheet 6."},
+{"change": "a gap of twenty-three degrees opens between them", "as": "shown", "sheet": 7, "note": "A shaded bracket draws in from the canopy top up to the asphalt top, then '23 °C' is written."},
+{"change": "grass and bare soil sit in between", "as": "told", "sheet": 9, "note": "Only a heading appears; no bars for grass or soil are placed between asphalt and canopy in the main comparison."},
+{"change": "shade does the cooling", "as": "told", "sheet": 11, "note": "Only the sentence is written; nothing in the picture separates shade from green."}
+]}

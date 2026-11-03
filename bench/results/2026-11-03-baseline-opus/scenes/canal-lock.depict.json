@@ -1,0 +1,21 @@
+{"things": [
+{"thing": "boat", "as": "itself", "sheet": 1, "note": "Side view of a small pink hull with a pale blue cabin, floating on the water surface."},
+{"thing": "uphill (the height difference)", "as": "itself", "sheet": 1, "note": "Cross-section with the upper canal stepped well above the lower canal; an 'UPHILL' arrow arcs from boat to upper level."},
+{"thing": "canal lock / chamber", "as": "itself", "sheet": 4, "note": "Cross-section of a walled chamber between lower and upper canals, with gate posts; small 'CHAMBER' label but the structure reads on its own once gates are in."},
+{"thing": "water", "as": "symbol", "sheet": 3, "note": "Flat tan/khaki rectangles stand for the water, while the ground beneath is pale blue; the colours read backwards (water looks like earth), so it is known only from the boat floating on it."},
+{"thing": "gates (lower, behind the boat)", "as": "symbol", "sheet": 5, "note": "A thin dark vertical bar with a 'GATES' label; no gate leaves or hinges."},
+{"thing": "upper gate", "as": "symbol", "sheet": 1, "note": "A thin dark vertical bar between chamber and upper canal."},
+{"thing": "sluice", "as": "symbol", "sheet": 7, "note": "A tiny pale notch in the upper gate bar with a dashed line and 'SLUICE' label; would not be known without the label."},
+{"thing": "levels (matching)", "as": "itself", "sheet": 11, "note": "Chamber water top and upper canal water top sit level, with a dashed guide line."}
+],
+"changes": [
+{"change": "the lock lifts the boat using water", "as": "shown", "sheet": 9, "note": "Narrated in sheets 2 and 3 while the picture is static; the lift itself is shown later when the chamber fills."},
+{"change": "boat enters the chamber", "as": "shown", "sheet": 4, "note": "Boat slides right from the lower canal into the chamber (7.2 to 8.0 s)."},
+{"change": "gates close behind it", "as": "shown", "sheet": 5, "note": "A dark bar rises/fades in between lower canal and chamber (9.2 to 9.7 s); appears rather than swings shut."},
+{"change": "sluice in the upper gate opens", "as": "shown", "sheet": 7, "note": "A small pale gap appears in the upper gate bar at about 12.7 s; very small, mostly carried by the label."},
+{"change": "water pours in", "as": "shown", "sheet": 8, "note": "A curved stream arcs from the sluice into the chamber and the chamber fill rises."},
+{"change": "boat rises with the water", "as": "shown", "sheet": 9, "note": "Chamber water level rises from lower-canal height to upper-canal height (14.5 to 20 s) and the boat rides up on it."},
+{"change": "levels match", "as": "shown", "sheet": 11, "note": "Chamber surface reaches the upper canal surface and the pouring stream stops (about 20.7 s)."},
+{"change": "upper gates open", "as": "shown", "sheet": 13, "note": "The upper gate bar disappears at about 25 s, a sheet after it is narrated (sheet 12, where the bar is still in place)."},
+{"change": "boat sails on", "as": "shown", "sheet": 13, "note": "Boat slides right from the chamber into the upper canal (25 to 26 s)."}
+]}

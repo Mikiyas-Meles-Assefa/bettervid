@@ -1,0 +1,10 @@
+[
+  {"q": 1, "answer": "840 tickets (Q3).", "from": "both"},
+  {"q": 2, "answer": "412, almost half.", "from": "both"},
+  {"q": 3, "answer": "Billing, with 268.", "from": "both"},
+  {"q": 4, "answer": "160 (Shipping + other = 160).", "from": "both"},
+  {"q": 5, "answer": "Login (412).", "from": "picture"},
+  {"q": 6, "answer": "Other (63).", "from": "picture"},
+  {"q": 7, "answer": "97.", "from": "picture"},
+  {"q": 8, "answer": "They had no numbers on them; only the names Shipping and Other, with a yellow box below reading 'Shipping + other = ?'. The numbers 97 and 63 appeared only after 'Just 160' was said.", "from": "picture"}
+]

@@ -1,6 +1,7 @@
 // The Project JSON: one file per run. Each pipeline stage reads earlier fields and writes its own.
 // Types here are the contract between stages; the JSON Schemas below are what the models must return.
 import type { Scene, Theme } from "../engine/core/types.ts";
+import type { PartCard, Requirement } from "../engine/design/types.ts";
 
 export type StageName = "plan" | "research" | "writer" | "direction" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
@@ -22,6 +23,9 @@ export type Project = {
   timeline?: Timeline;
   render?: { path: string; ms: number };
   critic?: { verdict: string; tickets: { shotId: string; action: string; note: string }[] };
+  // The user's material read once into part cards, with what one file requires of the video (engine/design/material).
+  // `key`: a hash of what was read, so unchanged material is not read again.
+  material?: { cards: PartCard[]; requirements: Requirement[]; problems: string[]; key?: string };
   // Cache: the hash of each stage's inputs when it last ran, so unchanged stages are skipped.
   stages: Partial<Record<StageName, { hash: string; at: string; ms: number }>>;
   costs: Cost[];
@@ -33,6 +37,10 @@ export type Input = {
   persona: string; // a file in personas/: who narrates, in what voice; "auto" lets the writer choose
   mode: "explain" | "history" | "math" | "story";
   seconds: number; // target length; 0 means as long as the story needs
+  frame?: [number, number]; // the frame's width and height in pixels; 1080 by 1920 (9:16) when absent
+  // Who writes the scene: "language" (each part in the scene language) or "intent" (an intent plan per part, which the
+  // design brain composes). Absent: the scene stage's default (SCENE_AUTHOR_DEFAULT).
+  sceneAuthor?: "language" | "intent";
 };
 
 // Stage 0: plan. What the user explicitly asked for in their message, sorted by which part of the work it concerns.
@@ -203,8 +211,12 @@ export type BoardCamera = { frame: number; x: number; y: number; w: number; hold
 // The engine scene. Each section covers a run of spoken words and is written in the scene language
 // (prompts/engine-language.md) with global word numbers, so the sections join into one document in order.
 // `assets` maps the names a scene may use in `image id asset=NAME` to files in the project folder.
-export type SceneSection = { id: string; firstWord: number; lastWord: number; source: string; ok: boolean; rounds: number; usd: number };
-export type ScenePlan = { sections: SceneSection[]; assets: Record<string, string> };
+// `author` "intent": `source` is the part's intent plan (scripts/design-brain/intent-prompt.md), and the design brain
+// composed it into a compiled scene kept in `design.file` (relative to the project folder), with what it decided.
+// Absent or "language": `source` is scene language.
+export type SceneSection = { id: string; firstWord: number; lastWord: number; source: string; ok: boolean; rounds: number; usd: number; author?: "language" | "intent"; design?: { file: string; decisions: string[]; notes: string[] } };
+// `decisions`: what the design brain decided and every correction the director made to the plan, as visible notes.
+export type ScenePlan = { sections: SceneSection[]; assets: Record<string, string>; decisions?: string[] };
 // The end card: every source the facts rest on, and who made each image.
 export type Credits = { sources: string[]; images: string[] };
 

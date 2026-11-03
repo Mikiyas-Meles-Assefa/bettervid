@@ -5,7 +5,7 @@
 // Usage: node --experimental-strip-types app/preview.ts [<style> ...]   (all top-level and custom styles by default)
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../engine/render/bundle.ts";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import { compile } from "../engine/core/compile.ts";
 import { themeFrom } from "../engine/render/theme.ts";
@@ -28,7 +28,7 @@ function pics(): Pictures {
 }
 
 let served: Promise<string> | undefined;
-const serveUrl = () => (served ??= bundle({ entryPoint: resolve("engine/render/preview.tsx") }));
+const serveUrl = () => (served ??= bundled(resolve("engine/render/preview.tsx")));
 const chrome = { gl: "angle" as const };
 const browserExecutable = process.env.BETTERVID_CHROME || null;
 

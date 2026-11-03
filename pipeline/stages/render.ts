@@ -1,7 +1,7 @@
 // Stage 7: render the timeline with Remotion. The project folder is the public dir, so asset paths stay relative.
 import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled, releaseBundles } from "../../engine/render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import type { Project, Timeline } from "../../schemas/project.ts";
 import { dir, stage } from "../lib/project.ts";
@@ -35,30 +35,34 @@ export async function render(p: Project, force = false) {
     const t0 = Date.now();
     // Scene files first: the bundle copies the public dir as it is when bundling.
     const inputProps = playerProps(p);
-    const serveUrl = await bundle({ entryPoint: resolve("video/index.ts"), publicDir: resolve(dir(p)) });
-    // A Chrome to use instead of the one Remotion downloads, e.g. a shared chrome-headless-shell for worktrees.
-    const browserExecutable = process.env.BETTERVID_CHROME || null;
-    const composition = await selectComposition({ serveUrl, id: "Bettervid", inputProps, browserExecutable });
-    const pictures = new Set(p.timeline!.clips.flatMap((c) => (c.scene ? c.scene.nodes.filter((n) => n.kind === "image").map((n) => String(n.props.src)) : []))).size;
-    const concurrency = CONCURRENCY;
-    let last = 0;
-    const t1 = Date.now();
-    await renderMedia({
-      serveUrl,
-      composition,
-      inputProps,
-      browserExecutable,
-      codec: "h264",
-      crf: CRF,
-      imageFormat: "jpeg",
-      concurrency,
-      outputLocation: join(dir(p), "video.mp4"),
-      onProgress: ({ progress }) => {
-        if (progress - last >= 0.25) console.log(`  render ${Math.round(progress * 100)}%`), (last = progress);
-      },
-    });
-    const seconds = (Date.now() - t1) / 1000;
-    console.log(`  render: ${composition.durationInFrames} frames in ${seconds.toFixed(0)} s, ${(composition.durationInFrames / seconds).toFixed(1)} frames/s at concurrency ${concurrency}${pictures ? ` with ${pictures} scene pictures` : ""}, props ${(JSON.stringify(inputProps).length / 1024).toFixed(0)} KB`);
+    const serveUrl = await bundled(resolve("video/index.ts"), { publicDir: resolve(dir(p)) });
+    try {
+      // A Chrome to use instead of the one Remotion downloads, e.g. a shared chrome-headless-shell for worktrees.
+      const browserExecutable = process.env.BETTERVID_CHROME || null;
+      const composition = await selectComposition({ serveUrl, id: "Bettervid", inputProps, browserExecutable });
+      const pictures = new Set(p.timeline!.clips.flatMap((c) => (c.scene ? c.scene.nodes.filter((n) => n.kind === "image").map((n) => String(n.props.src)) : []))).size;
+      const concurrency = CONCURRENCY;
+      let last = 0;
+      const t1 = Date.now();
+      await renderMedia({
+        serveUrl,
+        composition,
+        inputProps,
+        browserExecutable,
+        codec: "h264",
+        crf: CRF,
+        imageFormat: "jpeg",
+        concurrency,
+        outputLocation: join(dir(p), "video.mp4"),
+        onProgress: ({ progress }) => {
+          if (progress - last >= 0.25) console.log(`  render ${Math.round(progress * 100)}%`), (last = progress);
+        },
+      });
+      const seconds = (Date.now() - t1) / 1000;
+      console.log(`  render: ${composition.durationInFrames} frames in ${seconds.toFixed(0)} s, ${(composition.durationInFrames / seconds).toFixed(1)} frames/s at concurrency ${concurrency}${pictures ? ` with ${pictures} scene pictures` : ""}, props ${(JSON.stringify(inputProps).length / 1024).toFixed(0)} KB`);
+    } finally {
+      await releaseBundles(resolve("video/index.ts"), resolve(dir(p)));
+    }
     p.render = { path: "video.mp4", ms: Date.now() - t0 };
   }, force);
 }

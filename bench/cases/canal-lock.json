@@ -1,0 +1,130 @@
+{
+ "id": "canal-lock",
+ "use": "a 16:9 lesson on a TV across a room",
+ "request": "I home-school my two kids (9 and 11). Make a short lesson for our living room TV on how a canal lock lifts a boat uphill.",
+ "topic": "How a canal lock lifts a boat",
+ "intent": "Children watching together on a TV should understand that a lock lifts a boat with water alone, step by step.",
+ "style": "blueprint",
+ "goal": "The viewer can tell the steps: the boat enters, the gates close, water fills the chamber and lifts it, the upper gates open when the levels match.",
+ "promise": "A boat climbing a hill with nothing but water.",
+ "arc": "The boat below the upper canal, in the chamber, gates shut, the water rising with the boat, the levels meeting, the boat sailing out higher.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "A boat can't sail uphill, so a canal lock lifts it, using nothing but water.",
+   "job": "Pose the problem and the answer.",
+   "knows": "A lock lifts boats with water.",
+   "waiting": "How can water lift a boat?",
+   "look": "the boat on the lower canal at the left, the higher canal at the right beyond the lock",
+   "feel": "curious",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "The boat enters the chamber, and the gates close behind it.",
+   "job": "The boat in the chamber, closed in.",
+   "knows": "The boat is in the chamber with the lower gates shut.",
+   "waiting": "",
+   "look": "the boat moving left to right into the chamber, the lower gates closing behind it",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e3",
+   "text": "Now a sluice in the upper gate opens. Water pours in, and the boat rises with it.",
+   "job": "The lift itself.",
+   "knows": "Water from the upper canal fills the chamber and the boat floats up.",
+   "waiting": "When does it stop?",
+   "look": "water pouring through the sluice, the chamber's level and the boat rising together",
+   "feel": "",
+   "rhythm": "long",
+   "demo": {
+    "what": "the chamber filling and the boat rising",
+    "phases": [
+     {
+      "at": "Water pours in,",
+      "pace": "slow",
+      "why": "children should see the boat ride up on the water, not jump"
+     }
+    ]
+   },
+   "holds": [
+    {
+     "id": "h1",
+     "after": "with it.",
+     "seconds": 2.5,
+     "purpose": "look",
+     "does": "the water keeps climbing to a dashed line marking the upper canal's level"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "When the levels match, the upper gates open, and the boat sails on.",
+   "job": "The payoff.",
+   "knows": "Equal levels let the upper gates open; the boat continues higher.",
+   "waiting": "",
+   "look": "the two water levels equal, the upper gates opening, the boat sailing out to the right",
+   "feel": "satisfied",
+   "rhythm": "short",
+   "reveal": {
+    "at": "the levels match,",
+    "what": "the chamber's water meeting the upper canal's level"
+   }
+  }
+ ],
+ "measure": {
+  "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion. For a TV: a 1.2 m wide picture seen from about 3 m looks about 2.5 times as wide as a phone's 65 mm at 40 cm, so the read sizes (shares of the frame's width) are the phone's divided by 2.5.",
+  "context": {
+   "screen": "TV",
+   "frame": "16:9",
+   "distance": "across a living room, about 3 m from a 1.2 m wide screen",
+   "attention": "watching on purpose, together",
+   "why": "a home-school lesson on the living room TV"
+  },
+  "read": {
+   "small": 0.014,
+   "comfortable": 0.028
+  }
+ },
+ "quiz": [
+  {
+   "q": "What does a canal lock use to lift a boat?",
+   "a": "Only water.",
+   "needs": "words"
+  },
+  {
+   "q": "What happens after the boat enters the chamber?",
+   "a": "The gates close behind it.",
+   "needs": "words"
+  },
+  {
+   "q": "What opens to let the water in?",
+   "a": "A sluice in the upper gate.",
+   "needs": "words"
+  },
+  {
+   "q": "When do the upper gates open?",
+   "a": "When the water levels match.",
+   "needs": "words"
+  },
+  {
+   "q": "Which way does the boat travel across the screen, left to right or right to left?",
+   "a": "Left to right.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Is the higher canal on the left or the right of the lock?",
+   "a": "On the right.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "During the pause after the boat rises, what does the water climb toward?",
+   "a": "A dashed line marking the upper canal's level.",
+   "needs": "picture",
+   "hard": true
+  }
+ ]
+}
