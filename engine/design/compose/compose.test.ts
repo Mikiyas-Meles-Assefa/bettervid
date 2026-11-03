@@ -6,7 +6,7 @@ import { themeFrom } from "../../render/theme.ts";
 import { parseIntent } from "../intent/parse.ts";
 import { edgeBand, suggestDesign, viewingFrom } from "../suggest.ts";
 import type { Design, PartCard, Viewing } from "../types.ts";
-import type { PropSpec } from "../depict/index.ts";
+import { depictionFrom, suggestLook, type PropSpec } from "../depict/index.ts";
 import { SAMPLES } from "../depict/samples.ts";
 import { compose } from "./compose.ts";
 import { when } from "../../core/compile.ts";
@@ -335,4 +335,70 @@ test("any kind the kits make composes the same way: a graph and a formula", () =
   // A part the kit does not make is named back to the author with the parts it does make.
   const wrong = sortRun(src.replace("net.node.A", "net.A")).problems.map((p) => p.problem).join("\n");
   assert.match(wrong, /net has no part "A". Its parts include: .*node\.A/);
+});
+
+// What the scene shows at a frame: every node's resolved props by id (local to its parent).
+const at = (out: ReturnType<typeof compose>, f: number) => {
+  const all = new Map<string, Resolved>();
+  const walk = (rs: Resolved[]) => rs.forEach((r) => (all.set(r.id, r), walk(r.children)));
+  walk(evaluate(out.scene, f));
+  return all;
+};
+const late = (word: number, next: number) => Math.round((words[word]!.start + (words[next]!.start - words[word]!.start) * 0.85) * 30);
+
+test("a comparison of drawn things is composed on the stage: side by side on one baseline, at one real scale", () => {
+  const plan = parseIntent(`thing note "a note"\nobject red "a red ball"\nobject blue "a small blue ball"\n@0\n  show note\n@6\n  compare red blue\n@12\n  ask "Which is heavier?"\n  show red\n  keep blue\n@20\n  compare red note\n@30\n  show note`);
+  const { out } = run(view(1080, 1920), undefined, plan);
+  assert.ok(out.decisions.some((d) => d.area === "relation" && /compare red blue: side by side on one baseline, at one real scale/.test(d.choice)));
+  const s = at(out, late(6, 12));
+  const [r, b] = [s.get("t.red")!.props, s.get("t.blue")!.props];
+  assert.ok(Math.abs(Number(r.y) - Number(b.y)) < 1, "bases level");
+  assert.ok(Math.abs(Number(r.scaleX) / Number(b.scaleX) - 21.8 / 6.7) < 0.05 * (21.8 / 6.7), "true relative size");
+  assert.ok(Number(r.x) < Number(b.x), "in the order compared");
+  // A drawn thing against words: the thing on the stage, its words beside it, both on screen.
+  const m3 = out.boxes.find((x) => x.moment === 3)!.boxes;
+  assert.ok(m3.stage && m3.note, JSON.stringify(Object.keys(m3)));
+  for (const [w, h] of [[1920, 1080], [1080, 1080]] as const) assert.ok(run(view(w, h), undefined, plan).out.scene.nodes.length);
+});
+
+test("a comparison with a computed thing places it whole on the stage beside its partner", () => {
+  const out = compose(parseIntent(`thing note "a note"\nobject red "a red ball"\n@0\n  sort demo1 data=[3,1,2] algo=insertion show=boxes\n  show demo1\n@20\n  compare demo1 red\n@40\n  compare demo1.item.1 note\n`), suggestDesign(parseIntent(`thing note "a note"\nobject red "a red ball"\n@0\n  sort demo1 data=[3,1,2] algo=insertion show=boxes\n  show demo1\n@20\n  compare demo1 red\n@40\n  compare demo1.item.1 note\n`), view(1080, 1920), theme, [], SORT_WORDS, PROPS), { theme, words: SORT_WORDS, frames: SORT_FRAMES, props: PROPS });
+  assert.ok(out.boxes[1]!.boxes.stage && out.boxes[2]!.boxes.stage && out.boxes[2]!.boxes.note, JSON.stringify(out.boxes.map((b) => Object.keys(b.boxes))));
+  assert.ok(out.decisions.some((d) => d.area === "relation" && /compare demo1 red: side by side on one baseline/.test(d.choice)), out.decisions.filter((d) => d.area === "relation").map((d) => d.choice).join("; "));
+});
+
+test("two sources that feed one vessel never share its mouth: the one that acts takes it, the other stands clear", () => {
+  const PROPS2 = { ...PROPS, burette: sample("burette"), flask: sample("flask"), dropper: sample("burette", { label: "dropper bottle", size: { w: 3, h: 8, unit: "cm" } }) };
+  const plan = parseIntent(`object burette "a burette"\nobject flask "a flask"\nobject dropper "a dropper bottle"\n@0\n  show burette\n  keep flask\n  burette drips into flask\n@12\n  show dropper\n  keep flask burette\n  dropper drips into flask\n@24\n  show flask\n  keep burette\n@36\n  show burette\n  keep flask`);
+  const { out } = run(view(1080, 1920), undefined, plan, [], PROPS2);
+  const shown = (f: number, id: string) => Number(at(out, f).get(id)?.props.opacity ?? 0) > 0.05;
+  // The second source comes only when the plan names it.
+  for (const [w, n] of [[0, 12], [24, 36]] as const) assert.ok(!shown(late(w, n), "t.dropper"), `the dropper is not parked at @${w}`);
+  assert.ok(out.decisions.some((d) => /dropper over flask; burette beside flask/.test(d.choice)));
+  // While the dropper drips, its outlet is over the mouth, and the burette is beside, clear of both.
+  const s = at(out, late(12, 24));
+  const [dr, bu, fl] = ["t.dropper", "t.burette", "t.flask"].map((id) => s.get(id)!.props);
+  assert.ok(Math.abs(Number(dr.x) - Number(fl.x)) < 2, "the acting source over the vessel");
+  assert.ok(Math.abs(Number(bu.x) - Number(fl.x)) > 50, "the other source beside it");
+});
+
+test("a stated reading sits at its value on the thing's scale, and a level that disagrees is the depicter's to repair", () => {
+  const PROPS2 = { ...PROPS, burette: sample("burette"), flask: sample("flask") };
+  const plan = parseIntent(`object burette "a burette"\nobject flask "a flask"\n@0\n  show burette\n  keep flask\n  burette drips into flask\n@30\n  show burette\n  keep flask\n  burette reads "24.30 mL"`);
+  const { out } = run(view(1080, 1920), undefined, plan, [], PROPS2);
+  const d = out.decisions.find((x) => /the reading's mark at its value/.test(x.choice))!;
+  assert.ok(d, "the mark is placed by the value");
+  const dep = depictionFrom(PROPS2.burette, theme, { id: "b", look: suggestLook(theme, 1) });
+  assert.ok(Math.abs(d.readings!.saidLevel! - dep.levelAt!(24.3)!) < 0.01, "the level of 24.3 on its scale (to the drawn line width)");
+  if (Math.abs(d.readings!.saidLevel! - d.readings!.drawnLevel!) > dep.minorLevel!) assert.ok(out.problems.some((p) => p.who === "depicter" && p.thing === "burette" && /reads "24.30 mL", but its contents stand at/.test(p.problem)));
+  // The value stands on the side away from the scale's numbers (the sample's scale is on the right).
+  const s = at(out, Math.round(words[33]!.start * 30));
+  assert.ok(Number(s.get("read.1")!.props.x) < Number(s.get("t.burette")!.props.x));
+});
+
+test("a redrawn chart's words follow the moment's type scale", () => {
+  const card: PartCard = { name: "chart", file: "x.png", size: [800, 600], kind: "chart", about: "bars", parts: {}, data: { kind: "bars", orient: "h", labels: ["a", "b"], values: [5, 9], plot: [0.1, 0.1, 0.9, 0.9] }, requirements: [], checked: { ok: true, notes: [] } };
+  const plan = parseIntent(`@0\n  show chart`);
+  const size = (ts: number) => Number(at(run(view(1080, 1920), (d) => (d.moments[0]!.typeScale = { value: ts, from: "designer" }), plan, [card]).out, 200).get("p.chart.lab0")!.props.scaleX);
+  assert.ok(size(1.4) > size(1) * 1.3, `${size(1)} then ${size(1.4)}`);
 });

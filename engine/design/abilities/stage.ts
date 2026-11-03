@@ -96,3 +96,33 @@ export function fallGroup(mem: { id: string; shape: ObjShape }[], box: { w: numb
 
 /** A single object scaled to fit a box. */
 export const fitObject = (shape: ObjShape, box: { w: number; h: number }) => Math.min(box.w / shape.w, box.h / shape.h);
+
+/**
+ * Things compared, side by side on one baseline. When every one has a real size they share one scale (px per cm), so
+ * the eye reads their true ratio; otherwise each fills an equal cell, and `toScale` is false so the caller says so.
+ * `cap` bounds a member's own scale (type keeps its size beside words). The members' `dy` is where their base sits.
+ */
+export function sideBySide(mem: { id: string; shape: ObjShape; cap?: number }[], box: { w: number; h: number }, gap: number) {
+  const n = mem.length;
+  const toScale = n > 1 && mem.every((m) => m.shape.realCm && m.shape.realCm.w > 0);
+  const free = Math.max(1, box.w - gap * (n - 1));
+  let scales: number[];
+  if (toScale) {
+    // One px-per-cm for all: the widest row that fits the box, and no member taller than the box.
+    const real = mem.map((m) => m.shape.realCm!.w);
+    const k = Math.min(free / real.reduce((a, b) => a + b, 0), ...mem.map((m, i) => box.h / ((real[i]! * m.shape.h) / m.shape.w)));
+    scales = mem.map((m, i) => (real[i]! * k) / m.shape.w);
+  } else scales = mem.map((m) => Math.min(free / n / m.shape.w, box.h / m.shape.h));
+  scales = scales.map((s, i) => Math.min(s, mem[i]!.cap ?? Infinity));
+  const ws = mem.map((m, i) => m.shape.w * scales[i]!);
+  const hs = mem.map((m, i) => m.shape.h * scales[i]!);
+  const total = ws.reduce((a, b) => a + b, 0) + gap * (n - 1);
+  const H = Math.max(...hs);
+  let x = -total / 2;
+  const members: Member[] = mem.map((m, i) => {
+    const dx = x + ws[i]! / 2;
+    x += ws[i]! + gap;
+    return { id: m.id, dx, dy: H, w: ws[i]!, h: hs[i]!, scale: scales[i]! };
+  });
+  return { members, w: total, h: H, toScale };
+}

@@ -315,6 +315,8 @@ export const container: KindDef = {
         const v = valueAtT(tOfY(yLevel(Number(s.level))));
         return `${v.toFixed(scale.decimals ?? 2)}${scale.unit ? ` ${scale.unit}` : ""}`;
       } : undefined,
+      levelAt: scale && topLayer ? (v) => levelAtT(tAtValue(v)) : undefined,
+      minorLevel: scale && topLayer ? Math.abs(levelAtT(tAtValue(scale.minor)) - levelAtT(tAtValue(0))) : undefined,
       animate: nBub ? (from, to, t) => {
         // Bubbles rise at about 25 cm/s (small bubbles in water); each starts at its own phase and loops.
         if (!(Number(to.bubbles) > 0)) return [];

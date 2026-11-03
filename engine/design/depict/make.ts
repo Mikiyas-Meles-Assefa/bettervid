@@ -35,6 +35,8 @@ export type KindBuild = {
   /** Values a verb can name as "@name", worked out from the state (an angle at which a vessel pours, say). */
   computed?: Record<string, (s: StateMap) => StateValue>;
   read?(s: StateMap): string | undefined;
+  levelAt?(value: number): number | undefined;
+  minorLevel?: number;
   /** Continuous processes the diff cannot show (drops falling, a clock running): changes over the timing. */
   animate?(from: StateMap, to: StateMap, t: Timing): Change[];
   capacity?: { unit: string; at(level: number): number; levelOf(amount: number): number };
@@ -141,11 +143,29 @@ export function makeDepiction(def: KindDef, spec: PropSpec, theme: Theme, look: 
       verbs[name.toLowerCase()] = { ...verbs[base]!, about: sv.about ?? `${name}: as ${base}`, ...(sv.motion ? { motion: sv.motion } : {}), ...(sv.arg !== undefined ? { sets: verbs[base]!.sets.map((s) => (s.arg ? { ...s, value: sv.arg, arg: false } : s)) } : {}) };
     } else if (sv.sets) verbs[name.toLowerCase()] = { about: sv.about ?? name, sets: sv.sets, motion: sv.motion };
   }
+  const resolveArg = (d: StateDef, arg: StateValue): StateValue => {
+    if (d.type === "color" && typeof arg === "string") {
+      const named = spec.colors?.[arg] ?? spec.colors?.[arg.toLowerCase()];
+      if (named) return named;
+      if (isHex(arg) || theme.colors[arg]) return arg;
+      throw new Error(`${id}: "${arg}" is not one of its colors (${Object.keys(spec.colors ?? {}).join(", ") || "none named"}); the depicter names the colors a thing can take`);
+    }
+    if ((d.type === "number" || d.type === "angle") && typeof arg === "string") {
+      const m = /(-?\d+(?:\.\d+)?)\s*(%)?/.exec(arg);
+      if (!m) throw new Error(`${id}: "${arg}" is not a number`);
+      return m[2] ? Number(m[1]) / 100 : Number(m[1]);
+    }
+    if (d.type === "bool") return arg === true || arg === "true" || arg === 1 || arg === "on" || arg === "open";
+    return arg;
+  };
+
   const state: StateMap = {};
   for (const [n, d] of Object.entries(states)) state[n] = d.initial;
+  // The spec's starting state reads its words as a verb's argument does: a color by its name in colors, a number from
+  // "30%". A name painted as it is would be no color at all to the renderer (and an SVG paints that black).
   for (const [n, v] of Object.entries(spec.state ?? {})) {
     if (!(n in states)) throw new Error(`${id}: ${def.name} has no state "${n}" (it has ${Object.keys(states).join(", ")})`);
-    state[n] = v;
+    state[n] = resolveArg(states[n]!, v);
   }
 
   const [px, py] = k.pivot;
@@ -171,22 +191,6 @@ export function makeDepiction(def: KindDef, spec: PropSpec, theme: Theme, look: 
   ];
   const known = new Set(nodes.map((n) => n.id));
   for (const nid of Object.keys(first)) if (!known.has(nid)) throw new Error(`${id}: draw names ${nid}, which is not a node`);
-
-  const resolveArg = (d: StateDef, arg: StateValue): StateValue => {
-    if (d.type === "color" && typeof arg === "string") {
-      const named = spec.colors?.[arg] ?? spec.colors?.[arg.toLowerCase()];
-      if (named) return named;
-      if (isHex(arg) || theme.colors[arg]) return arg;
-      throw new Error(`${id}: "${arg}" is not one of its colors (${Object.keys(spec.colors ?? {}).join(", ") || "none named"}); the depicter names the colors a thing can take`);
-    }
-    if ((d.type === "number" || d.type === "angle") && typeof arg === "string") {
-      const m = /(-?\d+(?:\.\d+)?)\s*(%)?/.exec(arg);
-      if (!m) throw new Error(`${id}: "${arg}" is not a number`);
-      return m[2] ? Number(m[1]) / 100 : Number(m[1]);
-    }
-    if (d.type === "bool") return arg === true || arg === "true" || arg === 1 || arg === "on" || arg === "open";
-    return arg;
-  };
 
   const dep: Depiction = {
     id,
@@ -242,7 +246,7 @@ export function makeDepiction(def: KindDef, spec: PropSpec, theme: Theme, look: 
         const s = s0.state.includes("{arg}") ? { ...s0, state: s0.state.replace("{arg}", String(arg ?? "")), arg: false } : s0;
         const d = states[s.state];
         if (!d) return { known: false, verb, notes: [`${key} sets "${s.state}", which ${spec.label} does not have`] };
-        let value: StateValue | undefined = s.arg && arg !== undefined ? resolveArg(d, arg) : s.value;
+        let value: StateValue | undefined = s.arg && arg !== undefined ? resolveArg(d, arg) : typeof s.value === "string" && !s.value.startsWith("@") ? resolveArg(d, s.value) : s.value;
         if (typeof value === "string" && value.startsWith("@")) {
           const f = k.computed?.[value.slice(1)];
           if (!f) return { known: false, verb, notes: [`${key} needs "${value}", which ${spec.label} cannot work out`] };
@@ -288,6 +292,8 @@ export function makeDepiction(def: KindDef, spec: PropSpec, theme: Theme, look: 
     },
   };
   if (k.read) dep.read = (s = dep.state) => k.read!(s);
+  if (k.levelAt) dep.levelAt = k.levelAt;
+  if (k.minorLevel !== undefined) dep.minorLevel = k.minorLevel;
   if (k.capacity) dep.capacity = k.capacity;
   return dep;
 }

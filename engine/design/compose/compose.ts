@@ -351,11 +351,16 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
 
   // ---------------------------------------------------------------------------------------------------------------
   // 3. Each moment: who is on screen and in what role.
-  const apparatus: string[][] = [];
+  // Apparatus: a source with what it pours or drips into, and things that fall together. A vessel fed by several sources
+  // keeps only its first (primary) source as context; another source comes on screen when the plan names it.
+  const apparatus: { ids: string[]; flow: boolean }[] = [];
+  const primarySource = new Map<string, string>();
   for (const f of fms)
     for (const a of f.acts) {
-      const g = is(a, "flow") && a.to ? [a.ids[0]!, a.to] : is(a, "fall") && a.ids.length > 1 ? a.ids : [];
-      if (g.length > 1 && g.every(isObj) && !apparatus.some((x) => g.every((y) => x.includes(y)))) apparatus.push(g);
+      const flow = is(a, "flow") && !!a.to;
+      const g = flow ? [a.ids[0]!, a.to!] : is(a, "fall") && a.ids.length > 1 ? a.ids : [];
+      if (g.length > 1 && g.every(isObj) && !apparatus.some((x) => x.flow === flow && g.every((y) => x.ids.includes(y)))) apparatus.push({ ids: g, flow });
+      if (flow && g.every(isObj) && !primarySource.has(g[1]!)) primarySource.set(g[1]!, g[0]!);
     }
   const sticky = new Set<string>();
   const plans: Plan[] = [];
@@ -392,9 +397,13 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     let pair = m.compare && m.compare[0] !== m.compare[1] ? m.compare : undefined;
     let partPair: Plan["partPair"];
     if (pair && (kr(pair[0]) || kr(pair[1]))) {
-      notes.push(`${tag(m)} compare ${pair[0]} ${pair[1]} involves a computed thing: both are shown, side by side on the stage or around it`);
-      for (const x of pair) add(x, "support");
-      pair = undefined;
+      // A computed thing is compared whole, on the stage beside its partner (a part names where to look, not what to draw).
+      const whole = [sid(pair[0])!, sid(pair[1])!] as [string, string];
+      if (whole[0] === whole[1]) {
+        notes.push(`${tag(m)} compare ${pair[0]} ${pair[1]}: two parts of one computed thing, shown as that one thing`);
+        add(pair[0], "support");
+        pair = undefined;
+      } else pair = whole;
     }
     if (pair && (pr(pair[0]) || pr(pair[1]))) {
       const [ra, rb] = [pr(pair[0]), pr(pair[1])];
@@ -438,7 +447,12 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     for (const x of f.becomes) add(x.id, "support");
     for (const a of f.acts) for (const x of [...a.ids, ...(a.to ? [a.to] : [])]) if (x && sid(x) !== subj) add(x, "support");
     // An apparatus is one thing: while any part of it is on screen, the rest stays as quiet context.
-    for (const g of apparatus) if (g.some((x) => has(x) || x === subj)) for (const x of g) if (!has(x) && x !== subj) (add(x, "support"), decide("continuity", f.i, `${x} stays as context`, "style", `it belongs to one apparatus with ${g.filter((y) => y !== x).join(", ")}`));
+    const here = (x: string) => has(x) || x === subj;
+    for (const { ids: g, flow } of apparatus) {
+      // A source brings what it feeds; a vessel brings only its primary source; things that fall together come together.
+      const pull = !flow ? (g.some(here) ? g : []) : here(g[0]!) ? [g[1]!] : here(g[1]!) && primarySource.get(g[1]!) === g[0] ? [g[0]!] : [];
+      for (const x of pull) if (!here(x)) (add(x, "support"), decide("continuity", f.i, `${x} stays as context`, "style", `it belongs to one apparatus with ${g.filter((y) => y !== x).join(", ")}`));
+    }
     if (pair) for (const x of pair) add(x, pairIsSubject ? "subject" : "support");
     if (subj) {
       const s = slots.find((x) => x.id === subj);
@@ -542,7 +556,13 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   });
   const picParts = new Map<string, Set<string>>();
   for (const p of plans) for (const s of p.slots) if (pics.has(s.id)) for (const x of [s.part, ...(s.parts ?? [])]) if (x) (picParts.get(s.id) ?? picParts.set(s.id, new Set()).get(s.id)!).add(x);
-  const chartLook = (k?: number): A.ChartLook => ({ small: MIN_FS, valueFs: MIN_FS * V.n("chart.valueScale", k), headBig: V.px("chart.headBig", k), headShare: V.n("chart.headShare", k), rowLine: V.n("chart.rowLine", k), gap: V.px("chart.gap", k), barFrac: V.n("chart.barFrac", k), photoBarFrac: V.n("chart.photoBarFrac", k), dimBars: V.n("chart.dimBars", k), dimText: V.n("chart.dimText", k), labelOpacity: V.n("chart.labelOpacity", k), levelPad: V.px("chart.levelPad", k), em });
+  // A redrawn chart's words follow the design's type sizes and the moment's type scale (labels at the label step, its
+  // values a step up, its words in focus large), never under the smallest size; the chart fits them in its box.
+  const typeScaleOf = (k?: number) => (k === undefined ? 1 : fms.find((x) => x.i === k)?.md.typeScale.value ?? 1);
+  const chartSmall = (k?: number) => Math.max(MIN_FS, V.px("type.label", k) * typeScaleOf(k));
+  const LABEL_FONT = roleLook(theme, "label").font ?? FONT;
+  const emLabel = (t: string) => emCache.get(`\u0000${t}`) ?? emCache.set(`\u0000${t}`, measure(t, 100, LABEL_FONT) / 100).get(`\u0000${t}`)!;
+  const chartLook = (k?: number): A.ChartLook => ({ small: chartSmall(k), min: MIN_FS, valueFs: Math.max(MIN_FS, chartSmall(k) * V.n("chart.valueScale", k)), headBig: Math.max(MIN_FS, V.px("chart.headBig", k) * typeScaleOf(k)), headShare: V.n("chart.headShare", k), rowLine: V.n("chart.rowLine", k), gap: V.px("chart.gap", k), barFrac: V.n("chart.barFrac", k), photoBarFrac: V.n("chart.photoBarFrac", k), dimBars: V.n("chart.dimBars", k), dimText: V.n("chart.dimText", k), labelOpacity: V.n("chart.labelOpacity", k), levelPad: V.px("chart.levelPad", k), em, emLabel });
 
   // ---------------------------------------------------------------------------------------------------------------
   // 5. Layout: per moment, the anchor where the design asks, the rest packed around it by the arrangement.
@@ -610,7 +630,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       return textBlock(s.id, s.id, e.text!, ver, fs, { cls: s.cls, wrong: s.wrong, reveal: s.reveal, ver, color: colorFor(s, subjectLike), op: opFor(s, subjectLike) }, s.cls === "question" ? -1 : rank.get(s.id) ?? 0, subjectLike);
     };
     const pairBlock = (maxW: number, cs: number, asAnchor: boolean, maxH: number): Block => {
-      const [a, b] = plan.pair!;
+      const [a, b] = wordPair!;
       const members = [slotOf.get(a)!, slotOf.get(b)!];
       const subjectLike = members[0]!.cls === "subject";
       const gap = V.px("compare.gap", f.i);
@@ -694,13 +714,32 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const objIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "obj";
     const picIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "pic";
     const kitIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "kit";
+    // A comparison that holds a drawn or computed thing is composed on the stage: the stage things side by side on one
+    // baseline (at one real scale when their sizes are known), and a partner made of words beside the stage.
+    const onStage = (id: string) => objIn(id) || picIn(id) || kitIn(id);
+    const stagePair = plan.pair?.some(onStage) ? plan.pair : undefined;
+    const wordPair = stagePair ? undefined : plan.pair;
+    const pairSet = stagePair?.every((x) => objIn(x) || kitIn(x)) ? new Set(stagePair) : undefined;
     const stageParts = (): string[][] => {
       const used = new Set<string>();
       const groups: string[][] = [];
-      for (const [src, dst] of flows) {
-        if (!objIn(src) || !objIn(dst)) continue;
-        const grouped = new Set([...flows.keys(), ...flows.values(), ...fallGroups.flat()]);
-        const sats = plan.slots.filter((sl) => objIn(sl.id) && !grouped.has(sl.id) && !used.has(sl.id)).map((sl) => sl.id);
+      // One apparatus per vessel. Of the sources on screen that feed it, the one that pours or drips in this moment has
+      // its outlet over the mouth (else the primary source); any other stands beside the vessel, clear of the working
+      // parts, so two sources never share the mouth.
+      const feeds = new Map<string, string[]>();
+      for (const [src, dst] of flows) (feeds.get(dst) ?? feeds.set(dst, []).get(dst)!).push(src);
+      const grouped = new Set([...flows.keys(), ...flows.values(), ...fallGroups.flat()]);
+      for (const [dst, srcs] of feeds) {
+        if (!objIn(dst) || used.has(dst)) continue;
+        const here = srcs.filter((x) => objIn(x) && !used.has(x) && x !== dst);
+        if (!here.length) continue;
+        const acting = here.filter((x) => f.acts.some((a) => is(a, "flow") && a.ids[0] === x && a.to === dst));
+        const src = acting.at(-1) ?? (here.includes(primarySource.get(dst) ?? "") ? primarySource.get(dst)! : here[0]!);
+        const aside = here.filter((x) => x !== src);
+        if (aside.length && tell) decide("composition", f.i, `${src} over ${dst}; ${aside.join(", ")} beside ${dst}`, "style", acting.includes(src) ? `${src} pours or drips into ${dst} now: its outlet takes the mouth` : `${src} is ${dst}'s primary source`);
+        // Compared things stand together, not as satellites of an apparatus they are not part of.
+        const keepPair = pairSet && !pairSet.has(src) && !pairSet.has(dst);
+        const sats = [...aside, ...plan.slots.filter((sl) => objIn(sl.id) && !grouped.has(sl.id) && !used.has(sl.id) && !(keepPair && pairSet.has(sl.id))).map((sl) => sl.id)];
         groups.push(["flow", src, dst, ...sats]);
         [src, dst, ...sats].forEach((x) => used.add(x));
       }
@@ -711,6 +750,16 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         mem.forEach((x) => used.add(x));
       }
       for (const s of plan.slots) if ((objIn(s.id) || picIn(s.id) || kitIn(s.id)) && !used.has(s.id)) groups.push([objIn(s.id) ? "obj" : kitIn(s.id) ? "kit" : "pic", s.id]);
+      // Two compared things that stand alone become one comparison, where the first of them stood.
+      if (pairSet) {
+        const [a, b] = [...pairSet];
+        const ga = groups.findIndex((g) => g.length === 2 && g[1] === a && g[0] !== "pic");
+        const gb = groups.findIndex((g) => g.length === 2 && g[1] === b && g[0] !== "pic");
+        if (ga >= 0 && gb >= 0) {
+          groups.splice(Math.max(ga, gb), 1);
+          groups.splice(Math.min(ga, gb), 1, ["pair", a!, b!]);
+        }
+      }
       return groups;
     };
     const stageBlock = (box: { w: number; h: number }, groups: string[][]): Block => {
@@ -745,6 +794,16 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
           const sc = A.fitObject(p, cell);
           out.push({ id: ids[0]!, dx: 0, dy: (p.h * sc) / 2, w: p.w * sc, h: p.h * sc, st: { ...objCls(ids[0]!), s: sc } });
           (w = p.w * sc), (h = p.h * sc);
+        } else if (kind === "pair") {
+          const mem = ids.map((id) => {
+            if (objIn(id)) return { id, shape: shapeOf(id) };
+            const c = computed.get(id)!;
+            return { id, shape: { w: c.box.w, h: c.box.h }, cap: c.nodes[0]?.props?.typeset ? 1 : undefined };
+          });
+          const g2 = A.sideBySide(mem, cell, V.px("compare.gap", f.i));
+          for (const mm of g2.members) out.push({ id: mm.id, dx: mm.dx, dy: mm.dy - mm.h / 2, w: mm.w, h: mm.h, st: { ...objCls(mm.id), s: mm.scale } });
+          (w = g2.w), (h = g2.h);
+          if (tell) decide("relation", f.i, `compare ${ids[0]} ${ids[1]}: side by side on one baseline${g2.toScale ? ", at one real scale" : ""}`, "style", g2.toScale ? "both have real sizes: the eye reads their true ratio" : "a real size is missing for one of them: each fills an equal half, not to scale");
         } else if (kind === "kit") {
           // A computed thing fills its cell by the box of all it may ever show (so its later steps fit too), as the
           // scene language fits it into a slot; type (a formula) keeps its own size beside words, never larger.
@@ -759,8 +818,21 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
           const p = pics.get(s.id)!;
           if (isChart(p)) {
             const lit = plan.partPair?.pic === s.id ? plan.partPair.parts : s.part ? [s.part] : [];
-            out.push({ id: s.id, dx: 0, dy: cell.h / 2, w: cell.w, h: cell.h, st: { cls: s.cls, op: 1, s: 1, z: 1, ox: 0, oy: 0, sub: s.part, sup: s.parts, lit } });
-            (w = cell.w), (h = cell.h);
+            // The redrawn chart takes its cell, or the height its words need at that width when the cell is short, so
+            // the packer makes room rather than letting labels print over each other.
+            const real = md.proposals.some((q) => q.value.kind === "real" && q.value.ids.some((x) => x.split(".")[0] === s.id));
+            let cw = cell.w;
+            let fit = real ? undefined : A.chartFit({ w: cw, h: cell.h, sub: s.part, lit }, p, chartLook(f.i));
+            // Short of room, a chart alone on a stage that stacks may take the usable frame's width: wider rows need
+            // fewer lines.
+            if (fit && !fit.fits && groups.length === 1 && arrangement !== "row" && arrangement !== "split" && rw(U) > cw + 1) {
+              const wide = A.chartFit({ w: rw(U), h: cell.h, sub: s.part, lit }, p, chartLook(f.i));
+              if (wide.fits || wide.needH < fit.needH) (fit = wide), (cw = rw(U));
+            }
+            const ch = fit && !fit.fits ? fit.needH : cell.h;
+            if (fit && !fit.fits && tell) decide("layout", f.i, `${s.id}: the redrawn chart needs ${Math.round(fit.needH)} px of height at ${Math.round(cw)} px wide, ${Math.round(cell.h)} px given`, "style", "its labels, values and header rows at the smallest size do not fit the box", { needH: fit.needH, given: cell.h });
+            out.push({ id: s.id, dx: 0, dy: ch / 2, w: cw, h: ch, st: { cls: s.cls, op: 1, s: 1, z: 1, ox: 0, oy: 0, sub: s.part, sup: s.parts, lit } });
+            (w = cw), (h = ch);
           } else {
             const asp = p.w / p.h;
             const pw = Math.min(cell.w, cell.h * asp) * V.n("picture.photoWidth", f.i);
@@ -790,7 +862,11 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
 
     const groups = stageParts();
     const stageIds = new Set(groups.flatMap((g) => g.slice(1)));
-    const pairIds = new Set(plan.pair ?? []);
+    const pairIds = new Set(wordPair ?? []);
+    if (tell && stagePair && !groups.some((g) => g[0] === "pair")) {
+      const together = groups.some((g) => stagePair.every((x) => g.includes(x)));
+      decide("relation", f.i, `compare ${stagePair[0]} ${stagePair[1]}: ${together ? "within the composition that already holds both" : "the drawn thing on the stage, its partner beside it"}`, "style", together ? "they already stand together on the stage, as one apparatus or group" : "a comparison of a drawn thing with words or with a thing composed elsewhere on the stage");
+    }
     const arrowIds = new Set<string>();
     const arrowsUsed = plan.arrows.filter((ar) => {
       const ok = slotOf.has(ar.a) && slotOf.has(ar.b) && ar.a !== ar.b && !pairIds.has(ar.a) && !pairIds.has(ar.b) && !stageIds.has(ar.a) && !stageIds.has(ar.b) && !arrowIds.has(ar.a) && !arrowIds.has(ar.b);
@@ -800,7 +876,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     });
     const loose = plan.slots.filter((s) => !stageIds.has(s.id) && !pairIds.has(s.id) && !arrowIds.has(s.id));
     // The anchor: the stage when one is on screen, else the block that holds the subject, else the question.
-    const anchorKind = groups.length ? "stage" : plan.pair && (pairIds.has(plan.subject ?? "") || !plan.subject) ? "pair" : plan.subject && arrowIds.has(plan.subject) ? "arrow" : plan.subject && loose.some((s) => s.id === plan.subject) ? "single" : plan.question ? "question" : loose.length ? "first" : "none";
+    const anchorKind = groups.length ? "stage" : wordPair && (pairIds.has(plan.subject ?? "") || !plan.subject) ? "pair" : plan.subject && arrowIds.has(plan.subject) ? "arrow" : plan.subject && loose.some((s) => s.id === plan.subject) ? "single" : plan.question ? "question" : loose.length ? "first" : "none";
     const anchorSlot = anchorKind === "single" ? slotOf.get(plan.subject!)! : anchorKind === "question" ? slotOf.get(`q.${k}`)! : anchorKind === "first" ? loose[0]! : undefined;
     const scale0 = md.subjectScale.value;
     const at = md.subjectAt.value;
@@ -824,8 +900,8 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const othersFor = (maxBefore: number, maxAfter: number, cs: number, anchorRank: number): (Block & { before: boolean })[] => {
       const out: (Block & { before: boolean })[] = [];
       const side = (r: number) => r < anchorRank;
-      if (plan.pair && anchorKind !== "pair") {
-        const r = Math.min(rank.get(plan.pair[0]) ?? 0, rank.get(plan.pair[1]) ?? 0);
+      if (wordPair && anchorKind !== "pair") {
+        const r = Math.min(rank.get(wordPair[0]) ?? 0, rank.get(wordPair[1]) ?? 0);
         out.push({ ...pairBlock(side(r) ? maxBefore : maxAfter, cs, false, rh(U)), before: side(r) });
       }
       for (const ar of arrowsUsed) {
@@ -1048,7 +1124,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   for (const [id, e] of ents) {
     if (e.type !== "pic" || !used.has(key(id))) continue;
     const pic = pics.get(id)!;
-    if (isChart(pic)) A.chartNodes(w, key(id), pic, { subject: C.subject, muted: C.muted, pointer: C.pointer, small: MIN_FS, valueFs: MIN_FS * V.n("chart.valueScale"), baseWidth: markW * 0.5, levelWidth: V.px("level.width") });
+    if (isChart(pic)) A.chartNodes(w, key(id), pic, { subject: C.subject, muted: C.muted, pointer: C.pointer, small: chartSmall(), valueFs: chartSmall() * V.n("chart.valueScale"), baseWidth: markW * 0.5, levelWidth: V.px("level.width") });
     else A.pictureNodes(w, key(id), pic, picParts.get(id) ?? [], { pointer: C.pointer, pad: 6, radius: 14 });
   }
   // Computed things: the kit's own parts under their group, created hidden at their first place. Words the kit draws are
@@ -1263,7 +1339,24 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         const r = A.actOn(w, P, a.verb, said, at0 + 2, { frames: V.f("reading.move", i), fps: FPS });
         if (!r.known) problems.push({ thing: Aid, who: "depicter", task: `depict.${Aid}`, problem: `${tag(f.m)} ${Aid} ${a.verb}: ${r.notes.join("; ")}` });
         const v = A.readingOf(P, a.arg);
-        A.readClose(w, String(k), P, v.value, at0 + 2, { zoom: V.n("reading.zoom", i), textPx: V.px("reading.size", i), markPx: V.px("reading.mark", i), moveFrames: V.f("reading.move", i), textAt: V.f("reading.textAt", i), textFrames: V.f("chart.fade", i), markAt: Math.round(V.f("reading.textAt", i) * 0.8), gap: V.px("reading.gap", i), em });
+        // A stated value sits at its own graduation on the thing's scale. Where the contents drawn there stand elsewhere
+        // (by more than one minor step), the scene says two things at once: the depicter is asked to repair it.
+        const said0 = v.fromScale ? undefined : A.levelOfReading(P, v.value);
+        const drawnLv = Number(P.d.state.level);
+        if (said0 !== undefined && Number.isFinite(drawnLv)) {
+          const off = Math.abs(said0 - drawnLv);
+          decide("demonstration", i, `${Aid}: the reading's mark at its value on the scale`, "style", "a stated reading sits where its value is printed", { saidLevel: said0, drawnLevel: drawnLv });
+          if (off > (P.d.minorLevel ?? 0.01)) {
+            const cap = P.d.capacity;
+            const start = Number(defs.get(Aid)?.spec?.state?.level ?? P.d.states.level?.initial);
+            const moved = cap && Number.isFinite(start) ? cap.at(start) - cap.at(drawnLv) : undefined;
+            const need = cap && moved !== undefined ? cap.at(said0) + moved : undefined;
+            const hint = need === undefined || !Number.isFinite(need) ? "" : need > cap!.at(1) + 1e-9 ? `; even full it cannot: ${moved!.toFixed(2)} ${cap!.unit} moves out before ${tag(f.m)}${drawnLv <= 0.001 ? " and it runs empty" : ""}, so the flows before it, its scale or the reading must change` : `; start it at level ${cap!.levelOf(need).toFixed(3)} so what moves out before ${tag(f.m)} (${moved!.toFixed(2)} ${cap!.unit}) brings it to the reading${drawnLv <= 0.001 ? " (it runs empty, so this is the least it needs)" : ""}`;
+            problems.push({ thing: Aid, who: "depicter", task: `depict.${Aid}`, problem: `${tag(f.m)} ${Aid} ${a.verb} "${v.value}", but its contents stand at ${P.d.read?.() ?? `level ${drawnLv.toFixed(3)}`} there (level ${drawnLv.toFixed(3)}, the reading's is ${said0.toFixed(3)})${hint}` });
+            notes.push(`${tag(f.m)} ${Aid} reads "${v.value}" while its contents are drawn at ${P.d.read?.() ?? drawnLv.toFixed(3)}: the mark sits at the stated value`);
+          }
+        }
+        A.readClose(w, String(k), P, v.value, at0 + 2, { zoom: V.n("reading.zoom", i), textPx: V.px("reading.size", i), markPx: V.px("reading.mark", i), moveFrames: V.f("reading.move", i), textAt: V.f("reading.textAt", i), textFrames: V.f("chart.fade", i), markAt: Math.round(V.f("reading.textAt", i) * 0.8), gap: V.px("reading.gap", i), em }, said0);
         decide("demonstration", i, `${Aid} reads ${v.value}${v.fromScale ? " (off its scale, at the level the plan left it)" : " (the author's value)"}`, "style", "the camera closes in on the part read and the value stands beside it");
       } else if (c.kind === "move") {
         const to = a.to ? cur.get(key(sid(a.to)!)) : undefined;
@@ -1582,8 +1675,9 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     for (const part of parts) {
       const nmPart = `${p.name}.${part}`;
       if (isChart(p)) {
-        for (const b of p.barsOf.get(part) ?? []) addId(nmPart, `${key(p.name)}.bar${b}`, `${key(p.name)}.val${b}`, `${key(p.name)}.lab${b}`);
-        addId(nmPart, `${key(p.name)}.hd.${part}`, `${key(p.name)}.lv.${part}`);
+        const rows = (row: string) => Array.from({ length: A.CHART_LINES }, (_, j) => A.lineId(row, j));
+        for (const b of p.barsOf.get(part) ?? []) addId(nmPart, `${key(p.name)}.bar${b}`, `${key(p.name)}.val${b}`, ...rows(`${key(p.name)}.lab${b}`));
+        addId(nmPart, ...(p.data.texts?.[part] !== undefined ? rows(`${key(p.name)}.hd.${part}`) : [`${key(p.name)}.hd.${part}`]), `${key(p.name)}.lv.${part}`);
       } else addId(nmPart, `${key(p.name)}.c.ol.${part}`);
       if (!ids[nmPart]?.length) delete ids[nmPart];
     }

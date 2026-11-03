@@ -87,6 +87,10 @@ export interface Depiction {
   act(verb: string, arg?: StateValue, timing?: Timing): ActResult;
   /** What the thing reads at a state, in its own units, when it has a scale. */
   read?(state?: StateMap): string | undefined;
+  /** The level (0 to 1, as the `level` state) where its scale reads a value, when it has a scale. */
+  levelAt?(value: number): number | undefined;
+  /** How much level one minor step of its scale spans: the smallest difference a reader of the scale can see. */
+  minorLevel?: number;
   /** For things that hold something: the amount at a level (in `unit`, such as mL) and the level of an amount. */
   capacity?: { unit: string; at(level: number): number; levelOf(amount: number): number };
   notes: string[];

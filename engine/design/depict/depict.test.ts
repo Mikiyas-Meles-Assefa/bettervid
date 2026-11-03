@@ -244,3 +244,36 @@ test("the prototype's exports still work for the composer", () => {
   propNodes("x", p, (id) => ids.push(id), "ink", "paper", 40);
   assert.ok(ids.length > 10);
 });
+
+test("a starting state names its colors as a verb does: a liquid named by its color name is painted in that color", () => {
+  const base = SAMPLES.find((s) => s.name === "flask")!.spec;
+  const d = depictionFrom({ ...base, state: { ...(base.state ?? {}), color: "clear" } }, theme, { id: "f", look });
+  assert.equal(d.state.color, base.colors!.clear);
+  const fill = String(find(evaluate(scene(d, 400, 600), 0), "f.liq.solution")!.props.fill);
+  assert.ok(!/^[a-z ]+$/i.test(fill), `"${fill}" is a name, which the renderer paints black`);
+  assert.ok(fill.includes("#"), fill);
+  // A verb's own literal color is read the same way, and a color it does not name is the depicter's to repair.
+  const v = depictionFrom({ ...base, verbs: { blushes: { sets: [{ state: "color", value: "rose" }] } } }, theme, { id: "g", look });
+  v.act("blushes");
+  assert.equal(v.state.color, base.colors!.rose);
+  assert.ok(checkSpec({ ...base, state: { color: "violet" } }).some((p) => /violet/.test(p.problem)));
+});
+
+test("a burette's scale spans its graduated length, and a value's level is where the scale prints it", () => {
+  const spec = SAMPLES.find((s) => s.name === "burette")!.spec;
+  const d = depictionFrom(spec, theme, { id: "b", look, text: 20 });
+  const sc = spec.params!.scale as { from: number; to: number };
+  const nums = d.nodes.filter((n) => /^b\.num\.\d+$/.test(n.id)).map((n) => ({ v: Number(n.props!.text), y: Number(n.props!.y) }));
+  const ys = nums.map((n) => n.y);
+  // The marks run from near the top of the body to near its bottom (the outlet below takes the rest), not bunched.
+  const span = (Math.max(...ys) - Math.min(...ys)) / d.box.h;
+  const outlet = (spec.params!.outlet as { length: number }).length;
+  assert.ok(Math.abs(span - (sc.to - sc.from) * (1 - outlet)) < 0.02, `marks span ${span.toFixed(2)} of the height`);
+  // A reading's level lands between the marks around it, in proportion.
+  const lv = d.levelAt!(24.3)!;
+  const y = d.anchor("surface", { ...d.state, level: lv })![1];
+  const [y20, y30] = [nums.find((n) => n.v === 20)!.y, nums.find((n) => n.v === 30)!.y];
+  assert.ok(Math.abs((y - y20) / (y30 - y20) - 0.43) < 0.03, `24.3 sits ${((y - y20) / (y30 - y20)).toFixed(2)} of the way from 20 to 30`);
+  assert.match(d.read!({ ...d.state, level: lv })!, /^24\.3/);
+  assert.ok(d.minorLevel! > 0 && d.minorLevel! < 0.05);
+});
