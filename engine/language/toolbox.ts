@@ -13,7 +13,7 @@
 import type { Behavior, CompileContext, Kit, NodeSpec, Theme, Track, Value } from "../core/types.ts";
 import { depict, depictionFrom, pictureDepiction, sizeCm, spriteDepiction, suggestLook, transfer, type DepictRequest, type Depiction, type PropSpec, type SpriteMaker, type StateMap, type StateValue } from "../design/depict/index.ts";
 import { getSprite, loadSprite, spriteRequest, SPRITE_CACHE } from "../design/depict/sprite.ts";
-import { POSE_VERBS } from "../design/depict/make.ts";
+import { POSE_STATES, POSE_VERBS } from "../design/depict/make.ts";
 import { pointOf } from "../design/depict/points.ts";
 import type { PartCard, Reasoner } from "../design/types.ts";
 import { parse, type Item } from "./syntax.ts";
@@ -66,8 +66,16 @@ type Live = Map<string, Depiction>;
 
 const DEPICT_OWN = new Set(["text", "tier", "asset", "parts", "cm", "w", "h", "role", "enter", "at", "into", "before", "after", "follow", "id"]);
 
-function stateValue(d: Depiction, name: string, v: Value): StateValue {
+function stateValue(d: Depiction, name: string, v: Value, spec?: PropSpec, theme?: Theme): StateValue {
   const def = d.states[name]!;
+  // A color is one the depicter named for the real thing, a #hex, or one of the style's colors.
+  if (def.type === "color") {
+    const c = String(v);
+    const named = spec?.colors?.[c] ?? Object.entries(spec?.colors ?? {}).find(([k]) => k.toLowerCase() === c.toLowerCase())?.[1];
+    if (named) return named;
+    if (/^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(c) || theme?.colors[c]) return c;
+    throw new Error(`${d.id}'s ${name} cannot be "${c}": its colors are ${Object.keys(spec?.colors ?? {}).join(", ") || "none named"}, or a #hex`);
+  }
   if (def.type === "number" || def.type === "angle") return Number(v);
   if (def.type === "bool") return v === "1" || v === 1 || v === "true" || v === "yes";
   if (def.type === "point") return Array.isArray(v) ? [Number(v[0]), Number(v[1])] as [number, number] : (String(v).split(",").map(Number) as [number, number]);
@@ -91,9 +99,10 @@ function makeOne(e: ToolboxEntry, id: string, theme: Theme, state: StateMap): De
   return draft((0.45 * 1920) / Math.max(1, first.box.w, first.box.h));
 }
 
-const fractions = (d: Depiction): Record<string, [number, number]> => {
+// Named points in the depiction's local units; the build turns them into shares of the box it really draws.
+const localPoints = (d: Depiction): Record<string, [number, number]> => {
   const out: Record<string, [number, number]> = {};
-  const to01 = ([x, y]: [number, number]): [number, number] => [x / d.box.w + 0.5, 1 + y / d.box.h];
+  const to01 = (p: [number, number]): [number, number] => p;
   for (const [k, p] of Object.entries(d.points ?? {})) out[k.toLowerCase()] = to01(p);
   for (const name of ["outlet", "mouth", "surface", "tip", "top", "bottom", "left", "right", "center"]) {
     const p = name in out ? undefined : d.anchor(name);
@@ -105,7 +114,10 @@ const fractions = (d: Depiction): Record<string, [number, number]> => {
 
 /** What a prepared thing can do, for the writer: its states, verbs and points. */
 export function describeDepiction(d: Depiction): string {
-  const states = Object.entries(d.states).map(([k, s]) => `${k} (${s.type}${s.min !== undefined || s.max !== undefined ? ` ${s.min ?? ""} to ${s.max ?? ""}` : ""}${s.unit ? ` ${s.unit}` : ""}, now ${JSON.stringify(d.state[k])}): ${s.about}`);
+  // Its own states first (a level, a color, a reading), then the ones every thing has (place, turn, size).
+  const pose = new Set(Object.keys(POSE_STATES));
+  const range = (s: { min?: number; max?: number }) => (s.min !== undefined && s.max !== undefined ? ` ${s.min} to ${s.max}` : s.min !== undefined ? ` from ${s.min}` : s.max !== undefined ? ` up to ${s.max}` : "");
+  const states = Object.entries(d.states).sort(([a], [b]) => Number(pose.has(a)) - Number(pose.has(b))).map(([k, s]) => `${k} (${s.type}${range(s)}${s.unit ? ` ${s.unit}` : ""}, now ${JSON.stringify(d.state[k])}): ${s.about}`);
   const verbs = Object.keys(d.verbs).filter((v) => !(v in POSE_VERBS));
   const points = Object.keys(d.points ?? {});
   return `${d.id}, drawn as ${d.label} (${d.kind}${d.form ? ` ${d.form}` : ""}${d.size ? `, ${d.size.w} by ${d.size.h} ${d.size.unit}` : ""}). States for \`do change ${d.id} STATE=VALUE\`: ${states.join("; ") || "none"}. Verbs for \`do act ${d.id} verb="..."\`: ${verbs.join(", ") || "none"} (and moves to, moves, turns, falls, ... as any thing). Parts: ${Object.keys(d.parts).map((p) => `${d.id}.${d.parts[p]!.node.slice(d.id.length + 1) || p}`).slice(0, 12).join(", ")}${points.length ? `. Points it meets other things by: ${points.join(", ")}` : ""}.${d.read?.() ? ` It reads ${d.read()}.` : ""}`;
@@ -115,6 +127,7 @@ export function describeDepiction(d: Depiction): string {
 export function toolboxKit(box: Toolbox): Kit {
   // One build's depictions, by the kit list of that build's context (one list per build), so builds never share state.
   const builds = new WeakMap<object, Live>();
+  const specs = new Map<string, PropSpec>();
   const liveOf = (ctx: CompileContext): Live => {
     const key = (ctx.kits ?? ctx) as object;
     return builds.get(key) ?? builds.set(key, new Map()).get(key)!;
@@ -134,13 +147,14 @@ export function toolboxKit(box: Toolbox): Kit {
     for (const [k, v] of Object.entries(data)) {
       if (DEPICT_OWN.has(k)) continue;
       if (!probe.states[k]) throw new Error(`${node.id} has no state ${k}. ${describeDepiction(probe)}`);
-      state[k] = stateValue(probe, k, v as Value);
+      state[k] = stateValue(probe, k, v as Value, e.spec, ctx.theme);
     }
     const d = Object.keys(state).length ? makeOne(e, node.id, ctx.theme, state) : probe;
     liveOf(ctx).set(node.id, d);
+    specs.set(node.id, e.spec);
     const real = sizeCm(e.spec);
     const root = d.nodes.find((n) => n.id === d.id);
-    const props = { ...root?.props, ...(real ? { realW: real.w, realH: real.h } : {}), points01: JSON.stringify(fractions(d)) };
+    const props = { ...root?.props, ...(real ? { realW: real.w, realH: real.h } : {}), pointsLocal: JSON.stringify(localPoints(d)) };
     const rest = d.nodes.filter((n) => n.id !== d.id).map((n) => (n.props?.src !== undefined ? { ...n, props: { ...n.props, src: loadable(n.props.src) as string } } : n));
     return [{ ...(root ?? { id: d.id, kind: "group" }), props }, ...rest];
   };
@@ -158,11 +172,12 @@ export function toolboxKit(box: Toolbox): Kit {
   const timing = (args: Record<string, Value>, ctx: CompileContext) => ({ frames: Number(args.frames ?? ctx.theme.moveFrames * 2), ...(typeof args.ease === "string" ? { ease: args.ease as never } : {}), fps: ctx.fps });
   const change: Behavior = ({ target, start, args, ctx, tools }) => {
     const d = need(target, ctx);
+    const spec = specs.get(target);
     const next: StateMap = { ...d.state };
     for (const [k, v] of Object.entries(args)) {
       if (k === "frames" || k === "ease") continue;
       if (!d.states[k]) throw new Error(`${target} has no state ${k}. ${describeDepiction(d)}`);
-      next[k] = stateValue(d, k, v);
+      next[k] = stateValue(d, k, v, spec, ctx.theme);
     }
     return tracksOf(d.apply(next, timing(args, ctx)), start, tools);
   };

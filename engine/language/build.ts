@@ -315,12 +315,16 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     // A kit thing that knows its real size and named points (a depicted thing) says so on its root.
     thing: (item) => {
       if (!kinds[item.kind] || item.kind === "graph") return undefined;
-      const root = expandKit(item).nodes[0]?.props;
+      const made = expandKit(item);
+      const root = made.nodes[0]?.props;
       if (!root) return undefined;
+      const b = made.box;
       const realCm = typeof root.realW === "number" && typeof root.realH === "number" ? { w: root.realW, h: root.realH } : undefined;
       let pts: Record<string, [number, number]> = {};
       try {
-        pts = typeof root.points01 === "string" ? JSON.parse(root.points01) : {};
+        // Points in the thing's own units, as shares of the box it draws (x from the left, y from the top).
+        const local: Record<string, [number, number]> = typeof root.pointsLocal === "string" ? JSON.parse(root.pointsLocal) : {};
+        pts = Object.fromEntries(Object.entries(local).map(([k, [x, y]]) => [k, [(x - (b.x - b.w / 2)) / Math.max(1e-6, b.w), (y - (b.y - b.h / 2)) / Math.max(1e-6, b.h)]]));
       } catch {
         pts = {};
       }
