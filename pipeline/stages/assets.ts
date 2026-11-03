@@ -11,6 +11,7 @@
 //   illustration of the idea in the style's diagram look; then the previous picture holds a few seconds; past that,
 //   the scene step draws what the words say.
 // - Generated pictures in one video share one look per image type: each is made with a small look study as reference.
+import { parallelMap } from "../lib/scheduler.ts";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -379,11 +380,11 @@ async function cutout(image: string, subject: string, out: string, spend: Spend)
 // changed run only redoes the shots that need it. The file also keeps that shot's notes, so a picture's story can be read.
 async function one(p: Project, shot: Shot, s: StyleFile, spend: Spend): Promise<Asset> {
   const folder = join(dir(p), "assets");
-  const key = hash(RULES_VERSION, shot.type, shot.asset, s.art, moment(p, shot).now);
+  const key = hash(RULES_VERSION, shot.type, shot.asset, s.art, topic(p), moment(p, shot), p.plan?.story, p.plan?.visuals, ownPictures(p));
   const cacheFile = join(folder, `${shot.id}.json`);
   if (existsSync(cacheFile)) {
     const c = JSON.parse(readFileSync(cacheFile, "utf8"));
-    if (c.key === key) return c.asset;
+    if (c.key === key && [c.asset.path, c.asset.cutout].every((f) => !f || existsSync(join(dir(p), f)))) return c.asset;
   }
   const result = await make(p, shot, s, spend, folder);
   await write(cacheFile, JSON.stringify({ key, asset: result, notes: spend.notes.filter((n) => n.startsWith(`${shot.id} `)) }, null, 1));
@@ -600,13 +601,11 @@ async function illustrate(p: Project, shot: Shot, s: StyleFile, spend: Spend): P
 export async function assets(p: Project, force = false) {
   const s = style(p.input.style);
   const todo = p.shots!.filter((x) => x.asset);
-  await stage(p, "assets", [RULES_VERSION, p.shots, s.art], todo.length * 0.03, async () => {
+  await stage(p, "assets", [RULES_VERSION, p.shots, s.art, topic(p), p.narration?.words, p.plan?.story, p.plan?.visuals, ownPictures(p)], todo.length * 0.03, async () => {
     const spend: Spend = { usd: 0, notes: [] };
     const out: Asset[] = [];
     try {
-      for (let i = 0; i < todo.length; i += PARALLEL) {
-        out.push(...(await Promise.all(todo.slice(i, i + PARALLEL).map((shot) => one(p, shot, s, spend)))));
-      }
+      out.push(...await parallelMap(todo, PARALLEL, (shot) => one(p, shot, s, spend)));
       await fillGaps(p, out, s, spend);
     } finally {
       // Charge what was spent even if a shot failed, so the ledger stays true.

@@ -1,8 +1,10 @@
 // Project folders, the stage runner (hash cache) and the spend ledger with its budget cap.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import type { Persona, Project, StageName, StyleFile } from "../../schemas/project.ts";
-import { hash, write } from "./util.ts";
+import { hash } from "./util.ts";
+import { effortSetting, inStage, record } from "./timing.ts";
 
 export const ROOT = process.env.PROJECTS_DIR ?? "projects";
 const LEDGER = join(ROOT, "spend.jsonl");
@@ -15,8 +17,16 @@ export function load(id: string): Project {
   return JSON.parse(readFileSync(join(ROOT, id, "project.json"), "utf8"));
 }
 
+const saves = new WeakMap<Project, Promise<void>>();
 export async function save(p: Project) {
-  await write(join(dir(p), "project.json"), JSON.stringify(p, null, 2));
+  const next = (saves.get(p) ?? Promise.resolve()).catch(() => {}).then(async () => {
+    await mkdir(dir(p), { recursive: true });
+    const file = join(dir(p), "project.json");
+    await writeFile(`${file}.tmp`, JSON.stringify(p, null, 2));
+    await rename(`${file}.tmp`, file);
+  });
+  saves.set(p, next);
+  await next;
 }
 
 export function style(name: string): StyleFile {
@@ -63,8 +73,14 @@ export function checkBudget(estimate: number) {
 
 // Runs a stage unless its inputs are unchanged since the last run. `inputs` must cover everything the stage reads.
 export async function stage(p: Project, name: StageName, inputs: unknown[], estimate: number, run: () => Promise<void>, force = false) {
-  const h = hash(name, ...inputs);
-  if (!force && p.stages[name]?.hash === h) {
+  const extra: unknown[] = [];
+  if (effortSetting(name)) extra.push(effortSetting(name));
+  if (name === "mix" && p.narration) extra.push(hash(readFileSync(join(dir(p), p.narration.audio)).toString("base64")));
+  if (name === "render") extra.push(process.env.RENDER_CRF ?? "23");
+  const h = hash(name, ...inputs, ...extra);
+  const filesPresent = name !== "assets" || (p.assets ?? []).every((a) => [a.path, a.cutout].every((f) => !f || existsSync(join(dir(p), f))));
+  if (!force && filesPresent && p.stages[name]?.hash === h) {
+    record({ kind: "stage", name, start: new Date().toISOString(), ms: 0, status: "cached" });
     console.log(`- ${name}: cached`);
     return;
   }
@@ -72,13 +88,15 @@ export async function stage(p: Project, name: StageName, inputs: unknown[], esti
   const t0 = Date.now();
   console.log(`- ${name}: running`);
   try {
-    await run();
+    await inStage(name, run);
   } catch (e: any) {
+    record({ kind: "stage", name, start: new Date(t0).toISOString(), ms: Date.now() - t0, status: "failed" });
     // A failed call may still have been billed; json() attaches its cost.
     if (e.usd) charge(p, name, e.usd, `failed: ${String(e.message).slice(0, 120)}`);
     await save(p);
     throw e;
   }
+  record({ kind: "stage", name, start: new Date(t0).toISOString(), ms: Date.now() - t0, status: "done" });
   p.stages[name] = { hash: h, at: new Date().toISOString(), ms: Date.now() - t0 };
   await save(p);
   const usd = p.costs.filter((c) => c.stage === name).at(-1)?.usd ?? 0;

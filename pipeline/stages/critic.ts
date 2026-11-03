@@ -2,6 +2,7 @@
 // (spike S5: frames catch everything except timing, which code enforces). One fix round applies them and re-renders.
 // Engine videos are judged by the look step's judge (pipeline/lib/look.ts) on the final render, and get notes only.
 // A video with a direction plan is also checked against it (pipeline/lib/direction-check.ts).
+import { parallelMap } from "../lib/scheduler.ts";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -70,7 +71,8 @@ async function engineCritic(p: Project, video: string) {
   let usd = 0;
   const designs: number[] = [];
   // About four sections per call, so each call sees a stretch of the video in order.
-  for (let i = 0; i < moments.length; i += 12) {
+  const groups = Array.from({ length: Math.ceil(moments.length / 12) }, (_, k) => k * 12);
+  const judged = await parallelMap(groups, 5, async (i) => {
     const group = moments.slice(i, i + 12);
     const content: unknown[] = [{ type: "input_text", text: head }];
     group.forEach((m, k) => {
@@ -85,6 +87,9 @@ async function engineCritic(p: Project, video: string) {
     });
     const judge = (prompt("scene-look").split(/^# /m).find((x) => x.startsWith("Judge")) ?? "").slice(5).trim();
     const r = await json<Judged>({ system: judge, user: content, schema: judgeSchema, schemaName: "look", effort: "medium" });
+    return { r, group };
+  });
+  for (const { r, group } of judged) {
     usd += r.usd;
     designs.push(r.value.design);
     for (const x of r.value.issues.filter((y) => y.severity >= 2)) {
@@ -105,9 +110,21 @@ export async function critic(p: Project, force = false) {
   const directed = p.direction ? [p.direction, p.narration?.holds, prompt("direction-check")] : [];
   await stage(p, "critic", [t, prompt("critic"), prompt("scene-look"), ...directed], 0.15, async () => {
     const video = join(dir(p), "video.mp4");
-    if (t.clips.some((c) => c.type === "engine")) await engineCritic(p, video);
-    else await shotCritic(p, video);
-    if (p.direction) await directionCritic(p, video);
+    if (t.clips.some((c) => c.type === "engine")) {
+      // These checks only read the finished video. Keep their results separate until both finish.
+      const directed: Project = { ...p, critic: undefined };
+      const results = await Promise.allSettled([engineCritic(p, video), ...(p.direction ? [directionCritic(directed, video)] : [])]);
+      if (directed.critic) {
+        p.critic ??= { verdict: "", tickets: [] };
+        p.critic.verdict = [p.critic.verdict, directed.critic.verdict].filter(Boolean).join(" ");
+        p.critic.tickets.push(...directed.critic.tickets);
+      }
+      const failed = results.find((r) => r.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
+    } else {
+      await shotCritic(p, video);
+      if (p.direction) await directionCritic(p, video);
+    }
   }, force);
 }
 
