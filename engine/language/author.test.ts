@@ -63,3 +63,16 @@ test("typed copies of computed numbers are named in the review, and a clean scen
   const plain = `@0\nbox a "hello" w=900 h=1400\n`;
   assert.equal(reviewText(plain, await build(plain, { ctx }), { math: true, truthKinds: ["sort"] }), "");
 });
+
+test("steps spread evenly by until= get a note, and steps placed on their words do not", () => {
+  const kinds = ["sort"];
+  const spread = craftNotes("@0\nsort s data=[3,1,2] algo=bubble\n@2 keep\ndo steps s from=1 to=3 pace=slow until=@30\n", { kitKinds: kinds });
+  assert.equal(spread.length, 1);
+  assert.match(spread[0]!, /Line 4 plays 3 steps of s spread evenly until @30/);
+  assert.match(spread[0]!, /at=@\.\.\., one per step/);
+  const placed = craftNotes("@0\nsort s data=[3,1,2] algo=bubble\n@2 keep\ndo steps s from=1 to=3 at=@4,@9,@14\n", { kitKinds: kinds });
+  assert.deepEqual(placed, []);
+  // Many steps to a moment is a stretch the words sum up, not steps called out one by one.
+  const many = craftNotes("@0\nsort s data=[9,8,7,6,5,4,3,2,1] algo=bubble\n@2 keep\ndo steps s from=1 to=30 pace=fast until=@40\n", { kitKinds: kinds });
+  assert.deepEqual(many, []);
+});

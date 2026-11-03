@@ -7,7 +7,7 @@ import { EASES } from "../core/ease.ts";
 import { evaluate, sample } from "../core/evaluate.ts";
 import type { Resolved } from "../core/types.ts";
 import { graphKit } from "../kits/graph.ts";
-import { stepSchedule, storyOf, truthSteps } from "../kits/steps.ts";
+import { stepSchedule, storyOf, truthSteps, truthDrawn } from "../kits/steps.ts";
 import { partAt, stepAreas, textSize, wordsAfter, type Area } from "./follow.ts";
 import { BOARD_FOLLOW, followWriting, writingOf } from "./board.ts";
 import { estimate, graphPositions, layout, TEXT_SIZE, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
@@ -62,7 +62,7 @@ export function measureLines(result: Pick<BuildResult, "measures">, fps: number)
 
 // What a program measured while it ran: the numbers it chose to show that its rules did what it claims (`proves`).
 export type ProgramMeasures = { program: string; id: string; proves?: string; series: { name: string; at: number; value: number }[] };
-export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; truth?: { id: string; kind: string; steps: string[] }[]; measures?: ProgramMeasures[]; notes?: string[]; stats: { states: number; parts: number; programs: number; programMs: number } };
+export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; truth?: { id: string; kind: string; steps: string[]; drawn?: string }[]; measures?: ProgramMeasures[]; notes?: string[]; stats: { states: number; parts: number; programs: number; programMs: number } };
 type Live = { kind: string; parent?: string; props: Props; alive: boolean; line: number };
 
 const STATE_ENTERS = ["fade", "draw", "pop", "none"];
@@ -2090,7 +2090,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       const kind = root?.props?.truth;
       if (typeof kind !== "string" || typeof root?.props?.spec !== "string") return [];
       try {
-        return [{ id, kind, steps: truthSteps(kind, id, JSON.parse(root.props.spec), ctx) }];
+        const spec = JSON.parse(root.props.spec);
+        const drawn = truthDrawn(kind, id, spec, ctx);
+        return [{ id, kind, steps: truthSteps(kind, id, spec, ctx), ...(drawn ? { drawn } : {}) }];
       } catch {
         return [];
       }

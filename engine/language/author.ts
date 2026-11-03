@@ -241,6 +241,15 @@ export function craftNotes(source: string, opts: { kitKinds?: string[]; truthKin
   // Values put in a new order by hand, when a kit can work the process out.
   const truth = (opts.truthKinds ?? []).filter((k) => !kinds.has(k));
   const moved = truth.length && truth.length === (opts.truthKinds ?? []).length ? reordered(doc.states) : undefined;
+  // Steps spread evenly to a moment, where the words may be calling them out one by one.
+  for (const st of doc.states)
+    for (const c of st.commands) {
+      if (c.do !== "play" || c.behavior !== "steps" || c.attrs.until === undefined || c.attrs.at !== undefined) continue;
+      const [from, to] = [Number(c.attrs.from ?? 1), Number(c.attrs.to ?? NaN)];
+      const n = Number.isFinite(to) ? to - from + 1 : undefined;
+      if (n !== undefined && n > 8) continue;
+      notes.push(`Line ${c.line} plays ${n ? `${n} step${n > 1 ? "s" : ""}` : "steps"} of ${c.targets.join(", ")} spread evenly until ${c.attrs.until}, so each moves on a schedule, not when it is said. If the words name these steps one by one, give each the moment its words are said with at=@..., one per step; until= is for a stretch the words sum up.`);
+    }
   if (moved) notes.push(`The state at line ${moved.first} shows ${moved.before.join(", ")}, and line ${moved.then} puts ${moved.after.join(", ")} in a new order by hand. If a kit in your guide works this process out (${truth.map((k) => `\`${k}\``).join(", ")}), let it: every step is then right, each part can be pointed at, and \`do steps\` ties each step to the words that say it, slowly the first time and faster after. Keep the hand-made version only if no kit does what the words describe.`);
   return notes;
 }
@@ -323,10 +332,10 @@ export async function author(req: AuthorRequest, opts: Omit<BuildOptions, "ctx" 
 // The numbered steps of every truth thing in a scene, for one alignment round. With the scene's source, lines that type
 // numbers the truth things compute are named, so the writer can point at the computed parts instead.
 export function truthText(truth: NonNullable<BuildResult["truth"]>, source?: string, kitKinds: string[] = []): string {
-  const list = truth.map((t) => `${t.kind} ${t.id}:\n${t.steps.map((s, i) => `  ${i + 1}. ${s}`).join("\n")}`).join("\n");
+  const list = truth.map((t) => `${t.kind} ${t.id}${t.drawn ? ` (${t.drawn})` : ""}:\n${t.steps.map((s, i) => `  ${i + 1}. ${s}`).join("\n")}`).join("\n");
   const typed = source ? typedResults(source, truth, kitKinds) : [];
   const typedNote = typed.length ? `\n\nThese lines type numbers that the truth things compute: ${typed.slice(0, 5).join("; ")}. A typed copy can disagree with what is computed and cannot follow the steps; where a line shows a result, point at the part that shows it (light, tag, mark) instead. A line that only quotes the narration's words can stay.` : "";
-  return `These are the steps the truth things in your scene really compute, in order:\n${list}\n\nCheck that each \`do steps\` plays these steps on the spoken words that talk about them (at=, or from= and to= across states), and that tags, marks and lights point at the parts that show computed results rather than writing results as text yourself.${typedNote}`;
+  return `These are the steps the truth things in your scene really compute, in order, each with how it is drawn on this frame:\n${list}\n\nCheck that each \`do steps\` plays these steps on the spoken words that talk about them (at=, or from= and to= across states), that the way the thing is drawn moves the way the words say (a value the words send down must move down on screen: set form= when it does not), and that tags, marks and lights point at the parts that show computed results rather than writing results as text yourself.${typedNote}`;
 }
 
 // What goes back to the writer once a scene builds: computed steps to bind, craft notes to weigh, or both. Empty when

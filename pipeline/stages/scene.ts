@@ -14,7 +14,7 @@ import { evaluate } from "../../engine/core/evaluate.ts";
 import type { CompileContext, Kit, Resolved, Scene, Theme } from "../../engine/core/types.ts";
 import { KITS } from "../../engine/kits/index.ts";
 import { mathKit } from "../../engine/kits/math.ts";
-import { STEPS_DOC, truthSteps } from "../../engine/kits/steps.ts";
+import { STEPS_DOC, stepLines, truthSteps } from "../../engine/kits/steps.ts";
 import { spokenNotShown, type PhaseSpan } from "../lib/demo.ts";
 import { languagePrompt, numbered, reviewText, truthKinds } from "../../engine/language/author.ts";
 import { build, formatProblems, measureLines, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
@@ -733,7 +733,9 @@ export function review(job: Job, written: string, result: BuildResult): string {
   const things = job.toolbox ? toolboxNotes(source, kinds, job.toolbox.box, job.opts.ctx.theme) : [];
   // What the part's programs measured against what they claim to prove: numbers for the writer to read, never a verdict.
   const measures = measureLines(result, job.opts.ctx.fps);
-  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra: [...extra, ...things.map((x) => `Depicted: ${x}`), ...measures] });
+  // When each computed step really played, against the words spoken then, so a step that runs ahead of its words is seen.
+  const steps = result.scene ? stepLines(result.scene.events, job.p.narration!.words.map((w) => ({ text: w.text, start: w.start })), job.opts.ctx.fps) : [];
+  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra: [...extra, ...things.map((x) => `Depicted: ${x}`), ...measures, ...steps] });
 }
 
 // What goes back to the writer: a part with build problems, and a part that builds with what code can see about it.

@@ -10,7 +10,9 @@ import type { Behavior, CompileContext, Ease, Kit, NodeSpec, Props, Track, Value
 export type Change = { id: string; prop: string; value: Value; at: number; dur: number; ease?: Ease };
 export type Play = { id: string; behavior: string; args?: Record<string, Value>; at: number };
 export type StoryStep = { say: string; changes: Change[]; plays: Play[]; after: Map<string, Value> };
-export type Board = { parts: NodeSpec[]; steps: StoryStep[] };
+// `drawn`: one sentence on how the thing is drawn and which way its moves go, so a writer can check the picture against
+// words like down, up, left or right, and choose another form when they disagree.
+export type Board = { parts: NodeSpec[]; steps: StoryStep[]; drawn?: string };
 export type Maker = (id: string, data: Record<string, unknown>, ctx: CompileContext) => Board;
 
 const DEFAULTS: Props = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotate: 0, opacity: 1, drawn: 1 };
@@ -268,11 +270,13 @@ export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
   }
   tools.write({ target, prop: "played", keys: [{ at: start, value: to, ease: "step" }] });
   tools.emit({ name: "steps", at: times[0], data: { target, from, to } });
+  // One event per step, so anything reading the scene (a report, the sound) knows when each step really plays.
+  for (let i = 0; i < count; i++) tools.emit({ name: "step", at: times[i]!, data: { target, step: from + i, say: steps[from + i - 1]!.say } });
   return [];
 };
 
 // The one behavior every truth kit adds, with the one line that teaches it.
-export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. `done=K` on the thing itself shows it as it stands once steps 1 to K are done, for a stretch that takes a demonstration over part way through; its plays then start at from=K+1. `pace=slow|normal|fast` sets how long each step takes and how long its moves last; with `until=` or `at=` it is the least time a step may have, and a stretch too short for its steps at that pace is an error that says how many fit. A demonstration in phases is one `do steps` per phase: `do steps s from=1 to=2 pace=slow until=@h1`, then `do steps s from=3 to=9 pace=fast until=@40`. To show the same process again (a replay, or the same input run beside it), make a second thing with `replay=ID`, which takes the first one's input, and play its steps. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. In the main column it grows into the room the words leave on its own; `w=` and `h=` give it a different shape of box to start from";
+export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step: the first time a process plays, and whenever the words name its steps one by one, give each step the moment its words are said with at=, so the value moves as it is spoken and not before. `until=@40` spreads the steps evenly to that moment, which fits a stretch the words sum up (a replay, the rest going the same way), not steps the words call out; or `each=FRAMES`. After the build you are shown when each step really played and the words under it. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. `done=K` on the thing itself shows it as it stands once steps 1 to K are done, for a stretch that takes a demonstration over part way through; its plays then start at from=K+1. `pace=slow|normal|fast` sets how long each step takes and how long its moves last; with `until=` or `at=` it is the least time a step may have, and a stretch too short for its steps at that pace is an error that says how many fit. A demonstration in phases is one `do steps` per phase: `do steps s from=1 to=2 pace=slow until=@h1`, then `do steps s from=3 to=9 pace=fast until=@40`. To show the same process again (a replay, or the same input run beside it), make a second thing with `replay=ID`, which takes the first one's input, and play its steps. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. In the main column it grows into the room the words leave on its own; `w=` and `h=` give it a different shape of box to start from";
 
 // ---------- Layout helpers shared by the kits ----------
 
@@ -292,6 +296,37 @@ export function frame(id: string, parent: string, l: number, t: number, r: numbe
 
 export function text(id: string, parent: string, x: number, y: number, value: string, size: number, more: Props = {}): NodeSpec {
   return { id, kind: "text", parent, props: { x, y, text: value, size, color: "ink", ...more } };
+}
+
+/** When each step of every truth thing really played, with the words spoken then: one line per thing. Read from the
+ * scene's `step` events, so it reports what was built, not what was written. `words` carry seconds. */
+export function stepLines(events: { name: string; at?: number; data?: Record<string, unknown> }[], words: { text: string; start: number }[], fps: number): string[] {
+  const by = new Map<string, { step: number; at: number; say: string }[]>();
+  for (const e of events) {
+    if (e.name !== "step" || !e.data) continue;
+    const { target, step, say } = e.data as { target?: string; step?: number; say?: string };
+    if (typeof target !== "string" || typeof step !== "number" || typeof e.at !== "number") continue;
+    if (!by.has(target)) by.set(target, []);
+    by.get(target)!.push({ step, at: e.at, say: String(say ?? "") });
+  }
+  const under = (frame: number) => {
+    const t = frame / fps;
+    let k = words.findIndex((w) => w.start > t);
+    if (k < 0) k = words.length;
+    const from = Math.max(0, k - 1);
+    const text = words.slice(from, from + 4).map((w) => w.text).join(" ");
+    return text ? `"${text}"` : "silence";
+  };
+  return [...by.entries()].map(([target, list]) => {
+    list.sort((a, b) => a.at - b.at);
+    return `${target} played ${list.map((s) => `step ${s.step} (${s.say}) at ${(s.at / fps).toFixed(1)} s under ${under(s.at)}`).join("; ")}. A step whose words come earlier or later than it plays moves at the wrong moment: give it that moment with at=.`;
+  });
+}
+
+// How a truth thing is drawn, in one sentence, for the same planner: which way its moves go on this frame.
+export function truthDrawn(kind: string, id: string, data: Record<string, unknown>, ctx: CompileContext): string | undefined {
+  const { w: _w, h: _h, ...rest } = data;
+  return boardFor(kind, id, JSON.stringify(rest), ctx).drawn;
 }
 
 // The steps a truth thing will play, in words, for a planner deciding which spoken moment each step belongs to.

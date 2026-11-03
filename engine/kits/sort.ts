@@ -244,7 +244,10 @@ function sortBoard(id: string, d: Record<string, unknown>, ctx: { width: number;
       if (usesPointer && e.i.length) s.set(sortPart.pointer(id), "opacity", 0, 0.9, 0.1);
     }
   }
-  return { parts, steps: s.finish() };
+  const how = algo === "merge"
+    ? `drawn as one row (form=row): a cut opens a gap between the halves in the row; in a merge the smaller value moves down out of the row into the merged run below it, and the last step of that merge lifts the merged run back up into the row`
+    : `drawn as one row of ${show}: a swap exchanges two places in the row, and a value that moves slides along it`;
+  return { parts, steps: s.finish(), drawn: how };
 }
 
 // Merge sort by level. Each run sits at the level of its depth in the split tree: a cut moves both halves one level on,
@@ -374,7 +377,10 @@ function treeBoard(id: string, values: number[], log: SortEvent[], form: "down" 
       for (const p of e.i) s.set(shape(p), "stroke", "highlight", 0.85, 0.15).set(sortPart.value(id, order[p]!), "color", "highlight", 0.85, 0.15);
     }
   }
-  return { parts, steps: s.finish() };
+  const how = form === "down"
+    ? `drawn as levels stacked downward (form=down): a cut moves the halves one level down; in a merge each value moves up into the level above, so merged values travel upward and the sorted run ends in the top level`
+    : `drawn as levels side by side (form=across), each level a column: a cut moves the halves one level to the right; in a merge each value moves left into the level before, so merged values travel leftward and the sorted run ends in the first column`;
+  return { parts, steps: s.finish(), drawn: how };
 }
 
 export const sortKit: Kit = {
@@ -382,7 +388,7 @@ export const sortKit: Kit = {
   kinds: { sort: truthKind("sort", sortBoard, ["data", "algo", "show", "order", "form"]) },
   behaviors: { steps: playSteps },
   docs: {
-    sort: "`sort s data=[5,2,8,1,9] algo=bubble|insertion|selection|merge|quick show=bars|boxes` runs the real sort; each comparison is a step (with its swap or move), so the count depends on the data: use `do steps s until=@N`. Merge shows the whole method: each cut of a run is a step that opens a gap between its halves; each merge starts with a step that puts a finger under the front of each half, every comparison takes the smaller value down into the merged run below while that finger moves on, and a last step lifts the merged run back up as the gap closes. `order=levels` (merge) cuts every run first, level by level, then merges level by level from the smallest; the default follows the recursion. Parts: s.item.K (the value that started at place K, from 1; it travels), s.item.K.shape, s.item.K.value, s.pointer (pivot or smallest, quick and selection), s.finger.a and s.finger.b (merge: the fronts of the two halves), s.place.L.K (merge by level: the faint outline of place K at level L, from 0, left where a value moved away). Finished places turn highlight. `form=row|down|across` (merge with boxes): on a tall frame the kit draws merge sort by level unless told otherwise: each cut moves the halves one level on and each merge takes the values back into the level above, ending in the first level, sorted; `down` stacks the levels, `across` sets them side by side with each level's values in a column, and the kit picks whichever lets the values be larger (`row`: one row, as on a wide screen). Its steps say what each does, so a label it shows is always true",
+    sort: "`sort s data=[5,2,8,1,9] algo=bubble|insertion|selection|merge|quick show=bars|boxes` runs the real sort; each comparison is a step (with its swap or move), so the count depends on the data: use `do steps s until=@N`. Merge shows the whole method: each cut of a run is a step that opens a gap between its halves; each merge starts with a step that puts a finger under the front of each half, every comparison takes the smaller value down into the merged run below while that finger moves on, and a last step lifts the merged run back up as the gap closes. `order=levels` (merge) cuts every run first, level by level, then merges level by level from the smallest; the default follows the recursion. Parts: s.item.K (the value that started at place K, from 1; it travels), s.item.K.shape, s.item.K.value, s.pointer (pivot or smallest, quick and selection), s.finger.a and s.finger.b (merge: the fronts of the two halves), s.place.L.K (merge by level: the faint outline of place K at level L, from 0, left where a value moved away). Finished places turn highlight. `form=row|down|across` (merge with boxes): on a tall frame the kit draws merge sort by level unless told otherwise: each cut moves the halves one level on and each merge takes the values back into the level above, ending in the first level, sorted; `down` stacks the levels (merged values move up into the level above), `across` sets them side by side with each level's values in a column (merged values move left), and `row` keeps one row where merged values move down into a run below and are lifted back up. Set form= yourself whenever the words say a direction (down, up, left, right): the picture must move the way the words say. Left to auto, the kit picks whichever of down and across lets the values be larger, and the build then tells you which it drew and which way its moves go. Its steps say what each does, so a label it shows is always true",
     steps: STEPS_DOC,
   },
 };

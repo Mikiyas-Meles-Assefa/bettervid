@@ -4,6 +4,7 @@ import { compile } from "../core/compile.ts";
 import { evaluate } from "../core/evaluate.ts";
 import type { CompileContext, Resolved, Scene } from "../core/types.ts";
 import { build, formatProblems } from "../language/build.ts";
+import { stepLines, truthDrawn } from "./steps.ts";
 import { languagePrompt } from "../language/author.ts";
 import { dijkstraKit } from "./dijkstra.ts";
 import { KITS } from "./index.ts";
@@ -191,4 +192,31 @@ test("dijkstra is callable like the others and ends on the real shortest path", 
 test("truth kinds also compile directly, outside the language", () => {
   const s = compile({ steps: [{ at: 0, add: [{ id: "m", kind: "matrix", data: { data: [[1, 2], [3, 4]], ops: ["R2-3R1"] } }] }, { at: 5, play: [{ behavior: "steps", target: "m" }] }] }, { ...ctx, frames: 90 });
   assert.equal(at(s, 89, linalgPart.cell("m", 2, 2)).text, "−2");
+});
+
+test("every step played is an event with its moment and its words, and the report reads them against the voice", async () => {
+  const s = await ok(`@0\ndet d data=[[3,8],[4,6]]\n@2 keep\ndo steps d at=@3,@6,@9\n`);
+  const played = s.events.filter((e) => e.name === "step");
+  assert.equal(played.length, 3);
+  assert.deepEqual(played.map((e) => (e.data as { step: number }).step), [1, 2, 3]);
+  assert.equal(played[1]!.at, 6 * 15);
+  const words = Array.from({ length: 12 }, (_, i) => ({ text: `w${i}`, start: i * 0.5 }));
+  const lines = stepLines(s.events, words, 30);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0]!, /^d played step 1 \(.*\) at 1\.5 s under "w3 w4 w5 w6"; step 2/);
+  assert.match(lines[0]!, /give it that moment with at=/);
+});
+
+test("a sort says how it is drawn and which way its merges move, and the writer can set the form", async () => {
+  const tall = { ...ctx, width: 1080, height: 1920 };
+  const spec = { data: [5, 1, 7, 3, 6, 2, 8, 4], algo: "merge", show: "boxes", order: "levels" };
+  const auto = truthDrawn("sort", "s", spec, tall)!;
+  assert.match(auto, /^drawn as levels (stacked downward \(form=down\)|side by side \(form=across\))/);
+  assert.match(truthDrawn("sort", "s", { ...spec, form: "down" }, tall)!, /merged values travel upward/);
+  assert.match(truthDrawn("sort", "s", { ...spec, form: "across" }, tall)!, /merged values travel leftward/);
+  assert.match(truthDrawn("sort", "s", { ...spec, form: "row" }, tall)!, /moves down out of the row into the merged run below/);
+  assert.match(truthDrawn("sort", "s", { data: [3, 1, 2], algo: "bubble" }, tall)!, /a swap exchanges two places/);
+  const r = await build(`@0\nsort s data=[5,1,7,3] algo=merge show=boxes form=down\n@2 keep\ndo steps s until=@20\n`, { ctx: tall });
+  assert.deepEqual(r.problems, [], formatProblems(r.problems));
+  assert.match(r.truth![0]!.drawn!, /form=down/);
 });
