@@ -5,6 +5,9 @@ import type { Atom, Item } from "./syntax.ts";
 import type { NodeSpec, Props, Role, RoleLook, Theme } from "../core/types.ts";
 import { bestOn, colorOf, inkOn, isRole, readability, roleLook } from "../core/roles.ts";
 import { circle } from "../kits/shapes.ts";
+import { fitScene, solveScene, type SceneThing } from "../design/abilities/scene.ts";
+import { boxPoint } from "../design/depict/points.ts";
+import type { RelationKind } from "../design/types.ts";
 
 export type Box = { x: number; y: number; w: number; h: number }; // x and y are the center
 export type Part = NodeSpec & { props: Props; line: number };
@@ -19,6 +22,9 @@ export type Env = {
   // of its height from the middle of its box (a kit's box also holds room for what its later steps show).
   natural: (item: Item) => { w: number; h: number; rest?: number };
   minText: number; // the smallest readable text, in pixels
+  // What a thing in a stage is beyond its box: its real size in centimetres, and its named points as fractions of its
+  // box (x from the left, y from the top). A depicted thing has both; anything else has its box's points.
+  thing?: (item: Item) => { realCm?: { w: number; h: number }; point?: (name: string) => [number, number] | undefined } | undefined;
 };
 export type Slot = { item: Item; box: Box; scale: number };
 // Words as they land on screen: where, how big, and the color of the panel or shape they sit on (none: whatever is
@@ -26,7 +32,7 @@ export type Slot = { item: Item; box: Box; scale: number };
 export type Shown = { id: string; box: Box; line: number; text: string; size: number; item: string; back?: string };
 // What lies behind the arrangement: pictures (placed or filling the frame) and fields of color.
 export type Field = { id: string; box: Box; line: number; picture: boolean; frame: boolean; fill?: string };
-export type Laid = { parts: Part[]; boxes: Map<string, Box>; members: Map<string, string[]>; slots: Slot[]; links: { from: string; to: string; line: number }[]; problems: Problem[]; scale: number; smallest: number; texts: Shown[]; fields: Field[]; held: Box[] };
+export type Laid = { notes?: string[]; parts: Part[]; boxes: Map<string, Box>; members: Map<string, string[]>; slots: Slot[]; links: { from: string; to: string; line: number }[]; problems: Problem[]; scale: number; smallest: number; texts: Shown[]; fields: Field[]; held: Box[] };
 // `held`: room kept for what a later state of the stretch shows, so tags and labels placed now leave it free.
 // The least contrast words may have with what is behind them, as a ratio. Words are large in a video, so 3 to 1.
 export const MIN_CONTRAST = 3;
@@ -52,7 +58,7 @@ const MIN_SCALE = 0.4;
 
 const n = (v: string | undefined, d: number) => (v === undefined || !Number.isFinite(Number(v)) ? d : Number(v));
 const SHAPE_KINDS = ["box", "circle", "pill", "diamond", "dot", "tri"];
-const CONTAINER_KINDS = ["row", "stack", "grid", "ring", "chain", "free"];
+const CONTAINER_KINDS = ["row", "stack", "grid", "ring", "chain", "free", "stage"];
 const LEAF_KINDS = ["atoms", "text", "code", "space"];
 // How far the gaps of the outer stack may open to spread a state over the frame, as a share of the safe height.
 const SPREAD = 0.22;
@@ -332,6 +338,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
       }
       case "free":
         return { w: n(item.attrs.w, 900) * s, h: n(item.attrs.h, 900) * s };
+      case "stage":
+        return { w: n(item.attrs.w, 900) * s, h: n(item.attrs.h, 1100) * s };
       case "run":
         if (overlay(item)) return { w: 0, h: 0 };
       // falls through
@@ -438,6 +446,14 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
       const node: Item = { ...(here ?? all.at(-1)!) };
       if (!here) ghost.add(node);
       if (CONTAINER_KINDS.includes(node.kind)) node.children = unite(here?.children, all.filter((c) => c.id === node.id).map((c) => c.children));
+      // A stage is solved with every relation its stretch states, so what stays keeps its place while things join it.
+      if (node.kind === "stage") {
+        const seen = new Set<string>();
+        node.relations = all.filter((c) => c.id === node.id).flatMap((c) => c.relations ?? []).filter((r) => {
+          const k = `${r.a} ${r.kind} ${r.b} ${r.at ?? ""} ${r.gapCm ?? ""}`;
+          return !seen.has(k) && !!seen.add(k);
+        });
+      }
       alts.set(node, all);
       return node;
     });
@@ -764,6 +780,41 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
             continue;
           }
           place(c, cx - size.w / 2 + (Number(m[1]) / 100) * size.w, cy - size.h / 2 + (Number(m[2]) / 100) * size.h, s, back);
+        }
+        return;
+      }
+      case "stage": {
+        // One scene, solved by its relations at one real scale (engine/design/abilities/scene.ts), then fitted to the
+        // stage's box. Each thing is drawn at the scale the scene gives it, so a lake stays wider than a dock.
+        const kids = item.children;
+        const nat = kids.map((c) => sizeOf(c, s));
+        const ids = new Set(kids.map((c) => c.id));
+        const things: SceneThing[] = kids.map((c, i) => {
+          const t = env.thing?.(c);
+          const { w, h } = nat[i]!;
+          const cm = /^([\d.]+)(?:,([\d.]+))?$/.exec(c.attrs.cm ?? "");
+          const realCm = t?.realCm ?? (cm ? { w: Number(cm[1]), h: Number(cm[2] ?? (Number(cm[1]) * h) / Math.max(1, w)) } : undefined);
+          return { id: c.id, w: Math.max(1, w), h: Math.max(1, h), ...(realCm ? { realCm } : {}), point: (name: string) => {
+            const f = t?.point?.(name);
+            return f ? [(f[0] - 0.5) * w, (f[1] - 1) * h] : boxPoint(w, h, name);
+          } };
+        });
+        const rels = (item.relations ?? []).filter((r) => {
+          const missing = [r.a, r.b].filter((x) => !ids.has(x));
+          if (missing.length) out.problems.push({ line: r.line, message: `${missing.join(" and ")} ${missing.length > 1 ? "are" : "is"} not in the stage ${item.id}. A relation joins two things of the same stage; its things are ${[...ids].join(", ") || "none yet"}.` });
+          return !missing.length;
+        });
+        const lay = solveScene(things, rels.map((r) => ({ a: r.a, b: r.b, kind: r.kind as RelationKind, words: r.words, ...(r.at ? { at: r.at } : {}), ...(r.gapCm !== undefined ? { gapCm: r.gapCm } : {}) })), { gap: n(item.attrs.gap, 0.15) });
+        const focus = item.attrs.focus && ids.has(item.attrs.focus) ? { id: item.attrs.focus, share: n(item.attrs.share, 0.5) } : undefined;
+        const fit = fitScene(lay, things, size, { bleed: item.attrs.bleed !== "no", margin: n(item.attrs.margin, 0.15), ...(focus ? { focus } : {}) });
+        for (const c of lay.checks) if (!c.held) out.problems.push({ line: c.rel.words ? rels.find((r) => r.a === c.rel.a && r.b === c.rel.b)?.line ?? item.line : item.line, message: `${c.rel.a} ${c.rel.words} ${c.rel.b} cannot hold: it is ${Math.round(c.offCm)} cm off, because another relation already places ${c.rel.a} and ${c.rel.b} differently. Keep the relations that say where each thing really is, and drop or change the one that disagrees.` });
+        for (const x of lay.notes.filter((x) => !/cm off/.test(x))) (out.notes ??= []).push(`stage ${item.id}: ${x}`);
+        const top = cy - fit.h / 2;
+        for (const m of fit.members) {
+          const i = kids.findIndex((c) => c.id === m.id);
+          const c = kids[i]!;
+          const k = m.w / Math.max(1, nat[i]!.w);
+          place(c, cx + m.dx, top + m.dy - m.h / 2, s * k, back);
         }
         return;
       }

@@ -129,7 +129,10 @@ export type DirectionEvent = {
   camera?: string;
 };
 export type Cue = { beforeWord: number; text: string }; // beforeWord counts the script before cues were added
-export type DirectionPlan = { goal: string; promise: string; arc: string; events: DirectionEvent[]; cues: Cue[] };
+// `look`: the video-wide art direction every scene writer is given: what is emphasized and how, the scale things are
+// shown at, motifs that recur, and the texture of the picture. Words for the writers, never values code applies.
+export type ArtLook = { emphasis: string; scale: string; motifs: string; texture: string };
+export type DirectionPlan = { goal: string; promise: string; arc: string; events: DirectionEvent[]; cues: Cue[]; look?: ArtLook };
 
 // Stage 3: voice
 export type Word = { text: string; start: number; end: number; beatId: string };

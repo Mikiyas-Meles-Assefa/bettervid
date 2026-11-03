@@ -7,7 +7,7 @@
 import type { CompileContext } from "../../engine/core/types.ts";
 import { truthSteps } from "../../engine/kits/steps.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
-import type { Beat, DemoPhase, DirectionEvent, DirectionPlan, Hold, HoldPurpose, Project, Script } from "../../schemas/project.ts";
+import type { ArtLook, Beat, DemoPhase, DirectionEvent, DirectionPlan, Hold, HoldPurpose, Project, Script } from "../../schemas/project.ts";
 import { abilities, truthKindNames } from "../lib/abilities.ts";
 import { spokenNotShown, type PhaseSpan } from "../lib/demo.ts";
 import { json } from "../lib/meta.ts";
@@ -45,16 +45,18 @@ export type RawEvent = {
   camera: string;
 };
 export type RawCue = { id: string; beforeWord: number; text: string };
-export type RawPlan = { goal: string; promise: string; arc: string; events: RawEvent[]; cues: RawCue[] };
+export type RawPlan = { goal: string; promise: string; arc: string; look?: ArtLook; events: RawEvent[]; cues: RawCue[] };
 
 const str = { type: "string" } as const;
 const int = { type: "integer" } as const;
 const obj = (properties: Record<string, object>) => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
 const point = obj({ word: int, hold: str, cue: str });
+export const lookSchema = obj({ emphasis: str, scale: str, motifs: str, texture: str });
 const schema = obj({
   goal: str,
   promise: str,
   arc: str,
+  look: lookSchema,
   events: {
     type: "array",
     items: obj({
@@ -347,7 +349,7 @@ export function applyCues(script: Script, raw: RawPlan, steps: Map<string, strin
   }
   for (const c of cues.filter((c) => c.beforeWord >= n)) beats.push(cueBeat(c, script.beats.at(-1)?.role ?? "ending"));
 
-  const plan: DirectionPlan = { goal: raw.goal, promise: raw.promise, arc: raw.arc, events, cues: raw.cues.map((c) => ({ beforeWord: c.beforeWord, text: punctuate(c.text) })) };
+  const plan: DirectionPlan = { goal: raw.goal, promise: raw.promise, arc: raw.arc, ...(raw.look ? { look: raw.look } : {}), events, cues: raw.cues.map((c) => ({ beforeWord: c.beforeWord, text: punctuate(c.text) })) };
   const final = { ...script, beats };
   // The renumbering must leave every word in exactly one event; anything else is a bug here, not the model's.
   const broken = coverage(events, scriptWords(final).length);
@@ -407,7 +409,7 @@ export async function direction(p: Project, force = false) {
   const who = persona(p.input.persona);
   const secs = seconds(p);
   const kinds = truthKindNames();
-  const system = prompt("direction").replace("{{abilities}}", abilities()).replace("{{cueWords}}", String(CUE_WORDS)).replace("{{holdMin}}", String(HOLD_SECONDS[0])).replace("{{holdMax}}", String(HOLD_SECONDS[1]));
+  const system = prompt("direction").replace("{{abilities}}", abilities()).replace("{{cueWords}}", String(CUE_WORDS)).replace("{{holdMin}}", String(HOLD_SECONDS[0])).replace("{{holdMax}}", String(HOLD_SECONDS[1])).replace("{{look}}", prompt("art-direction"));
   const wishes = asked([...(p.plan?.story ?? []), p.plan?.tone ? `Tone: ${p.plan.tone}` : "", ...(p.plan?.visuals ?? []), ...(p.plan?.sound ?? [])]);
   const claims = p.factSheet?.claims.map((c) => `- ${c.id}: ${c.text}${c.number ? ` (${c.number})` : ""}`).join("\n") ?? "";
   const user = [

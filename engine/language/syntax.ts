@@ -23,7 +23,10 @@ export type Item = {
   edges?: { from: string; to: string; weight?: number }[]; // graph
   loose?: string[]; // graph: nodes with no edge
   program?: string; // run
+  relations?: StageRelation[]; // stage: where its things are relative to each other, in the writer's words
 };
+// A relation line inside a stage: `cup sits on table`, `rope tied to post "top"`, `lamp above table "1 m"`.
+export type StageRelation = { a: string; b: string; kind: string; words: string; at?: string; gapCm?: number; line: number };
 
 export type Command =
   | { do: "arrow"; line: number; from: string; to: string; head: boolean; text?: string; attrs: Attrs }
@@ -48,7 +51,7 @@ export const SIZES = ["huge", "big", "normal", "small", "note"];
 export const SHAPES = ["box", "circle", "pill", "diamond", "dot", "tri"];
 export const MARKS = ["ring", "box", "underline", "cross", "brace", "highlight", "line", "arrow", "dots", "path", "pointer"];
 export const ENTERS = ["fade", "draw", "pop", "none", "slide", "slide-left", "rise", "slam"];
-const CONTAINERS = ["row", "stack", "grid", "ring", "chain", "free"];
+const CONTAINERS = ["row", "stack", "grid", "ring", "chain", "free", "stage"];
 const PLACING = ["at", "into", "before", "after"];
 const LOOK = ["color", "fill", "stroke", "weight", "opacity", "rotate", "strokeWidth"];
 const ATTRS: Record<string, string[]> = {
@@ -58,12 +61,13 @@ const ATTRS: Record<string, string[]> = {
   ring: ["size", "arrows", "role", "enter", ...PLACING],
   chain: ["dir", "gap", "role", "enter", ...PLACING],
   free: ["w", "h", "role", "enter", ...PLACING],
+  stage: ["w", "h", "gap", "bleed", "margin", "focus", "share", "role", "enter", ...PLACING],
   atoms: ["gap", "role", "enter", ...PLACING, ...LOOK],
   text: ["size", "w", "font", "align", "role", "enter", ...PLACING, ...LOOK],
   code: ["size", "role", "enter", ...PLACING],
-  image: ["asset", "w", "h", "frame", "enter", "rotate", ...PLACING, "opacity"],
+  image: ["asset", "w", "h", "frame", "enter", "rotate", "cm", ...PLACING, "opacity"],
   graph: ["w", "h", "radius", ...PLACING],
-  shape: ["w", "h", "size", "frame", "role", "enter", ...PLACING, ...LOOK],
+  shape: ["w", "h", "size", "frame", "role", "enter", "cm", ...PLACING, ...LOOK],
   space: ["h", ...PLACING],
   arrow: ["id", "bend", "color", "strokeWidth", "both", "role"],
   mark: ["id", "color", "strokeWidth", "side", "at", "role"],
@@ -348,6 +352,14 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
       if (holds) stack.push({ indent, item });
     };
 
+    // Inside a stage, a line that starts with a thing's id says where it is: `cup sits on table`.
+    if (holder?.kind === "stage" && !WORDS.includes(head) && !kits.has(head) && ID.test(head)) {
+      const r = readRelation(line);
+      if (r) (holder.relations ??= []).push({ ...r, line: number });
+      else fail(`Inside a stage, a line is a thing, or where one thing is relative to another: the thing's id, the words for where it is, then the other thing's id, as in cup sits on table, rope tied to post "top", lamp above table "1 m". Relation words: ${STAGE_WORDS.map(([w]) => w).join(", ")}, or at/on/in the PLACE of.`);
+      continue;
+    }
+
     // A literal line of code.
     if (head.startsWith("|") && holder?.kind === "code") {
       const text = raw.slice(raw.indexOf("|") + 1);
@@ -446,6 +458,43 @@ function leaf(head: string, toks: string[], line: number, fail: Fail, isKit: boo
   const item: Item = { kind: SHAPES.includes(head) ? head : head, id, line, attrs, children: [], ...(text === undefined ? {} : { text }) };
   if (head === "code") item.lines = [];
   return item;
+}
+
+// Where things are: relation words, longest first, each to the one kind of placement the staging solver carries out.
+// Words before them say how the thing is there ("sits", "tied", "hangs") and are kept as the writer's words.
+export const STAGE_WORDS: [string, string][] = [
+  ["in front of", "front"], ["on top of", "on"], ["to the left of", "left"], ["to the right of", "right"], ["left of", "left"], ["right of", "right"],
+  ["next to", "beside"], ["close to", "beside"], ["beside", "beside"], ["alongside", "beside"], ["near", "beside"], ["by", "beside"], ["against", "against"],
+  ["behind", "behind"], ["underneath", "under"], ["beneath", "under"], ["below", "under"], ["under", "under"], ["above", "over"], ["over", "over"],
+  ["onto", "on"], ["upon", "on"], ["atop", "on"], ["on", "on"], ["inside", "in"], ["within", "in"], ["into", "in"], ["in", "in"], ["around", "around"],
+  ["to", "to"], ["from", "to"], ["at", "at"],
+];
+const PLACE_OF = /\b(at|on|in) the ([\p{L}\p{N} -]+?) of$/u; // "at the end of", "on the edge of", "in the middle of"
+const LENGTH = /^\s*(\d+(?:\.\d+)?)\s*(mm|cm|m|km|in|ft)\s*$/i;
+const LENGTH_CM: Record<string, number> = { mm: 0.1, cm: 1, m: 100, km: 100000, in: 2.54, ft: 30.48 };
+
+// A relation line: a thing, the writer's words ending in a relation, another thing (or a part of it, as b.part), then
+// an optional quoted place on the other thing or a distance.
+export function readRelation(line: string): Omit<StageRelation, "line"> | undefined {
+  const q = /"([^"]*)"/.exec(line)?.[1];
+  const toks = line.replace(/"[^"]*"/g, " ").trim().split(/\s+/).filter(Boolean);
+  if (toks.length < 3) return undefined;
+  const a = toks[0]!;
+  const [b, ...part] = toks.at(-1)!.split(".");
+  if (!ID.test(a) || !ID.test(b!)) return undefined;
+  const words = toks.slice(1, -1).join(" ").toLowerCase();
+  let kind: string | undefined;
+  let at = part.length ? part.join(".").replace(/[_-]+/g, " ") : undefined;
+  const place = PLACE_OF.exec(words);
+  if (place) {
+    kind = place[1] === "at" ? "at" : place[1] === "on" ? "on" : "in";
+    at ??= place[2]!.trim();
+  } else kind = STAGE_WORDS.find(([w]) => words === w || words.endsWith(` ${w}`))?.[1];
+  if (!kind) return undefined;
+  const len = q !== undefined ? LENGTH.exec(q) : null;
+  const gapCm = len ? Number(len[1]) * LENGTH_CM[len[2]!.toLowerCase()]! : undefined;
+  if (q !== undefined && !len && q.trim()) at = q.trim().replace(/^(at|on|in|by) the /i, "").replace(/^the /i, "");
+  return { a, kind, b: b!, words, ...(at ? { at } : {}), ...(gapCm !== undefined ? { gapCm } : {}) };
 }
 
 function targetList(toks: string[], fail: Fail): string[] {

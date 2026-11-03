@@ -72,6 +72,24 @@ A picture, or a shape as a field of color, can fill the whole frame behind every
 Empty room: `space h=80`
 {{kits}}
 
+[[toolbox]]
+# Things as themselves
+
+A real thing the words are about (a flask, a bridge, a heart, a lever, a planet, a coffee cup) can be drawn as itself, with parts that carry state, instead of a box with its name:
+
+    depict flask "a 250 mL conical flask, a third full of clear acid"
+    depict cup "a white espresso cup on its saucer" tier=sprite
+    depict tower "the Eiffel Tower" asset=NAME
+
+The quoted words say what it is, plainly and exactly: the engine's depicter reads them, with the verbs your scene has it do and the relations it stands in, and draws it at its real size in the style's own line. `tier=sprite` asks for a picture made in the video's style and cut into its parts; `asset=NAME` draws one of the pictures you can show, with its parts; `parts=a,b` names the parts you will point at or change. After it builds, you are told what each depicted thing can do: its states, its verbs, its parts and the points it meets other things by. Then:
+
+    do change flask color=pink frames=40           a state changes: a level, a color, a reading, an angle
+    do act burette verb="drips into" to=flask amount=5 frames=90
+    do act ball verb="falls" frames=24
+
+A state can also start other than the depicter's: `depict flask "..." level=0.6`. Its parts are `flask.NAME` for `light`, `mark`, `tag`, `camera` and `drop`. Use it when seeing the thing itself teaches more than its name; words and diagrams stay better for ideas that have no body.
+
+[[/toolbox]]
 # What a thing is for
 
 [[roles]]
@@ -99,7 +117,25 @@ Indent to put things inside an arrangement, which can nest. Everything goes in `
     ring id arrows=1                            around a circle, optional arrows from each to the next
     chain id dir=down|up|right|left             a line with arrows between neighbors
     free id w=900 h=900                         by percent: each child has at=X,Y from the top left
+[[toolbox]]
+    stage id w=900 h=1300                       one scene: things where they really are, by relations (below)
+[[/toolbox]]
 
+[[toolbox]]
+A stage is one scene: things where they really are relative to each other, at their true relative sizes, not stacked like a list. Under the things, say where each one is, in plain words (a thing's id, the words, the other thing's id, then an optional quoted place on it or a distance):
+
+    stage lab w=900 h=1300
+      depict burette "a 50 mL burette of sodium hydroxide"
+      depict flask "a conical flask of clear acid"
+      depict bench "a lab bench top"
+      burette above flask "3 cm"
+      flask sits on bench
+      box sign "EXIT" cm=40,15
+      sign hangs from wall "the far end"
+
+Relation words: on, on top of, over, above, under, below, beneath, in, inside, into, beside, next to, near, left of, right of, against, behind, in front of, around, to, tied to, hangs from, at, and at/on/in the PLACE of ("at the end of", "on the edge of"). The words before them ("sits", "tied", "hangs") are yours. `cm=W,H` gives a shape or picture its real size; a depicted thing knows its own. What everything else rests on (a floor, a field, the sea) may run past the stage's sides so the rest stays big enough to see; `bleed=no` keeps all of it inside. `focus=ID share=0.5` closes in on one thing until it fills that share of the stage, the rest of the scene around it. A stage keeps every thing's place for the whole stretch of keep states, so things can join it, change and leave while the rest holds still. Relations that cannot all hold at once are reported, so say only where things really are.
+
+[[/toolbox]]
 [[roles]]
 `role=panel` on a row, stack or grid sets it on a panel, like a card, drawn the style's way.
 [[/roles]]
@@ -164,6 +200,10 @@ Properties for `set`: x, y, scaleX, scaleY, rotate, skew, opacity, drawn (0 to 1
 
 Behaviors:
 {{behaviors}}
+{{leans}}
+[[toolbox]]
+A shape's outline is `ID.shape`, so `do morph a.shape to=b.shape` reshapes one thing into another, matching like with like, and `do follow`, `do arc` and `do orbit` move a thing along a line, an arc or around another.
+[[/toolbox]]
 
 # The camera
 

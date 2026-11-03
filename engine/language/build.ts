@@ -158,6 +158,8 @@ export function expandKitItem(item: Item, o: { kinds: NonNullable<Kit["kinds"]>;
       const color = roleLook(ctx.theme, item.attrs.role).color;
       if (color) data.color = color;
     }
+    // A kit thing's quoted words (what a depicted thing is) reach the kit as `text`.
+    if (item.text !== undefined && data.text === undefined) data.text = item.text;
     spec = { id: item.id, kind: item.kind, data };
   }
   const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, ctx) ?? []).flatMap(expand));
@@ -309,6 +311,20 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       const seen = expandKit(item).rest;
       return { w: b.w * fit, h: b.h * fit, rest: (seen.y - b.y) / b.h };
     },
+    // A kit thing that knows its real size and named points (a depicted thing) says so on its root.
+    thing: (item) => {
+      if (!kinds[item.kind] || item.kind === "graph") return undefined;
+      const root = expandKit(item).nodes[0]?.props;
+      if (!root) return undefined;
+      const realCm = typeof root.realW === "number" && typeof root.realH === "number" ? { w: root.realW, h: root.realH } : undefined;
+      let pts: Record<string, [number, number]> = {};
+      try {
+        pts = typeof root.points01 === "string" ? JSON.parse(root.points01) : {};
+      } catch {
+        pts = {};
+      }
+      return { ...(realCm ? { realCm } : {}), point: (name: string) => pts[name] ?? pts[name.toLowerCase()] };
+    },
   };
 
   // What is on the board now.
@@ -379,7 +395,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   const pruneEmpty = (list: Item[]): Item[] =>
     list.filter((i) => {
       i.children = pruneEmpty(i.children);
-      return !(i.kind === "atoms" && !i.parts!.length) && !(["row", "stack", "grid", "ring", "chain", "free"].includes(i.kind) && !i.children.length);
+      return !(i.kind === "atoms" && !i.parts!.length) && !(["row", "stack", "grid", "ring", "chain", "free", "stage"].includes(i.kind) && !i.children.length);
     });
   const removeItem = (list: Item[], id: string): boolean => {
     const at = list.findIndex((i) => i.id === id);
@@ -563,7 +579,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       }
     });
     walkAll(board, (i) => {
-      for (const k of ["color", "fill", "stroke", "back"]) colorOk(i.attrs[k], i.line);
+      // A depicted thing's states take the colors of the real thing, which its depicter named.
+      if (i.kind !== "depict") for (const k of ["color", "fill", "stroke", "back"]) colorOk(i.attrs[k], i.line);
       backOk(i.attrs.back, i.line);
       if (i.attrs.enter && !ENTERS.includes(i.attrs.enter)) report(i.line, `enter must be one of ${ENTERS.join(", ")}.${suggest(i.attrs.enter, ENTERS)}`);
       if (i.kind === "image" && !opts.assets?.[i.attrs.asset ?? ""]) report(i.line, `The image ${i.id} needs asset=NAME with a name from the assets list.${opts.assets ? ` Available: ${Object.keys(opts.assets).join(", ") || "none"}.` : " This scene has no assets."}`);
@@ -571,6 +588,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
 
     const laid = layout(board, env, stretchScale[index], stretchOf[index], spareOf(index));
     problems.push(...laid.problems.slice(0, 6).map((p) => ({ ...p, line: p.line || s.line })));
+    for (const x of laid.notes ?? []) if (!notes.includes(x)) notes.push(x);
     // How the state reads once it settles: sentences crowding one frame, or a frame left mostly empty.
     const lasts = (index + 1 < doc.states.length ? when(doc.states[index + 1]!.at, ctx) : ctx.frames) - momentOf(s.at, s.line);
     if (lasts >= ctx.fps * 1.5) {
@@ -1491,7 +1509,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
           continue;
         }
         const args = Object.fromEntries(Object.entries(c.attrs).map(([k, v]) => [k, argValue(v, (t) => momentOf(t, c.line))]));
-        if (typeof args.color === "string") colorOk(args.color, c.line);
+        if (typeof args.color === "string" && c.behavior !== "change" && c.behavior !== "act") colorOk(args.color, c.line);
         for (const t of c.targets) {
           const list = parts.has(t) ? [t] : expandTarget(t, c.line).filter((id) => !parts.get(id)?.parent);
           for (const id of list) play.push({ behavior: c.behavior, target: id, args });
