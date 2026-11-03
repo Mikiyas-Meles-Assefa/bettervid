@@ -269,7 +269,28 @@ function treeBoard(id: string, values: number[], log: SortEvent[], form: "down" 
   // process went through, and the places merged values come back to, are seen.
   const outline = [-w / 2, -w / 2, w / 2, -w / 2, w / 2, w / 2, -w / 2, w / 2, -w / 2, -w / 2];
   for (let L = 0; L <= deepest; L++) for (let p = 0; p < n; p++) if (reached(L, p)) parts.push({ id: sortPart.place(id, L, p), kind: "path", parent: id, props: { ...at(p, L), points: outline, closed: 1, fill: "none", stroke: "ink", strokeWidth: 3, opacity: 0 } });
-  const leave = (L: number, p: number, start: number) => s.set(sortPart.place(id, L, p), "opacity", 0.35, start, 0.4);
+  // A place a value left stays as a faint outline, but only on the levels being worked (the level a step takes values
+  // from and the level it takes them to): outlines everywhere else would fill the frame with empty boxes.
+  const QUIET = 0.3;
+  const left = new Set<string>();
+  const shown = new Map<string, number>();
+  const working = new Set<number>();
+  const show = (key: string, start: number) => {
+    const [L, p] = key.split(",").map(Number) as [number, number];
+    const want = working.has(L) ? QUIET : 0;
+    if ((shown.get(key) ?? 0) === want) return;
+    s.set(sortPart.place(id, L, p), "opacity", want, start, 0.4);
+    shown.set(key, want);
+  };
+  const work = (levels: number[], start: number) => {
+    working.clear();
+    levels.forEach((L) => working.add(L));
+    for (const key of left) show(key, start);
+  };
+  const leave = (L: number, p: number, start: number) => {
+    left.add(`${L},${p}`);
+    show(`${L},${p}`, start);
+  };
   values.forEach((_, i) => {
     const k = i + 1;
     parts.push({ id: sortPart.item(id, k), kind: "group", parent: id, props: at(i, 0) });
@@ -321,6 +342,7 @@ function treeBoard(id: string, values: number[], log: SortEvent[], form: "down" 
     } else if (e.type === "divide") {
       begin(`split ${vals(e.lo, e.hi)} into ${vals(e.lo, e.mid)} and ${vals(e.mid + 1, e.hi)}`);
       const L = depth(e.lo, e.hi) + 1;
+      work([L - 1, L], 0.1);
       for (let p = e.lo; p <= e.hi; p++) {
         move(order[p]!, at(p, L), 0.1, 0.6);
         leave(L - 1, p, 0.1);
@@ -329,6 +351,7 @@ function treeBoard(id: string, values: number[], log: SortEvent[], form: "down" 
       begin(`merge ${vals(e.lo, e.mid)} with ${vals(e.mid + 1, e.hi)}: a finger on the front of each`);
       for (let p = e.lo; p <= e.hi; p++) s.flash(sortPart.value(id, order[p]!), "color", "accent");
       Object.assign(run, { lo: e.lo, mid: e.mid, hi: e.hi, a: e.lo, b: e.mid + 1, d: depth(e.lo, e.hi) });
+      work([run.d, run.d + 1], 0);
       for (const [side, p] of [["a", e.lo], ["b", e.mid + 1]] as const) {
         const c = fingerAt(p, run.d + 1);
         s.set(sortPart.finger(id, side), "x", c.x, 0, 0).set(sortPart.finger(id, side), "y", c.y, 0, 0).set(sortPart.finger(id, side), "opacity", 1, 0.1, 0.4);

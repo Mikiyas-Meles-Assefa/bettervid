@@ -151,8 +151,11 @@ test("on a tall frame merge sort is drawn by level: halves go down a level, merg
   const order = data.map((v, i) => ({ v, x: item(i + 1, end1).x as number })).sort((a, b) => a.x - b.x).map((o) => o.v);
   assert.deepEqual(order, [1, 2, 3, 4, 5, 6, 7, 8]);
   for (let i = 1; i <= data.length; i++) assert.equal(item(i, end1).y, 0, "back at the first level");
-  // The places the values left stay as faint outlines.
-  assert.ok(Number(at(s, end1, sortPart.place("s", 3, 0)).opacity) > 0, "the last level is outlined");
+  // The places values left show as faint outlines only on the levels being worked: the last level while its pairs merge,
+  // and not once the work has moved up.
+  const outlined = (f: number) => Number(at(s, f, sortPart.place("s", 3, 0)).opacity);
+  assert.ok(Array.from({ length: end1 }, (_, f) => outlined(f)).some((o) => o > 0), "the last level is outlined while it is worked");
+  assert.equal(outlined(end1), 0, "and quiet once the work has moved up");
   // Across: the levels side by side, the values of a level in a column; sorted top to bottom.
   const a = await ok(`@0\nsort s data=[${data}] algo=merge show=boxes form=across\ndo steps s until=@60\n`);
   const down = data.map((v, i) => ({ v, y: at(a, end(a), sortPart.item("s", i + 1)).y as number })).sort((p, q) => p.y - q.y).map((o) => o.v);
