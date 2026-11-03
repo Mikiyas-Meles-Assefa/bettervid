@@ -11,40 +11,40 @@ table{border-collapse:collapse;width:100%;background:var(--card)}td,th{border-bo
 .now{color:var(--now);font-weight:600}
 </style></head><body>
 <h1>bettervid, from prompt to product</h1>
-<p>Goal: the best video creation platform in the world, built on the best agent-native video engine. Circle size = how much improving the layer matters. Fill = how close it is to perfect (estimates). Orange ring = being built now.</p>
+<p>Goal: the best video creation platform in the world, built on the best agent-native video engine. Circle size = how much improving the layer matters. Fill = how close it is to perfect (estimates). Orange ring = being built now. Status as of Nov 3, 19:30 Doha.</p>
 <svg id="c" viewBox="0 0 760 1180"></svg>
 <h2>Waves</h2>
 <table>
 <tr><th>Wave</th><th>Covers</th><th>Size</th><th>Now</th></tr>
-<tr><td>3. Teaching bench</td><td>Clips judged in time: eye, lag, pace, load, holds, depiction, readability, learner quiz, designer and scroller seats</td><td>60</td><td>done</td></tr>
-<tr><td class="now">4. Design brain</td><td>Abilities, instruments, reasoning agents, search and look loops, style suggestions; direction as an ability; zero hardcoding</td><td>100</td><td class="now">built, now being tested on the bench</td></tr>
-<tr><td>5. What can be shown</td><td>Your material first (agentic parsing, project graph, requirements across files), bringing static charts and images to life, agentic picture hunting, truth engines</td><td>90</td><td>about 45%</td></tr>
-<tr><td>6. Styles, sound, voice</td><td>Design languages and brand kits, sound tied to events, delivery per moment</td><td>60</td><td>about 60%</td></tr>
+<tr><td>3. Teaching bench</td><td>Clips judged in time: eye, lag, pace, load, holds, depiction, readability, learner quiz, designer and scroller seats</td><td>60</td><td>done, paused: we judge with real clips Miki watches</td></tr>
+<tr><td class="now">4. Design brain</td><td>Abilities, instruments, reasoning agents, search and look loops, style suggestions; direction as an ability; zero hardcoding</td><td>100</td><td class="now">about 45%: built and merged (staging, steadiness, hand-drawn fix, motion vocabulary); path A (Spark writes scenes with the toolbox, the board, sprites, one repair round, taste review) on its branch. Open: Spark does not use the new tools or fix composition</td></tr>
+<tr><td>5. What can be shown</td><td>Your material first (agentic parsing, project graph, requirements across files), bringing static charts and images to life, agentic picture hunting, truth engines</td><td>90</td><td>about 50%: uploads and PDF, Word, PowerPoint, Excel readers merged; round 2 in progress</td></tr>
+<tr><td>6. Styles, sound, voice</td><td>Design languages and brand kits, sound tied to events, delivery per moment</td><td class="now">about 60%: sound tied to events being built (Codex)</td></tr>
 <tr><td>7. Proof</td><td>Full blind benchmark against NotebookLM and human-made videos</td><td>50</td><td>10%</td></tr>
-<tr><td>8. Platform</td><td>Chat-to-edit, live preview, uploads and library, interactive export, dubbing, sharing, hosting, accounts</td><td>95</td><td>20%</td></tr>
-<tr><td>9. Speed and cost</td><td>Minutes per video, Spark only where it matters</td><td>30</td><td>about 80%</td></tr>
-<tr><td>Every wave</td><td>Checks that only improve, better examples and stories, truthful research, bench after every change</td><td>50</td><td>about 60%</td></tr>
+<tr><td>8. Platform</td><td>Chat-to-edit, live preview, uploads and library, interactive export, dubbing, sharing, hosting, accounts</td><td>95</td><td>about 25%: uploads in the app</td></tr>
+<tr><td>9. Speed and cost</td><td>Minutes per video, Spark only where it matters</td><td class="now">about 80%: speed being built (Codex); a 1-minute video takes about 15 min</td></tr>
+<tr><td>Every wave</td><td>Checks that only improve, better examples and stories, truthful research, real clips after every change</td><td>50</td><td>about 60%</td></tr>
 </table>
 <p style="margin-top:12px">Full plan: docs/ROADMAP.md. Design brain: docs/DESIGN-BRAIN.md.</p>
 <script>
 const L=[
  ["Request","Plan: read what the user wants",70,2],
  ["Request","Research: sourced facts",70,3],
- ["Request","Your material: parsing and the project graph",15,5],
+ ["Request","Your material: parsing and the project graph",40,5,"now"],
  ["Story","Writer: script and examples",65,4],
- ["Story","Direction: tempo, pauses, demos",45,5,"now"],
+ ["Story","Direction: tempo, pauses, demos, the video's look",50,5],
  ["Story","Voice: narration with real pauses",80,3],
- ["Visuals","Pictures: hunt, make, frame",55,4],
- ["Visuals","Scene authoring",35,4,"now"],
- ["Visuals","Design brain: composition, type, motion",30,6,"now"],
+ ["Visuals","Pictures: hunt, make, frame, sprites",60,4],
+ ["Visuals","Scene authoring",40,4,"now"],
+ ["Visuals","Design brain: composition, type, motion",40,6,"now"],
  ["Visuals","Truth engines: what can be shown",35,5],
  ["Visuals","Styles",60,4],
- ["Finish","Sound and music",50,3],
+ ["Finish","Sound and music",50,3,"now"],
  ["Finish","Render",85,1.5],
- ["Quality","Checks and repair",50,3],
- ["Quality","Teaching bench",70,4],
+ ["Quality","Checks and repair, taste review",60,3],
+ ["Quality","Teaching bench (paused)",70,4],
  ["Quality","Full blind benchmark",10,3],
- ["Product","Platform: edit, upload, share, host",20,6]
+ ["Product","Platform: edit, upload, share, host",25,6]
 ];
 const s=document.getElementById("c"),N="http://www.w3.org/2000/svg";
 const el=(t,a,p=s)=>{const e=document.createElementNS(N,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
