@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { resolve as depict } from "../depict/index.ts";
+import { themeFrom } from "../../render/theme.ts";
+import { depictionFrom, sizeCm, type PropSpec } from "../depict/index.ts";
+import { SAMPLES } from "../depict/samples.ts";
+import { PLAIN_LOOK } from "../compose/acts.ts";
 import { pack, usableRect } from "../compose/pack.ts";
 import * as A from "./index.ts";
 
@@ -20,21 +23,29 @@ test("a fall takes physical time from its height and g; playback speed and a rep
 });
 
 test("a fall group keeps true relative sizes, bottoms level, room to fall, and a real scale", () => {
-  const big = depict("a heavy black bowling ball");
-  const small = depict("a light yellow tennis ball");
-  const g = A.fallGroup([{ id: "a", prop: big }, { id: "b", prop: small }], { w: 800, h: 1200 }, new Set(), { bigShare: 0.4, gapShare: 0.1, minShare: 0.01, roomShare: 0.5, floorGap: 20 });
+  const big: A.ObjShape = { w: 100, h: 100, realCm: { w: 21.8, h: 21.8 } };
+  const small: A.ObjShape = { w: 100, h: 100, realCm: { w: 6.7, h: 6.7 } };
+  const g = A.fallGroup([{ id: "a", shape: big }, { id: "b", shape: small }], { w: 800, h: 1200 }, new Set(), { bigShare: 0.4, gapShare: 0.1, minShare: 0.01, roomShare: 0.5, floorGap: 20 });
   const [a, b] = g.members;
-  assert.ok(Math.abs(a!.w / b!.w - big.body!.size / small.body!.size) < 1e-6);
+  assert.ok(Math.abs(a!.w / b!.w - 21.8 / 6.7) < 1e-6);
   assert.equal(a!.dy, b!.dy);
   assert.ok(g.fall >= 0.5 * 1200 - 20 - 1e-6);
-  assert.ok(Math.abs(g.pxPerM! - a!.w / (big.body!.size / 100)) < 1e-6);
+  assert.ok(Math.abs(g.pxPerM! - a!.w / 0.218) < 1e-6);
 });
 
-test("an apparatus puts the source's tip over the vessel's mouth, inside its box", () => {
-  const ap = A.apparatus({ id: "s", prop: depict("a glass burette") }, { id: "v", prop: depict("a conical flask") }, [{ id: "c", prop: depict("a stopwatch") }], { w: 900, h: 1400 }, { sourceShare: 0.5, gapShare: 0.04, sourceWidth: 0.5, vesselWidth: 0.7, satelliteShare: 0.2, satelliteGap: 40 });
+test("an apparatus puts the source's outlet over the vessel's mouth, inside its box", () => {
+  const theme = themeFrom("flat");
+  const shape = (name: string): A.ObjShape => {
+    const spec = SAMPLES.find((x) => x.name === name)!.spec as PropSpec;
+    const d = depictionFrom(spec, theme, { id: name, look: PLAIN_LOOK });
+    const real = sizeCm(spec);
+    return { w: d.box.w, h: d.box.h, outlet: d.anchor("outlet"), mouth: d.anchor("mouth"), ...(real ? { realCm: real } : {}) };
+  };
+  const ap = A.apparatus({ id: "s", shape: shape("burette") }, { id: "v", shape: shape("flask") }, [{ id: "c", shape: shape("stopwatch") }], { w: 900, h: 1400 }, { sourceShare: 0.5, gapShare: 0.04, sourceWidth: 0.5, vesselWidth: 0.7, satelliteShare: 0.2, satelliteGap: 40 });
   assert.ok(ap.h <= 1400 + 1e-6 && ap.w <= 900 + 1e-6);
   const [s, v, c] = ap.members;
-  assert.equal(s!.dx, v!.dx);
+  // The burette's outlet (its tip, at x 0) sits over the flask's mouth.
+  assert.ok(Math.abs(s!.dx - v!.dx) < 1e-6);
   assert.ok(s!.dy < v!.dy - v!.h, "the source is above the vessel");
   assert.ok(Math.abs(c!.dx) >= v!.w / 2, "a satellite stands beside the vessel");
 });

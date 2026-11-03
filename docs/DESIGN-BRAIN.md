@@ -104,7 +104,7 @@ Most people bring their own material: files, docs, slides, screenshots, photos, 
 
 ## 3. What the author says
 
-The author states intent per moment; the agents and the engine do the rest. The vocabulary is small and about the viewer, not the screen (`scripts/design-brain/intent-prompt.md`, 5.3 KB against 40 KB for today's language guide):
+The author states intent per moment; the agents and the engine do the rest. The vocabulary is small and about the viewer, not the screen (`prompts/intent.md`, 5.3 KB against 40 KB for today's language guide):
 - **Things**: `thing` (words or a value), `many` (countable marks), `object` (a real thing to see, described in plain words), and the user's material by name and part (`slide.login`).
 - **Per moment** (`@N` on a spoken word): `show` (the one subject), `keep` (what stays as support), relations (`compare`, `A -> B`, `A from B`, `becomes`), direction (`ask`, `reveal`, `wrong`, `stress`, `pace`), and plain verbs for what objects do (`drips into`, `turns`, `flashes`, `swirls`, `falls`, `fills`, `reads`, `runs`, `moves to`).
 - **Top lines**: `feel`, `for new|familiar`.

@@ -5,6 +5,8 @@
 import { roleLook } from "../core/roles.ts";
 import type { Theme } from "../core/types.ts";
 import { idsOf } from "./intent/parse.ts";
+import { actKinds, depictAll, type ActKind } from "./compose/acts.ts";
+import type { PropSpec } from "./depict/index.ts";
 import type { Box, CameraPlan, Decided, DemoPlan, Design, IntentPlan, Moment, MomentDesign, PartCard, Viewing, Word } from "./types.ts";
 import { numOf } from "./abilities/types.ts";
 
@@ -162,29 +164,24 @@ export function styleValues(theme: Theme, viewing: Viewing): Record<string, Styl
   set("demo.fast", 2, "fast plays at twice real speed");
   set("demo.wordsWait", true, "revealed words wait for the landing they describe");
   set("demo.neverCut", true, "the next moment waits for a demonstration to finish");
-  set("flow.dropsEvery", 0.73, "one drop at a time: 0.73 s apart");
-  set("flow.streamEvery", 0.17, "a quick stream: a drop every 0.17 s");
-  set("flow.dropsFall", 0.4, "a single drop falls in 0.4 s");
-  set("flow.streamFall", 0.3, "a stream's drops fall in 0.3 s");
-  set("flow.hang", 0.47, "a single drop hangs at the tip 0.47 s");
-  set("flow.size", [0.0019, 0.012, 0.0093], "drop radius when it appears, hangs and falls");
+  set("flow.rate", [1.4, 6], "drop by drop: 1.4 drops a second; a quick run: 6 a second");
+  set("flow.trueWidth", [0.5, 0.3], "a drop is about 5 mm across; a thin stream about 3 mm (sizes of the world, in cm)");
+  set("flow.minWidth", 0.009, "what flows is never drawn thinner than 0.9% of the shorter side, so it is seen");
+  set("flow.sourceCm", 30, "a source with no real size is timed as 30 cm tall");
   set("flow.perDrop", 0.05, "a drop is about 0.05 mL");
-  set("flow.perSecond", 2.6, "a stream from a burette tap runs about 2.6 mL/s");
-  set("flow.drainShare", 0.15, "a source with no scale drains by 15% of its contents");
-  set("flow.fill", [0.004, 0.12, 0.78], "the vessel rises per drop, for a whole stream, and at most");
+  set("flow.perSecond", 2.6, "a thin stream runs about 2.6 mL/s");
+  set("flow.tap", 0.3, "a tap opens over 0.3 s");
+  set("flow.stop", 0.3, "a stream runs out over 0.3 s once it stops");
+  set("flow.replayPause", 0.4, "a pause before a flow is replayed");
   set("flow.bloom", [0.25, 0.011], "a bloom of color where a drop lands: width share of the surface, height");
   set("flow.bloomGrow", 0.33, "a bloom spreads in 0.33 s");
   set("flow.bloomFade", [1.33, 0.6], "and fades over 1.3 s (drops) or 0.6 s (stream)");
   set("flow.bloomSpread", 0.3, "landings spread across 30% of the surface");
+  set("flow.bloomEvery", 0.17, "a stream blooms every 0.17 s where it lands");
   set("flow.stopBefore", 0.6, "a flow stops 0.6 s before what follows, so the result is seen at rest");
-  set("flow.pool", 8, "drops reused in turn");
-  set("turns.time", 0.87, "contents shift color over 0.87 s");
-  set("sways.degrees", 7, "rocks 7 degrees each way");
-  set("sways.swings", 5, "five swings");
-  set("sways.swing", 0.27, "0.27 s a swing");
-  set("sways.decay", 0.8, "each pair of swings 80% of the last");
-  set("sways.spin", 1.33, "a spin takes 1.33 s");
-  set("runs.size", 0.07, "a clock's time is written at 7% of the shorter side");
+  set("focus.hidden", 0, "a withheld subject is not seen at all");
+  set("flow.pool", 8, "blooms reused in turn");
+  set("change.time", 0.87, "a thing changes state (a color, a level, a pose) over 0.87 s");
   set("reading.zoom", 2.4, "close enough that a scale's marks read");
   set("reading.size", 0.085, "the reading's size on screen after the zoom");
   set("reading.mark", 0.0056, "the mark on the surface");
@@ -241,7 +238,8 @@ function anchorKind(plan: IntentPlan, m: Moment, cards: PartCard[]): Stagey {
 }
 
 /** The suggested design of one moment: every field from the style or the viewing, with its reason. */
-export function suggestMoment(plan: IntentPlan, k: number, viewing: Viewing, theme: Theme, cards: PartCard[], words?: Word[]): MomentDesign {
+/** `kinds`: what each of the moment's acts is (a flow, a fall, a reading ...), read off the depictions (compose/acts.ts). */
+export function suggestMoment(plan: IntentPlan, k: number, viewing: Viewing, theme: Theme, cards: PartCard[], words?: Word[], kinds: ActKind[] = []): MomentDesign {
   const m = plan.moments[k]!;
   const S = styleValues(theme, viewing);
   const shape = shapeOf(viewing);
@@ -251,7 +249,7 @@ export function suggestMoment(plan: IntentPlan, k: number, viewing: Viewing, the
   const arrangement = shape === "wide" && a.stage ? "row" : "stack";
   const paceS = m.pace === "slow" ? 1.5 : m.pace === "fast" ? 0.7 : 1.0;
   const dwell = Math.max(paceS, m.reveal || m.ask || m.stress ? 1.4 : 0);
-  const camera = cameraOf(m, k, plan, S, words);
+  const camera = cameraOf(m, k, plan, S, words, kinds);
   return {
     moment: k,
     importance: m.stress ? dec(0.8, "author", "the author marked this moment as stress") : m.reveal ? dec(0.7, "author", "a reveal: the payoff of a question") : dec(0.5, "style", "an ordinary moment"),
@@ -268,9 +266,9 @@ export function suggestMoment(plan: IntentPlan, k: number, viewing: Viewing, the
   };
 }
 
-function cameraOf(m: Moment, k: number, plan: IntentPlan, S: Record<string, StyleValue>, words?: Word[]): Decided<CameraPlan> {
+function cameraOf(m: Moment, k: number, plan: IntentPlan, S: Record<string, StyleValue>, words: Word[] | undefined, kinds: ActKind[]): Decided<CameraPlan> {
   const at: [number, number] = [0.5, 0.47];
-  if (m.acts.some((a) => a.verb === "reads")) return dec({ zoom: 1, at, move: "hold" }, "style", "the reading brings the camera close itself");
+  if (kinds.includes("read")) return dec({ zoom: 1, at, move: "hold" }, "style", "the reading brings the camera close itself");
   if (m.stress) return dec({ zoom: S["camera.stress"]!.value as number, at, move: "push" }, "style", "a stressed moment: a slow push in");
   const next = plan.moments[k + 1];
   const [after, z] = S["camera.still"]!.value as [number, number];
@@ -351,24 +349,27 @@ function barValues(c: PartCard, part: string): number[] {
 }
 
 /** Demonstrations: how each fall and flow plays. Falls at real speed, then a slow replay; flows as the author paced them. */
-export function demosOf(plan: IntentPlan): DemoPlan[] {
+export function demosOf(plan: IntentPlan, kinds: ActKind[][] = []): DemoPlan[] {
   const out: DemoPlan[] = [];
   plan.moments.forEach((m, k) =>
     m.acts.forEach((a, i) => {
-      if (a.verb === "falls")
+      const kind = kinds[k]?.[i];
+      if (kind === "fall")
         out.push({ moment: k, act: i, speed: dec(a.speed === "slow" ? "slow" : "real", "style", a.speed === "slow" ? "the author asked for it slow" : "a fall from a height a viewer knows is short: shown at real speed first, so it looks like the world"), replay: a.speed === "slow" ? undefined : dec({ speed: "slow" as const }, "style", "then replayed slowly, so the eye can compare the things as they fall"), why: "a demonstration that must truly happen" });
-      if (a.verb === "flows") out.push({ moment: k, act: i, speed: dec(a.speed === "slow" ? "slow" : "real", "style", a.speed === "slow" ? "one drop at a time, as the author paced it" : "a quick stream, as the author paced it"), why: "a flow plays as the author paced it" });
+      if (kind === "flow") out.push({ moment: k, act: i, speed: dec(a.speed === "slow" ? "slow" : "real", "style", a.speed === "slow" ? "one drop at a time, as the author paced it" : "a quick stream, as the author paced it"), why: "a flow plays as the author paced it" });
     }),
   );
   return out;
 }
 
-export function suggestDesign(plan: IntentPlan, viewing: Viewing, theme: Theme, cards: PartCard[] = [], words?: Word[]): Design {
+/** `props`: the depicter's specs of the plan's objects, so the suggestion knows what each act is (a fall, a flow ...). */
+export function suggestDesign(plan: IntentPlan, viewing: Viewing, theme: Theme, cards: PartCard[] = [], words?: Word[], props: Record<string, PropSpec> = {}): Design {
+  const kinds = actKinds(plan, depictAll(plan, props, theme).depictions).map((m) => m.map((c) => c.kind));
   return {
     viewing,
     tempo: tempoOf(plan.feel),
-    moments: plan.moments.map((_, k) => suggestMoment(plan, k, viewing, theme, cards, words)),
-    demos: demosOf(plan),
+    moments: plan.moments.map((_, k) => suggestMoment(plan, k, viewing, theme, cards, words, kinds[k])),
+    demos: demosOf(plan, kinds),
     overrides: [],
     goals: [],
     decisions: [],

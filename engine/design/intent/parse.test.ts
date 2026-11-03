@@ -38,17 +38,17 @@ test("parses things, moments, relations and verbs", () => {
   assert.equal(m.reveal, "price");
   assert.equal(m.stress, true);
   assert.deepEqual(m.becomes, [{ id: "price", text: "$120" }]);
-  assert.deepEqual(m.acts.map((a) => [a.verb, a.ids, a.arg, a.speed]), [["turns", ["jar"], "faint blue", undefined], ["sways", ["jar"], "wobbles", "slow"]]);
+  assert.deepEqual(m.acts.map((a) => [a.verb, a.ids, a.arg, a.speed]), [["turns", ["jar"], "faint blue", undefined], ["wobbles", ["jar"], undefined, "slow"]]);
   assert.deepEqual(p.notes, []);
 });
 
-test("flows, falls together, moves to and speed words", () => {
-  const p = parseIntent(`object a "a jug"\nobject b "a bowl"\nobject c "a ball"\nobject d "a ball"\n@0\n  show b\n  a pours into b\n  c d fall\n  c moves to b fast`);
+test("verbs are the author's own words, with their particles, other things, arguments and speed words", () => {
+  const p = parseIntent(`object a "a jug"\nobject b "a bowl"\nobject c "a ball"\nobject d "a ball"\n@0\n  show b\n  a pours into b\n  c d fall together\n  c moves to b fast\n  a lights up`);
   const acts = p.moments[0]!.acts;
-  assert.deepEqual(acts[0], { verb: "flows", ids: ["a"], to: "b", arg: "pours", speed: "fast", line: 7 });
-  assert.deepEqual(acts[1]!.ids, ["c", "d"]);
-  assert.equal(acts[1]!.verb, "falls");
-  assert.deepEqual([acts[2]!.verb, acts[2]!.to, acts[2]!.speed], ["moves", "b", "fast"]);
+  assert.deepEqual(acts[0], { verb: "pours into", ids: ["a"], to: "b", line: 7 });
+  assert.deepEqual(acts[1], { verb: "fall", ids: ["c", "d"], line: 8 });
+  assert.deepEqual([acts[2]!.verb, acts[2]!.to, acts[2]!.speed], ["moves to", "b", "fast"]);
+  assert.equal(acts[3]!.verb, "lights up");
 });
 
 test("lines of today's scene language inside a moment are pinned, with what is indented under them", () => {
@@ -58,12 +58,12 @@ test("lines of today's scene language inside a moment are pinned, with what is i
   assert.equal(p.moments[0]!.show, "x");
 });
 
-test("a verb the engine does not know is kept as an act and reported", () => {
-  const p = parseIntent(`object kite "a paper kite"\n@0\n  show kite\n  kite flutters "in the wind"`);
+test("any verb is kept as an act for the depicter to map; a line about no thing is reported", () => {
+  const p = parseIntent(`object kite "a paper kite"\n@0\n  show kite\n  kite flutters "in the wind"\n  wind blows`);
   assert.deepEqual(p.moments[0]!.acts.map((a) => [a.verb, a.ids, a.arg]), [["flutters", ["kite"], "in the wind"]]);
-  assert.match(p.notes.join("\n"), /flutters/);
+  assert.match(p.notes.join("\n"), /wind blows/);
   const problems = checkIntent(p, Array.from({ length: 4 }, (_, i) => ({ text: "w", start: i })));
-  assert.match(problems.map((x) => x.message).join("\n"), /"flutters" is not a verb/);
+  assert.doesNotMatch(problems.map((x) => x.message).join("\n"), /flutters/);
 });
 
 test("checkIntent reports what an author can repair", () => {

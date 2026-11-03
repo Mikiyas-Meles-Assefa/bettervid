@@ -1,10 +1,10 @@
-// The intent language (scripts/design-brain/intent-prompt.md): the author says what matters at each moment, never where,
+// The intent language (prompts/intent.md): the author says what matters at each moment, never where,
 // how big, what color or how it moves. Lenient: anything unclear is kept where it can be and reported as a note.
 //
 // Moment blocks parse inside today's scene files too: a line of today's scene language inside a moment (a `camera`, a
 // `set`, a `row`, a `text` with a size, and any lines indented under it) becomes `Moment.pinned`, the strongest
 // precedence (docs/DESIGN-BRAIN.md 6). A verb the engine does not know is kept as an Act with that verb and reported,
-// never dropped.
+// never dropped; verbs are open (the depicter maps each onto what the thing can do).
 import type { Act, IntentPlan, Moment, Pace, PartCard, Thing, Word } from "../types.ts";
 import { SCENE_WORDS } from "../../language/syntax.ts";
 
@@ -19,10 +19,38 @@ const SCENE = new Set(SCENE_WORDS.filter((w) => w !== "drop"));
 const newMoment = (word: number, line: number): Moment => ({ word, line, keep: [], becomes: [], from: [], arrows: [], wrong: [], stress: false, pace: "normal", acts: [], pinned: [] });
 
 // Speed words after a verb: the author's, read as a pace. Anything else stays in `arg`.
+const FAST = /\b(fast|quick|quickly|rapid|rapidly)\b/i;
+const SLOW = /\b(slow|slowly|one at a time|bit by bit|little by little)\b/i;
 function speedOf(rest: string): Pace | undefined {
-  if (/\b(fast|quick|quickly|stream|rapid)\b/i.test(rest)) return "fast";
-  if (/\b(slow|slowly|one at a time|drop by drop|one drop)\b/i.test(rest)) return "slow";
+  if (FAST.test(rest)) return "fast";
+  if (SLOW.test(rest)) return "slow";
   return undefined;
+}
+
+// Particles that belong to a verb ("drips into", "moves to", "lights up"): grammar, not a list of verbs.
+const PARTICLES = new Set(["into", "onto", "in", "on", "to", "toward", "towards", "out", "up", "down", "over", "off", "through", "away", "back", "across", "around", "under", "from", "at", "along", "by", "with"]);
+// Words that say how, not what: kept out of the argument.
+const FILLER = new Set(["together", "again", "then", "now", "all", "both"]);
+
+/**
+ * An act line: one or more things, the author's verb (with its particles), an optional other thing, then a quoted
+ * argument or a value. "A drips into B fast", "A B fall", "A turns "faint green"", "A runs 30 s", "A moves to B".
+ */
+export function readAct(line: string, isThing: (t: string) => boolean): Omit<Act, "line"> | undefined {
+  const q = quoted(line);
+  const toks = line.replace(/"[^"]*"/g, " ").trim().split(/\s+/).filter(Boolean);
+  const ids: string[] = [];
+  let i = 0;
+  while (i < toks.length && ID.test(toks[i]!) && isThing(toks[i]!)) ids.push(toks[i++]!);
+  if (!ids.length || i >= toks.length) return undefined;
+  const verb = [toks[i++]!.toLowerCase()];
+  while (i < toks.length && PARTICLES.has(toks[i]!.toLowerCase()) && !isThing(toks[i]!)) verb.push(toks[i++]!.toLowerCase());
+  let to: string | undefined;
+  if (i < toks.length && isThing(toks[i]!)) to = toks[i++];
+  const rest = toks.slice(i).join(" ");
+  const speed = speedOf(rest);
+  const left = rest.replace(FAST, " ").replace(SLOW, " ").split(/\s+/).filter((t) => t && !FILLER.has(t.toLowerCase())).join(" ");
+  return { verb: verb.join(" "), ids, ...(to ? { to } : {}), ...(q !== undefined ? { arg: q } : left ? { arg: left } : {}), ...(speed ? { speed } : {}) };
 }
 
 export function parseIntent(src: string): IntentPlan {
@@ -114,31 +142,17 @@ export function parseIntent(src: string): IntentPlan {
     const act = (a: Omit<Act, "line">) => cur!.acts.push({ ...a, line: ln });
     const arg = (t: string | undefined) => (t === undefined ? undefined : quoted(t) ?? (t.trim() || undefined));
     let m: RegExpExecArray | null;
-    if ((m = /^([\w.]+)\s+(drips|pours|flows|drains|drops|leaks|trickles)\s+(?:into|onto|in)\s+([\w.]+)\s*(.*)$/i.exec(line))) act({ verb: "flows", ids: [m[1]!], to: m[3]!, arg: m[2]!.toLowerCase(), speed: speedOf(m[4]!) ?? (/pours|flows/i.test(m[2]!) ? "fast" : undefined) });
-    else if ((m = /^([\w.]+)\s+(turns|changes to|goes)\s+(.*)$/i.exec(line))) act({ verb: "turns", ids: [m[1]!], arg: arg(m[3]), speed: speedOf(m[3]!) });
-    else if ((m = /^([\w.]+)\s+(flashes|blushes|glows)\s*(.*)$/i.exec(line))) act({ verb: "flashes", ids: [m[1]!], arg: arg(m[3]) });
-    else if ((m = /^([\w.]+)\s+(swirls|shakes|spins|rocks|wobbles|stirs)\b\s*(.*)$/i.exec(line))) act({ verb: "sways", ids: [m[1]!], arg: m[2]!.toLowerCase(), speed: speedOf(m[3]!) });
-    else if ((m = /^((?:[\w.]+\s+)+?)(falls?|drops?)\b\s*(together)?\s*(.*)$/i.exec(line))) act({ verb: "falls", ids: m[1]!.trim().split(/\s+/), speed: speedOf(m[4]!), arg: arg(m[4]) });
-    else if ((m = /^([\w.]+)\s+(fills|empties|rises|drains)\s*(.*)$/i.exec(line))) act({ verb: "fills", ids: [m[1]!], arg: /empties|drains/i.test(m[2]!) ? "0%" : arg(m[3]) });
-    else if ((m = /^([\w.]+)\s+reads\s*(.*)$/i.exec(line))) act({ verb: "reads", ids: [m[1]!], arg: arg(m[2]) });
-    else if ((m = /^([\w.]+)\s+(runs|counts|ticks)\s*(.*)$/i.exec(line))) act({ verb: "runs", ids: [m[1]!], arg: arg(m[3]) });
-    else if ((m = /^([\w.]+)\s+moves\s+to\s+([\w.]+)\s*(.*)$/i.exec(line))) act({ verb: "moves", ids: [m[1]!], to: m[2]!, speed: speedOf(m[3]!) });
-    else if ((m = /^(\w+)\s+becomes\s+(.*)$/i.exec(line)) && declared.get(m[1]!)?.kind === "object") act({ verb: "turns", ids: [m[1]!], arg: arg(m[2]) });
-    else if ((m = /^([\w.]+)\s+becomes\s+(.*)$/i.exec(line))) {
+    if ((m = /^([\w.]+)\s+becomes\s+(.*)$/i.exec(line)) && declared.get(m[1]!)?.kind !== "object") {
       const v = m[2]!.trim();
       if (/^\d+(\.\d+)?$/.test(v)) cur.becomes.push({ id: m[1]!, n: Number(v) });
       else cur.becomes.push({ id: m[1]!, text: quoted(v) ?? v });
     } else if ((m = /^([\w.]+)\s+from\s+([\w.]+)\s*$/i.exec(line))) cur.from.push({ a: m[1]!, b: m[2]! });
     else if ((m = /^([\w.]+)\s*->\s*([\w.]+)\s*(.*)$/.exec(line))) cur.arrows.push({ a: m[1]!, b: m[2]!, label: quoted(m[3]!) ?? "" });
     else {
-      // A verb the engine does not know: kept with the author's words, so an agent or a later ability can act on it.
-      const toks = line.split(/\s+/);
-      const first = toks[0]!;
-      const subj = ID.test(first) && toks.length > 1 ? first : undefined;
-      const verb = (subj ? toks[1]! : first).toLowerCase();
-      const others = toks.slice(subj ? 2 : 1).filter((t) => declared.has(t) || /\./.test(t));
-      act({ verb, ids: subj ? [subj, ...others] : others, arg: quoted(line) ?? (toks.slice(subj ? 2 : 1).join(" ") || undefined) });
-      notes.push(`line ${ln}: "${verb}" is not a verb the engine knows: kept as an act and reported`);
+      // What things do, in the author's own plain verbs: open. The depicter maps each verb onto what the thing can do.
+      const a = readAct(line, (t) => declared.has(t) || /^\w+\.\w+$/.test(t));
+      if (a) act(a);
+      else notes.push(`line ${ln}: "${line}" names no thing it is about: kept out of the plan`);
     }
   });
   return { feel, audience, things, moments, notes };
@@ -149,11 +163,8 @@ export function idsOf(m: Moment): string[] {
   return [m.show, ...m.keep, ...m.becomes.map((b) => b.id), ...m.from.flatMap((f) => [f.a, f.b]), ...(m.compare ?? []), ...m.arrows.flatMap((a) => [a.a, a.b]), m.reveal, ...m.wrong, ...m.acts.flatMap((a) => [...a.ids, ...(a.to ? [a.to] : [])])].filter((x): x is string => !!x);
 }
 
-export const KNOWN_VERBS = ["flows", "turns", "flashes", "sways", "falls", "fills", "reads", "runs", "moves"];
-
 // Problems an author can repair, each with its line: word numbers that are not words or go backwards, ids that were never
-// declared and are not the user's material, material parts that do not exist, moments with nothing to look at, verbs the
-// engine does not know, a picture asked to become something else.
+// declared and are not the user's material, material parts that do not exist, moments with nothing to look at, a picture asked to become something else.
 export function checkIntent(plan: IntentPlan, words: Word[], material: PartCard[] = []): IntentProblem[] {
   const out: IntentProblem[] = [];
   const things = new Map(plan.things.map((t) => [t.id, t]));
@@ -175,8 +186,7 @@ export function checkIntent(plan: IntentPlan, words: Word[], material: PartCard[
     }
     for (const b of m.becomes) if (cards.has(b.id.split(".")[0]!)) out.push({ line: m.line, message: `@${m.word}: ${b.id} is the user's material and cannot become something else.` });
     for (const b of m.becomes) if (things.get(b.id)?.kind === "many" && b.n === undefined) out.push({ line: m.line, message: `@${m.word}: ${b.id} is a many thing: it becomes a count, as in ${b.id} becomes 12.` });
-    for (const a of m.acts) if (!KNOWN_VERBS.includes(a.verb)) out.push({ line: a.line, message: `"${a.verb}" is not a verb the engine knows. Use the nearest of: drips into, pours into, turns, flashes, swirls, falls, fills, reads, runs, moves to.` });
-    for (const a of m.acts) for (const id of a.ids) if (things.has(id) && things.get(id)!.kind !== "object" && a.verb !== "moves") out.push({ line: a.line, message: `${id} ${a.verb}: only an object can ${a.verb}; declare ${id} as an object.` });
+    for (const a of m.acts) for (const id of a.ids) if (things.has(id) && things.get(id)!.kind !== "object") out.push({ line: a.line, message: `${id} ${a.verb}: only an object does things; declare ${id} as an object, or say how it changes with becomes.` });
   }
   return out;
 }

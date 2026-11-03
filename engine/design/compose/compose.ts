@@ -10,12 +10,13 @@ import { roleLook } from "../../core/roles.ts";
 import type { Ease, Scene, SceneDoc, Theme, Value } from "../../core/types.ts";
 import { estimate, TEXT_SIZE } from "../../language/layout.ts";
 import { fontMeasure } from "../../language/measure.ts";
-import { colorOf, propNodes, resolve as depict, withAlpha, type Prop } from "../depict/index.ts";
+import { depictionFrom, sizeCm, suggestLook, type Depiction, type PropSpec } from "../depict/index.ts";
 import * as A from "../abilities/index.ts";
 import type { Cls, St, Triple } from "../abilities/types.ts";
-import { idsOf, KNOWN_VERBS } from "../intent/parse.ts";
+import { idsOf } from "../intent/parse.ts";
 import { suggestMoment } from "../suggest.ts";
-import type { Act, CameraPlan, DecisionRecord, Design, From, IntentPlan, Moment, MomentDesign, PartCard, Word } from "../types.ts";
+import type { Act, Box, CameraPlan, DecisionRecord, Design, From, IntentPlan, Moment, MomentDesign, PartCard, Viewing, Word } from "../types.ts";
+import { classify, depictAll, type ActKind, type Classified } from "./acts.ts";
 import { anchorRect, overlap, pack, rh, rw, sideWidths, splitHalves, usableRect, type Rect } from "./pack.ts";
 import { Values } from "./values.ts";
 
@@ -26,12 +27,28 @@ export type ComposeCtx = {
   cards?: PartCard[];
   /** The user's pictures by card name, as data URLs (or any URL the renderer can load). */
   assets?: Record<string, string>;
+  /** The depicter's spec of each object thing, by the plan's id (the orchestrator asks the depicter; tests write them). */
+  props?: Record<string, PropSpec>;
   measure?: A.Measure;
 };
 
-export type Composition = { doc: SceneDoc; scene: Scene; ids: Record<string, string[]>; notes: string[]; decisions: DecisionRecord[]; boxes: { moment: number; boxes: Record<string, [number, number, number, number]> }[] };
+/** Something the composition cannot do until an agent repairs it: who should (the depicter, the author) and what. */
+export type BuildProblem = { thing: string; who: "depicter" | "author"; task?: string; problem: string };
 
-type Def = { id: string; text: string; many?: { n: number; unit: string }; obj?: Prop; desc?: string };
+export type Composition = { doc: SceneDoc; scene: Scene; ids: Record<string, string[]>; notes: string[]; decisions: DecisionRecord[]; problems: BuildProblem[]; boxes: { moment: number; boxes: Record<string, [number, number, number, number]> }[] };
+
+/**
+ * The viewing the composer keeps clear: the platform's UI zones, and the captions' box only while the captions show (a
+ * designer who turns captions off frees their box; a zone the platform itself covers stays).
+ */
+export function keptClear(v: Viewing): Viewing {
+  const cap = v.captions;
+  const zones = v.uiZones.filter((z) => cap.show || !cap.box || z.box.join() !== cap.box.join());
+  if (cap.show && cap.box && !zones.some((z) => z.box.join() === cap.box!.join())) zones.push({ box: cap.box as Box, what: "captions" });
+  return { ...v, uiZones: zones };
+}
+
+type Def = { id: string; text: string; many?: { n: number; unit: string }; obj?: Depiction; spec?: PropSpec; missing?: boolean; desc?: string };
 type FM = { m: Moment; i: number; md: MomentDesign; onset: number; carry: string[]; becomes: Moment["becomes"]; wrong: string[]; acts: Act[]; merged: number[] };
 type Slot = { id: string; cls: Cls; wrong: boolean; reveal: boolean; born?: string; part?: string; parts?: string[] };
 type PArrow = { t: string; pic: string; part: string; to: boolean };
@@ -77,8 +94,17 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   // ---------------------------------------------------------------------------------------------------------------
   // 1. The plan's things, the user's material, and every name resolved.
   const defs = new Map<string, Def>();
+  const specs = ctx.props ?? {};
+  const problems: BuildProblem[] = [];
+  const depicted = depictAll(plan, specs, theme);
+  for (const p of depicted.problems) problems.push({ thing: p.id, who: "depicter", task: `depict.${p.id}`, problem: p.problem });
   for (const t of plan.things) {
-    if (t.kind === "object") defs.set(t.id, { id: t.id, text: t.id, obj: depict(t.desc ?? t.id), desc: t.desc });
+    if (t.kind === "object") {
+      const d = depicted.depictions.get(t.id);
+      // Until the depicter answers, the thing stands as its own words, so the frame still says what it is.
+      if (d) defs.set(t.id, { id: t.id, text: t.id, obj: d, spec: specs[t.id], desc: t.desc });
+      else defs.set(t.id, { id: t.id, text: t.desc ?? t.id, missing: true, desc: t.desc });
+    }
     else if (t.kind === "many") defs.set(t.id, { id: t.id, text: t.id, many: t.many ?? { n: 1, unit: t.id } });
     else defs.set(t.id, { id: t.id, text: t.text ?? t.id });
   }
@@ -138,12 +164,26 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const md = design.moments.find((x) => x.moment === i);
     if (md) return md;
     notes.push(`@${plan.moments[i]!.word} has no MomentDesign: the style's suggestion is used`);
-    return suggestMoment(plan, i, viewing, theme, cards);
+    return suggestMoment(plan, i, viewing, theme, cards, words, plan.moments[i]!.acts.map((a) => kindOf(a).kind));
   };
   const tag = (m: Moment) => `@${m.word}`;
   const subjectOf = (m: Moment): string | undefined => m.reveal ?? m.show ?? m.becomes[0]?.id ?? m.arrows[0]?.b ?? m.wrong[0];
   const sid = (id: string | undefined) => (id ? pr(id)?.name ?? id : id);
   const isObj = (id: string | undefined) => !!id && !!defs.get(id)?.obj;
+  // What an act is, read off the depiction's own verbs (never off the verb's words).
+  const kindCache = new Map<string, Classified>();
+  const kindOf = (a: Act): Classified => {
+    const k = `${a.ids[0]}|${a.verb}`;
+    return kindCache.get(k) ?? kindCache.set(k, classify(defs.get(sid(a.ids[0]) ?? "")?.obj, a.verb)).get(k)!;
+  };
+  const is = (a: Act, kind: ActKind) => kindOf(a).kind === kind;
+  /** The shape the stage needs of an object: its box, outlet and mouth, and its real size when known. */
+  const shapeOf = (id: string): A.ObjShape => {
+    const d = defs.get(id)!.obj!;
+    const spec = defs.get(id)!.spec;
+    const real = spec ? sizeCm(spec) : undefined;
+    return { w: d.box.w, h: d.box.h, outlet: d.anchor("outlet") ?? d.anchor("mouth"), mouth: d.anchor("mouth") ?? d.anchor("surface"), ...(real ? { realCm: real } : {}) };
+  };
   const pinsOf = (i: number) => pins[i]!;
 
   function readPins(m: Moment, i: number) {
@@ -179,14 +219,16 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   // ---------------------------------------------------------------------------------------------------------------
   // 2. Timing that follows the voice. Each moment starts `lead` before its word and holds at least `dwell`; a moment
   // too short to stand alone is merged into the next, its subject passed on as support. Demonstrations are never cut.
-  const U0 = usableRect(viewing, V.px("frame.margin"));
+  // Captions are the designer's call per platform: their box is kept clear only while they show.
+  const U0 = usableRect(keptClear(viewing), V.px("frame.margin"));
+  decide("captions", undefined, viewing.captions.show ? `captions show${viewing.captions.box ? ", their box is kept clear" : ""}` : "no captions", "director", viewing.captions.why);
   const U = U0.rect;
   if (U0.cuts.length) decide("frame", undefined, U0.cuts.join("; "), "director", viewing.why);
   const demoOf = (i: number, a: number) => design.demos.find((d) => d.moment === i && d.act === a);
   const speedOf = (s: "real" | "slow" | "fast" | number | undefined, k: number) => (s === undefined || s === "real" ? 1 : s === "slow" ? V.n("demo.slow", k) : s === "fast" ? V.n("demo.fast", k) : Math.max(0.01, Number(s)));
   // A fall's real time needs the drawing's scale: estimated here from the anchor box the design asks for.
   const fallFramesOf = (i: number, a: Act, box: { w: number; h: number }) => {
-    const mem = a.ids.filter(isObj).map((id) => ({ id, prop: defs.get(id)!.obj! }));
+    const mem = a.ids.filter(isObj).map((id) => ({ id, shape: shapeOf(id) }));
     if (!mem.length) return { real: 0, played: 0, metres: 0 };
     const g = A.fallGroup(mem, box, new Set(), fallParams(i));
     const metres = g.pxPerM ? g.fall / g.pxPerM : V.n("fall.heightM", i);
@@ -197,7 +239,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   };
   const fallParams = (k: number): A.FallGroupParams => ({ bigShare: V.n("fall.bigShare", k), gapShare: V.n("fall.gapShare", k), minShare: V.n("fall.minShare", k), roomShare: V.n("fall.roomShare", k), floorGap: V.px("fall.floorGap", k) });
   const anchorBox = (md: MomentDesign) => ({ w: md.subjectScale.value * rw(U), h: md.subjectScale.value * rh(U) });
-  const demoFrames = (f: { i: number; acts: Act[]; md: MomentDesign }) => Math.max(0, ...f.acts.filter((a) => a.verb === "falls").map((a) => fallFramesOf(f.i, a, anchorBox(f.md)).played));
+  const demoFrames = (f: { i: number; acts: Act[]; md: MomentDesign }) => Math.max(0, ...f.acts.filter((a) => is(a, "fall")).map((a) => fallFramesOf(f.i, a, anchorBox(f.md)).played));
   const dwellOf = (f: FM) => Math.round(f.md.dwell.value * FPS) + (V.get<boolean>("demo.neverCut", f.i) ? demoFrames(f) : 0);
   const fms: FM[] = [];
   for (const { m, i } of sortedM) {
@@ -209,7 +251,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       if (!prev) break;
       const cand = Math.max(nominal, prev.onset + dwellOf(prev));
       const delay = cand - nominal;
-      const demo = prev.acts.some((x) => x.verb === "falls") && V.get<boolean>("demo.neverCut", prev.i);
+      const demo = prev.acts.some((x) => is(x, "fall") || is(x, "flow")) && V.get<boolean>("demo.neverCut", prev.i);
       const allowed = demo ? Infinity : Math.round((prev.m.reveal || prev.m.ask ? V.n("timing.maxDelayPayoff", fm.i) : V.n("timing.maxDelay", fm.i)) * FPS);
       if (delay <= allowed) {
         fm.onset = cand;
@@ -237,7 +279,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   const apparatus: string[][] = [];
   for (const f of fms)
     for (const a of f.acts) {
-      const g = a.verb === "flows" && a.to ? [a.ids[0]!, a.to] : a.verb === "falls" && a.ids.length > 1 ? a.ids : [];
+      const g = is(a, "flow") && a.to ? [a.ids[0]!, a.to] : is(a, "fall") && a.ids.length > 1 ? a.ids : [];
       if (g.length > 1 && g.every(isObj) && !apparatus.some((x) => g.every((y) => x.includes(y)))) apparatus.push(g);
     }
   const sticky = new Set<string>();
@@ -356,8 +398,8 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     fms.forEach((f) => {
       fallenAt.push(new Set(fallen));
       for (const a of f.acts) {
-        if (a.verb === "flows" && a.to && isObj(a.ids[0]) && isObj(a.to) && !flows.has(a.ids[0]!)) (flows.set(a.ids[0]!, a.to), decide("composition", f.i, `${a.ids[0]} over ${a.to}, one apparatus`, "style", `${a.ids[0]} ${a.arg ?? "flows"} into ${a.to}: the source's tip over the vessel's mouth whenever both are on screen`));
-        if (a.verb === "falls") {
+        if (is(a, "flow") && a.to && isObj(a.ids[0]) && isObj(a.to) && !flows.has(a.ids[0]!)) (flows.set(a.ids[0]!, a.to), decide("composition", f.i, `${a.ids[0]} over ${a.to}, one apparatus`, "style", `${a.ids[0]} ${a.verb} ${a.to}: the source's outlet over the target's mouth whenever both are on screen`));
+        if (is(a, "fall")) {
           const g = a.ids.filter(isObj);
           if (g.length && !fallGroups.some((x) => g.every((y) => x.includes(y)))) (fallGroups.push(g), decide("composition", f.i, `${g.join(" and ")} fall together`, "style", `${g.length > 1 ? "side by side, bottoms level, " : ""}over a floor with room to fall`));
           g.forEach((x) => fallen.add(x));
@@ -388,7 +430,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         if (d.many) {
           if (b.n === undefined) notes.push(`${tag(f.m)} ${b.id} becomes words, but it is a many thing: ignored`);
           else nOf.set(b.id, Math.max(0, Math.round(b.n))), maxN.set(b.id, Math.max(maxN.get(b.id) ?? 0, Math.round(b.n)));
-        } else if (d.obj) notes.push(`${tag(f.m)} ${b.id} is an object: say what changes about it with a verb (turns, fills)`);
+        } else if (d.obj) notes.push(`${tag(f.m)} ${b.id} is an object: say what changes about it with a verb the depicter maps onto it`);
         else {
           const t = b.text ?? String(b.n);
           const list = textsOf.get(b.id)!;
@@ -402,7 +444,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   }
   const linesFor = (text: string, subject: boolean) => A.pickLines(text, em, { width: rw(U), cap: V.px("type.subjectMax"), size: V.px("type.support"), gain: V.n("type.twoLineGain"), subject });
   for (const d of defs.values()) {
-    if (d.obj) (ents.set(d.id, { id: d.id, type: "obj" }), decide("depiction", undefined, `${d.id}: ${d.obj.kind}${d.obj.shape ? ` (${d.obj.shape})` : ""}`, "material", d.obj.why));
+    if (d.obj) (ents.set(d.id, { id: d.id, type: "obj" }), decide("depiction", undefined, `${d.id}: ${d.obj.kind}${d.obj.form ? ` (${d.obj.form})` : ""}${d.obj.size ? `, ${d.obj.size.w} by ${d.obj.size.h} ${d.obj.size.unit}` : ""}`, "material", d.spec?.why ?? "the depicter's answer"));
     else if (d.many) ents.set(d.id, { id: d.id, type: "many", many: { id: d.id, unit: d.many.unit, maxN: Math.max(1, maxN.get(d.id) ?? d.many.n), n0: d.many.n } });
     else ents.set(d.id, { id: d.id, type: "text", text: A.textEnt(d.id, textsOf.get(d.id)!, (t) => linesFor(t, subjectEver.has(d.id)), em) });
   }
@@ -435,7 +477,13 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const arrangement = pin.arrangement ?? md.arrangement.value;
     const typeScale = md.typeScale.value;
     const colorFor = (s: Slot, subjectLike: boolean) => (s.wrong ? C.wrong : s.reveal ? C.answer : s.cls === "question" ? C.heading : subjectLike ? C.subject : C.muted);
-    const opFor = (s: Slot, subjectLike: boolean) => (s.wrong ? V.n("wrong.opacity", f.i) : subjectLike || s.cls === "question" ? 1 : supOp);
+    // Focus is the designer's: one subject (or two compared) with support stepping back, no focal point (all at full
+    // strength), or the subject withheld (it keeps its place, unseen, until a later moment shows it).
+    const focus = md.focus.value;
+    const level = focus === "none" || focus === "all";
+    const subjOp = focus === "hidden" ? V.n("focus.hidden", f.i) : 1;
+    const opFor = (s: Slot, subjectLike: boolean) => (s.wrong ? V.n("wrong.opacity", f.i) : subjectLike ? subjOp : s.cls === "question" || level ? 1 : supOp);
+    if (tell && focus !== "one" && focus !== "two") decide("focus", f.i, focus === "hidden" ? `the subject is withheld (opacity ${subjOp})` : "no focal point: support at full strength", md.focus.from, md.focus.why ?? "");
     const pinnedFs = (id: string) => pin.texts.find((t) => t.id === id)?.size;
     // Text sizes: the subject up to the type scale's largest step (times the moment's type scale) and the width it is
     // given; support and questions at their steps, shrunk by cs when room is short; never under the smallest size.
@@ -449,7 +497,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       if (fit < MIN_FS - 0.5) squeezed++;
       return Math.max(fs, Math.min(MIN_FS, fit));
     };
-    const objCls = (id: string): Partial<St> => ({ cls: slotOf.get(id)!.cls, op: slotOf.get(id)!.cls === "subject" || !plan.subject || !slotOf.has(plan.subject) ? 1 : supOp, reveal: slotOf.get(id)!.reveal });
+    const objCls = (id: string): Partial<St> => ({ cls: slotOf.get(id)!.cls, op: slotOf.get(id)!.cls === "subject" ? subjOp : !plan.subject || !slotOf.has(plan.subject) || level ? 1 : supOp, reveal: slotOf.get(id)!.reveal });
     // Countable marks on screen together share one mark size.
     const manyExtent = (s: Slot, maxW: number, cs: number, paired: boolean) => Math.min(maxW, (paired ? V.px("many.paired", f.i) : V.px("many.support", f.i)) * cs);
     let markCap = Infinity;
@@ -596,16 +644,16 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         let h = 0;
         if (kind === "flow") {
           const [src, dst, ...sats] = ids;
-          const ap = A.apparatus({ id: src!, prop: defs.get(src!)!.obj! }, { id: dst!, prop: defs.get(dst!)!.obj! }, sats.map((id) => ({ id, prop: defs.get(id)!.obj! })), cell, { sourceShare: V.n("apparatus.sourceShare", f.i), gapShare: V.n("apparatus.gapShare", f.i), sourceWidth: V.n("apparatus.sourceWidth", f.i), vesselWidth: V.n("apparatus.vesselWidth", f.i), satelliteShare: V.n("apparatus.satelliteShare", f.i), satelliteGap: V.px("apparatus.satelliteGap", f.i) });
+          const ap = A.apparatus({ id: src!, shape: shapeOf(src!) }, { id: dst!, shape: shapeOf(dst!) }, sats.map((id) => ({ id, shape: shapeOf(id) })), cell, { sourceShare: V.n("apparatus.sourceShare", f.i), gapShare: V.n("apparatus.gapShare", f.i), sourceWidth: V.n("apparatus.sourceWidth", f.i), vesselWidth: V.n("apparatus.vesselWidth", f.i), satelliteShare: V.n("apparatus.satelliteShare", f.i), satelliteGap: V.px("apparatus.satelliteGap", f.i) });
           for (const mm of ap.members) out.push({ id: mm.id, dx: mm.dx, dy: mm.dy - mm.h / 2, w: mm.w, h: mm.h, st: { ...objCls(mm.id), s: mm.scale } });
           (w = ap.w), (h = ap.h);
         } else if (kind === "fall") {
-          const g2 = A.fallGroup(ids.map((id) => ({ id, prop: defs.get(id)!.obj! })), cell, fallenAt[k]!, fallParams(f.i));
+          const g2 = A.fallGroup(ids.map((id) => ({ id, shape: shapeOf(id) })), cell, fallenAt[k]!, fallParams(f.i));
           for (const mm of g2.members) out.push({ id: mm.id, dx: mm.dx, dy: mm.dy - mm.h / 2, w: mm.w, h: mm.h, st: { ...objCls(mm.id), s: mm.scale, len: g2.fall } });
           dec.push({ type: "floor", id: `floor.${ids.join(".")}`, dx: -g2.floorW / 2, dy: g2.floorY, len: g2.floorW, color: C.muted, op: 0.5 });
           (w = g2.w), (h = g2.h);
         } else if (kind === "obj") {
-          const p = defs.get(ids[0]!)!.obj!;
+          const p = shapeOf(ids[0]!);
           const sc = A.fitObject(p, cell);
           out.push({ id: ids[0]!, dx: 0, dy: (p.h * sc) / 2, w: p.w * sc, h: p.h * sc, st: { ...objCls(ids[0]!), s: sc } });
           (w = p.w * sc), (h = p.h * sc);
@@ -912,8 +960,11 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     if (!used.has(nid)) continue;
     if (e.type === "many") A.manyNodes(w, nid, e.many!, { fill: C.key, labelColor: C.muted, labelFs: V.px("type.label") });
     else if (e.type === "obj") {
-      w.node(nid, "group", { opacity: 0, scaleX: 0.01, scaleY: 0.01, x: W / 2, y: H / 2 });
-      propNodes(nid, defs.get(id)!.obj!, (cid, kind, props, parent) => w.node(cid, kind, props as Record<string, Value>, parent), C.subject, "paper", 60);
+      // Drawn again at its size on screen, so its lines and its text have the style's widths there.
+      const d0 = defs.get(id)!;
+      const s0 = laid.map((l) => l.items.get(nid)?.st.s).find((x) => x !== undefined && x > 0) ?? 1;
+      d0.obj = depictionFrom(d0.spec!, theme, { id: nid, look: suggestLook(theme, s0), text: V.px("type.label") / s0 });
+      A.depictionNodes(w, d0.obj, { opacity: 0, scaleX: 0.01, scaleY: 0.01, x: W / 2, y: H / 2 });
     } else {
       const pinRole = pins.flatMap((p) => p.texts).find((t) => t.id === id)?.role;
       A.textNodes(w, nid, e.text!, pinRole ?? (id.startsWith("q.") ? "heading" : id.startsWith("lab.") ? "label" : "title"), C.subject, LH);
@@ -927,12 +978,11 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     else if (id.startsWith("arrow.")) A.arrowNode(w, id, { color: C.pointer, width: markW, len: V.px("arrow.len"), head: V.px("arrow.head") });
   }
   const dashPx = V.arr("level.dash").map((x) => x * SHORT);
-  for (const [src, dst] of flows) A.flowNodes(w, key(src), key(dst), { pool: V.n("flow.pool"), dropFill: withAlpha("#9fd3e6", 0.95), dropStroke: C.subject, bloomFill: "#e8559a" });
-  for (const g of fallGroups) A.fallNodes(w, g.map((id) => ({ id: key(id), fill: defs.get(id)!.obj!.body?.fill ?? C.subject })), V.n("fall.trail"), g.length > 1 ? { id: `level.${g.join(".")}`, color: C.pointer, width: V.px("level.width"), dash: dashPx } : undefined);
+  for (const dst of new Set(flows.values())) A.bloomNodes(w, key(dst), V.n("flow.pool"));
+  for (const g of fallGroups) A.fallNodes(w, g.map((id) => ({ id: key(id), fill: String(defs.get(id)!.obj!.state.color ?? C.subject) })), V.n("fall.trail"), g.length > 1 ? { id: `level.${g.join(".")}`, color: C.pointer, width: V.px("level.width"), dash: dashPx } : undefined);
   fms.forEach((f, k) => {
     for (const a of f.acts) {
-      if (a.verb === "reads") A.readingNodes(w, String(k), C.pointer);
-      if (a.verb === "runs") w.node(`run.${k}`, "text", { text: a.arg ?? "", size: 100, role: "heading", color: C.pointer, opacity: 0 });
+      if (is(a, "read")) A.readingNodes(w, String(k), C.pointer);
     }
   });
 
@@ -943,6 +993,9 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   const durMove = (px: number, k: number) => Math.max(1, Math.round(Math.min(mvMax!, mvMin! + mvPer! * Math.sqrt(Math.max(0, px) / SHORT)) * FPS * paceMul(k) * tempo));
   const ent = (id: string): Ent | undefined => (id === "ph" ? ents.get("ph") : id.startsWith("q.") || id.startsWith("lab.") ? ents.get(id) : id.startsWith("t.") || id.startsWith("p.") ? ents.get(id.slice(2)) : undefined);
   const chartSeen = new Map<string, Set<number>>();
+  // Real or redrawn is the designer's call per piece and moment: a "real" proposal keeps the user's own picture as it
+  // is (evidence to recognise); otherwise a chart with its data is redrawn on its own bars.
+  const realIn = (k: number, name: string) => fms[k]!.md.proposals.some((p) => p.value.kind === "real" && p.value.ids.some((x) => x.split(".")[0] === name));
   const target = (it: Item, k: number): Triple[] => {
     const { id, st } = it;
     if (it.type === "text" || it.type === "ph") return A.textTargets(id, ent(id)!.text!, st);
@@ -950,7 +1003,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     if (it.type === "obj") return [[id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.s], [id, "scaleY", st.s], [id, "opacity", st.op]];
     if (it.type === "pic") {
       const pic = pics.get(id.slice(2))!;
-      if (isChart(pic)) return A.chartTargets(id, st, pic, "own", chartSeen.get(id) ?? new Set(), chartLook(fms[k]!.i), C);
+      if (isChart(pic)) return A.chartTargets(id, st, pic, realIn(k, pic.name) ? "photo" : "own", chartSeen.get(id) ?? new Set(), chartLook(fms[k]!.i), C);
       return A.pictureTargets(id, st, picParts.get(pic.name) ?? [], { dim: V.n("picture.dim", fms[k]!.i), supportOutline: V.n("picture.supportOutline", fms[k]!.i), outlineWidth: markW });
     }
     if (it.type === "parrow") return A.pointerTargets(id, st);
@@ -959,21 +1012,23 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     if (it.type === "bar" || it.type === "floor") return A.barTargets(id, st);
     return A.arrowTargets(id, st);
   };
-  const objState = new Map<string, { level: number; color?: string }>();
-  for (const d of defs.values()) if (d.obj) objState.set(d.id, { level: d.obj.level, color: d.obj.liquid });
   const visibleIn = (k: number, id: string) => plans[k]!.slots.some((sl) => sl.id === id);
-  const flashes: { dst: string; color: string; from: number; to: number }[] = [];
+  // A thing that flashes a color while something flows into it blooms where each drop lands, until it changes color.
+  const flashes: { dst: string; color: string; from: number; to: number; line: number }[] = [];
+  const setsColor = (b: Act) => kindOf(b).def?.arg === "color" && kindOf(b).def?.motion !== "pulse";
   fms.forEach((f, k) => {
     for (const a of f.acts) {
-      if (a.verb !== "flashes") continue;
-      const c = colorOf(a.arg ?? "");
-      if (!c) {
-        notes.push(`${tag(f.m)} ${a.ids[0]} flashes "${a.arg ?? ""}": no color in it, nothing blooms`);
+      const c = kindOf(a);
+      const id = sid(a.ids[0])!;
+      if (c.kind !== "change" || c.def?.motion !== "pulse" || c.def.arg !== "color" || ![...flows.values()].includes(id)) continue;
+      const col = A.colorNamed(defs.get(id)!.spec, a.arg);
+      if (!col) {
+        problems.push({ thing: id, who: "depicter", task: `depict.${id}`, problem: `${tag(f.m)} ${id} ${a.verb} "${a.arg ?? ""}": name that color among its colors` });
         continue;
       }
       let to = FRAMES;
-      for (let m = k + 1; m < K; m++) if (fms[m]!.acts.some((b) => b.verb === "turns" && b.ids.includes(a.ids[0]!))) (to = onsets[m]!), (m = K);
-      flashes.push({ dst: a.ids[0]!, color: c.hex, from: onsets[k]!, to });
+      for (let m = k + 1; m < K; m++) if (fms[m]!.acts.some((b) => b.ids.includes(id) && setsColor(b))) (to = onsets[m]!), (m = K);
+      flashes.push({ dst: id, color: col, from: onsets[k]!, to, line: a.line });
     }
   });
   const flashAt = (dst: string, t: number) => flashes.find((x) => x.dst === dst && t >= x.from && t < x.to)?.color;
@@ -984,86 +1039,93 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     return `${name}.${j % V.n("flow.pool")}`;
   };
 
+  const placedOf = (id: string, it: Item): A.Placed => ({ d: defs.get(id)!.obj!, x: it.st.x, y: it.st.y, s: it.st.s });
+  const realOf = (id: string) => (defs.get(id)?.spec ? sizeCm(defs.get(id)!.spec!) : undefined);
   const scheduleActs = (k: number, at0: number, cur: Map<string, Item>): number => {
     const f = fms[k]!;
     const i = f.i;
     const nextOn = onsets[k + 1] ?? FRAMES;
     let landed = at0;
     f.acts.forEach((a) => {
-      const Aid = a.ids[0]!;
+      const Aid = sid(a.ids[0])!;
       const itA = cur.get(key(Aid));
-      const pa = defs.get(Aid)?.obj;
-      if (!KNOWN_VERBS.includes(a.verb)) {
-        notes.push(`${tag(f.m)} "${a.verb}" has no ability yet: nothing moves (kept in the plan for an agent)`);
-        decide("act", i, `${a.verb} not drawn`, "author", "a verb the engine does not know");
+      const def = defs.get(Aid);
+      const c = kindOf(a);
+      if (def?.missing) return; // the depicter's task is already reported
+      if (!itA || !def?.obj) return void notes.push(`${tag(f.m)} "${Aid}" ${a.verb}: it is not an object on screen, so nothing moves`);
+      if (c.kind === "unknown") {
+        problems.push({ thing: Aid, who: "depicter", task: `depict.${Aid}`, problem: `${tag(f.m)} ${Aid} ${a.verb}: ${def.obj.label} has no verb "${a.verb}"; map it in the spec's verbs onto one it has (${Object.keys(def.obj.verbs).join(", ")}), or answer with a kind that can` });
+        decide("act", i, `${Aid} ${a.verb} not drawn`, "author", "a verb this thing's depiction does not have yet");
         return;
       }
-      if (!itA || !pa) return void notes.push(`${tag(f.m)} "${Aid}" ${a.verb}: it is not an object on screen, so nothing moves`);
-      const st = objState.get(Aid)!;
+      const P = placedOf(Aid, itA);
       // The act's own moment in the plan (a merged moment carries acts of the moments merged into it).
       const origin = plan.moments.findIndex((pm) => pm.acts.some((x) => x.line === a.line));
       const demo = origin >= 0 ? demoOf(origin, plan.moments[origin]!.acts.findIndex((x) => x.line === a.line)) : undefined;
-      if (a.verb === "flows") {
-        const B = a.to!;
+      if (c.kind === "flow") {
+        const B = a.to ? sid(a.to)! : undefined;
+        if (!B) return void problems.push({ thing: Aid, who: "author", problem: `line ${a.line}: ${Aid} ${a.verb}: into what? name the other thing` });
         const itB = cur.get(key(B));
-        const pb = defs.get(B)?.obj;
-        if (!itB || !pb) return;
+        const dB = defs.get(B)?.obj;
+        if (!itB || !dB) return void notes.push(`${tag(f.m)} ${Aid} ${a.verb} ${B}: ${B} is not an object on screen, so nothing flows`);
         let end = FRAMES - 6;
         for (let m = k + 1; m < K; m++) {
-          const stop = fms[m]!.acts.some((b) => (b.verb === "flows" && b.ids[0] === Aid) || (b.verb === "turns" && b.ids.includes(B))) || !visibleIn(m, Aid) || !visibleIn(m, B);
+          const stop = fms[m]!.acts.some((b) => (is(b, "flow") && sid(b.ids[0]) === Aid) || (b.ids.includes(B) && setsColor(b))) || !visibleIn(m, Aid) || !visibleIn(m, B);
           if (stop) (end = onsets[m]!), (m = K);
         }
         end = Math.max(at0 + 20, end - V.f("flow.stopBefore", i));
         const sp = demo?.speed.value;
+        // Slow, for a flow, is drop by drop at real speed; a number or fast changes the speed itself.
         const drops = sp === "slow" || (sp === undefined && (a.speed === "slow" || (!a.speed && f.m.pace === "slow")));
-        const mul = typeof sp === "number" ? Math.max(0.05, sp) : 1;
-        const size = V.arr("flow.size", i).map((x) => x * SHORT);
-        const res = A.playFlow(w, { node: key(Aid), prop: pa, st: itA.st }, { node: key(B), prop: pb, st: itB.st }, { a: st.level, b: objState.get(B)!.level }, at0, end, {
-          mode: drops ? "drops" : "stream",
-          every: Math.max(1, Math.round((drops ? V.f("flow.dropsEvery", i) : V.f("flow.streamEvery", i)) / mul)),
-          fallFrames: Math.max(1, Math.round((drops ? V.f("flow.dropsFall", i) : V.f("flow.streamFall", i)) / mul)),
-          hang: Math.round(V.f("flow.hang", i) / mul),
-          size: { start: size[0]!, hang: size[1]!, fall: size[2]! },
-          volume: { perDrop: V.n("flow.perDrop", i), perSecond: V.n("flow.perSecond", i) * mul },
-          drainShare: V.n("flow.drainShare", i),
-          fill: { perDrop: V.arr("flow.fill", i)[0]!, whole: V.arr("flow.fill", i)[1]!, max: V.arr("flow.fill", i)[2]! },
-          bloom: { size: [V.arr("flow.bloom", i)[0]!, V.arr("flow.bloom", i)[1]! * SHORT], grow: V.f("flow.bloomGrow", i), fade: Math.round(V.arr("flow.bloomFade", i)[drops ? 0 : 1]! * FPS), spread: V.n("flow.bloomSpread", i) },
-          fps: FPS,
-        }, { drop: () => nextOf(`drop.${key(Aid)}`), bloom: () => nextOf(`bloom.${key(B)}`) }, (t) => flashAt(B, t));
-        st.level = res.levelA;
-        objState.get(B)!.level = res.levelB;
-        decide("demonstration", i, `${Aid} ${a.arg ?? "flows"} into ${B}: ${drops ? "one drop at a time" : "a stream"}, ${res.n} drops until ${(end / FPS).toFixed(1)} s${res.volume !== undefined ? `, ${res.volume.toFixed(2)} mL` : ""}`, demo?.speed.from ?? "style", demo?.speed.why ?? "as the author paced it");
-      } else if (a.verb === "flashes") {
-        if (![...flows.values()].includes(Aid)) notes.push(`${tag(f.m)} ${Aid} flashes, but nothing lands in it: the flash shows only where drops land`);
-      } else if (a.verb === "turns") {
-        const c = colorOf(a.arg ?? "");
-        if (!c) {
-          notes.push(`${tag(f.m)} ${Aid} turns "${a.arg}": no color in it, so it only pulses`);
-          const [ps, pf] = V.arr("motion.pulse", i);
-          w.play(at0 + 4, key(Aid), "pulse", { size: ps!, frames: Math.round(pf! * FPS) });
-          return;
+        const stretch = 1 / speedOf(sp === "slow" ? "real" : sp, i);
+        const realA = realOf(Aid);
+        const pxPerCm = P.s * (realA ? P.d.box.h / realA.h : P.d.box.h / V.n("flow.sourceCm", i));
+        if (!realA) notes.push(`${tag(f.m)} ${Aid} has no real size: its flow is timed as from ${V.n("flow.sourceCm", i)} cm`);
+        const j = drops ? 0 : 1;
+        // A replay shares the flow's time: the live pass, a pause, then the replay at its speed, all before what follows.
+        const stopF = V.f("flow.stop", i);
+        let replay: { at: number; frames: number; rs: number } | undefined;
+        if (demo?.replay) {
+          const rs = 1 / speedOf(demo.replay.value.speed, i);
+          const pause = V.f("flow.replayPause", i);
+          const live = Math.round((end - at0 - pause - stopF) / (1 + rs / stretch));
+          const frames = end - (at0 + live + stopF + pause);
+          if (live >= FPS * 0.5 && frames >= FPS * 0.5) replay = { at: at0 + live + stopF + pause, frames, rs };
+          else notes.push(`${tag(f.m)} ${Aid} ${a.verb} ${B}: no room for the replay before what follows (${((end - at0) / FPS).toFixed(1)} s in all)`);
         }
-        const col = withAlpha(c.hex, c.alpha);
-        A.turns(w, key(Aid), pa, col, at0 + 4, Math.round(V.f("turns.time", i) * paceMul(k) * tempo));
-        st.color = col;
-      } else if (a.verb === "fills") {
-        const pct = Number(/(\d+(?:\.\d+)?)/.exec(a.arg ?? "")?.[1] ?? NaN) / 100;
-        if (!Number.isFinite(pct)) return void notes.push(`${tag(f.m)} ${Aid} fills "${a.arg ?? ""}": no level in it`);
-        A.fills(w, key(Aid), pa, pct, at0 + 4, durMove(SHORT * 0.3, k));
-        st.level = pct;
-      } else if (a.verb === "sways") {
-        A.sways(w, key(Aid), a.arg ?? "rocks", at0 + 2, { degrees: V.n("sways.degrees", i), swings: V.n("sways.swings", i), frames: V.f("sways.swing", i), decay: V.n("sways.decay", i), spinFrames: V.f("sways.spin", i) });
-      } else if (a.verb === "moves" && a.to) {
-        const to = cur.get(key(sid(a.to)!));
-        if (!to) return void notes.push(`${tag(f.m)} ${Aid} moves to ${a.to}: ${a.to} is not on screen`);
-        A.movesTo(w, key(Aid), { x: to.st.x, y: to.st.y }, at0 + 2, durMove(Math.hypot(to.st.x - itA.st.x, to.st.y - itA.st.y), k));
-      } else if (a.verb === "falls") {
-        const mem = a.ids.filter((x) => cur.has(key(x)) && isObj(x));
+        const liveEnd = replay ? replay.at - stopF - V.f("flow.replayPause", i) : end;
+        const res = A.playFlow(w, P, placedOf(B, itB), at0, liveEnd, {
+          id: `flow.${key(Aid)}.${k}`,
+          verb: a.verb,
+          form: drops ? "drops" : "stream",
+          rate: V.arr("flow.rate", i)[j]!,
+          volume: { perDrop: V.n("flow.perDrop", i), perSecond: V.n("flow.perSecond", i) },
+          widthPx: Math.max(V.arr("flow.trueWidth", i)[j]! * pxPerCm, V.px("flow.minWidth", i)),
+          pxPerCm,
+          stretch,
+          bloom: { size: [V.arr("flow.bloom", i)[0]!, V.arr("flow.bloom", i)[1]! * SHORT], grow: V.f("flow.bloomGrow", i), fade: Math.round(V.arr("flow.bloomFade", i)[j]! * FPS), spread: V.n("flow.bloomSpread", i), every: V.f("flow.bloomEvery", i) },
+          tapFrames: V.f("flow.tap", i),
+          stopFrames: stopF,
+          fps: FPS,
+          theme,
+          look: suggestLook(theme, 1),
+        }, () => nextOf(`bloom.${key(B)}`), (t) => flashAt(B, t));
+        flowIds.push(res.flow.id);
+        let how = `${drops ? "drop by drop" : "a stream"}, ${res.lands.length} landings until ${(liveEnd / FPS).toFixed(1)} s${res.moved ? `, ${res.moved.toFixed(2)} ${P.d.capacity?.unit ?? ""} moved` : ""}${stretch !== 1 ? `, played at ${(1 / stretch).toFixed(2)} times real speed` : ""}`;
+        if (replay) {
+          A.replayFlow(w, res.flow, replay.at, replay.frames, replay.rs, FPS, stopF);
+          how += `, then replayed for ${(replay.frames / FPS).toFixed(1)} s at ${(1 / replay.rs).toFixed(2)} times real speed (nothing moves a second time)`;
+          landed = Math.max(landed, replay.at + replay.frames);
+        }
+        decide("demonstration", i, `${Aid} ${a.verb} ${B}: ${how}`, demo?.speed.from ?? "style", demo?.speed.why ?? "as the author paced it", { landings: res.lands.length, moved: res.moved });
+        for (const n of res.notes) notes.push(`${tag(f.m)} ${n}`);
+      } else if (c.kind === "fall") {
+        const mem = a.ids.map((x) => sid(x)!).filter((x) => cur.has(key(x)) && isObj(x));
         const its = mem.map((id) => cur.get(key(id))!);
         if (!its.length) return;
         // Physical time from the drawing's scale: the fall in px over px per metre, or the style's height when no scale is known.
-        const sized = mem.findIndex((id) => defs.get(id)!.obj!.body?.size);
-        const pxPerM = sized >= 0 ? its[sized]!.st.w / (defs.get(mem[sized]!)!.obj!.body!.size / 100) : undefined;
+        const sized = mem.findIndex((id) => realOf(id));
+        const pxPerM = sized >= 0 ? its[sized]!.st.w / (realOf(mem[sized]!)!.w / 100) : undefined;
         const metres = pxPerM ? its[0]!.st.len / pxPerM : V.n("fall.heightM", i);
         const real = Math.max(1, Math.round(A.fallSeconds(metres) * FPS));
         const speed = speedOf(demo?.speed.value, i);
@@ -1079,18 +1141,32 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         });
         landed = Math.max(landed, res.land);
         decide("demonstration", i, `${mem.join(" and ")} fall ${metres.toFixed(2)} m: ${(real / FPS).toFixed(2)} s at real speed, played ${res.passes.map((p) => `${(p / FPS).toFixed(2)} s`).join(" then ")}`, demo?.speed.from ?? "style", `${pxPerM ? "the scale of the drawing comes from the real size of what falls" : "no real size is known, the style's height is used"}; ${demo?.why ?? "no demonstration plan: real speed"}`, { metres, realSeconds: real / FPS });
-      } else if (a.verb === "reads") {
-        const r = A.readingOf(pa, st.level, a.arg);
-        for (let ml = 0; ml <= 50; ml += 10) w.put(`${key(Aid)}.num${ml}`, "opacity", 0.9, at0 + 14, 12, "out");
-        A.readClose(w, String(k), key(Aid), pa, itA.st, st.level, r.value, at0 + 2, { zoom: V.n("reading.zoom", i), textPx: V.px("reading.size", i), markPx: V.px("reading.mark", i), moveFrames: V.f("reading.move", i), textAt: V.f("reading.textAt", i), textFrames: V.f("chart.fade", i), markAt: Math.round(V.f("reading.textAt", i) * 0.8), gap: V.px("reading.gap", i), em });
-        decide("demonstration", i, `${Aid} reads ${r.value}${r.offScale ? " (off the drawn scale, which the flow really emptied)" : ""}`, "style", "the camera closes in on the surface and the value stands beside it");
-      } else if (a.verb === "runs") {
-        const secs = Number(/(\d+(?:\.\d+)?)/.exec(a.arg ?? "")?.[1] ?? NaN);
-        A.runs(w, key(Aid), `run.${k}`, itA.st, Number.isFinite(secs) ? secs : (nextOn - at0) / FPS, at0 + 6, Math.max(20, nextOn - at0 - 12), { fs: V.px("runs.size", i), until: nextOn, fade: V.f("chart.lateFrames", i), text: a.arg ?? "" });
+      } else if (c.kind === "read") {
+        const said = a.arg && /\d/.test(a.arg) ? a.arg : undefined;
+        const r = A.actOn(w, P, a.verb, said, at0 + 2, { frames: V.f("reading.move", i), fps: FPS });
+        if (!r.known) problems.push({ thing: Aid, who: "depicter", task: `depict.${Aid}`, problem: `${tag(f.m)} ${Aid} ${a.verb}: ${r.notes.join("; ")}` });
+        const v = A.readingOf(P, a.arg);
+        A.readClose(w, String(k), P, v.value, at0 + 2, { zoom: V.n("reading.zoom", i), textPx: V.px("reading.size", i), markPx: V.px("reading.mark", i), moveFrames: V.f("reading.move", i), textAt: V.f("reading.textAt", i), textFrames: V.f("chart.fade", i), markAt: Math.round(V.f("reading.textAt", i) * 0.8), gap: V.px("reading.gap", i), em });
+        decide("demonstration", i, `${Aid} reads ${v.value}${v.fromScale ? " (off its scale, at the level the plan left it)" : " (the author's value)"}`, "style", "the camera closes in on the part read and the value stands beside it");
+      } else if (c.kind === "move") {
+        const to = a.to ? cur.get(key(sid(a.to)!)) : undefined;
+        if (!to) return void notes.push(`${tag(f.m)} ${Aid} ${a.verb} ${a.to ?? ""}: ${a.to ?? "the place"} is not on screen`);
+        const frames = durMove(Math.hypot(to.st.x - itA.st.x, to.st.y - itA.st.y), k);
+        w.put(key(Aid), "x", to.st.x, at0 + 2, frames, "smooth");
+        w.put(key(Aid), "y", to.st.y, at0 + 2, frames, "smooth");
+        decide("act", i, `${Aid} ${c.key} ${a.to}`, "author", c.def!.about);
+      } else {
+        if (flashes.some((x) => x.line === a.line)) return void decide("act", i, `${Aid} ${a.verb} ${a.arg ?? ""}: a bloom where each drop lands`, "style", "it flashes while something flows into it");
+        // A steady change (time passing) spreads over the moment; any other change takes the style's time.
+        const frames = c.def!.ease === "linear" ? Math.max(20, nextOn - at0 - V.f("flow.stopBefore", i)) : Math.round(V.f("change.time", i) * paceMul(k) * tempo);
+        const r = A.actOn(w, P, a.verb, a.arg, at0 + 4, { frames, fps: FPS });
+        if (!r.known) problems.push({ thing: Aid, who: "depicter", task: `depict.${Aid}`, problem: `${tag(f.m)} ${Aid} ${a.verb}${a.arg ? ` "${a.arg}"` : ""}: ${r.notes.join("; ")}` });
+        else decide("act", i, `${Aid} ${c.key}${a.arg ? ` ${a.arg}` : ""} over ${(frames / FPS).toFixed(2)} s`, "author", c.def!.about);
       }
     });
     return landed;
   };
+  const flowIds: string[] = [];
 
   for (let k = 0; k < K; k++) {
     const f = fms[k]!;
@@ -1192,6 +1268,14 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         const pic = pics.get(id.slice(2)) as A.Chart;
         const seen = chartSeen.get(id) ?? new Set();
         const L = chartLook(i);
+        if (realIn(k, pic.name)) {
+          for (const [n, q, v] of A.chartTargets(id, it.st, pic, "photo", seen, L, C)) w.put(n, q, v, t0 - 1);
+          w.put(id, "opacity", 0, t0 - 1);
+          w.put(id, "opacity", 1, at, V.f("chart.fade", i), "out");
+          const pr0 = fms[k]!.md.proposals.find((p) => p.value.kind === "real" && p.value.ids.some((x) => x.split(".")[0] === pic.name))!;
+          decide("material", i, `${pic.name}: kept real, as the user's own picture`, pr0.from, pr0.why ?? "evidence the viewer should recognise");
+          return;
+        }
         const how = A.enterChart(w, id, pic, A.chartTargets(id, it.st, pic, "photo", seen, L, C), A.chartTargets(id, it.st, pic, "own", seen, L, C), { prep: t0 - 1, at, room: (onsets[k + 1] ?? FRAMES) - at, nextHas: k + 1 < K && laid[k + 1]!.items.has(id) }, {
           holdOriginal: [Math.round(V.arr("chart.holdOriginal", i)[0]! * FPS), Math.round(V.arr("chart.holdOriginal", i)[1]! * FPS)],
           settle: V.f("chart.settle", i),
@@ -1292,7 +1376,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       cam = pinCam;
       camFrom = "author";
     }
-    if (f.acts.some((a) => a.verb === "reads")) decide("camera", i, "close in on the reading", "style", "the reading brings the camera close");
+    if (f.acts.some((a) => is(a, "read"))) decide("camera", i, "close in on the reading", "style", "the reading brings the camera close");
     else {
       const window: [number, number] = cam.move === "push" || cam.move === "drift" ? [tEnd, nextOn] : [t0 + mvOff, nextOn];
       const did = A.cameraMove(w, cam, window[0], window[1], restF);
@@ -1322,9 +1406,9 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   };
   for (const d of defs.values()) {
     addId(d.id, key(d.id));
-    if (d.obj) for (const s of w.specs.filter((x) => x.id.startsWith(`drop.${key(d.id)}.`) || x.id.startsWith(`ghost.${key(d.id)}.`))) addId(d.id, s.id);
+    if (d.obj) for (const s of w.specs.filter((x) => x.id.startsWith(`flow.${key(d.id)}.`) || x.id.startsWith(`ghost.${key(d.id)}.`))) addId(d.id, s.id);
   }
-  for (const [src, dst] of flows) for (const s of w.specs.filter((x) => x.id.startsWith(`bloom.${key(dst)}.`))) addId(dst, s.id);
+  for (const dst of new Set(flows.values())) for (const s of w.specs.filter((x) => x.id.startsWith(`bloom.${key(dst)}.`))) addId(dst, s.id);
   for (const p of pics.values()) {
     if (!w.has(key(p.name))) continue;
     addId(p.name, key(p.name));
@@ -1344,5 +1428,5 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   });
   if (w.has("ph")) addId("?", "ph");
   for (const [name, list] of Object.entries(ids)) if (!list.length) delete ids[name];
-  return { doc, scene, ids, notes, decisions, boxes: laid.map((l, k) => ({ moment: fms[k]!.i, boxes: l.boxes })) };
+  return { doc, scene, ids, notes, decisions, problems, boxes: laid.map((l, k) => ({ moment: fms[k]!.i, boxes: l.boxes })) };
 }

@@ -33,7 +33,7 @@ export type Viewing = {
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
-// The author's intent plan (scripts/design-brain/intent-prompt.md is its guide). It says what matters, never where,
+// The author's intent plan (prompts/intent.md is its guide). It says what matters, never where,
 // how big, what color or how it moves.
 
 export type Pace = "slow" | "normal" | "fast";

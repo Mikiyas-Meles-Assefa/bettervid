@@ -1,17 +1,30 @@
 // The stage and its compositions of objects. The stage is what persists (depicted objects, the user's material): it keeps
 // its place while words take turns around it. Objects that act on each other are composed as one thing: an apparatus
-// (a source over the vessel it pours or drips into, its tip over the mouth) and a fall group (things that fall
+// (a source over the vessel it pours or drips into, its outlet over the mouth) and a fall group (things that fall
 // together, side by side at one height over a floor, at their true relative sizes).
 //
-// Objects are drawn with their origin at their base (bottom center): an object's `dy` is where its base sits.
-import { mouthOf, tipOf, type Prop } from "../depict/index.ts";
+// Objects come as shapes read off their depictions: a box in local units with its origin at its base (bottom center,
+// y up as negative numbers), the anchors that matter here, and the real size when it is a fact. An object's `dy` is
+// where its base sits.
+
+/** What the stage needs to know of a depicted thing. */
+export type ObjShape = {
+  w: number;
+  h: number;
+  /** Where contents leave it (an outlet's tip, or its mouth when it pours), local units. */
+  outlet?: [number, number];
+  /** Where things go into it, local units. */
+  mouth?: [number, number];
+  /** Its real size in centimetres, when the depicter gave one. */
+  realCm?: { w: number; h: number };
+};
 
 /** A thing placed inside a composition: center x offset from the composition's center, base y from its top. */
 export type Member = { id: string; dx: number; dy: number; w: number; h: number; scale: number };
 
 export type ApparatusParams = {
   sourceShare: number; // share of the composition's height the source takes
-  gapShare: number; // share of the height between the source's tip and the vessel's mouth
+  gapShare: number; // share of the height between the source's outlet and the vessel's mouth
   sourceWidth: number; // the source is at most this share of the composition's width
   vesselWidth: number; // the vessel is at most this share of the width
   satelliteShare: number; // other objects needed now stand beside the vessel, at most this share of the height
@@ -19,17 +32,17 @@ export type ApparatusParams = {
 };
 
 /** A source over the vessel it pours or drips into, in a box of w by h, with satellites beside the vessel. */
-export function apparatus(src: { id: string; prop: Prop }, dst: { id: string; prop: Prop }, sats: { id: string; prop: Prop }[], box: { w: number; h: number }, p: ApparatusParams) {
-  const ps = src.prop;
-  const pd = dst.prop;
+export function apparatus(src: { id: string; shape: ObjShape }, dst: { id: string; shape: ObjShape }, sats: { id: string; shape: ObjShape }[], box: { w: number; h: number }, p: ApparatusParams) {
+  const ps = src.shape;
+  const pd = dst.shape;
   const ss = Math.min((p.sourceShare * box.h) / ps.h, (p.sourceWidth * box.w) / ps.w);
   const sd = Math.min(((1 - p.sourceShare - p.gapShare) * box.h) / pd.h, (p.vesselWidth * box.w) / pd.w);
   const hs = ps.h * ss;
   const hd = pd.h * sd;
   const gap = p.gapShare * box.h;
-  // The source's tip sits over the vessel's mouth: offset the source so its tip x matches the mouth's x.
-  const tipX = tipOf(ps).x * ss;
-  const mouthX = mouthOf(pd).x * sd;
+  // The source's outlet sits over the vessel's mouth: offset the source so the outlet's x matches the mouth's x.
+  const tipX = (ps.outlet?.[0] ?? 0) * ss;
+  const mouthX = (pd.mouth?.[0] ?? 0) * sd;
   const members: Member[] = [
     { id: src.id, dx: mouthX - tipX, dy: hs, w: ps.w * ss, h: hs, scale: ss },
     { id: dst.id, dx: 0, dy: hs + gap + hd, w: pd.w * sd, h: hd, scale: sd },
@@ -38,8 +51,8 @@ export function apparatus(src: { id: string; prop: Prop }, dst: { id: string; pr
   const vw = pd.w * sd;
   for (const s of sats) {
     const room = box.w / 2 - vw / 2 - p.satelliteGap;
-    const sc = Math.max(0, Math.min((p.satelliteShare * box.h) / s.prop.h, room / s.prop.w));
-    members.push({ id: s.id, dx: side * (vw / 2 + p.satelliteGap + (s.prop.w * sc) / 2), dy: hs + gap + hd, w: s.prop.w * sc, h: s.prop.h * sc, scale: sc });
+    const sc = Math.max(0, Math.min((p.satelliteShare * box.h) / s.shape.h, room / s.shape.w));
+    members.push({ id: s.id, dx: side * (vw / 2 + p.satelliteGap + (s.shape.w * sc) / 2), dy: hs + gap + hd, w: s.shape.w * sc, h: s.shape.h * sc, scale: sc });
     side = -side;
   }
   return { members, h: hs + gap + hd, w: Math.max(...members.map((m) => 2 * Math.abs(m.dx) + m.w)) };
@@ -48,7 +61,7 @@ export function apparatus(src: { id: string; prop: Prop }, dst: { id: string; pr
 export type FallGroupParams = {
   bigShare: number; // the largest thing's width as a share of the composition's width
   gapShare: number; // space between things, as a share of the width
-  minShare: number; // a small thing never drawn narrower than this share of the width
+  minShare: number; // a small thing is never drawn narrower than this share of the width
   roomShare: number; // at least this share of the height stays free for the fall
   floorGap: number; // px between the floor line and where things land
 };
@@ -58,28 +71,28 @@ export type FallGroupParams = {
  * `fallen` are already down (they fell in an earlier moment). Returns the members, the fall distance in px, and the
  * scale of the drawing in px per metre when a real size is known (for physical time).
  */
-export function fallGroup(mem: { id: string; prop: Prop }[], box: { w: number; h: number }, fallen: Set<string>, p: FallGroupParams) {
-  const sizes = mem.map((m) => m.prop.body?.size);
+export function fallGroup(mem: { id: string; shape: ObjShape }[], box: { w: number; h: number }, fallen: Set<string>, p: FallGroupParams) {
+  const sizes = mem.map((m) => m.shape.realCm?.w);
   const big = Math.max(...sizes.map((s) => s ?? 0), 0);
-  let D = mem.map((m, i) => (big && sizes[i] ? Math.max(p.minShare * box.w, (p.bigShare * box.w * sizes[i]!) / big) : p.bigShare * box.w * (m.prop.w / Math.max(...mem.map((x) => x.prop.w)))));
+  let D = mem.map((m, i) => (big && sizes[i] ? Math.max(p.minShare * box.w, (p.bigShare * box.w * sizes[i]!) / big) : p.bigShare * box.w * (m.shape.w / Math.max(...mem.map((x) => x.shape.w)))));
   const maxD = (1 - p.roomShare) * box.h;
-  const k = Math.min(1, maxD / Math.max(...D.map((d, i) => (d * mem[i]!.prop.h) / mem[i]!.prop.w)), box.w / (D.reduce((a, b) => a + b, 0) + p.gapShare * box.w * (mem.length - 1)));
+  const k = Math.min(1, maxD / Math.max(...D.map((d, i) => (d * mem[i]!.shape.h) / mem[i]!.shape.w)), box.w / (D.reduce((a, b) => a + b, 0) + p.gapShare * box.w * (mem.length - 1)));
   D = D.map((d) => d * k);
   const gx = p.gapShare * box.w * k;
   const total = D.reduce((a, b) => a + b, 0) + gx * (mem.length - 1);
-  const H = D.map((d, i) => (d * mem[i]!.prop.h) / mem[i]!.prop.w);
+  const H = D.map((d, i) => (d * mem[i]!.shape.h) / mem[i]!.shape.w);
   const Hmax = Math.max(...H);
   const fallTo = box.h - p.floorGap;
   let x = -total / 2;
   const members: Member[] = mem.map((m, i) => {
     const dx = x + D[i]! / 2;
     x += D[i]! + gx;
-    return { id: m.id, dx, dy: fallen.has(m.id) ? fallTo : Hmax, w: D[i]!, h: H[i]!, scale: D[i]! / m.prop.w };
+    return { id: m.id, dx, dy: fallen.has(m.id) ? fallTo : Hmax, w: D[i]!, h: H[i]!, scale: D[i]! / m.shape.w };
   });
-  const sized = mem.findIndex((m) => m.prop.body?.size);
-  const pxPerM = sized >= 0 ? D[sized]! / (mem[sized]!.prop.body!.size / 100) : undefined;
+  const sized = mem.findIndex((m) => m.shape.realCm);
+  const pxPerM = sized >= 0 ? D[sized]! / (mem[sized]!.shape.realCm!.w / 100) : undefined;
   return { members, fall: fallTo - Hmax, floorY: fallTo + p.floorGap / 2, floorW: Math.max(total, box.w * 0.9), h: box.h, w: Math.max(total, box.w * 0.9), pxPerM };
 }
 
 /** A single object scaled to fit a box. */
-export const fitObject = (prop: Prop, box: { w: number; h: number }) => Math.min(box.w / prop.w, box.h / prop.h);
+export const fitObject = (shape: ObjShape, box: { w: number; h: number }) => Math.min(box.w / shape.w, box.h / shape.h);

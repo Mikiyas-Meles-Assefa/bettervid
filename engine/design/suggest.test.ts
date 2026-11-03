@@ -19,7 +19,9 @@ test("a viewing assumes nothing it was not told", () => {
 });
 
 test("every suggested field says where it came from and why", () => {
-  const d = suggestDesign(plan, v(1080, 1920), theme);
+  // The depicter's answer for the ball, so the suggestion knows its act is a fall (read off the depiction's verbs).
+  const ball = { kind: "body", form: "sphere", label: "small ball", size: { w: 6.7, h: 6.7, unit: "cm" as const }, why: "a test" };
+  const d = suggestDesign(plan, v(1080, 1920), theme, [], undefined, { o: ball });
   assert.equal(d.moments.length, 3);
   for (const m of d.moments)
     for (const k of ["importance", "focus", "subjectScale", "subjectAt", "arrangement", "supportOpacity", "typeScale", "lead", "dwell", "camera"] as const) {

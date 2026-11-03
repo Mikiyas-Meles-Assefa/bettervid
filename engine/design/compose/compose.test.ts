@@ -6,7 +6,18 @@ import { themeFrom } from "../../render/theme.ts";
 import { parseIntent } from "../intent/parse.ts";
 import { edgeBand, suggestDesign, viewingFrom } from "../suggest.ts";
 import type { Design, PartCard, Viewing } from "../types.ts";
+import type { PropSpec } from "../depict/index.ts";
+import { SAMPLES } from "../depict/samples.ts";
 import { compose } from "./compose.ts";
+
+// The depicter's answers for the plan's objects (in the product the depicter writes these from the user's material).
+const sample = (name: string, patch: Partial<PropSpec> = {}): PropSpec => ({ ...(SAMPLES.find((x) => x.name === name)!.spec as PropSpec), ...patch });
+const PROPS: Record<string, PropSpec> = {
+  jug: sample("tumbler of water", { label: "glass jug of water", size: { w: 12, h: 20, unit: "cm" } }),
+  bowl: sample("tumbler of water", { label: "glass bowl", size: { w: 18, h: 8, unit: "cm" }, params: { profile: [[0.3, 0], [0.5, 1]], contents: [{ name: "water", level: 0.1, color: "water" }] } }),
+  red: { kind: "body", form: "sphere", label: "red ball", size: { w: 21.8, h: 21.8, unit: "cm" }, colors: { body: "#d23a2a" }, colorSources: { body: "known: the plan says red" }, why: "a test" },
+  blue: { kind: "body", form: "sphere", label: "small blue ball", size: { w: 6.7, h: 6.7, unit: "cm" }, colors: { body: "#2a62d2" }, colorSources: { body: "known: the plan says blue" }, why: "a test" },
+};
 
 const theme = themeFrom("flat");
 // A 30 s clip: 75 words, one every 0.4 s.
@@ -50,10 +61,10 @@ object blue "a small blue ball"
   keep red
 `);
 const view = (width: number, height: number, uiZones: Viewing["uiZones"] = []) => viewingFrom({ width, height, fps: 30, screen: "a test screen", frameWidthMm: 300, distanceMm: 600, watch: "on purpose", uiZones, why: "a test" });
-const run = (v: Viewing, edit?: (d: Design) => void, plan = PLAN, cards: PartCard[] = []) => {
-  const d = suggestDesign(plan, v, theme, cards, words);
+const run = (v: Viewing, edit?: (d: Design) => void, plan = PLAN, cards: PartCard[] = [], props = PROPS) => {
+  const d = suggestDesign(plan, v, theme, cards, words, props);
   edit?.(d);
-  return { d, out: compose(plan, d, { theme, words, frames, cards }) };
+  return { d, out: compose(plan, d, { theme, words, frames, cards, props }) };
 };
 const boxesOf = (out: ReturnType<typeof compose>) => out.boxes;
 
@@ -113,7 +124,7 @@ test("style values can be overridden per video and per moment", () => {
 test("demonstrations follow the director's plan: real speed is quicker than slow, a replay adds a second pass", () => {
   const fall = (speed: "real" | "slow", replay: boolean) => {
     const { out } = run(view(1080, 1920), (d) => {
-      const dm = d.demos.find((x) => PLAN.moments[x.moment]!.acts[x.act]!.verb === "falls")!;
+      const dm = d.demos.find((x) => PLAN.moments[x.moment]!.acts[x.act]!.verb === "fall")!;
       dm.speed = { value: speed, from: "director" };
       dm.replay = replay ? { value: { speed: "slow" }, from: "director" } : undefined;
     });
@@ -152,11 +163,11 @@ test("ids map every plan name and material part to the scene ids that draw it", 
 
 test("recomposing a 30 s clip after a change to one moment is fast", () => {
   const { d } = run(view(1080, 1920));
-  compose(PLAN, d, { theme, words, frames });
+  compose(PLAN, d, { theme, words, frames, props: PROPS });
   const t = performance.now();
   for (let i = 0; i < 5; i++) {
     d.moments[3]!.subjectScale = { value: 0.6 + i * 0.05, from: "search" };
-    compose(PLAN, d, { theme, words, frames });
+    compose(PLAN, d, { theme, words, frames, props: PROPS });
   }
   const ms = (performance.now() - t) / 5;
   assert.ok(ms < 300, `recompose took ${ms.toFixed(0)} ms`);
@@ -168,4 +179,60 @@ test("every arrangement packs without overlaps", () => {
     assert.deepEqual(out.notes.filter((n) => /overlap/.test(n)), [], a);
     if (a === "something new") assert.ok(out.notes.some((n) => /not one the packer knows/.test(n)));
   }
+});
+
+test("acts are what the depiction says they are: a flow pours, a fall falls, an unknown verb is a task for the depicter", () => {
+  const { out } = run(view(1080, 1920));
+  assert.deepEqual(out.problems, []);
+  assert.ok(out.decisions.some((d) => d.area === "demonstration" && /^jug pours into bowl/.test(d.choice)), "the jug pours into the bowl");
+  assert.ok(out.decisions.some((d) => d.area === "demonstration" && /^red and blue fall/.test(d.choice)));
+  const odd = parseIntent(`object red "a red ball"\n@0\n  show red\n  red evaporates`);
+  const r = run(view(1080, 1920), undefined, odd).out;
+  assert.equal(r.problems.length, 1);
+  assert.equal(r.problems[0]!.who, "depicter");
+  assert.match(r.problems[0]!.problem, /no verb "evaporates"/);
+});
+
+test("an object with no depiction is a task for the depicter, and stands as its words meanwhile", () => {
+  const { out } = run(view(1080, 1920), undefined, PLAN, [], { ...PROPS, jug: undefined as unknown as PropSpec });
+  assert.ok(out.problems.some((p) => p.thing === "jug" && p.task === "depict.jug"));
+  assert.ok(out.scene.nodes.some((n) => n.id === "t.jug"));
+});
+
+test("focus: none keeps support at full strength, hidden withholds the subject", () => {
+  const at = Math.round(words[50]!.start * 30);
+  const opOf = (o: ReturnType<typeof compose>, id: string) => {
+    const r: Resolved = { id: "root", kind: "group", props: {}, children: evaluate(o.scene, at) };
+    const find = (n: Resolved): Resolved | undefined => (n.id === id ? n : (n.children ?? []).map(find).find(Boolean));
+    return Number(find(r)!.props.opacity);
+  };
+  const none = run(view(1080, 1920), (d) => (d.moments[6]!.focus = { value: "none", from: "designer" })).out;
+  assert.ok(opOf(none, "t.note") > 0.98);
+  const hidden = run(view(1080, 1920), (d) => (d.moments[6]!.focus = { value: "hidden", from: "designer" })).out;
+  assert.ok(opOf(hidden, "t.after") < 0.02);
+});
+
+test("captions: their box is kept clear only while they show", () => {
+  const box: [number, number, number, number] = [0, 0.8, 1, 0.92];
+  const on = viewingFrom({ width: 1080, height: 1920, fps: 30, screen: "a phone", frameWidthMm: 65, distanceMm: 300, watch: "on purpose", uiZones: [], captions: { show: true, box, why: "a test" }, why: "a test" });
+  for (const m of run(on).out.boxes) for (const [k, b] of Object.entries(m.boxes)) assert.ok(b[3] <= 0.8 + 1e-6 || b[1] >= 0.92 - 1e-6, `${k} enters the captions`);
+  const off = { ...on, captions: { ...on.captions, show: false } };
+  const low = Math.max(...run(off).out.boxes.flatMap((m) => Object.values(m.boxes).map((b) => b[3])));
+  assert.ok(low > 0.8, "without captions the frame's bottom is used");
+});
+
+test("real or redrawn: a real proposal keeps the user's chart as it is", () => {
+  const card: PartCard = { name: "chart", file: "x.png", size: [800, 600], kind: "chart", about: "bars", parts: {}, data: { kind: "bars", labels: ["a", "b"], values: [5, 9], plot: [0.1, 0.1, 0.9, 0.9] }, requirements: [], checked: { ok: true, notes: [] } };
+  const plan = parseIntent(`@0\n  show chart`);
+  const real = run(view(1080, 1920), (d) => d.moments[0]!.proposals.push({ value: { kind: "real", ids: ["chart"] }, from: "designer", why: "evidence to recognise" }), plan, [card]).out;
+  assert.ok(real.decisions.some((d) => d.area === "material" && /kept real/.test(d.choice)));
+  const redrawn = run(view(1080, 1920), undefined, plan, [card]).out;
+  assert.ok(redrawn.decisions.some((d) => d.area === "material" && /redrawn/.test(d.choice)));
+});
+
+test("a flow can be replayed when the director asks and there is room", () => {
+  const plan = parseIntent(`object jug "a glass jug of water"\nobject bowl "a glass bowl"\n@0\n  show bowl\n  jug pours into bowl\n@60\n  show jug`);
+  const { out } = run(view(1080, 1920), (d) => (d.demos.find((x) => x.moment === 0)!.replay = { value: { speed: "slow" }, from: "director" }), plan);
+  const dm = out.decisions.find((d) => d.area === "demonstration")!;
+  assert.match(dm.choice, /replayed/);
 });
