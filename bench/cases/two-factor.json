@@ -1,0 +1,97 @@
+{
+ "id": "two-factor",
+ "use": "how a safeguard works, from a company notice",
+ "request": "Our IT team sent this notice. Make a 25 second explainer for staff on why two-factor matters, based on it.",
+ "material": [
+  {
+   "kind": "doc",
+   "name": "it-notice.txt",
+   "about": "an internal IT notice",
+   "text": "From Monday all staff accounts require two-factor sign-in. After your password, the site sends a six-digit code to your registered phone. A stolen or leaked password alone will no longer let anyone into your account, because the attacker would also need your phone. Never share the code with anyone, including IT."
+  }
+ ],
+ "topic": "How two-factor login stops a stolen password",
+ "intent": "Everyday users want to know why turning on two-factor matters.",
+ "style": "blueprint",
+ "goal": "The viewer knows the two factors and why a stolen password alone fails.",
+ "promise": "A stolen password that still doesn't open the door.",
+ "arc": "A stolen password, two keys, the code going to the phone, the thief stuck.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Someone steals your password. With two-factor login, they still can't get in. Here's why.",
+   "job": "Hook with the threat.",
+   "knows": "",
+   "waiting": "Why can't they get in?",
+   "look": "the stolen password",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Logging in asks for two things: something you know, your password, and something you have, your phone.",
+   "job": "The two factors.",
+   "knows": "Two factors: something you know and something you have.",
+   "waiting": "",
+   "look": "the two keys: password and phone",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e3",
+   "text": "The thief has the password. The site sends a code to your phone, which the thief doesn't have.",
+   "job": "Why the thief fails.",
+   "knows": "The code goes to the phone the thief lacks.",
+   "waiting": "",
+   "look": "the code going to your phone, not to the thief",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "have.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the code sits on your phone while the thief's login waits, stuck"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "One stolen key isn't enough. They'd need both.",
+   "job": "Land it.",
+   "knows": "Both are needed.",
+   "waiting": "",
+   "look": "the lock staying shut",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What two things does login ask for?",
+   "a": "Something you know (the password) and something you have (the phone).",
+   "needs": "words"
+  },
+  {
+   "q": "Where does the site send the code?",
+   "a": "To your phone.",
+   "needs": "words"
+  },
+  {
+   "q": "Why can't the thief log in?",
+   "a": "They have only the password, not the phone that gets the code.",
+   "needs": "words"
+  },
+  {
+   "q": "What happened to the thief's login on screen?",
+   "a": "It was stuck, waiting for the code; the lock stayed shut.",
+   "needs": "picture"
+  },
+  {
+   "q": "Per the notice, what does the site send after the password?",
+   "a": "A six-digit code to your registered phone.",
+   "needs": "words"
+  }
+ ]
+}

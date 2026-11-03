@@ -1,0 +1,78 @@
+{
+ "id": "death-zone",
+ "use": "a suspense beat",
+ "request": "A tense moment for a mountaineering video: what the death zone does to a climber.",
+ "topic": "The death zone on high mountains",
+ "intent": "Viewers of an adventure channel want to feel the danger while learning why it is deadly.",
+ "style": "ink",
+ "goal": "The viewer feels the danger and knows why it is called the death zone.",
+ "promise": "A climber high on a mountain, running out of air.",
+ "arc": "The altitude line, thin air, a slow body, a long pause, the summit still far.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Above eight thousand meters, every breath holds about a third of the oxygen at sea level.",
+   "job": "Set the danger with a number.",
+   "knows": "About a third of the oxygen per breath.",
+   "waiting": "What does that do to the body?",
+   "look": "the climber at the altitude line, each breath thin",
+   "feel": "unease",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "Your body can't adapt up here. It is slowly dying, hour by hour.",
+   "job": "Raise the stakes.",
+   "knows": "The body deteriorates; it cannot adapt.",
+   "waiting": "",
+   "look": "the climber slowing, time passing",
+   "feel": "dread",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "hour.",
+     "seconds": 2.5,
+     "purpose": "look",
+     "does": "the climber's steps slow while the oxygen drains"
+    }
+   ]
+  },
+  {
+   "id": "e3",
+   "text": "Climbers call it the death zone. And the summit is still hours away.",
+   "job": "Name it and leave the viewer waiting.",
+   "knows": "It's called the death zone; the summit is still far.",
+   "waiting": "Will they make it?",
+   "look": "the summit far above the climber",
+   "feel": "suspense",
+   "rhythm": "short",
+   "reveal": {
+    "at": "still hours away.",
+    "what": "how far the summit still is"
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "How much oxygen does each breath hold above 8000 meters?",
+   "a": "About a third of the oxygen at sea level.",
+   "needs": "words"
+  },
+  {
+   "q": "Can the body adapt up there?",
+   "a": "No; it is slowly dying, hour by hour.",
+   "needs": "words"
+  },
+  {
+   "q": "What do climbers call it?",
+   "a": "The death zone.",
+   "needs": "words"
+  },
+  {
+   "q": "What was happening on screen during the long pause?",
+   "a": "The climber slowing down while the oxygen ran low.",
+   "needs": "picture"
+  }
+ ]
+}

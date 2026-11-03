@@ -1,0 +1,105 @@
+{
+ "id": "magna-carta",
+ "use": "a history turning point, from a teacher's notes",
+ "request": "These are my lecture notes on Magna Carta. Turn the key moment into a 30 second clip for my history class.",
+ "material": [
+  {
+   "kind": "notes",
+   "name": "lecture-notes.txt",
+   "about": "a history teacher's notes",
+   "text": "Magna Carta, June 1215, Runnymede. Rebel barons force King John to seal it.\n- 63 clauses, mostly feudal dues, fees, royal forests, local grievances\n- Clause 39: no free man to be seized or imprisoned except by lawful judgment of his peers or by the law of the land\n- Why it matters: king bound by written law; later read as root of due process\n- Annulled by the Pope within months; reissued 1216, 1217, 1225"
+  }
+ ],
+ "topic": "Why Magna Carta mattered",
+ "intent": "A history teacher wants the turning point for a class video.",
+ "style": "collage",
+ "goal": "The viewer knows when it happened, what the key clause says, and why it put a king under the law.",
+ "promise": "A charter forced on a king, and one sentence that outlived the rest.",
+ "arc": "A date and a place, a long charter, a clause held back, then its words, ending on a king placed under the law.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "June 1215. Rebel barons force King John to seal a charter at Runnymede.",
+   "job": "Place the moment: when, where, who.",
+   "knows": "June 1215, Runnymede, the barons force the king.",
+   "waiting": "What does the charter say?",
+   "look": "the charter being sealed, with the date and place",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Most of it is about feudal fees and forests. But one clause will outlive everything else.",
+   "job": "Show the charter is mostly ordinary, and that one clause is special.",
+   "knows": "Most of it is ordinary.",
+   "waiting": "Which clause?",
+   "look": "the long charter with one clause singled out, not yet readable",
+   "feel": "anticipation",
+   "rhythm": "long",
+   "withhold": {
+    "what": "the words of the famous clause",
+    "until": "e3"
+   },
+   "holds": [
+    {
+     "id": "h1",
+     "after": "else.",
+     "seconds": 1.5,
+     "purpose": "look",
+     "does": "the view moves along the charter toward one clause, still unread"
+    }
+   ]
+  },
+  {
+   "id": "e3",
+   "text": "No free man shall be imprisoned except by the lawful judgment of his peers or the law of the land.",
+   "job": "Reveal the clause's words.",
+   "knows": "No imprisonment without lawful judgment or the law of the land.",
+   "waiting": "",
+   "look": "the clause's words, with 'the law of the land' standing out",
+   "feel": "weight",
+   "rhythm": "long",
+   "reveal": {
+    "at": "No free",
+    "what": "the clause's words"
+   }
+  },
+  {
+   "id": "e4",
+   "text": "A king, in writing, was placed under the law.",
+   "job": "Say why it mattered.",
+   "knows": "The king was under the law, in writing.",
+   "waiting": "",
+   "look": "the king placed below the law",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "When and where was the charter sealed?",
+   "a": "June 1215, at Runnymede.",
+   "needs": "words"
+  },
+  {
+   "q": "Who forced the king to seal it?",
+   "a": "Rebel barons.",
+   "needs": "words"
+  },
+  {
+   "q": "What is most of the charter about?",
+   "a": "Feudal fees and forests.",
+   "needs": "words"
+  },
+  {
+   "q": "What does the famous clause promise?",
+   "a": "No free man imprisoned except by the lawful judgment of his peers or the law of the land.",
+   "needs": "words"
+  },
+  {
+   "q": "What did the screen show just before the clause's words appeared?",
+   "a": "The charter with one clause singled out but not yet readable.",
+   "needs": "picture"
+  }
+ ]
+}

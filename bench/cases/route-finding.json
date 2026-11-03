@@ -1,0 +1,159 @@
+{
+ "id": "route-finding",
+ "use": "a worked algorithm on a graph",
+ "request": "How does a map app find the fastest route? Show the actual method with a tiny example.",
+ "topic": "How a map app finds the fastest route",
+ "intent": "A curious app user wants to see the actual method on a small example.",
+ "style": "blueprint",
+ "goal": "The viewer can follow how the method keeps the better number and finds the 8 minute route.",
+ "promise": "Four places, a few roads, and the fastest way through.",
+ "arc": "A small map of four places, the first steps slowly, a better number kept, the rest quickly, the route lit.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Your map app has to find the fastest way from home to work. Here are four places and the minutes between them.",
+   "job": "Show the small map.",
+   "knows": "Four places, minutes on each road.",
+   "waiting": "Which way is fastest?",
+   "look": "the four places and the minutes on each road",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "Start at home. The park is two minutes away, the cafe four.",
+   "job": "First steps of the method, slowly.",
+   "knows": "Park 2, cafe 4 so far.",
+   "waiting": "",
+   "look": "home, and the first distances written at the park and cafe",
+   "feel": "",
+   "rhythm": "long",
+   "demo": {
+    "what": "the shortest route method",
+    "truth": {
+     "kind": "dijkstra",
+     "data": {
+      "edges": "Home-Park:2,Home-Cafe:4,Park-Cafe:1,Cafe-Work:5,Park-Work:8",
+      "from": "Home",
+      "to": "Work"
+     }
+    },
+    "phases": [
+     {
+      "at": "Start at home.",
+      "pace": "slow",
+      "why": "one step at a time: start, settle home, the two roads",
+      "steps": [
+       1,
+       4
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Next, settle the park. Through the park, the cafe is only three, better than four.",
+   "job": "The key move: keep the better number.",
+   "knows": "A better route replaces a worse number.",
+   "waiting": "What is the fastest route?",
+   "look": "the cafe's number changing from 4 to 3",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "four.",
+     "seconds": 1.5,
+     "purpose": "look",
+     "does": "the cafe's new 3 stays lit beside the road through the park"
+    }
+   ],
+   "demo": {
+    "what": "the shortest route method",
+    "truth": {
+     "kind": "dijkstra",
+     "data": {
+      "edges": "Home-Park:2,Home-Cafe:4,Park-Cafe:1,Cafe-Work:5,Park-Work:8",
+      "from": "Home",
+      "to": "Work"
+     }
+    },
+    "phases": [
+     {
+      "at": "Next, settle",
+      "pace": "slow",
+      "why": "settle the park, then the better number for the cafe",
+      "steps": [
+       5,
+       6
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Do this from each closest place, and the fastest route appears: eight minutes, through the park and the cafe.",
+   "job": "Run the rest quickly and show the route.",
+   "knows": "The fastest route is 8 minutes via park and cafe.",
+   "waiting": "",
+   "look": "the route home, park, cafe, work lit with 8",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "eight minutes,",
+    "what": "the 8 minute route"
+   },
+   "demo": {
+    "what": "the shortest route method",
+    "truth": {
+     "kind": "dijkstra",
+     "data": {
+      "edges": "Home-Park:2,Home-Cafe:4,Park-Cafe:1,Cafe-Work:5,Park-Work:8",
+      "from": "Home",
+      "to": "Work"
+     }
+    },
+    "phases": [
+     {
+      "at": "Do this",
+      "pace": "fast",
+      "why": "the rest of the method runs quickly and rests on the route",
+      "steps": [
+       7,
+       11
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "How many minutes is the fastest route?",
+   "a": "8.",
+   "needs": "both"
+  },
+  {
+   "q": "Which way does the fastest route go?",
+   "a": "Home, park, cafe, work.",
+   "needs": "both"
+  },
+  {
+   "q": "Why does the cafe become 3 instead of 4?",
+   "a": "Going through the park (2 + 1) is shorter than the direct road (4).",
+   "needs": "both"
+  },
+  {
+   "q": "How many minutes is the road straight from the park to work?",
+   "a": "8.",
+   "needs": "picture"
+  },
+  {
+   "q": "Which place does the method start from?",
+   "a": "Home.",
+   "needs": "words"
+  }
+ ]
+}

@@ -1,0 +1,150 @@
+{
+ "id": "matrix-rotation",
+ "use": "a worked step: a matrix acting on a vector",
+ "request": "Show how a rotation matrix moves a point, one row at a time. Linear algebra class.",
+ "topic": "A rotation matrix acting on a point",
+ "intent": "Linear algebra students need to see the row-by-row computation and what it means.",
+ "style": "chalkboard",
+ "goal": "The viewer can compute a matrix times a vector row by row and sees the point turn a quarter turn.",
+ "promise": "A matrix that turns points, worked out by hand.",
+ "arc": "The matrix and the point, the top row worked slowly, the bottom row quicker, then both points shown turned.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "This matrix rotates any point a quarter turn. Let's move the point three, one.",
+   "job": "Set up the matrix and the point.",
+   "knows": "The matrix rotates a quarter turn; the point is (3, 1).",
+   "waiting": "Where does it land?",
+   "look": "the matrix and the vector three, one",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "The top row times the vector: zero times three, plus minus one times one. That's minus one.",
+   "job": "The first row, slowly.",
+   "knows": "Top entry: −1.",
+   "waiting": "",
+   "look": "the top row and the vector lit, the sum written",
+   "feel": "",
+   "rhythm": "long",
+   "demo": {
+    "what": "the matrix times the vector",
+    "truth": {
+     "kind": "matvec",
+     "data": {
+      "m": [
+       [
+        0,
+        -1
+       ],
+       [
+        1,
+        0
+       ]
+      ],
+      "v": [
+       3,
+       1
+      ]
+     }
+    },
+    "phases": [
+     {
+      "at": "The top row",
+      "pace": "slow",
+      "why": "each product in turn, then the sum",
+      "steps": [
+       1,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Bottom row: one times three, plus zero times one. Three.",
+   "job": "The second row, quicker.",
+   "knows": "Bottom entry: 3.",
+   "waiting": "",
+   "look": "the bottom row and the result 3",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "Three.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the answer vector minus one, three stands complete"
+    }
+   ],
+   "demo": {
+    "what": "the matrix times the vector",
+    "truth": {
+     "kind": "matvec",
+     "data": {
+      "m": [
+       [
+        0,
+        -1
+       ],
+       [
+        1,
+        0
+       ]
+      ],
+      "v": [
+       3,
+       1
+      ]
+     }
+    },
+    "phases": [
+     {
+      "at": "Bottom row:",
+      "pace": "normal",
+      "why": "the same move, quicker",
+      "steps": [
+       2,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "So three, one lands on minus one, three: the same point, turned a quarter turn.",
+   "job": "Show what it means.",
+   "knows": "(3, 1) becomes (−1, 3), a quarter turn.",
+   "waiting": "",
+   "look": "the point (3, 1) and its turned image (−1, 3)",
+   "feel": "",
+   "rhythm": "long"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What does this matrix do to a point?",
+   "a": "Rotates it a quarter turn (90 degrees).",
+   "needs": "words"
+  },
+  {
+   "q": "What are the matrix's four entries?",
+   "a": "0, −1 on the top row and 1, 0 on the bottom row.",
+   "needs": "picture"
+  },
+  {
+   "q": "How is the top entry of the answer computed?",
+   "a": "Top row times the vector: 0 × 3 + (−1) × 1 = −1.",
+   "needs": "both"
+  },
+  {
+   "q": "Where does the point (3, 1) land?",
+   "a": "At (−1, 3).",
+   "needs": "words"
+  }
+ ]
+}

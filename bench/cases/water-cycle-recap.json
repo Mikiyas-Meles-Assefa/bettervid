@@ -1,0 +1,104 @@
+{
+ "id": "water-cycle-recap",
+ "use": "a recap of something built in pieces",
+ "request": "End of my water cycle lesson: a quick recap that puts the four stages back together.",
+ "topic": "The water cycle, recapped",
+ "intent": "A teacher wants a recap at the end of a lesson that has already built each stage.",
+ "style": "custom/sticky-notes-on-a-37bb",
+ "goal": "The viewer can name the four stages in order and sees them as one loop.",
+ "promise": "The whole loop once more, fast.",
+ "arc": "Four empty places, each stage arriving quickly in order, then the whole loop lit once more.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "So, the whole loop, one more time.",
+   "job": "Signal a recap.",
+   "knows": "This is a recap of four stages.",
+   "waiting": "",
+   "look": "four places waiting in a loop",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "The sun heats the ocean, and water rises as vapor.",
+   "job": "Stage one.",
+   "knows": "Evaporation.",
+   "waiting": "",
+   "look": "evaporation: vapor rising from the ocean",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e3",
+   "text": "High up, it cools into clouds.",
+   "job": "Stage two.",
+   "knows": "Condensation.",
+   "waiting": "",
+   "look": "condensation: clouds forming",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e4",
+   "text": "Clouds drop it as rain or snow.",
+   "job": "Stage three.",
+   "knows": "Precipitation.",
+   "waiting": "",
+   "look": "precipitation: rain falling",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e5",
+   "text": "And it runs back to the sea.",
+   "job": "Stage four, closing the loop.",
+   "knows": "Collection.",
+   "waiting": "",
+   "look": "collection: water running to the sea",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e6",
+   "text": "Same water, around and around, for billions of years.",
+   "job": "Make it one loop.",
+   "knows": "It is one endless loop.",
+   "waiting": "",
+   "look": "the whole loop",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "years.",
+     "seconds": 2.5,
+     "purpose": "recap",
+     "does": "the whole loop lights stage by stage once more"
+    }
+   ]
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What makes the water rise?",
+   "a": "The sun heating the ocean, so water rises as vapor.",
+   "needs": "words"
+  },
+  {
+   "q": "What happens to the vapor high up?",
+   "a": "It cools into clouds.",
+   "needs": "words"
+  },
+  {
+   "q": "In what order did the four stages come?",
+   "a": "Evaporation, condensation (clouds), precipitation (rain or snow), collection (back to the sea).",
+   "needs": "both"
+  },
+  {
+   "q": "What did the picture do at the very end?",
+   "a": "It showed the whole loop and lit each stage in order once more.",
+   "needs": "picture"
+  }
+ ]
+}

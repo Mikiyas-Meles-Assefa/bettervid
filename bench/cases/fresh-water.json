@@ -1,0 +1,121 @@
+{
+ "id": "fresh-water",
+ "use": "a chart reveal of a surprising number",
+ "request": "Make a quick video showing how little of Earth's water we can actually drink. Use a visual people get instantly.",
+ "topic": "How much of Earth's water is in lakes and rivers",
+ "intent": "A general audience on social media, curious about water scarcity.",
+ "style": "neon",
+ "goal": "The viewer remembers the proportions: almost all water is ocean, most fresh water is ice or underground, and lakes and rivers are a sliver.",
+ "promise": "All of Earth's water as glasses you can count.",
+ "arc": "One hundred glasses, ninety-seven turn to ocean, the three fresh ones split, and a tiny sliver remains lit.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Picture all the water on Earth as one hundred glasses.",
+   "job": "Set up the unit everything is counted in.",
+   "knows": "The whole is 100 glasses.",
+   "waiting": "How are they split?",
+   "look": "one hundred glasses",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Ninety-seven of them are salty ocean.",
+   "job": "The first big split.",
+   "knows": "97 of 100 are ocean.",
+   "waiting": "",
+   "look": "ninety-seven glasses becoming ocean",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "Ninety-seven",
+    "what": "97 glasses turning into ocean"
+   }
+  },
+  {
+   "id": "e3",
+   "text": "That leaves three fresh glasses. How much of that can we actually drink from lakes and rivers?",
+   "job": "Narrow to the fresh water and ask the viewer to guess.",
+   "knows": "Only 3 glasses are fresh.",
+   "waiting": "How much of the 3 is lakes and rivers?",
+   "look": "the three fresh glasses",
+   "feel": "tension of a guess",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "rivers?",
+     "seconds": 2.5,
+     "purpose": "predict",
+     "does": "the three fresh glasses wait, picked out from the rest",
+     "shows": "How much is lakes and rivers?"
+    }
+   ],
+   "withhold": {
+    "what": "the size of the lakes and rivers share",
+    "until": "e5"
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Two of the three are frozen in ice caps. Most of the last one is underground.",
+   "job": "Split the fresh glasses.",
+   "knows": "2 of 3 fresh glasses are ice; most of the third is groundwater.",
+   "waiting": "",
+   "look": "two glasses turning to ice, the third mostly underground",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e5",
+   "text": "Lakes and rivers together hold less than one percent of one glass.",
+   "job": "Land the surprising number.",
+   "knows": "Lakes and rivers are under 1% of one glass out of 100.",
+   "waiting": "",
+   "look": "a tiny sliver of one glass, lit",
+   "feel": "a quiet shock",
+   "rhythm": "long",
+   "reveal": {
+    "at": "less than one percent",
+    "what": "the sliver of one glass"
+   },
+   "holds": [
+    {
+     "id": "h2",
+     "after": "glass.",
+     "seconds": 2.0,
+     "purpose": "settle",
+     "does": "the sliver stays lit against all one hundred glasses"
+    }
+   ]
+  }
+ ],
+ "quiz": [
+  {
+   "q": "Out of 100 glasses, how many are salty ocean?",
+   "a": "97.",
+   "needs": "words"
+  },
+  {
+   "q": "Where is most of the fresh water?",
+   "a": "Frozen in ice caps (two of the three glasses).",
+   "needs": "words"
+  },
+  {
+   "q": "Where is most of the remaining fresh glass?",
+   "a": "Underground.",
+   "needs": "words"
+  },
+  {
+   "q": "How much do lakes and rivers hold?",
+   "a": "Less than one percent of one glass (out of one hundred).",
+   "needs": "words"
+  },
+  {
+   "q": "Which glass was the lakes-and-rivers sliver taken from?",
+   "a": "One of the three fresh glasses, the last one, not the ice ones.",
+   "needs": "picture"
+  }
+ ]
+}

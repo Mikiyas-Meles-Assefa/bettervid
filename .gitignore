@@ -10,3 +10,4 @@ out/
 *.wav
 node_modules/
 projects/
+bench/work/

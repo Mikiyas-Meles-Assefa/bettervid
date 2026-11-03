@@ -1,0 +1,84 @@
+{
+ "id": "led-vs-bulb",
+ "use": "a comparison of two options",
+ "request": "Compare an LED with an old incandescent bulb. Why is the LED so much cheaper to run?",
+ "topic": "LED versus incandescent bulbs",
+ "intent": "Someone deciding about bulbs wants to see why LEDs cost less to run.",
+ "style": "whiteboard",
+ "goal": "The viewer can say where the old bulb's power goes and how much less the LED needs.",
+ "promise": "Two bulbs with the same light, and where their power goes.",
+ "arc": "Two bulbs side by side, the old bulb's power mostly heat, the LED's power small, the two bars compared.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "An old incandescent bulb and an LED, giving the same light.",
+   "job": "Set up a fair comparison.",
+   "knows": "Same light from both.",
+   "waiting": "What's different?",
+   "look": "two bulbs side by side, equally bright",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "The old bulb turns about ninety percent of its power into heat, not light.",
+   "job": "Show where the old bulb's power goes.",
+   "knows": "About 90% of the old bulb's power is heat.",
+   "waiting": "",
+   "look": "the old bulb's power split: mostly heat",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e3",
+   "text": "The LED makes the same light from about a quarter of the power, and lasts up to twenty-five times longer.",
+   "job": "Show the LED beside it.",
+   "knows": "The LED uses about a quarter of the power and lasts up to 25 times longer.",
+   "waiting": "",
+   "look": "the LED's much smaller power next to the old bulb's",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "longer.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the two power amounts stand side by side, the difference marked"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "Same light. A quarter of the energy.",
+   "job": "Land the comparison.",
+   "knows": "Same light, a quarter of the energy.",
+   "waiting": "",
+   "look": "the two power amounts",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "How much of an incandescent bulb's power becomes heat?",
+   "a": "About 90 percent.",
+   "needs": "words"
+  },
+  {
+   "q": "How much power does the LED use for the same light?",
+   "a": "About a quarter.",
+   "needs": "words"
+  },
+  {
+   "q": "How much longer can an LED last?",
+   "a": "Up to 25 times longer.",
+   "needs": "words"
+  },
+  {
+   "q": "What did the picture compare side by side?",
+   "a": "How much power each bulb uses for the same light (and the old bulb's share going to heat).",
+   "needs": "picture"
+  }
+ ]
+}

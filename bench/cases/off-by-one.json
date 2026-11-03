@@ -1,0 +1,101 @@
+{
+ "id": "off-by-one",
+ "use": "a bug fix explained, from a code file",
+ "request": "Explain the bug I fixed in this function, for my team's code review channel.",
+ "material": [
+  {
+   "kind": "code",
+   "name": "sum_to.py",
+   "about": "the user's code file with the diff of the fix",
+   "text": "def sum_to(n):\n    total = 0\n-   for i in range(n):\n+   for i in range(1, n + 1):\n        total += i\n    return total\n\n# sum_to(5) returned 10 before the fix, 15 after"
+  }
+ ],
+ "topic": "An off-by-one bug in a sum",
+ "intent": "Teammates reviewing a pull request want to see the bug and why the fix works.",
+ "style": "neon",
+ "goal": "The viewer can say why range(n) misses n and what the fix is.",
+ "promise": "A function that is off by one.",
+ "arc": "The function and its wrong answer, the loop's numbers counted out, the missing last number, the fix and the right answer.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "This function should add up the numbers from one to n. For five, it should return fifteen. It returns ten.",
+   "job": "Show the bug.",
+   "knows": "It returns 10 instead of 15.",
+   "waiting": "Why ten?",
+   "look": "the function and the wrong result 10",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "The loop uses range of n, which starts at zero and stops before n. So it adds zero through four.",
+   "job": "Why.",
+   "knows": "range(n) gives 0 to n minus 1.",
+   "waiting": "",
+   "look": "the loop's numbers 0 to 4, with 5 missing",
+   "feel": "aha",
+   "rhythm": "long",
+   "demo": {
+    "what": "the loop's numbers counted out",
+    "phases": [
+     {
+      "at": "So it adds",
+      "pace": "slow",
+      "why": "each number the loop adds, one at a time"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "The fix: range of one to n plus one. Now five gives fifteen.",
+   "job": "The fix.",
+   "knows": "range(1, n + 1) fixes it; 5 gives 15.",
+   "waiting": "",
+   "look": "the changed line and the result 15",
+   "feel": "",
+   "rhythm": "long",
+   "reveal": {
+    "at": "fifteen.",
+    "what": "the correct result 15"
+   },
+   "holds": [
+    {
+     "id": "h1",
+     "after": "fifteen.",
+     "seconds": 1.5,
+     "purpose": "settle",
+     "does": "the fixed line and the 15 stay lit"
+    }
+   ]
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What should the function return for five, and what did it return?",
+   "a": "It should return 15; it returned 10.",
+   "needs": "words"
+  },
+  {
+   "q": "Which numbers did the buggy loop add?",
+   "a": "0 through 4.",
+   "needs": "words"
+  },
+  {
+   "q": "Why did it miss a number?",
+   "a": "range(n) stops before n, so n itself was never added.",
+   "needs": "words"
+  },
+  {
+   "q": "What is the fix?",
+   "a": "Use range(1, n + 1).",
+   "needs": "words"
+  },
+  {
+   "q": "What was the name of the function in the code?",
+   "a": "sum_to.",
+   "needs": "picture"
+  }
+ ]
+}
