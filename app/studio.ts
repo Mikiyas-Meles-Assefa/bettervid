@@ -19,7 +19,7 @@ export const label = (k: string) => LABELS[k] ?? (k === "visuals" ? "Making the 
 
 // Model words for the page: no em dashes, and short.
 export const plain = (s: string, max = 220) => {
-  const t = String(s ?? "").replace(/\s*[—–]\s*/g, ", ").replace(/\s+-\s+/g, ", ").trim();
+  const t = String(s ?? "").replace(/\s*[\u2014\u2013]\s*/g, ", ").replace(/\s+-\s+/g, ", ").trim();
   return t.length > max ? `${t.slice(0, max - 3)}...` : t;
 };
 
