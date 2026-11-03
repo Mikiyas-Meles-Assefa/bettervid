@@ -5,15 +5,18 @@
 //
 // Output is a SceneDoc of group, path, text and image nodes with theme color names and roles, compiled by the engine's
 // own compile(). `ids` maps every plan name (and part of the user's material) to the scene ids that draw it.
-import { compile } from "../../core/compile.ts";
+import { compile, when } from "../../core/compile.ts";
 import { roleLook } from "../../core/roles.ts";
-import type { Ease, Scene, SceneDoc, Theme, Value } from "../../core/types.ts";
+import type { CompileContext, Ease, Kit, Scene, SceneDoc, Step, Theme, Value } from "../../core/types.ts";
+import { DRAWING_KITS } from "../../kits/index.ts";
+import { argValue, expandKitItem, type KitExpansion } from "../../language/build.ts";
 import { estimate, TEXT_SIZE } from "../../language/layout.ts";
 import { fontMeasure } from "../../language/measure.ts";
+import { parse as parseScene, type Item as SceneItem } from "../../language/syntax.ts";
 import { depictionFrom, sizeCm, suggestLook, type Depiction, type PropSpec } from "../depict/index.ts";
 import * as A from "../abilities/index.ts";
 import type { Cls, St, Triple } from "../abilities/types.ts";
-import { idsOf } from "../intent/parse.ts";
+import { computedOf, idLine, idsOf } from "../intent/parse.ts";
 import { suggestMoment } from "../suggest.ts";
 import type { Act, Box, CameraPlan, DecisionRecord, Design, From, IntentPlan, Moment, MomentDesign, PartCard, Viewing, Word } from "../types.ts";
 import { classify, depictAll, type ActKind, type Classified } from "./acts.ts";
@@ -30,6 +33,8 @@ export type ComposeCtx = {
   /** The depicter's spec of each object thing, by the plan's id (the orchestrator asks the depicter; tests write them). */
   props?: Record<string, PropSpec>;
   measure?: A.Measure;
+  /** The kits that draw what a pinned line computes (a sort, a graph, a formula) and play its steps; all of them by default. */
+  kits?: Kit[];
 };
 
 /** Something the composition cannot do until an agent repairs it: who should (the depicter, the author) and what. */
@@ -53,8 +58,8 @@ type FM = { m: Moment; i: number; md: MomentDesign; onset: number; carry: string
 type Slot = { id: string; cls: Cls; wrong: boolean; reveal: boolean; born?: string; part?: string; parts?: string[] };
 type PArrow = { t: string; pic: string; part: string; to: boolean };
 type Plan = { slots: Slot[]; pair?: [string, string]; scaled?: boolean; partPair?: { pic: string; parts: [string, string] }; arrows: { a: string; b: string; label: string }[]; parrows: PArrow[]; subject?: string; question?: string; phFor?: string; levels: { part: string; thing: string; v: number }[] };
-type Ent = { id: string; type: "text" | "many" | "ph" | "pic" | "obj"; text?: A.TextEnt; many?: A.ManyEnt };
-type ItemType = "text" | "ph" | "many" | "strike" | "bar" | "arrow" | "pic" | "parrow" | "vbar" | "obj" | "floor";
+type Ent = { id: string; type: "text" | "many" | "ph" | "pic" | "obj" | "kit"; text?: A.TextEnt; many?: A.ManyEnt };
+type ItemType = "text" | "ph" | "many" | "strike" | "bar" | "arrow" | "pic" | "parrow" | "vbar" | "obj" | "floor" | "kit";
 type Item = { id: string; type: ItemType; st: St; born?: string };
 type Placed = { id: string; dx: number; dy: number; w: number; h: number; st: Partial<St> };
 type Dec = { type: "bar" | "arrow" | "vbar" | "floor"; id: string; dx: number; dy: number; len: number; color: string; w?: number; op?: number };
@@ -127,8 +132,56 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const [a, b] = id.split(".");
     return pics.has(a!) ? { name: a!, part: b } : undefined;
   };
+  // Things a pinned line computes with a kit (a sort, a graph, a formula): made by the very code that draws them in the
+  // scene language, from the pinned line itself, once, as one more thing of the composition. Its parts keep the kit's own
+  // names under the thing's scene id, so the steps the kit computes play on them, and every part is addressable.
+  const kits = ctx.kits ?? DRAWING_KITS;
+  const kitKinds: NonNullable<Kit["kinds"]> = Object.assign({}, ...kits.map((k) => k.kinds));
+  const kitCtx: CompileContext = { fps: FPS, width: W, height: H, frames: FRAMES, theme, words, kits };
+  type Made = KitExpansion & { id: string; sid: string; kind: string; line: number; text: string; parts: Set<string> };
+  const computed = new Map<string, Made>();
+  for (const c of computedOf(plan, Object.keys(kitKinds)).values()) {
+    if (pics.has(c.id) || defs.has(c.id)) continue; // the author's check names the clash
+    const read = parseScene(`@0\n${c.text}`, Object.keys(kitKinds).filter((k) => k !== "graph"));
+    const item: SceneItem | undefined = read.doc.states[0]?.items[0];
+    if (read.problems.length || !item) {
+      problems.push({ thing: c.id, who: "author", problem: `line ${c.line}: ${read.problems.map((p) => p.message).join("; ") || `"${c.text}" makes nothing`}` });
+      continue;
+    }
+    const sidOf = `k.${c.id}`;
+    const x = expandKitItem({ ...item, id: sidOf, line: c.line }, { kinds: kitKinds, ctx: kitCtx });
+    if (x.errors.length) {
+      problems.push({ thing: c.id, who: "author", problem: x.errors.map((e) => `line ${c.line}: ${e.message}`).join("; ") });
+      continue;
+    }
+    computed.set(c.id, { ...x, id: c.id, sid: sidOf, kind: c.kind, line: c.line, text: c.text, parts: new Set(x.nodes.filter((n) => n.id !== sidOf).map((n) => n.id.slice(sidOf.length + 1))) });
+    decide("depiction", c.moment, `${c.id}: a ${c.kind} the ${c.kind} kit computes and draws, ${x.nodes.length} parts`, "author", "a pinned line of the scene language");
+  }
+  for (const m of plan.moments)
+    for (const p of m.pinned) {
+      const [head, id] = idLine(p.text);
+      const first = id ? computed.get(id) : undefined;
+      if (head && kitKinds[head] && first && first.line !== p.line && p.text.replace(/\s+/g, " ") !== first.text.replace(/\s+/g, " "))
+        problems.push({ thing: id!, who: "author", problem: `line ${p.line}: ${id} is made at line ${first.line} already; one id is one thing with one input, made once (later moments name it, or play its steps)` });
+    }
+  /** A computed thing, or one of its parts, by the plan's name. */
+  const kr = (id: string | undefined): { name: string; part?: string } | undefined => {
+    if (!id) return undefined;
+    const [a, ...rest] = id.split(".");
+    return computed.has(a!) ? { name: a!, part: rest.length ? rest.join(".") : undefined } : undefined;
+  };
   const canon = (id: string | undefined, where: string): string | undefined => {
     if (!id) return id;
+    const kp = kr(id);
+    if (kp) {
+      const c = computed.get(kp.name)!;
+      if (kp.part === undefined || c.parts.has(kp.part)) return id;
+      const all = [...c.parts].sort((a, b) => a.split(".").length - b.split(".").length);
+      const shown = all.filter((x) => x.split(".").length === all[0]!.split(".").length).slice(0, 12);
+      notes.push(`${where} ${kp.name} has no part "${kp.part}": the whole ${c.kind} is used`);
+      problems.push({ thing: kp.name, who: "author", problem: `${where} ${kp.name} has no part "${kp.part}". Its parts include: ${shown.join(", ")}${c.parts.size > shown.length ? ", and the parts under them" : ""}` });
+      return kp.name;
+    }
     const r = pr(id);
     if (!r) return id.includes(".") ? (notes.push(`${where} "${id}" is not a part of the user's material: read as "${id.replace(/\./g, "_")}"`), id.replace(/\./g, "_")) : id;
     const pic = pics.get(r.name)!;
@@ -149,14 +202,14 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       arrows: m0.arrows.map((x) => ({ ...x, a: canon(x.a, w)!, b: canon(x.b, w)! })),
       compare: m0.compare ? [canon(m0.compare[0], w)!, canon(m0.compare[1], w)!] : undefined,
       acts: m0.acts.map((a) => ({ ...a, ids: a.ids.map((x) => canon(x, w)!), to: a.to ? canon(a.to, w) : undefined })),
-      becomes: m0.becomes.filter((b) => !pics.has(b.id.split(".")[0]!) || (notes.push(`${w} the user's material cannot become something else: ignored`), false)),
+      becomes: m0.becomes.filter((b) => (!pics.has(b.id.split(".")[0]!) || (notes.push(`${w} the user's material cannot become something else: ignored`), false)) && (!kr(b.id) || (notes.push(`${w} ${b.id} is computed: it changes by its own steps, not by becomes; ignored`), false))),
     };
     if (m.word >= words.length || m.word < 0) notes.push(`@${m.word} is not a word of the narration (0 to ${words.length - 1}): moved to the nearest word`);
     return { m, i };
   });
   // Pinned lines of today's scene language: the strongest precedence. What the composer understands is applied; the rest is reported.
   const pins = moments.map(({ m, i }) => readPins(m, i));
-  for (const { m } of moments) for (const id of idsOf(m)) if (!pr(id) && !defs.has(id)) (defs.set(id, { id, text: id }), notes.push(`@${m.word} "${id}" was never declared: made a thing whose text is "${id}"`));
+  for (const { m } of moments) for (const id of idsOf(m)) if (!pr(id) && !kr(id) && !defs.has(id)) (defs.set(id, { id, text: id }), notes.push(`@${m.word} "${id}" was never declared: made a thing whose text is "${id}"`));
   const sortedM = [...moments].sort((a, b) => Math.min(Math.max(a.m.word, 0), words.length - 1) - Math.min(Math.max(b.m.word, 0), words.length - 1) || a.i - b.i);
   if (sortedM.some((x, j) => x !== moments[j])) notes.push("moments were not in word order: sorted by word");
   const wordStart = (n: number) => words[Math.min(Math.max(0, n), words.length - 1)]!.start;
@@ -168,7 +221,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   };
   const tag = (m: Moment) => `@${m.word}`;
   const subjectOf = (m: Moment): string | undefined => m.reveal ?? m.show ?? m.becomes[0]?.id ?? m.arrows[0]?.b ?? m.wrong[0];
-  const sid = (id: string | undefined) => (id ? pr(id)?.name ?? id : id);
+  const sid = (id: string | undefined) => (id ? pr(id)?.name ?? kr(id)?.name ?? id : id);
   const isObj = (id: string | undefined) => !!id && !!defs.get(id)?.obj;
   // What an act is, read off the depiction's own verbs (never off the verb's words).
   const kindCache = new Map<string, Classified>();
@@ -187,7 +240,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   const pinsOf = (i: number) => pins[i]!;
 
   function readPins(m: Moment, i: number) {
-    const out: { camera?: CameraPlan; arrangement?: string; supportOpacity?: number; sets: { id: string; props: Record<string, Value>; line: number }[]; texts: { id: string; size?: number; role?: string }[]; kept: string[] } = { sets: [], texts: [], kept: [] };
+    const out: { camera?: CameraPlan; arrangement?: string; supportOpacity?: number; sets: { id: string; props: Record<string, Value>; line: number }[]; texts: { id: string; size?: number; role?: string }[]; kept: string[]; computed: string[]; plays: { behavior: string; targets: string[]; args: Record<string, Value>; line: number }[] } = { sets: [], texts: [], kept: [], computed: [], plays: [] };
     for (const p of m.pinned) {
       const toks = p.text.split(/\s+/);
       const head = toks[0]!.replace(/:$/, "");
@@ -209,8 +262,30 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         if (text !== undefined && !defs.has(id)) defs.set(id, { id, text });
         if (!m.keep.includes(id) && m.show !== id) m.keep.push(id);
         out.texts.push({ id, size: kv.size ? (TEXT_SIZE[kv.size] ?? Number(kv.size)) * (SHORT / 1080) : undefined, role: kv.role });
+      } else if (kitKinds[head] && computed.has(idLine(p.text)[1] ?? "")) {
+        // A computed thing is on screen in the moment that makes it.
+        const id = idLine(p.text)[1]!;
+        if (!out.computed.includes(id)) out.computed.push(id);
+      } else if (kitKinds[head]) {
+        // Its problem is already the author's (it could not be made).
+      } else if (head === "do") {
+        // A behavior played at the moment's word, as the scene language plays it: `do steps demo1 from=1 to=3`.
+        const read = parseScene(`@0\n${p.text}`, Object.keys(kitKinds).filter((k) => k !== "graph"));
+        const c = read.doc.states[0]?.commands[0];
+        if (read.problems.length || !c || c.do !== "play") {
+          out.kept.push(`line ${p.line}: "${p.text}" ${read.problems[0]?.message ?? "is not a behavior to play"}: not drawn`);
+          continue;
+        }
+        const args = Object.fromEntries(Object.entries(c.attrs).map(([k, v]) => [k, argValue(v, (t) => when({ word: Math.min(Math.max(0, t.word), words.length - 1), offset: t.offset }, kitCtx))]));
+        out.plays.push({ behavior: c.behavior, targets: c.targets, args, line: p.line });
+        for (const t of c.targets) {
+          const root = kr(t)?.name;
+          if (root && !out.computed.includes(root)) out.computed.push(root);
+        }
       } else out.kept.push(`line ${p.line}: "${p.text}" is pinned to @${m.word}, but this composer does not draw that line of the scene language yet`);
     }
+    // What is computed here is on screen here, as support unless the moment shows it.
+    for (const id of out.computed) if (!m.keep.includes(id) && kr(m.show)?.name !== id && kr(m.reveal)?.name !== id) m.keep.push(id);
     for (const k of out.kept) notes.push(k);
     if (m.pinned.length) decide("pinned", i, `${m.pinned.length} pinned line(s) of the scene language`, "author", "explicit lines win for their thing in their moment; the rest is composed around them");
     return out;
@@ -316,6 +391,11 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     if (!subj && !m.compare && !q) notes.push(`${tag(m)} has no show: nothing is the subject`);
     let pair = m.compare && m.compare[0] !== m.compare[1] ? m.compare : undefined;
     let partPair: Plan["partPair"];
+    if (pair && (kr(pair[0]) || kr(pair[1]))) {
+      notes.push(`${tag(m)} compare ${pair[0]} ${pair[1]} involves a computed thing: both are shown, side by side on the stage or around it`);
+      for (const x of pair) add(x, "support");
+      pair = undefined;
+    }
     if (pair && (pr(pair[0]) || pr(pair[1]))) {
       const [ra, rb] = [pr(pair[0]), pr(pair[1])];
       if (ra?.part && rb?.part && ra.name === rb.name && isChart(pics.get(ra.name))) {
@@ -326,7 +406,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       pair = undefined;
     }
     const scaledProp = props.find((p) => p.kind === "compare-scale");
-    if (!pair && !partPair && scaledProp && scaledProp.ids.length === 2) {
+    if (!pair && !partPair && scaledProp && scaledProp.ids.length === 2 && !scaledProp.ids.some((x) => kr(x))) {
       pair = [canon(scaledProp.ids[0], tag(m))!, canon(scaledProp.ids[1], tag(m))!];
       decide("relation", f.i, `${pair[0]} and ${pair[1]} on one scale`, md.proposals.find((p) => p.value === scaledProp)!.from, md.proposals.find((p) => p.value === scaledProp)!.why ?? "proposed");
     }
@@ -336,6 +416,8 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     for (const x of f.carry) add(x, "support");
     for (const x of m.from.map((fr) => fr.b)) add(x, "support");
     for (const x of m.keep) add(x, "support");
+    // A moment merged into this one may have pinned or played a computed thing: it stays on screen for its steps.
+    for (const j of f.merged) for (const x of pinsOf(j).computed) add(x, "support");
     if (m.show && sid(m.show) !== subj) add(m.show, "support");
     const plainArrows: Plan["arrows"] = [];
     const parrows: PArrow[] = [];
@@ -372,6 +454,10 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     }
     for (const s of slots) {
       if (pics.has(s.id)) (s.part = focusSub.get(s.id)), (s.parts = [...(focusSup.get(s.id) ?? [])].filter((x) => x !== s.part));
+      if (computed.has(s.id) && s.cls === "subject" && kr(subjRaw)?.part) {
+        s.part = kr(subjRaw)!.part;
+        decide("focus", f.i, `${s.id}.${s.part} is the subject, within ${s.id}`, "author", "the moment shows a part of a computed thing: the whole thing is placed, and the part is named for the instruments");
+      }
       if (s.cls === "subject") subjectEver.add(s.id);
     }
     for (const s of slots) {
@@ -411,7 +497,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   // ---------------------------------------------------------------------------------------------------------------
   // 4. Entities: what is drawn, with versions (becomes "text") and counts (becomes N) over time.
   const ents = new Map<string, Ent>();
-  const key = (id: string) => (pics.has(id) ? `p.${id}` : `t.${id}`);
+  const key = (id: string) => (pics.has(id) ? `p.${id}` : computed.has(id) ? `k.${id}` : `t.${id}`);
   const verAt: Map<string, number>[] = [];
   const countAt: Map<string, number>[] = [];
   const textsOf = new Map<string, string[]>();
@@ -449,6 +535,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     else ents.set(d.id, { id: d.id, type: "text", text: A.textEnt(d.id, textsOf.get(d.id)!, (t) => linesFor(t, subjectEver.has(d.id)), em) });
   }
   for (const p of pics.values()) if (plans.some((pl) => pl.slots.some((s) => s.id === p.name))) ents.set(p.name, { id: p.name, type: "pic" });
+  for (const c of computed.values()) if (plans.some((pl) => pl.slots.some((s) => s.id === c.id))) ents.set(c.id, { id: c.id, type: "kit" });
   plans.forEach((p, k) => {
     if (p.question) ents.set(`q.${k}`, { id: `q.${k}`, type: "text", text: A.textEnt(`q.${k}`, [p.question], (t) => A.twoLines(t, em).length > 1 && em(t) * V.px("type.question") > rw(U) ? A.twoLines(t, em) : [t], em) });
     if (p.phFor) ents.set("ph", { id: "ph", type: "ph", text: A.textEnt("ph", [A.PLACEHOLDER], (t) => [t], em) });
@@ -606,6 +693,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     // The stage: what persists (objects and the user's material), composed in a box.
     const objIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "obj";
     const picIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "pic";
+    const kitIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "kit";
     const stageParts = (): string[][] => {
       const used = new Set<string>();
       const groups: string[][] = [];
@@ -622,7 +710,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         groups.push(["fall", ...mem]);
         mem.forEach((x) => used.add(x));
       }
-      for (const s of plan.slots) if ((objIn(s.id) || picIn(s.id)) && !used.has(s.id)) groups.push([objIn(s.id) ? "obj" : "pic", s.id]);
+      for (const s of plan.slots) if ((objIn(s.id) || picIn(s.id) || kitIn(s.id)) && !used.has(s.id)) groups.push([objIn(s.id) ? "obj" : kitIn(s.id) ? "kit" : "pic", s.id]);
       return groups;
     };
     const stageBlock = (box: { w: number; h: number }, groups: string[][]): Block => {
@@ -657,6 +745,15 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
           const sc = A.fitObject(p, cell);
           out.push({ id: ids[0]!, dx: 0, dy: (p.h * sc) / 2, w: p.w * sc, h: p.h * sc, st: { ...objCls(ids[0]!), s: sc } });
           (w = p.w * sc), (h = p.h * sc);
+        } else if (kind === "kit") {
+          // A computed thing fills its cell by the box of all it may ever show (so its later steps fit too), as the
+          // scene language fits it into a slot; type (a formula) keeps its own size beside words, never larger.
+          const c = computed.get(ids[0]!)!;
+          const b = c.box;
+          let sc = Math.min(cell.w / b.w, cell.h / b.h);
+          if (c.nodes[0]?.props?.typeset) sc = Math.min(sc, 1);
+          out.push({ id: ids[0]!, dx: 0, dy: (b.h * sc) / 2, w: b.w * sc, h: b.h * sc, st: { ...objCls(ids[0]!), s: sc } });
+          (w = b.w * sc), (h = b.h * sc);
         } else {
           const s = slotOf.get(ids[0]!)!;
           const p = pics.get(s.id)!;
@@ -807,7 +904,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         const cx = (r.x0 + r.x1) / 2;
         for (const p of b.items) {
           const e = ents.get(p.id)!;
-          const type: ItemType = e.type === "many" ? "many" : e.type === "ph" ? "ph" : e.type === "pic" ? "pic" : e.type === "obj" ? "obj" : "text";
+          const type: ItemType = e.type === "many" ? "many" : e.type === "ph" ? "ph" : e.type === "pic" ? "pic" : e.type === "obj" ? "obj" : e.type === "kit" ? "kit" : "text";
           // Objects are placed by their base.
           const st: St = { ...blank(), ...p.st, x: cx + p.dx, y: r.y0 + p.dy + (type === "obj" ? p.h / 2 : 0), w: p.w, h: p.h } as St;
           const id = p.id === "ph" ? "ph" : p.id.startsWith("q.") || p.id.startsWith("lab.") ? p.id : key(p.id);
@@ -954,8 +1051,23 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     if (isChart(pic)) A.chartNodes(w, key(id), pic, { subject: C.subject, muted: C.muted, pointer: C.pointer, small: MIN_FS, valueFs: MIN_FS * V.n("chart.valueScale"), baseWidth: markW * 0.5, levelWidth: V.px("level.width") });
     else A.pictureNodes(w, key(id), pic, picParts.get(id) ?? [], { pointer: C.pointer, pad: 6, radius: 14 });
   }
+  // Computed things: the kit's own parts under their group, created hidden at their first place. Words the kit draws are
+  // kept at least the smallest size at the smallest scale the thing is shown at, as the scene language keeps them.
   for (const [id, e] of ents) {
-    if (e.type === "pic") continue;
+    if (e.type !== "kit" || !used.has(key(id))) continue;
+    const c = computed.get(id)!;
+    const placed = laid.map((l) => l.items.get(c.sid)?.st).filter((s): s is St => !!s && s.s > 0);    const s0 = Math.min(...placed.map((s) => s.s));
+    const at = placed[0]!;
+    const [root, ...rest] = c.nodes;
+    w.node(c.sid, "group", { ...root!.props, x: at.x - c.box.x * at.s, y: at.y - c.box.y * at.s, scaleX: at.s, scaleY: at.s, opacity: 0 }, undefined);
+    for (const n of rest) {
+      const size = n.props?.size;
+      const props = n.kind === "text" && typeof size === "number" && size * s0 < MIN_FS ? { ...n.props, size: Math.round((MIN_FS / s0) * 10) / 10 } : { ...(n.props ?? {}) };
+      w.node(n.id, n.kind as "group" | "path" | "text" | "image", props, n.parent);
+    }
+  }
+  for (const [id, e] of ents) {
+    if (e.type === "pic" || e.type === "kit") continue;
     const nid = id === "ph" ? "ph" : id.startsWith("q.") || id.startsWith("lab.") ? id : key(id);
     if (!used.has(nid)) continue;
     if (e.type === "many") A.manyNodes(w, nid, e.many!, { fill: C.key, labelColor: C.muted, labelFs: V.px("type.label") });
@@ -991,7 +1103,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   const paceMul = (k: number) => (fms[k]!.m.pace === "slow" ? V.n("pace.slow", fms[k]!.i) : fms[k]!.m.pace === "fast" ? V.n("pace.fast", fms[k]!.i) : 1);
   const [mvMin, mvPer, mvMax] = V.arr("motion.move");
   const durMove = (px: number, k: number) => Math.max(1, Math.round(Math.min(mvMax!, mvMin! + mvPer! * Math.sqrt(Math.max(0, px) / SHORT)) * FPS * paceMul(k) * tempo));
-  const ent = (id: string): Ent | undefined => (id === "ph" ? ents.get("ph") : id.startsWith("q.") || id.startsWith("lab.") ? ents.get(id) : id.startsWith("t.") || id.startsWith("p.") ? ents.get(id.slice(2)) : undefined);
+  const ent = (id: string): Ent | undefined => (id === "ph" ? ents.get("ph") : id.startsWith("q.") || id.startsWith("lab.") ? ents.get(id) : id.startsWith("t.") || id.startsWith("p.") || id.startsWith("k.") ? ents.get(id.slice(2)) : undefined);
   const chartSeen = new Map<string, Set<number>>();
   // Real or redrawn is the designer's call per piece and moment: a "real" proposal keeps the user's own picture as it
   // is (evidence to recognise); otherwise a chart with its data is redrawn on its own bars.
@@ -1001,6 +1113,11 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     if (it.type === "text" || it.type === "ph") return A.textTargets(id, ent(id)!.text!, st);
     if (it.type === "many") return A.manyTargets(id, st);
     if (it.type === "obj") return [[id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.s], [id, "scaleY", st.s], [id, "opacity", st.op]];
+    if (it.type === "kit") {
+      // The group is placed so the center of the kit's box lands on the item's center.
+      const b = computed.get(id.slice(2))!.box;
+      return [[id, "x", st.x - b.x * st.s], [id, "y", st.y - b.y * st.s], [id, "scaleX", st.s], [id, "scaleY", st.s], [id, "opacity", st.op]];
+    }
     if (it.type === "pic") {
       const pic = pics.get(id.slice(2))!;
       if (isChart(pic)) return A.chartTargets(id, st, pic, realIn(k, pic.name) ? "photo" : "own", chartSeen.get(id) ?? new Set(), chartLook(fms[k]!.i), C);
@@ -1308,6 +1425,9 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
           if (n === id && p === "opacity") (from = 0), (frames = 10);
           if (n === `${id}.dots` && (p === "scaleX" || p === "scaleY")) from = (v as number) * V.n("type.enterFrom", i);
           if (born && n === id && (p === "x" || p === "y")) from = p === "x" ? born.st.x : born.st.y;
+        } else if (it.type === "kit") {
+          // A computed thing fades in where it stands: growing about its group's origin would carry it across the frame.
+          if (n === id && p === "opacity") (from = 0), (frames = 12);
         } else if (it.type === "obj") {
           if (n === id && p === "opacity") (from = 0), (frames = 12);
           if (n === id && (p === "scaleX" || p === "scaleY")) from = (v as number) * V.n("type.enterFrom", i);
@@ -1385,7 +1505,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     if (becomesNow.length) decide("motion", i, `${becomesNow.map((x) => ent(x)!.id).join(", ")} changes in place`, "author", "old words lift and fade, new words rise, then a pulse");
     // Pinned sets: applied last in the moment, at its onset, so they win.
     for (const s of pinsOf(i).sets) {
-      const targets = w.has(s.id) ? [s.id] : w.has(key(s.id)) ? [key(s.id)] : [];
+      const targets = kr(s.id) && w.has(`k.${s.id}`) ? [`k.${s.id}`] : w.has(s.id) ? [s.id] : w.has(key(s.id)) ? [key(s.id)] : [];
       if (!targets.length) {
         notes.push(`line ${s.line}: set ${s.id}: no such thing on screen, kept and not applied`);
         continue;
@@ -1397,8 +1517,54 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
 
   // ---------------------------------------------------------------------------------------------------------------
   // 8. The SceneDoc, compiled, and the map from plan names to scene ids.
-  const doc = w.doc();
-  const scene = compile(doc, { fps: FPS, width: W, height: H, frames: FRAMES, theme, words });
+  // Pinned plays (`do steps demo1 from=2 to=3`): at the moment's own word, as the scene language plays a state's lines,
+  // with the kit's behaviors in the compile, so a computed thing's steps land on the words that pin them.
+  const pinnedPlays: { at: number; line: number; play: NonNullable<Step["play"]>[number] }[] = [];
+  plan.moments.forEach((pm, i) => {
+    const at = when({ word: Math.min(Math.max(0, pm.word), words.length - 1) }, kitCtx);
+    for (const p of pinsOf(i).plays)
+      for (const t of p.targets) {
+        const target = kr(t) ? `k.${t}` : w.has(key(t)) ? key(t) : w.has(t) ? t : undefined;
+        if (!target || (kr(t) && !w.has(computed.get(kr(t)!.name)!.sid))) {
+          notes.push(`line ${p.line}: do ${p.behavior} ${t}: ${t} is not on screen, nothing plays`);
+          continue;
+        }
+        pinnedPlays.push({ at, line: p.line, play: { behavior: p.behavior, target, args: p.args } });
+        decide("pinned", i, `do ${p.behavior} ${t}${Object.keys(p.args).length ? ` ${Object.entries(p.args).map(([k, v]) => `${k}=${v}`).join(" ")}` : ""} at ${(at / FPS).toFixed(2)} s`, "author", "a pinned line of the scene language, played on its moment's word");
+      }
+  });
+  const docWith = (plays: typeof pinnedPlays): SceneDoc => {
+    const d = w.doc();
+    return { ...d, steps: [...d.steps, ...plays.map((p) => ({ at: p.at, play: [p.play] }))] };
+  };
+  // A play the kit refuses (steps out of range, played twice, a stretch too short at its pace) is the author's to repair,
+  // with the kit's own words; the rest of the scene is composed without it.
+  let kept = pinnedPlays;
+  let doc = docWith(kept);
+  let scene: Scene | undefined;
+  for (let tries = 0; !scene; tries++) {
+    try {
+      scene = compile(doc, kitCtx);
+    } catch (e) {
+      if (!kept.length || tries > pinnedPlays.length) throw e;
+      // The first play whose addition breaks the compile is the one refused.
+      let bad = kept.length - 1;
+      for (let j = 0; j < kept.length; j++) {
+        try {
+          compile(docWith(kept.slice(0, j + 1)), kitCtx);
+        } catch (err) {
+          bad = j;
+          e = err;
+          break;
+        }
+      }
+      const p = kept[bad]!;
+      problems.push({ thing: p.play.target.replace(/^[tpk]\./, ""), who: "author", problem: `line ${p.line}: ${(e as Error).message}` });
+      notes.push(`line ${p.line}: do ${p.play.behavior} ${p.play.target.replace(/^[tpk]\./, "")} is refused, not played: ${(e as Error).message}`);
+      kept = kept.filter((_, j) => j !== bad);
+      doc = docWith(kept);
+    }
+  }
   const ids: Record<string, string[]> = {};
   const addId = (name: string, ...sids: string[]) => {
     const list = (ids[name] ??= []);
@@ -1421,6 +1587,12 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       } else addId(nmPart, `${key(p.name)}.c.ol.${part}`);
       if (!ids[nmPart]?.length) delete ids[nmPart];
     }
+  }
+  // A computed thing by its plan name, and every part of it by the kit's own part path (demo1.item.2).
+  for (const c of computed.values()) {
+    if (!w.has(c.sid)) continue;
+    addId(c.id, c.sid);
+    for (const part of c.parts) addId(`${c.id}.${part}`, `${c.sid}.${part}`);
   }
   plans.forEach((p, k) => {
     if (p.question) addId(`ask@${fms[k]!.m.word}`, `q.${k}`);

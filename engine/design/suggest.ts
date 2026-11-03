@@ -4,7 +4,7 @@
 // is the moment's index in the plan, or by the MomentDesign fields themselves. Nothing here is a rule.
 import { roleLook } from "../core/roles.ts";
 import type { Theme } from "../core/types.ts";
-import { idsOf } from "./intent/parse.ts";
+import { computedIn, computedOf, idsOf } from "./intent/parse.ts";
 import { actKinds, depictAll, type ActKind } from "./compose/acts.ts";
 import type { PropSpec } from "./depict/index.ts";
 import type { Box, CameraPlan, Decided, DemoPlan, Design, IntentPlan, Moment, MomentDesign, PartCard, Viewing, Word } from "./types.ts";
@@ -229,8 +229,10 @@ export function tempoOf(feel: string | undefined): Decided<number> {
 type Stagey = { stage: boolean; kind: "stage" | "text" | "many" | "none" };
 function anchorKind(plan: IntentPlan, m: Moment, cards: PartCard[]): Stagey {
   const things = new Map(plan.things.map((t) => [t.id, t]));
-  const isStage = (id: string) => things.get(id)?.kind === "object" || cards.some((c) => c.name === id.split(".")[0]);
-  const stage = idsOf(m).some(isStage);
+  // What persists stands on the stage: depicted objects, the user's material, and what a pinned line computes.
+  const computed = computedOf(plan);
+  const isStage = (id: string) => things.get(id)?.kind === "object" || cards.some((c) => c.name === id.split(".")[0]) || computed.has(id.split(".")[0]!);
+  const stage = idsOf(m).some(isStage) || computedIn(m, computed).length > 0;
   const subj = m.reveal ?? m.show;
   if (stage) return { stage, kind: "stage" };
   if (subj && things.get(subj)?.kind === "many") return { stage, kind: "many" };
@@ -254,7 +256,7 @@ export function suggestMoment(plan: IntentPlan, k: number, viewing: Viewing, the
     moment: k,
     importance: m.stress ? dec(0.8, "author", "the author marked this moment as stress") : m.reveal ? dec(0.7, "author", "a reveal: the payoff of a question") : dec(0.5, "style", "an ordinary moment"),
     focus: m.compare ? dec("two", "author", "the author compares two things") : m.show || m.reveal ? dec("one", "author", "the author names one subject") : dec("none", "author", "the moment names no subject"),
-    subjectScale: dec(scale, "style", a.kind === "stage" ? `the stage (what persists: depicted objects, the user's material) takes ${Math.round(scale * 100)}% of the usable frame` : a.kind === "many" ? "countable marks take about 60% of the usable frame" : `words fill up to ${Math.round(scale * 100)}% of the usable width, capped at the type scale's largest step`),
+    subjectScale: dec(scale, "style", a.kind === "stage" ? `the stage (what persists: depicted objects, the user's material, computed things) takes ${Math.round(scale * 100)}% of the usable frame` : a.kind === "many" ? "countable marks take about 60% of the usable frame" : `words fill up to ${Math.round(scale * 100)}% of the usable width, capped at the type scale's largest step`),
     subjectAt: dec(at, "style", shape === "tall" ? "just above the middle of the usable frame, the optical center of a tall frame" : "the middle of the usable frame"),
     arrangement: dec(arrangement, "style", arrangement === "row" ? "a wide frame: support stands beside the stage" : `a ${shape} frame: support stacks above and below the anchor`),
     supportOpacity: dec(S["support.opacity"]!.value as number, "style", S["support.opacity"]!.why),

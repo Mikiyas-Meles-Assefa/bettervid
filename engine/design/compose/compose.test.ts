@@ -9,6 +9,9 @@ import type { Design, PartCard, Viewing } from "../types.ts";
 import type { PropSpec } from "../depict/index.ts";
 import { SAMPLES } from "../depict/samples.ts";
 import { compose } from "./compose.ts";
+import { when } from "../../core/compile.ts";
+import { KITS } from "../../kits/index.ts";
+import { build } from "../../language/build.ts";
 
 // The depicter's answers for the plan's objects (in the product the depicter writes these from the user's material).
 const sample = (name: string, patch: Partial<PropSpec> = {}): PropSpec => ({ ...(SAMPLES.find((x) => x.name === name)!.spec as PropSpec), ...patch });
@@ -235,4 +238,101 @@ test("a flow can be replayed when the director asks and there is room", () => {
   const { out } = run(view(1080, 1920), (d) => (d.demos.find((x) => x.moment === 0)!.replay = { value: { speed: "slow" }, from: "director" }), plan);
   const dm = out.decisions.find((d) => d.area === "demonstration")!;
   assert.match(dm.choice, /replayed/);
+});
+
+// A real plan from the bench (insertion sort, 2026-11-03), with moments that show the computed thing and one of its parts.
+const SORT_PLAN = `feel calm
+for new
+
+thing sortedpart "sorted part"
+thing slide "slides past bigger cards"
+thing stop "stops at a smaller card"
+thing done "sorted: 1 2 3 4"
+thing rule "compared only with sorted cards"
+
+@0
+  sort demo1 data=[4,1,3,2] algo=insertion show=boxes
+  show sortedpart
+  pace slow
+@15
+  show demo1
+  keep slide sortedpart
+  do steps demo1 from=1 to=1
+  pace slow
+  stress
+@28
+  show demo1.item.2
+  keep stop sortedpart
+  do steps demo1 from=2 to=3
+@40
+  show done
+  keep sortedpart
+  do steps demo1 from=4 to=6
+  pace fast
+@50
+  show rule
+  keep done
+`;
+const SORT_WORDS = Array.from({ length: 59 }, (_, i) => ({ text: `w${i}`, start: 0.2 + i * 0.4 }));
+const SORT_FRAMES = 25 * 30;
+const sortRun = (src: string, v = view(1080, 1920)) => {
+  const plan = parseIntent(src);
+  const d = suggestDesign(plan, v, theme, [], SORT_WORDS, {});
+  return compose(plan, d, { theme, words: SORT_WORDS, frames: SORT_FRAMES });
+};
+
+test("a pinned computed thing is drawn by its kit, placed like any thing, and plays its steps on its moments' words", async () => {
+  for (const [w, h] of [[1080, 1920], [1920, 1080]] as const) {
+    const out = sortRun(SORT_PLAN, view(w, h));
+    assert.deepEqual(out.problems, []);
+    assert.deepEqual(out.notes.filter((n) => /demo1|does not draw|overlap|does not fit/.test(n)), []);
+    // The sort's own parts, under the thing's scene id, addressable by the plan's names.
+    const ids = new Set(out.scene.nodes.map((n) => n.id));
+    for (const k of [1, 2, 3, 4]) for (const part of ["", ".shape", ".value"]) assert.ok(ids.has(`k.demo1.item.${k}${part}`), `k.demo1.item.${k}${part}`);
+    assert.deepEqual(out.ids["demo1"], ["k.demo1"]);
+    assert.deepEqual(out.ids["demo1.item.2"], ["k.demo1.item.2"]);
+    // It gets a box from the layout in every moment it is on screen (as the stage), inside the frame, and leaves after.
+    const stage = out.boxes.map((m) => m.boxes.stage);
+    assert.ok(stage.slice(0, 4).every((b) => b && b[0] >= 0 && b[1] >= 0 && b[2] <= 1 && b[3] <= 1), "on screen from @0 to @40");
+    assert.equal(stage[4], undefined, "@50 does not name it, so it leaves");
+    // On screen while it plays: the group is visible at each moment's word.
+    const find = (n: Resolved): Resolved | undefined => (n.id === "k.demo1" ? n : (n.children ?? []).map(find).find(Boolean));
+    const op = (f: number) => (find({ id: "root", kind: "group", props: {}, children: evaluate(out.scene, f) })?.props.opacity ?? 0) as number;
+    for (const word of [15, 28, 40]) assert.ok(op(when({ word }, { fps: 30, width: w, height: h, frames: SORT_FRAMES, theme, words: SORT_WORDS }) + 2) > 0.3, `visible at @${word}`);
+    assert.ok(op(SORT_FRAMES - 1) < 0.02);
+    // The steps play exactly as the scene language plays the same lines: same parts, same frames, same values.
+    const ctx = { fps: 30, width: w, height: h, frames: SORT_FRAMES, theme, words: SORT_WORDS, kits: KITS };
+    const old = await build("@0\nsort demo1 data=[4,1,3,2] algo=insertion show=boxes\n@15 keep\ndo steps demo1 from=1 to=1\n@28 keep\ndo steps demo1 from=2 to=3\n@40 keep\ndo steps demo1 from=4 to=6\n", { ctx });
+    assert.deepEqual(old.problems, []);
+    const moves = (tracks: { target: string; prop: string; keys: { at: number; value: unknown }[] }[], prefix: string) =>
+      tracks.filter((t) => t.target.startsWith(`${prefix}.item.`) && ["x", "y", "fill", "stroke", "color"].includes(t.prop)).map((t) => `${t.target.slice(prefix.length)}.${t.prop} ${t.keys.map((k) => `${k.at}:${JSON.stringify(k.value)}`).join(" ")}`).sort();
+    const mine = moves(out.scene.tracks, "k.demo1");
+    assert.ok(mine.length > 4);
+    assert.deepEqual(mine, moves(old.scene!.tracks, "demo1"));
+    // Step 1 starts on word 15, not before.
+    const first = Math.min(...out.scene.tracks.filter((t) => t.target.startsWith("k.demo1.item.") && t.prop === "x").flatMap((t) => t.keys.slice(1).map((k) => k.at)));
+    assert.ok(first >= when({ word: 15 }, ctx) && first < when({ word: 28 }, ctx), `first step move at ${first}`);
+  }
+});
+
+test("a computed thing's mistakes are the author's to repair, and the rest still composes", () => {
+  const bad = sortRun(SORT_PLAN.replace("from=4 to=6", "from=4 to=9").replace("show demo1.item.2", "show demo1.item.7"));
+  const said = bad.problems.map((p) => p.problem).join("\n");
+  assert.match(said, /demo1 has steps 1 to 6, so from=4 to=9 does not fit/);
+  assert.match(said, /demo1 has no part "item.7"/);
+  assert.ok(bad.scene.nodes.some((n) => n.id === "k.demo1.item.4"), "the thing is still drawn");
+  const unmade = sortRun(SORT_PLAN.replace("algo=insertion", "algo=nosuch"));
+  assert.ok(unmade.problems.some((p) => p.who === "author" && /line 11/.test(p.problem)), unmade.problems.map((p) => p.problem).join("\n"));
+});
+
+test("any kind the kits make composes the same way: a graph and a formula", () => {
+  const src = `thing note "a note"\n@0\n  graph net: A-B:4 B-C:1\n  show net.node.A\n  keep note\n@20\n  math f latex="x^2 + 1"\n  show f\n  keep note\n`;
+  const out = sortRun(src);
+  assert.deepEqual(out.problems, []);
+  assert.deepEqual(out.ids["net.node.A"], ["k.net.node.A"]);
+  assert.ok(out.ids["f"]?.length);
+  assert.ok(out.boxes[0]!.boxes.stage && out.boxes[1]!.boxes.stage);
+  // A part the kit does not make is named back to the author with the parts it does make.
+  const wrong = sortRun(src.replace("net.node.A", "net.A")).problems.map((p) => p.problem).join("\n");
+  assert.match(wrong, /net has no part "A". Its parts include: .*node\.A/);
 });

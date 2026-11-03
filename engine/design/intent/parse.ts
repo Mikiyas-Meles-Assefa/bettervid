@@ -5,7 +5,12 @@
 // `set`, a `row`, a `text` with a size, and any lines indented under it) becomes `Moment.pinned`, the strongest
 // precedence (docs/DESIGN-BRAIN.md 6). A verb the engine does not know is kept as an Act with that verb and reported,
 // never dropped; verbs are open (the depicter maps each onto what the thing can do).
+//
+// A pinned line may also make a thing a kit computes (a line that starts with a kind the scene language's kits make: a
+// sort, a graph, a formula). Its id, and every dotted part of it, is then a name the rest of the plan may show, keep or
+// reveal, in any moment.
 import type { Act, IntentPlan, Moment, Pace, PartCard, Thing, Word } from "../types.ts";
+import { kindsOf } from "../../kits/index.ts";
 import { SCENE_WORDS } from "../../language/syntax.ts";
 
 export type IntentProblem = { line: number; message: string };
@@ -13,11 +18,11 @@ export type IntentProblem = { line: number; message: string };
 const quoted = (s: string) => /"([^"]*)"/.exec(s)?.[1];
 // A name: letters (any script), digits, underscores and inner hyphens, as a reader agent names a part ("bar-asphalt");
 // a hyphen never starts or ends a name, so "a->b" still reads as an arrow. A material part is the card's name, a dot
-// and the part's name.
+// and the part's name; a part of a computed thing may go deeper (its id, then the kit's own part path).
 const NAME = String.raw`[\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?`;
-const REF = `${NAME}(?:\\.${NAME})?`;
-const ID = new RegExp(`^${REF}$`, "u"); // a name, or a material name and one of its parts
-const PART = new RegExp(`^${NAME}\\.${NAME}$`, "u");
+const REF = `${NAME}(?:\\.${NAME})*`;
+const ID = new RegExp(`^${REF}$`, "u"); // a name, or a name and one of its parts
+const PART = new RegExp(`^${NAME}(?:\\.${NAME})+$`, "u");
 const re = (src: string, flags = "") => new RegExp(src.replaceAll("NAME", NAME).replaceAll("REF", REF), `u${flags}`);
 const DECL = re(String.raw`^(NAME)\s*(.*)$`);
 const MANY = re(String.raw`^(NAME)\s+(\d+)\s*(.*)$`);
@@ -28,6 +33,42 @@ const ARROW_START = re(String.raw`^REF\s*->`);
 const INTENT = new Set(["show", "keep", "compare", "ask", "reveal", "wrong", "stress", "pace", "plain"]);
 // Scene-language words that are also plain English verbs an author may write about an object ("A drops into B").
 const SCENE = new Set(SCENE_WORDS.filter((w) => w !== "drop"));
+
+/** The first word of a line of the scene language and the id after it (a graph's id ends at its colon). */
+export const idLine = (text: string): [string | undefined, string | undefined] => {
+  const [head, id] = text.split(/\s+/);
+  return [head, id?.replace(/:.*$/, "")];
+};
+
+/** A thing a pinned line makes with a kit: its id, its kind, the line, and the moment (by index in the plan) that pins it. */
+export type Computed = { id: string; kind: string; line: number; moment: number; text: string };
+
+/**
+ * The things the plan's pinned lines make with a kit, by id (the first line that makes each). `kinds` are the kinds the
+ * scene language's kits make (engine/kits); nothing here names one.
+ */
+export function computedOf(plan: Pick<IntentPlan, "moments">, kinds: Iterable<string> = kindsOf()): Map<string, Computed> {
+  const known = new Set(kinds);
+  const out = new Map<string, Computed>();
+  plan.moments.forEach((m, i) => {
+    for (const p of m.pinned) {
+      const [head, id] = idLine(p.text);
+      if (head && id && known.has(head) && ID.test(id) && !id.includes(".") && !out.has(id)) out.set(id, { id, kind: head, line: p.line, moment: i, text: p.text });
+    }
+  });
+  return out;
+}
+
+/** The computed things a moment's pinned lines make or play (`do steps demo1 ...`), by id. */
+export function computedIn(m: Moment, computed: Map<string, Computed>): string[] {
+  const out = new Set<string>();
+  for (const p of m.pinned) {
+    const [head, id] = idLine(p.text);
+    const named = head === "do" ? p.text.split(/\s+/).slice(2).filter((t) => !t.includes("=")) : id ? [id] : [];
+    for (const t of named) if (computed.has(t.split(".")[0]!)) out.add(t.split(".")[0]!);
+  }
+  return [...out];
+}
 
 const newMoment = (word: number, line: number): Moment => ({ word, line, keep: [], becomes: [], from: [], arrows: [], wrong: [], stress: false, pace: "normal", acts: [], pinned: [] });
 
@@ -66,7 +107,9 @@ export function readAct(line: string, isThing: (t: string) => boolean): Omit<Act
   return { verb: verb.join(" "), ids, ...(to ? { to } : {}), ...(q !== undefined ? { arg: q } : left ? { arg: left } : {}), ...(speed ? { speed } : {}) };
 }
 
-export function parseIntent(src: string): IntentPlan {
+export function parseIntent(src: string, kinds: Iterable<string> = kindsOf()): IntentPlan {
+  const kits = new Set(kinds);
+  const computed = new Set<string>();
   const notes: string[] = [];
   const things: Thing[] = [];
   const moments: Moment[] = [];
@@ -120,9 +163,12 @@ export function parseIntent(src: string): IntentPlan {
       return declare({ id: m[1]!, kind: "many", many: { n: Math.max(1, Number(m[2])), unit: quoted(m[3]!) ?? (m[3]!.trim() || m[1]!) }, line: ln });
     }
     if (!cur) return void notes.push(`line ${ln}: "${line}" comes before the first moment, kept out of the plan`);
-    if (SCENE.has(key) && !INTENT.has(key) && !ARROW_START.test(line) && !/\s+(becomes|from)\s+/.test(line)) {
-      // Today's scene language: pinned to this moment, with any lines indented under it.
+    if ((SCENE.has(key) || kits.has(key)) && !INTENT.has(key) && !declared.has(head) && !ARROW_START.test(line) && !/\s+(becomes|from)\s+/.test(line)) {
+      // Today's scene language: pinned to this moment, with any lines indented under it. A line that makes a computed
+      // thing names it for the rest of the plan.
       cur.pinned.push({ line: ln, text: line });
+      const made = idLine(line)[1];
+      if (kits.has(key) && made && ID.test(made)) computed.add(made);
       pinIndent = indent;
       return;
     }
@@ -163,7 +209,7 @@ export function parseIntent(src: string): IntentPlan {
     else if ((m = ARROW.exec(line))) cur.arrows.push({ a: m[1]!, b: m[2]!, label: quoted(m[3]!) ?? "" });
     else {
       // What things do, in the author's own plain verbs: open. The depicter maps each verb onto what the thing can do.
-      const a = readAct(line, (t) => declared.has(t) || PART.test(t));
+      const a = readAct(line, (t) => declared.has(t) || computed.has(t) || PART.test(t));
       if (a) act(a);
       else notes.push(`line ${ln}: "${line}" names no thing it is about: kept out of the plan`);
     }
@@ -178,10 +224,13 @@ export function idsOf(m: Moment): string[] {
 
 // Problems an author can repair, each with its line: word numbers that are not words or go backwards, ids that were never
 // declared and are not the user's material, material parts that do not exist, moments with nothing to look at, a picture asked to become something else.
-export function checkIntent(plan: IntentPlan, words: Word[], material: PartCard[] = []): IntentProblem[] {
+// A thing a pinned line computes (in any moment) is declared, with every dotted part of it; which parts it really has
+// is the composer's to check, since only the kit knows.
+export function checkIntent(plan: IntentPlan, words: Word[], material: PartCard[] = [], kinds: Iterable<string> = kindsOf()): IntentProblem[] {
   const out: IntentProblem[] = [];
   const things = new Map(plan.things.map((t) => [t.id, t]));
   const cards = new Map(material.map((c) => [c.name, c]));
+  const computed = computedOf(plan, kinds);
   let last = -1;
   if (!plan.moments.length) out.push({ line: 1, message: "The plan has no moments. Start one with @N on a spoken word." });
   for (const m of plan.moments) {
@@ -190,7 +239,9 @@ export function checkIntent(plan: IntentPlan, words: Word[], material: PartCard[
     last = Math.max(last, m.word);
     if (!m.show && !m.reveal) out.push({ line: m.line, message: `@${m.word} has no show: say the one thing the eye must be on${m.ask ? " while the question stands" : ""}.` });
     for (const id of new Set(idsOf(m))) {
-      const [name, part] = id.split(".");
+      const [name, ...rest] = id.split(".");
+      const part = rest.length ? rest.join(".") : undefined;
+      if (computed.has(name!) && !cards.has(name!) && !things.has(name!)) continue;
       const card = cards.get(name!);
       if (card) {
         if (part && !card.parts[part] && !card.data?.texts?.[part]) out.push({ line: m.line, message: `@${m.word}: ${name} has no part "${part}". Its parts: ${Object.keys(card.parts).join(", ")}.` });
@@ -201,5 +252,6 @@ export function checkIntent(plan: IntentPlan, words: Word[], material: PartCard[
     for (const b of m.becomes) if (things.get(b.id)?.kind === "many" && b.n === undefined) out.push({ line: m.line, message: `@${m.word}: ${b.id} is a many thing: it becomes a count, as in ${b.id} becomes 12.` });
     for (const a of m.acts) for (const id of a.ids) if (things.has(id) && things.get(id)!.kind !== "object") out.push({ line: a.line, message: `${id} ${a.verb}: only an object does things; declare ${id} as an object, or say how it changes with becomes.` });
   }
+  for (const c of computed.values()) if (things.has(c.id) || cards.has(c.id)) out.push({ line: c.line, message: `${c.id} is made here by a ${c.kind} line and is also ${cards.has(c.id) ? "the user's material" : `declared at line ${things.get(c.id)!.line}`}: one name is one thing, so give one of them another id.` });
   return out;
 }

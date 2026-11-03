@@ -63,7 +63,7 @@ const round = (v: number) => Math.round(v * 10) / 10;
 const circleAt = (r: number) => Array.from({ length: 25 }, (_, i) => [Math.cos((i / 24) * Math.PI * 2) * r, Math.sin((i / 24) * Math.PI * 2) * r]).flat().map(round);
 
 // A setting's value as a program or behavior wants it: numbers, spoken moments as frames, comma lists as arrays.
-function argValue(v: string, frameOf: (t: { word: number; offset: number }) => number): Value {
+export function argValue(v: string, frameOf: (t: { word: number; offset: number }) => number): Value {
   const t = parseTime(v);
   if (t) return frameOf(t);
   if (v.includes(",")) {
@@ -113,6 +113,90 @@ function bounds(nodes: NodeSpec[]): { x: number; y: number; w: number; h: number
   if (!xs.length) return { x: 0, y: 0, w: 1, h: 1 };
   const [l, r, t, d] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
   return { x: (l + r) / 2, y: (t + d) / 2, w: Math.max(1, r - l), h: Math.max(1, d - t) };
+}
+
+// A kit's thing from its line of the scene language: its spec, expanded to primitives with its own group first, the box
+// of all it may ever show, and where what it shows mostly sits while it plays (`rest`). Used by build and by the design
+// brain's composer, so a computed thing is drawn the same way wherever it is written. `first` finds the thing a
+// `replay=` names.
+export type KitExpansion = { nodes: NodeSpec[]; box: Box; rest: Box; errors: { line: number; message: string }[] };
+export function expandKitItem(item: Item, o: { kinds: NonNullable<Kit["kinds"]>; ctx: CompileContext; first?: (id: string) => Item | undefined }): KitExpansion {
+  const { kinds, ctx } = o;
+  const first = o.first ?? (() => undefined);
+  const errors: { line: number; message: string }[] = [];
+  const fail = (line: number, message: string) => void errors.push({ line, message });
+  let spec: NodeSpec;
+  if (item.kind === "graph") {
+    const ids = [...new Set([...item.edges!.flatMap((e) => [e.from, e.to]), ...item.loose!])];
+    const radius = number(item.attrs.radius ?? "") ?? 62;
+    const at = graphPositions(ids, item.edges!, 1000, radius);
+    spec = { id: item.id, kind: "graph", data: { radius, nodes: ids.map((id) => ({ id, ...at.get(id)! })), edges: item.edges!.map((e) => ({ id: `${e.from}${e.to}`, ...e })) } };
+  } else {
+    const data: Record<string, unknown> = {};
+    // `replay=ID`: a second instance of a kit thing with the same input, to play its steps again beside or after it.
+    let attrs = item.attrs;
+    if (attrs.replay !== undefined) {
+      const before = first(attrs.replay);
+      if (!before || before.kind !== item.kind || before.id === item.id) fail(item.line, `replay=${attrs.replay} must name another ${item.kind} in this scene, whose input ${item.id} repeats.${before && before.kind !== item.kind ? ` ${attrs.replay} is a ${before.kind}.` : ""}`);
+      const { replay: _r, ...own } = attrs;
+      const { at: _a, into: _i, before: _b, after: _f, w: _w, h: _h, ...input } = before && before.kind === item.kind ? before.attrs : {};
+      attrs = { ...input, ...own };
+    }
+    for (const [k, v] of Object.entries(attrs)) {
+      if (["at", "into", "before", "after", "follow"].includes(k)) continue;
+      try {
+        // A lone backslash is kept as written, so math such as \frac needs no doubling; a doubled one still works.
+        // Kits take the same size words as text, so `size=small` means what it means everywhere else.
+        data[k] = k === "size" && TEXT_SIZE[v] !== undefined ? TEXT_SIZE[v] : /^[{[]/.test(v) ? JSON.parse(v.replace(/\\\\|\\(?!["/])/g, (m) => (m.length === 2 ? m : "\\\\"))) : (number(v) ?? v);
+      } catch {
+        fail(item.line, `The setting ${k} of ${item.id} is not valid JSON.`);
+      }
+    }
+    // A kit's drawing takes its role's color, as words do, unless the scene names a color: a formula that is the
+    // answer is drawn in the answer's color, not left in plain ink beside it.
+    if (data.color === undefined && isRole(item.attrs.role)) {
+      const color = roleLook(ctx.theme, item.attrs.role).color;
+      if (color) data.color = color;
+    }
+    spec = { id: item.id, kind: item.kind, data };
+  }
+  const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, ctx) ?? []).flatMap(expand));
+  let nodes: NodeSpec[] = [];
+  try {
+    nodes = expand(spec);
+  } catch (e) {
+    fail(item.line, `${item.kind} ${item.id} failed: ${(e as Error).message}`);
+  }
+  if (!nodes.some((n) => n.id === item.id)) nodes = [{ id: item.id, kind: "group" }, ...nodes.map((n) => ({ ...n, parent: n.parent ?? item.id }))];
+  nodes.sort((a, b) => Number(b.id === item.id) - Number(a.id === item.id));
+  // Where what it shows sits: before any step plays, and for a truth thing after each step of its story too, so a
+  // kit that keeps room for later steps is placed by where its parts mostly are while it plays. Not its invisible
+  // frame, nor parts hidden at that moment.
+  const seenBox = (list: NodeSpec[]) => {
+    const byId = new Map(list.map((x) => [x.id, x]));
+    const hidden = (x: NodeSpec | undefined): boolean => !!x && (x.props?.opacity === 0 || hidden(x.parent ? byId.get(x.parent) : undefined));
+    const shown = list.filter((x, i) => i === 0 || (!hidden(x) && !(x.kind === "path" && (x.props?.stroke ?? "none") === "none" && (x.props?.fill ?? "none") === "none")));
+    return shown.length > 1 ? bounds(shown) : bounds(list);
+  };
+  const root = nodes[0];
+  const moments = [seenBox(nodes)];
+  if (root && typeof root.props?.truth === "string" && typeof root.props.spec === "string") {
+    try {
+      for (const step of storyOf(root.props.truth, root.id, root.props.spec, ctx).steps) {
+        const now = new Map<string, Props>();
+        for (const [key, value] of step.after) {
+          const [id, prop] = key.split("\u0000") as [string, string];
+          if (["x", "y", "opacity"].includes(prop)) now.set(id, { ...now.get(id), [prop]: value });
+        }
+        moments.push(seenBox(nodes.map((x) => (now.has(x.id) ? { ...x, props: { ...x.props, ...now.get(x.id) } } : x))));
+      }
+    } catch {
+      // The kind has already said what is wrong with its input.
+    }
+  }
+  const rest = { ...moments[0]!, y: moments.reduce((sum, m) => sum + m.y, 0) / moments.length };
+  const result = { nodes, box: bounds(nodes), rest, errors };
+  return result;
 }
 
 export async function build(written: string, opts: BuildOptions): Promise<BuildResult> {
@@ -201,82 +285,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       for (const e of known.errors) report(e.line, e.message);
       return known;
     }
-    const errors: { line: number; message: string }[] = [];
-    const fail = (line: number, message: string) => {
-      errors.push({ line, message });
-      report(line, message);
-    };
-    let spec: NodeSpec;
-    if (item.kind === "graph") {
-      const ids = [...new Set([...item.edges!.flatMap((e) => [e.from, e.to]), ...item.loose!])];
-      const radius = number(item.attrs.radius ?? "") ?? 62;
-      const at = graphPositions(ids, item.edges!, 1000, radius);
-      spec = { id: item.id, kind: "graph", data: { radius, nodes: ids.map((id) => ({ id, ...at.get(id)! })), edges: item.edges!.map((e) => ({ id: `${e.from}${e.to}`, ...e })) } };
-    } else {
-      const data: Record<string, unknown> = {};
-      // `replay=ID`: a second instance of a kit thing with the same input, to play its steps again beside or after it.
-      let attrs = item.attrs;
-      if (attrs.replay !== undefined) {
-        const first = kitItems.get(attrs.replay);
-        if (!first || first.kind !== item.kind || first.id === item.id) fail(item.line, `replay=${attrs.replay} must name another ${item.kind} in this scene, whose input ${item.id} repeats.${first && first.kind !== item.kind ? ` ${attrs.replay} is a ${first.kind}.` : ""}`);
-        const { replay: _r, ...own } = attrs;
-        const { at: _a, into: _i, before: _b, after: _f, w: _w, h: _h, ...input } = first && first.kind === item.kind ? first.attrs : {};
-        attrs = { ...input, ...own };
-      }
-      for (const [k, v] of Object.entries(attrs)) {
-        if (["at", "into", "before", "after", "follow"].includes(k)) continue;
-        try {
-          // A lone backslash is kept as written, so math such as \frac needs no doubling; a doubled one still works.
-          // Kits take the same size words as text, so `size=small` means what it means everywhere else.
-          data[k] = k === "size" && TEXT_SIZE[v] !== undefined ? TEXT_SIZE[v] : /^[{[]/.test(v) ? JSON.parse(v.replace(/\\\\|\\(?!["/])/g, (m) => (m.length === 2 ? m : "\\\\"))) : (number(v) ?? v);
-        } catch {
-          fail(item.line, `The setting ${k} of ${item.id} is not valid JSON.`);
-        }
-      }
-      // A kit's drawing takes its role's color, as words do, unless the scene names a color: a formula that is the
-      // answer is drawn in the answer's color, not left in plain ink beside it.
-      if (data.color === undefined && isRole(item.attrs.role)) {
-        const color = roleLook(ctx.theme, item.attrs.role).color;
-        if (color) data.color = color;
-      }
-      spec = { id: item.id, kind: item.kind, data };
-    }
-    const expand = (n: NodeSpec): NodeSpec[] => (["group", "path", "text", "image"].includes(n.kind) ? [n] : (kinds[n.kind]?.(n, kitCtx) ?? []).flatMap(expand));
-    let nodes: NodeSpec[] = [];
-    try {
-      nodes = expand(spec);
-    } catch (e) {
-      fail(item.line, `${item.kind} ${item.id} failed: ${(e as Error).message}`);
-    }
-    if (!nodes.some((n) => n.id === item.id)) nodes = [{ id: item.id, kind: "group" }, ...nodes.map((n) => ({ ...n, parent: n.parent ?? item.id }))];
-    nodes.sort((a, b) => Number(b.id === item.id) - Number(a.id === item.id));
-    // Where what it shows sits: before any step plays, and for a truth thing after each step of its story too, so a
-    // kit that keeps room for later steps is placed by where its parts mostly are while it plays. Not its invisible
-    // frame, nor parts hidden at that moment.
-    const seenBox = (list: NodeSpec[]) => {
-      const byId = new Map(list.map((x) => [x.id, x]));
-      const hidden = (x: NodeSpec | undefined): boolean => !!x && (x.props?.opacity === 0 || hidden(x.parent ? byId.get(x.parent) : undefined));
-      const shown = list.filter((x, i) => i === 0 || (!hidden(x) && !(x.kind === "path" && (x.props?.stroke ?? "none") === "none" && (x.props?.fill ?? "none") === "none")));
-      return shown.length > 1 ? bounds(shown) : bounds(list);
-    };
-    const root = nodes[0];
-    const moments = [seenBox(nodes)];
-    if (root && typeof root.props?.truth === "string" && typeof root.props.spec === "string") {
-      try {
-        for (const step of storyOf(root.props.truth, root.id, root.props.spec, kitCtx).steps) {
-          const now = new Map<string, Props>();
-          for (const [key, value] of step.after) {
-            const [id, prop] = key.split("\u0000") as [string, string];
-            if (["x", "y", "opacity"].includes(prop)) now.set(id, { ...now.get(id), [prop]: value });
-          }
-          moments.push(seenBox(nodes.map((x) => (now.has(x.id) ? { ...x, props: { ...x.props, ...now.get(x.id) } } : x))));
-        }
-      } catch {
-        // The kind has already said what is wrong with its input.
-      }
-    }
-    const rest = { ...moments[0]!, y: moments.reduce((sum, m) => sum + m.y, 0) / moments.length };
-    const result = { nodes, box: bounds(nodes), rest, errors };
+    const result = expandKitItem(item, { kinds, ctx: kitCtx, first: (id) => kitItems.get(id) });
+    for (const e of result.errors) report(e.line, e.message);
     made.set(key, result);
     expansions.set(item.id, result);
     return result;
