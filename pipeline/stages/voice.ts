@@ -2,6 +2,7 @@
 // later stage cuts to. With no holds in the direction the whole script is one call. With holds the script is split at
 // every hold, each part is read with its neighbours as context (spike S15), and the parts are joined with exactly the
 // held silence between them, so the result is still one narration.mp3 and one word list.
+import { modelResponse } from "../lib/timing.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -175,13 +176,12 @@ export async function encode(pcm: Float32Array, out: string): Promise<string> {
 // The real ElevenLabs call. previous_text and next_text carry the neighbouring segments for continuity and are not billed (S15).
 function elevenlabs(v: { id: string; model: string }): Tts {
   return async (req) => {
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${v.id}/with-timestamps?output_format=mp3_44100_128`, {
+    const { response: res, body } = await modelResponse(v.model, `https://api.elevenlabs.io/v1/text-to-speech/${v.id}/with-timestamps?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": env("ELEVENLABS_API_KEY"), "content-type": "application/json" },
       body: JSON.stringify({ ...req, model_id: v.model }),
       signal: AbortSignal.timeout(3 * 60_000),
     });
-    const body = await res.text();
     if (!res.ok) throw new Error(`elevenlabs ${res.status}: ${body.slice(0, 400)}`);
     const j = JSON.parse(body);
     return { audio: Buffer.from(j.audio_base64, "base64"), alignment: j.alignment, credits: Number(res.headers.get("character-cost") ?? 0) };
@@ -272,12 +272,11 @@ export async function voice(p: Project, force = false) {
       charge(p, "voice", 0, `${text.length} chars in ${segs.length} segments around ${holds.length} holds, ${r.billed} credits, ${audio}`);
       return;
     }
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${v.id}/with-timestamps?output_format=mp3_44100_128`, {
+    const { response: res, body } = await modelResponse(v.model, `https://api.elevenlabs.io/v1/text-to-speech/${v.id}/with-timestamps?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": env("ELEVENLABS_API_KEY"), "content-type": "application/json" },
       body: JSON.stringify({ text, model_id: v.model }),
     });
-    const body = await res.text();
     if (!res.ok) throw new Error(`elevenlabs ${res.status}: ${body.slice(0, 400)}`);
     const j = JSON.parse(body);
     const audio = await write(join(dir(p), "narration.mp3"), Buffer.from(j.audio_base64, "base64"));

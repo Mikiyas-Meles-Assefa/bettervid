@@ -2,8 +2,9 @@
 // phone frame keeps it), where the part the narration is about is, and plans drawn marks on the spoken words. SAM then
 // tightens the subject's box to the thing's real outline, and a second look at a crop refines a small target.
 // Tools are options: most shots get few marks or none.
+import { parallelMap } from "../lib/scheduler.ts";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { decodeMaskToRaster, parseImageStream, recordsOfKind, type ResponsesEvent } from "@meta-sam/parser";
 import type { Asset, Box, Mark, Project, Shot } from "../../schemas/project.ts";
@@ -143,8 +144,7 @@ async function one(p: Project, shot: Shot, a: Framed, usd: { n: number }): Promi
   const spoken = words.filter((w) => w.start >= shot.start && w.start < shot.end).map((w) => w.text);
   // Each picture's look is cached on its own, so adding pictures or rerunning does not pay again for the rest.
   const cacheFile = join(dir(p), "assets", `${shot.id}.annotate.json`);
-  // Keyed on VERSION rather than the prompt's wording, so a wording fix does not pay again for every picture.
-  const key = hash(VERSION, a.path, statSync(image).size, what, spoken, shot.start, p.plan?.visuals ?? []);
+  const key = hash(VERSION, prompt("annotate"), a.path, hash(readFileSync(image).toString("base64")), what, spoken, shot.start, shot.end, p.narration!.words, p.plan?.visuals ?? []);
   if (existsSync(cacheFile)) {
     const c = JSON.parse(readFileSync(cacheFile, "utf8"));
     if (c.key === key) return void Object.assign(a, c.result);
@@ -207,12 +207,10 @@ export async function annotate(p: Project, force = false) {
     const a = assets.get(s.id);
     return a?.path && !a.missing && (a.look || shaped(a));
   });
-  await stage(p, "annotate", [VERSION, todo.map((s) => [s.id, hint(s, assets.get(s.id)!), assets.get(s.id)?.path]), prompt("annotate")], todo.length * 0.012, async () => {
+  await stage(p, "annotate", [VERSION, todo.map((s) => [s, hint(s, assets.get(s.id)!), hash(readFileSync(join(dir(p), assets.get(s.id)!.path!)).toString("base64"))]), p.narration!.words, p.plan?.visuals, prompt("annotate")], todo.length * 0.012, async () => {
     const usd = { n: 0 };
     try {
-      for (let i = 0; i < todo.length; i += PARALLEL) {
-        await Promise.all(todo.slice(i, i + PARALLEL).map((s) => one(p, s, assets.get(s.id)!, usd).catch((e) => console.log(`  ${s.id} annotate error: ${e.message}`))));
-      }
+      await parallelMap(todo, PARALLEL, (s) => one(p, s, assets.get(s.id)!, usd).catch((e) => console.log(`  ${s.id} annotate error: ${e.message}`)));
     } finally {
       charge(p, "annotate", usd.n, `${todo.length} shots, ${todo.reduce((n, s) => n + (assets.get(s.id)?.marks?.length ?? 0), 0)} marks`);
     }

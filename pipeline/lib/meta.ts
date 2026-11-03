@@ -2,6 +2,8 @@
 import { setDefaultResultOrder } from "node:dns";
 import { setDefaultAutoSelectFamily } from "node:net";
 import { env, sleep } from "./util.ts";
+import { requestGate } from "./rate-limit.ts";
+import { currentStage, effort, record } from "./timing.ts";
 
 // IPv6 is unreachable from the dev machine, and connecting to api.meta.ai over IPv4 sometimes takes 2 to 7 s, longer than
 // Node gives each address when it races IPv4 against IPv6. So connect over IPv4 only, with the normal OS timeout.
@@ -38,11 +40,12 @@ export function tokenCost(model: keyof typeof PRICE, u: Usage = {}, searches = 0
 const withTier = (b: any) => (b && typeof b.model === "string" ? { ...b, model: wireModel(b.model) } : b);
 
 // POST with retries: network errors, 429 (Retry-After) and 5xx. Other errors throw with the body.
-export async function post(path: string, body: unknown, tries = 5): Promise<any> {
+async function request(path: string, body: unknown, tries = 5): Promise<any> {
   for (let i = 1; ; i++) {
     let res: Response | undefined;
     let text = "";
     try {
+      await rateLimit();
       res = await fetch(`${BASE}${path}`, {
         method: "POST",
         // A FormData body (multipart, as /images/edits needs) sets its own content type.
@@ -66,6 +69,24 @@ export async function post(path: string, body: unknown, tries = 5): Promise<any>
       continue;
     }
     throw new Error(`meta ${path} ${res.status}: ${text.slice(0, 600)}`);
+  }
+}
+
+const rateLimit = requestGate();
+
+export async function post(path: string, body: unknown, tries = 5): Promise<any> {
+  const b = body as any;
+  const model = body instanceof FormData ? String(body.get("model") ?? "unknown") : b?.model ?? "unknown";
+  const sent = b?.reasoning?.effort ? { ...b, reasoning: { ...b.reasoning, effort: effort(b.reasoning.effort) } } : body;
+  const start = Date.now();
+  let result: any;
+  try {
+    result = await request(path, sent, tries);
+    return result;
+  } finally {
+    record({ kind: "model", name: currentStage() ?? path, start: new Date(start).toISOString(), ms: Date.now() - start,
+      status: result && (!result.status || result.status === "completed") ? "done" : "failed", model: wireModel(model), effort: (sent as any)?.reasoning?.effort ?? null,
+      inputTokens: result?.usage?.input_tokens ?? null, outputTokens: result?.usage?.output_tokens ?? null });
   }
 }
 

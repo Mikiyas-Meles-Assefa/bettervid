@@ -1,4 +1,4 @@
-// CLI: create or resume a project and run stages in order. Cached stages are skipped.
+// CLI: create or resume a project and run stages as their dependencies finish. Cached stages are skipped.
 // New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 0, 0 = as long as the story needs; a length in the prompt wins] [--until voice] [--material <folder of the user's files>]
 // Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>] [--only <stage>]
 // Visuals: the engine scene is the one visual step. `--visuals legacy` restores the old routing (teaching stage, board
@@ -6,6 +6,8 @@
 import type { Project, StageName } from "../schemas/project.ts";
 import { dir, load, save, spent, style } from "./lib/project.ts";
 import { storeMaterial, UPLOAD_LIMITS } from "./lib/uploads.ts";
+import { dependencies, schedule } from "./lib/scheduler.ts";
+import { inStage, timedRun } from "./lib/timing.ts";
 import { hash } from "./lib/util.ts";
 import { annotate } from "./stages/annotate.ts";
 import { assets } from "./stages/assets.ts";
@@ -115,11 +117,22 @@ function skip(name: StageName) {
 }
 const until = flag("until") as StageName | undefined;
 const force = flag("force") as StageName | undefined;
-for (const [name, run] of ORDER) {
-  if ((only && only !== name) || skip(name)) continue;
-  await run(p, force === name);
-  if (until === name) break;
-}
-await save(p);
+await timedRun(dir(p), async () => {
+  const selected = ORDER.filter(([name]) => !only || only === name);
+  const names = new Set(selected.map(([name]) => name));
+  let stopped = false;
+  await schedule(selected.map(([name, run], i) => ({
+    name,
+    needs: until
+      ? (i ? [selected[i - 1]![0]] : [])
+      : (dependencies[name] ?? []).filter((n) => names.has(n as StageName)),
+    run: async () => {
+      if (stopped || skip(name)) return;
+      await inStage(name, () => run(p, force === name));
+      if (until === name) stopped = true;
+    },
+  })), process.env.PIPELINE_SCHEDULE !== "serial");
+  await save(p);
+});
 const total = p.costs.reduce((s, c) => s + c.usd, 0);
 console.log(`project ${p.id}: $${total.toFixed(3)} this project, $${spent().toFixed(2)} all dev runs`);
