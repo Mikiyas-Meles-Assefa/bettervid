@@ -9,6 +9,7 @@ import type { Resolved } from "../core/types.ts";
 import { graphKit } from "../kits/graph.ts";
 import { stepSchedule, storyOf, truthSteps } from "../kits/steps.ts";
 import { partAt, stepAreas, textSize, wordsAfter, type Area } from "./follow.ts";
+import { BOARD_FOLLOW, followWriting, writingOf } from "./board.ts";
 import { estimate, graphPositions, layout, TEXT_SIZE, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
 import { contrast } from "../style/color.ts";
@@ -326,6 +327,10 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   let view: View = REST;
   const shots: { at: number; frames: number; ease: Ease; view: View; drift: number; line: number; zoomBy: number }[] = [];
   let framed: Box | undefined; // what the camera last framed, for following it in later states
+  // A board being written: what was on it the state before, for the camera that follows the writing, and whether the
+  // camera in force shows the whole board (an overview, whose small words are a note rather than a problem).
+  let boardWas = new Map<string, string>();
+  let overview = false;
   // What a view shows, in the scene's own coordinates: the whole frame, and the part of it words may use (inside the
   // edges and above the captions).
   const EDGE = 4;
@@ -379,7 +384,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   const pruneEmpty = (list: Item[]): Item[] =>
     list.filter((i) => {
       i.children = pruneEmpty(i.children);
-      return !(i.kind === "atoms" && !i.parts!.length) && !(["row", "stack", "grid", "ring", "chain", "free"].includes(i.kind) && !i.children.length);
+      return !(i.kind === "atoms" && !i.parts!.length) && !(["row", "stack", "grid", "ring", "chain", "free", "board"].includes(i.kind) && !i.children.length);
     });
   const removeItem = (list: Item[], id: string): boolean => {
     const at = list.findIndex((i) => i.id === id);
@@ -414,7 +419,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
         }
       }
       for (const raw of clone(s.items)) {
-        const hasId = !/^(row|stack|grid|ring|chain|free|line|space|k\d+-line)\d*$/.test(raw.id);
+        const hasId = !/^(row|stack|grid|ring|chain|free|board|line|space|k\d+-line)\d*$/.test(raw.id);
         const same = hasId ? findItem(board, raw.id) : undefined;
         for (const id of raw.children.length || raw.kind === "atoms" ? leafIds(raw).filter((x) => x !== raw.id) : []) {
           removeAtom(board, id);
@@ -689,6 +694,13 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     const cam = cams[0];
     let next: View | undefined;
     let region: Box | undefined; // what the camera frames this state
+    // A board on screen, and the boxes of what this state writes on it.
+    const sheet = board.length === 1 && board[0]!.kind === "board" ? board[0] : undefined;
+    const writing = sheet ? writingOf(sheet) : new Map<string, string>();
+    const newest = [...writing].filter(([id, v]) => boardWas.get(id) !== v).map(([id]) => laid.boxes.get(id)).filter((b): b is Box => !!b);
+    boardWas = writing;
+    if (sheet?.attrs.follow !== undefined && !BOARD_FOLLOW.includes(sheet.attrs.follow)) report(sheet.line, `A board's follow is writing (the camera goes to what each state writes) or no (it stays where the scene puts it), not ${sheet.attrs.follow}.`);
+    const following = !cam && sheet?.attrs.follow === "writing" && newest.length > 0 && !!laid.boxes.get(sheet.id);
     const clampView = (v: View): View => {
       let { panX, panY, zoom } = v;
       const b = fillers.at(-1);
@@ -718,7 +730,12 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
           next = clampView({ panX: r.x, panY: r.y - (safe.y - ctx.height / 2) / z, zoom: z });
         }
       }
+    } else if (following) {
+      region = union(newest);
+      next = followWriting(region, laid.boxes.get(sheet!.id)!, view, safe, ctx.width, ctx.height);
     } else if (!s.keep && view !== REST) next = REST;
+    if (next) overview = !!sheet && cam?.target === sheet.id;
+    else if (!sheet) overview = false;
     if (next) {
       const frames = s.cut ? 1 : number(cam?.attrs.frames ?? "") ?? number(s.attrs.move ?? "") ?? Math.max(ctx.theme.moveFrames, Math.round(ctx.fps * 0.8));
       shots.push({ at: cameraAt, frames, ease: (cam?.attrs.ease as Ease) ?? "smooth", view: next, drift: number(cam?.attrs.drift ?? "") ?? 0, line: cam?.line ?? s.line, zoomBy: number(cam?.attrs.zoom ?? "") ?? 1 });
@@ -1270,7 +1287,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     cut = cutBy(view, keyWords);
     // A camera that moves in this state shifts as little as it must; a camera set earlier follows, with a small move of
     // its own in this state, so words that arrive under it are held whole.
-    const holding = cam && next && region ? region : !cam && framed && (view.zoom > 1.0001 || view.panX !== REST.panX || view.panY !== REST.panY) ? framed : undefined;
+    const holding = (cam || following) && next && region ? region : !cam && framed && (view.zoom > 1.0001 || view.panX !== REST.panX || view.panY !== REST.panY) ? framed : undefined;
     if (cut.length && holding) {
       let v = view;
       const cover = (x: View) => hits(holding, allowedIn(x)) / Math.max(1, holding.w * holding.h);
@@ -1308,7 +1325,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       }
       if (v !== view) {
         view = v;
-        if (cam) shots.at(-1)!.view = v;
+        if (cam || (following && next)) shots.at(-1)!.view = v;
         else shots.push({ at, frames: number(s.attrs.move ?? "") ?? Math.max(ctx.theme.moveFrames, Math.round(ctx.fps * 0.6)), ease: "smooth", view: v, drift: 0, line: s.line, zoomBy: shots.at(-1)?.zoomBy ?? 1 });
       }
     }
@@ -1333,6 +1350,18 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       }
       const chars = Math.max(4, Math.floor(([...(w.text ?? "")].length * a.w) / Math.max(1, w.box.w)) - 2);
       report(w.line, `With the camera where it is at this state${moved ? ` (zoom ${view.zoom.toFixed(2)}, from line ${moved.line})` : ""}, "${w.text}" runs ${where} by ${Math.round(by * view.zoom)} pixels.${hint || ""}${hint ? " shorten" : " Shorten"} it to ${w.box.w > a.w ? `${chars} characters or fewer` : "fewer words"}, or attach it elsewhere (another side=, or at= nearer the middle), or drop it.`);
+    }
+    // On a board, words are judged by their size on screen at the camera's zoom as they are written. A view of the
+    // whole board is an overview: its words may be small there, which is measured and noted, not refused.
+    if (sheet) {
+      const sizes = new Map(laid.texts.map((t) => [t.id, t.size]));
+      const f = frameIn(view);
+      const shown = laidWords.filter((w) => hits(w.box, f) > 0 && (sizes.get(w.id) ?? Infinity) * view.zoom < minText - 0.5);
+      const least = shown.reduce<Seen | undefined>((m, w) => (!m || sizes.get(w.id)! < sizes.get(m.id)! ? w : m), undefined);
+      // Writing that arrives under a view the scene did not just turn to the whole board is there to be read.
+      const fresh = cam?.target === sheet.id ? undefined : shown.find((w) => newWords.has(w.id));
+      if (fresh) report(fresh.line, `"${fresh.text}" is written while the camera shows the board at zoom ${view.zoom.toFixed(2)}, so it is only ${Math.round(sizes.get(fresh.id)! * view.zoom)} pixels tall on screen; the smallest readable is ${Math.round(minText)}. Frame where it is written (a camera line on that part, or follow=writing on the board), or show the whole board only once the writing is done.`);
+      else if (least && overview) notes.push(`The view of the whole board ${sheet.id} at line ${s.line} is an overview: at zoom ${view.zoom.toFixed(2)} its smallest words are ${Math.round(sizes.get(least.id)! * view.zoom)} pixels tall on screen (the smallest readable is ${Math.round(minText)}), so it is there to look at, not to read.`);
     }
     seenAt.push({ at, list: keyWords });
     // The room kept for later things, where it falls on the frame with the camera as this state leaves it.

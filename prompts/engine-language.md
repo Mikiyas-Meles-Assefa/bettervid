@@ -99,6 +99,7 @@ Indent to put things inside an arrangement, which can nest. Everything goes in `
     ring id arrows=1                            around a circle, optional arrows from each to the next
     chain id dir=down|up|right|left             a line with arrows between neighbors
     free id w=900 h=900                         by percent: each child has at=X,Y from the top left
+    board id w=1 h=3                            a canvas larger than the frame, written over states (see A board)
 
 [[roles]]
 `role=panel` on a row, stack or grid sets it on a panel, like a card, drawn the style's way.
@@ -176,6 +177,33 @@ The camera starts at rest, showing the frame as laid out. It keeps its view thro
     camera p1 at=... frames=60 ease=smooth drift=0.015
 
 `frames` is how long the move takes (in a cut, it is there at once). `drift` keeps it pushing closer by that much each second after it lands, until its next move: the slow push-in that keeps a still picture alive. When a picture fills the frame, the camera never shows past its edges. Anything can be framed: a part of a diagram, a node of a graph, a word.
+
+# A board
+
+A board is one canvas larger than the frame, written a piece at a time while the camera travels over it, like a teacher's whiteboard or a planning wall. Nothing on it ever shrinks, moves or reshuffles: each thing keeps the place and size it got when it was written, and at the end the whole board can be seen at once.
+
+    board b1 w=1 h=3 follow=writing             one screen wide, three screens tall
+
+`w` and `h` are in screens (default 1 each), so `w=2 h=2` is four screens in a square. A board is the whole frame: write it alone at the top of a state and put everything else inside it. Inside, a thing with `at=X,Y` has its center there, in percent of the board from its top left (as in `free`); things with no `at=` are written down the board in reading order, top to bottom, `gap=` apart, centered or at `align=left|right`. Everything on a board is laid out at the size it would have on a normal frame, so it reads when the camera is on it. Write the board in one plain state and add to it in keep states with `into=b1`, so what is already written stays. Writing that would run past the board's edge is reported: make the board larger or place the writing elsewhere.
+
+At rest the camera shows the board's top left screen. `follow=` says what moves it, and the default is `no`: the camera stays where your camera lines put it, and writing that lands out of view is reported. With `follow=writing` the camera goes to what each state writes on the board, moving as little as it must to show it whole and never past the board's edges; a camera line in a state takes over for that state. `camera ID` frames any part of the board, and `camera b1` shows the whole board. The whole view is an overview: its words are small there, which is fine for looking back over what was built, so show it when the writing is done, not while new words arrive.
+
+    @0
+    board b1 w=1 h=3 follow=writing
+      text q "How does a letter cross the world?" role=title
+    @5 keep
+    stack step1 into=b1 at=50,30
+      box post "post box"
+      text p1 "collected in the evening"
+    @11 keep
+    stack step2 into=b1 at=50,60
+      box sort "sorting hall"
+      text p2 "read by machine, bagged by city"
+    arrow post -> sort
+    @18 keep
+    text end "delivered by hand" role=answer into=b1 at=50,90
+    @24 keep
+    camera b1
 
 # Readable
 

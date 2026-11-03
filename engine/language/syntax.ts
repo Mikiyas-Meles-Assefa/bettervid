@@ -11,7 +11,7 @@ export type Atom = { id: string; text: string };
 export type AtomPart = { type: "text"; atom: Atom } | { type: "frac"; num: Atom[]; den: Atom[] } | { type: "matrix"; rows: Atom[][]; bars: boolean };
 
 export type Item = {
-  kind: string; // row, stack, grid, ring, chain, free, atoms, text, code, image, graph, run, space, a shape, or a kit's kind
+  kind: string; // row, stack, grid, ring, chain, free, board, atoms, text, code, image, graph, run, space, a shape, or a kit's kind
   id: string;
   line: number;
   attrs: Attrs;
@@ -48,7 +48,7 @@ export const SIZES = ["huge", "big", "normal", "small", "note"];
 export const SHAPES = ["box", "circle", "pill", "diamond", "dot", "tri"];
 export const MARKS = ["ring", "box", "underline", "cross", "brace", "highlight", "line", "arrow", "dots", "path", "pointer"];
 export const ENTERS = ["fade", "draw", "pop", "none", "slide", "slide-left", "rise", "slam"];
-const CONTAINERS = ["row", "stack", "grid", "ring", "chain", "free"];
+const CONTAINERS = ["row", "stack", "grid", "ring", "chain", "free", "board"];
 const PLACING = ["at", "into", "before", "after"];
 const LOOK = ["color", "fill", "stroke", "weight", "opacity", "rotate", "strokeWidth"];
 const ATTRS: Record<string, string[]> = {
@@ -58,6 +58,8 @@ const ATTRS: Record<string, string[]> = {
   ring: ["size", "arrows", "role", "enter", ...PLACING],
   chain: ["dir", "gap", "role", "enter", ...PLACING],
   free: ["w", "h", "role", "enter", ...PLACING],
+  // A canvas larger than the frame, w and h in screens, written over many keep states while the camera travels on it.
+  board: ["w", "h", "gap", "align", "follow", "back", "role", "enter"],
   atoms: ["gap", "role", "enter", ...PLACING, ...LOOK],
   text: ["size", "w", "font", "align", "role", "enter", ...PLACING, ...LOOK],
   code: ["size", "role", "enter", ...PLACING],
