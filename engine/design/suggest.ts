@@ -235,6 +235,10 @@ export function styleValues(theme: Theme, viewing: Viewing): Record<string, Styl
   set("chart.growStagger", 0.13, "bars growing in one after another");
   set("chart.grow", 0.53, "a bar grows in over 0.53 s");
   // Objects
+  set("scene.gap", 0.15, "things side by side in a scene stand apart by 15% of the smaller one's width, unless the author says how far or that they touch");
+  set("scene.bleed", true, "a thing the others rest on, stand in or hang over (a floor, a field, a body of water) may run past the scene's sides, so the things on it keep a size the eye can read; false shows it whole, however small the rest becomes");
+  set("scene.subjectShare", 0.3, "a moment's subject that is a thing of a scene is drawn at least 30% of the stage across or high, so its shape and what it does read: the scene's window closes in on it and the rest runs past, as a closer shot; 0 holds the whole scene");
+  set("scene.margin", 0.1, "around what stands on it, a running-past thing shows 10% of their extent on each side before it is cut by the box");
   set("apparatus.sourceShare", 0.51, "a source takes about half an apparatus's height");
   set("apparatus.gapShare", 0.04, "a small gap between the tip and the mouth, where drops are seen falling");
   set("apparatus.sourceWidth", 0.5, "a source is at most half the width");

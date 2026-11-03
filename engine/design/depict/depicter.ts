@@ -5,7 +5,7 @@ import type { AgentTask, Answer, Reasoner } from "../types.ts";
 import { checkSpec, type SpecProblem } from "./depict.ts";
 import { KINDS } from "./kinds/index.ts";
 import { POSE_VERBS } from "./make.ts";
-import { PROP_SPEC_SCHEMA, type PropSpec } from "./spec.ts";
+import { PROP_SPEC_SCHEMA, PROP_SPEC_SCHEMA_PLACED, type PropSpec } from "./spec.ts";
 
 export type DepictRequest = {
   /** Unique per run, such as "depict.flask". */
@@ -23,6 +23,8 @@ export type DepictRequest = {
   company?: string[];
   /** What the video is for and who watches, in a line. */
   purpose?: string;
+  /** The plan's lines that say where it is relative to other things, in the author's words ("cup on table"). */
+  relations?: string[];
 };
 
 function kindGuide(): string {
@@ -69,6 +71,22 @@ Examples (of the form, not of any topic)
   "verbs":{"empties onto":{"like":"pours into"}},"why":"..."}
 - A metronome that ticks: {"kind":"mechanism","form":"lever",...} or an "outline" with a hinged arm region, whichever lets the arm swing.`;
 
+/**
+ * What the depicter is told when the plan places the thing in a scene: the plan's lines, and the points the composer
+ * stages it by. Only then, so a thing that stands alone keeps its task as it was.
+ */
+export const placedText = (name: string, relations: string[]) => `Where it is in the scene (the plan's lines): ${relations.join("; ")}
+The engine stages these things as one scene, each at its real size, so:
+- Draw it upright as it stands in this scene, seen from the side the scene is seen from, and give its real size (the
+  whole of what is drawn).
+- Give "points", [x, y] as 0 to 1 of its box (x from the left, y from the top). For each line, name the point of
+  ${name} that the line joins to the other thing by the other thing's id, and a place on ${name} that a line names in
+  quotes or after a dot (a part, an end, an edge) by those words. For "cup on table" the cup's "table" point is its base
+  and the table's "cup" point is the spot on its top where the cup stands; for "cat under table" the cat's "table" point
+  is its feet and the table's "cat" point is the floor under its top; for "sign hangs from hook" the sign's "hook" point
+  is where its string is held. Where you name no point, a line joins the box's own (a's bottom to b's top for on, a's
+  top to b's bottom for under); top, bottom, left, right and center are always the box's unless you name them.`;
+
 /** The depicter's task for a thing; on a repair round it carries the previous answer and its problems. */
 export function depicterTask(req: DepictRequest, repair?: { previous: PropSpec; problems: SpecProblem[]; round: number }): AgentTask {
   const lines = [
@@ -78,12 +96,13 @@ export function depicterTask(req: DepictRequest, repair?: { previous: PropSpec; 
   ];
   if (req.company?.length) lines.push(`On screen with it: ${req.company.join("; ")}`);
   if (req.purpose) lines.push(`The video: ${req.purpose}`);
+  if (req.relations?.length) lines.push(placedText(req.name, req.relations));
   lines.push(req.material?.length ? `From the user's material:\n${req.material.map((m) => `> ${m}`).join("\n")}` : "The material says nothing about it.");
   if (repair) {
     lines.push(`\nYour previous answer:\n${JSON.stringify(repair.previous)}`);
     lines.push(`It has these problems; answer again with all of them fixed:\n${repair.problems.map((p) => `- ${p.path}: ${p.problem}`).join("\n")}`);
   }
-  return { role: "depicter", id: repair ? `${req.id}.r${repair.round}` : req.id, system: DEPICTER_SYSTEM, request: lines.join("\n"), schema: PROP_SPEC_SCHEMA, images: req.images };
+  return { role: "depicter", id: repair ? `${req.id}.r${repair.round}` : req.id, system: DEPICTER_SYSTEM, request: lines.join("\n"), schema: req.relations?.length ? PROP_SPEC_SCHEMA_PLACED : PROP_SPEC_SCHEMA, images: req.images };
 }
 
 export type DepictAnswer = { status: "answered"; spec: PropSpec; problems: SpecProblem[]; rounds: number } | { status: "pending"; file: string };

@@ -169,3 +169,65 @@ test("a pinned line that computes a thing declares it and its parts, for any kin
   const clash = checkIntent(parseIntent(`thing demo1 "x"\n${SORT_PLAN}`), WORDS59).map((x) => x.message).join("\n");
   assert.match(clash, /demo1 is made here by a sort line and is also declared at line 1/);
 });
+
+// Where things are: one line per relation, before the moments, in the author's words.
+const PLACED = `object desk "a wooden desk, 140 cm wide"
+object lamp "a small reading lamp"
+object cat "a sleeping cat"
+object mug "a mug"
+object tag "a paper tag"
+object rug "a long rug"
+thing note "a note"
+
+lamp on desk "left end"
+cat sleeps under desk
+mug next to lamp
+tag hangs from lamp.arm
+desk stands on rug
+note on desk
+mug above rug "1 m"
+lamp in front of rug
+flag at the top of desk
+
+@0
+  show lamp
+`;
+
+test("relations: the author's words end in a relation, with a place on the other thing or a distance", () => {
+  const p = parseIntent(PLACED);
+  const rel = (a: string, b: string) => p.relations!.find((r) => r.a === a && r.b === b);
+  assert.deepEqual(rel("lamp", "desk"), { a: "lamp", kind: "on", b: "desk", words: "on", at: "left end", line: 9 });
+  assert.equal(rel("cat", "desk")!.kind, "under");
+  assert.equal(rel("cat", "desk")!.words, "sleeps under");
+  assert.equal(rel("mug", "lamp")!.kind, "beside");
+  assert.deepEqual([rel("tag", "lamp")!.kind, rel("tag", "lamp")!.at], ["to", "arm"]);
+  assert.equal(rel("desk", "rug")!.kind, "on");
+  assert.deepEqual([rel("mug", "rug")!.kind, rel("mug", "rug")!.gapCm, rel("mug", "rug")!.at], ["over", 100, undefined]);
+  assert.equal(rel("lamp", "rug")!.kind, "front");
+  // A line about a thing that is not an object is read, and checkIntent says why it places nothing.
+  assert.ok(rel("note", "desk"));
+  const words = Array.from({ length: 4 }, (_, i) => ({ text: `w${i}`, start: i }));
+  const problems = checkIntent(p, words);
+  assert.ok(problems.some((x) => /note is a thing, not an object/.test(x.message)), JSON.stringify(problems));
+  // "flag" was never declared: the line is not a relation, it is a note.
+  assert.ok(!p.relations!.some((r) => r.a === "flag"));
+  assert.ok(p.notes.some((n) => /flag at the top of desk/.test(n)));
+});
+
+test("relations: a place named with 'at the ... of' and every kind the language has", () => {
+  const kinds = (line: string) => parseIntent(`object a "a"\nobject b "b"\n${line}\n@0\n  show a\n`).relations?.[0];
+  assert.deepEqual([kinds("a at the far end of b")!.kind, kinds("a at the far end of b")!.at], ["at", "far end"]);
+  assert.deepEqual([kinds("a on the edge of b")!.kind, kinds("a on the edge of b")!.at], ["on", "edge"]);
+  const cases: [string, string][] = [["a on top of b", "on"], ["a rests upon b", "on"], ["a floats over b", "over"], ["a is beneath b", "under"], ["a below b", "under"], ["a inside b", "in"], ["a tied to b", "to"], ["a beside b", "beside"], ["a leans against b", "against"], ["a left of b", "left"], ["a to the right of b", "right"], ["a behind b", "behind"], ["a in front of b", "front"], ["a around b", "around"], ["a at b", "at"]];
+  for (const [line, kind] of cases) assert.equal(kinds(line)?.kind, kind, line);
+  // Inside a moment the same words are what a thing does, not where it is.
+  const p = parseIntent(`object a "a"\nobject b "b"\n@0\n  show a\n  a moves to b\n`);
+  assert.equal(p.relations, undefined);
+  assert.equal(p.moments[0]!.acts[0]!.verb, "moves to");
+});
+
+test("relations: placing one thing on another twice is the author's to repair", () => {
+  const p = parseIntent(`object a "a"\nobject b "b"\na on b\na under b\n@0\n  show a\n`);
+  const problems = checkIntent(p, [{ text: "w", start: 0 }]);
+  assert.ok(problems.some((x) => /placed relative to b again/.test(x.message)), JSON.stringify(problems));
+});

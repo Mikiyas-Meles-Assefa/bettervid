@@ -21,6 +21,12 @@ export type PropSpec = {
   colorSources?: Record<string, string>;
   /** Starting states, by the kind's state names. */
   state?: StateMap;
+  /**
+   * Named points where it meets other things in the scene, [x, y] as 0 to 1 of its box (x from the left, y from the
+   * top): a deck's top, a post's top, a rope's two ends, a seat. Named by the other thing's id or by the plan's own
+   * words for a place on it ("far end"); top, bottom, left, right and center are its box's unless named here.
+   */
+  points?: Record<string, [number, number]>;
   /** The plan's own verbs for this thing, mapped onto the kind's verbs (`like`) or onto state changes (`sets`). */
   verbs?: Record<string, SpecVerb>;
   /** 1 drawn (default), 2 a generated sprite in the style, 3 the user's picture, 4 a found picture. */
@@ -68,6 +74,12 @@ export const PROP_SPEC_SCHEMA: Record<string, unknown> = {
     picture: { type: "object", required: ["card"], properties: { card: { type: "string" } } },
     why: { type: "string" },
   },
+};
+
+/** The schema with `points`, for a thing the plan places relative to others (only then is it asked for). */
+export const PROP_SPEC_SCHEMA_PLACED: Record<string, unknown> = {
+  ...PROP_SPEC_SCHEMA,
+  properties: { ...(PROP_SPEC_SCHEMA.properties as Record<string, unknown>), points: { type: "object", description: "named points where it meets other things: [x, y], 0 to 1 of its box, x from the left, y from the top", additionalProperties: pt } },
 };
 
 /** A real size in centimetres, when the spec gives one. */

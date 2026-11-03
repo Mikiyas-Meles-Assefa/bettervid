@@ -79,6 +79,8 @@ export interface Depiction {
   /** The current state; `apply` and `act` move it. */
   state: StateMap;
   verbs: Record<string, VerbDef>;
+  /** Named points where it meets other things in a scene (the depicter's), local units; see `pointOf`. */
+  points?: Record<string, Pt>;
   /** Named points that depend on state (a liquid's surface, a mouth, an outlet, a needle's tip), local units. */
   anchor(name: string, state?: StateMap): Pt | undefined;
   /** Property changes that take the drawing from the current state to `next`, over the caller's timing. */

@@ -8,6 +8,7 @@ export * from "./picture.ts";
 export * from "./chart.ts";
 export * from "./marks.ts";
 export * from "./stage.ts";
+export * from "./scene.ts";
 export * from "./flow.ts";
 export * from "./fall.ts";
 export * from "./objects.ts";
