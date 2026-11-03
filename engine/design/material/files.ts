@@ -7,6 +7,7 @@ export type MaterialFile = {
   file: string; // the file's own name
   path?: string; // where it is on disk (pictures, and text not given inline)
   text?: string; // its text, for text files
+  sections?: { where: string; text: string }[]; // a paged file's text by location (a page, a slide), when it has them
   size?: [number, number]; // a picture's width and height in pixels
   about?: string; // what the user said about it, if anything
   kind?: string; // what the user or the importer said it is (notes, doc, csv, code, image), as a hint

@@ -3,6 +3,7 @@
 import type { FactSheet, Project } from "../../schemas/project.ts";
 import { factSheetSchema } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
+import { materialText } from "../lib/material.ts";
 import { asked, charge, prompt, stage, topic } from "../lib/project.ts";
 import { viewer } from "./plan.ts";
 
@@ -10,7 +11,11 @@ export async function research(p: Project, force = false) {
   const notes = p.plan?.material
     ? `The user's own notes for this video. Treat them as leads: verify them, use what holds up, and say in the story where they are wrong:\n"""\n${p.plan.material}\n"""`
     : "";
-  const user = [`Topic for the video: ${topic(p)}`, viewer(p), asked(p.plan?.story ?? []), notes].filter(Boolean).join("\n\n");
+  const files = materialText(p, 120000);
+  const own = files
+    ? `${files}\n\nThese files are the user's sources. Build on them: verify what can be checked, keep what holds up, and say in the story where they are wrong. What only they can know (their own numbers, notes, plans) stands as theirs: do not replace it with something from the web. A claim resting on a file gets a source with the card's name as \`title\`, "Your file" as \`publisher\` and \`file:<card>.<part>\` as \`url\`, the part being where it stands; these count as real sources, beside the pages you find.`
+    : "";
+  const user = [`Topic for the video: ${topic(p)}`, viewer(p), asked(p.plan?.story ?? []), notes, own].filter(Boolean).join("\n\n");
   await stage(p, "research", [user, prompt("research")], 0.5, async () => {
     const r = await json<FactSheet>({
       system: prompt("research"),

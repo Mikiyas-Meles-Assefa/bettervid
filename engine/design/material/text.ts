@@ -128,3 +128,16 @@ export function readDoc(f: MaterialFile): PartCard {
   const said = [n.heading && `${n.heading} headings`, n.item && `${n.item} list items`, `${n.sentence} sentences`, n.quote && `${n.quote} quotes`].filter(Boolean).join(", ");
   return card(f, "document", `a text document of ${lines.filter((l) => l.trim()).length} lines: ${said}`, parts);
 }
+
+/** A document with locations of its own (pages, slides): each section is read as a document, and every part says where
+ * it stands, so a plan can cite "page 3". */
+export function readSections(f: MaterialFile): PartCard {
+  const parts: Parts = {};
+  const secs = f.sections ?? [];
+  for (const s of secs) {
+    const key = s.where.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-");
+    for (const [k, part] of Object.entries(readDoc({ ...f, text: s.text }).parts)) parts[`${key}.${k}`] = { ...part, about: part.about.replace(/\(line \d+\)/, `(${s.where})`) };
+  }
+  const text = secs.map((s) => `[${s.where}]\n${s.text}`).join("\n\n");
+  return card({ ...f, text }, "document", `a document of ${secs.length} ${secs.length === 1 ? "section" : "sections"}, ${Object.keys(parts).length} parts`, parts);
+}

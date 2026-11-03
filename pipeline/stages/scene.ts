@@ -1150,13 +1150,17 @@ export function materialFiles(p: Project, pics: Picture[]): MaterialFile[] {
 
 /** The material read once into part cards (p.material), and again only when the files change. */
 export async function readMaterialOnce(p: Project, files: MaterialFile[], reasoner: Reasoner): Promise<NonNullable<Project["material"]>> {
-  const key = hash(files.map((f) => [f.name, f.file, f.path, f.text, f.size]));
+  // The uploads were read by the material stage. They stay as they are; only what the scene adds is read here.
+  const uploaded = p.material?.uploaded;
+  const names = new Set(uploaded?.cards ?? []);
+  const kept = { cards: (p.material?.cards ?? []).filter((c) => names.has(c.name)), requirements: (p.material?.requirements ?? []).filter((r) => names.has(r.source.file)), problems: uploaded?.problems ?? [] };
+  const key = uploaded ? hash(uploaded.key, files.map((f) => [f.name, f.file, f.path, f.text, f.size])) : hash(files.map((f) => [f.name, f.file, f.path, f.text, f.size]));
   if (p.material?.key === key) return p.material;
-  if (!files.length) return (p.material = { cards: [], requirements: [], problems: [], key });
+  if (!files.length) return (p.material = { ...kept, key, ...(uploaded ? { uploaded } : {}) });
   const r = await readProject(files, reasoner, { request: `${topic(p)}${p.plan?.intent ? `. ${p.plan.intent}` : ""}` });
   if (r.pending.length) throw new Error(`scene: the material reader left ${r.pending.length} tasks unanswered: ${r.pending.slice(0, 3).join(", ")}`);
   for (const c of r.cards.filter((c) => !c.checked.ok)) console.log(`  !!! material ${c.name} did not check: ${c.checked.notes.slice(0, 2).join(" | ")}`);
-  return (p.material = { cards: r.cards, requirements: r.requirements, problems: r.problems, key });
+  return (p.material = { cards: [...kept.cards, ...r.cards], requirements: [...kept.requirements, ...r.requirements], problems: [...kept.problems, ...r.problems], key, ...(uploaded ? { uploaded } : {}) });
 }
 
 // How the video is watched, as far as the project says: the frame, the screen and distance the user's request and plan

@@ -4,11 +4,14 @@
 import type { Plan, Project } from "../../schemas/project.ts";
 import { planSchema } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
+import { materialNote } from "../lib/material.ts";
 import { charge, prompt, stage } from "../lib/project.ts";
 
 export async function plan(p: Project, force = false) {
-  await stage(p, "plan", [p.input.prompt, prompt("plan")], 0.02, async () => {
-    const r = await json<Plan>({ system: prompt("plan"), user: p.input.prompt, schema: planSchema, schemaName: "plan", effort: "medium" });
+  const note = materialNote(p);
+  const user = note ? `${p.input.prompt}\n\n${note}` : p.input.prompt;
+  await stage(p, "plan", [user, prompt("plan")], 0.02, async () => {
+    const r = await json<Plan>({ system: prompt("plan"), user, schema: planSchema, schemaName: "plan", effort: "medium" });
     const v = r.value;
     v.seconds = Math.max(0, Math.round(v.seconds));
     v.intent = (v.intent ?? "").trim();

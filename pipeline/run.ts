@@ -1,10 +1,11 @@
 // CLI: create or resume a project and run stages in order. Cached stages are skipped.
-// New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 0, 0 = as long as the story needs; a length in the prompt wins] [--until voice]
+// New:    npm run pipeline -- new "<prompt>" [--style collage] [--persona auto] [--mode history] [--seconds 0, 0 = as long as the story needs; a length in the prompt wins] [--until voice] [--material <folder of the user's files>]
 // Resume: npm run pipeline -- <projectId> [--until <stage>] [--force <stage>] [--only <stage>]
 // Visuals: the engine scene is the one visual step. `--visuals legacy` restores the old routing (teaching stage, board
 // or shots), for side-by-side tests.
 import type { Project, StageName } from "../schemas/project.ts";
-import { load, save, spent, style } from "./lib/project.ts";
+import { dir, load, save, spent, style } from "./lib/project.ts";
+import { storeMaterial, UPLOAD_LIMITS } from "./lib/uploads.ts";
 import { hash } from "./lib/util.ts";
 import { annotate } from "./stages/annotate.ts";
 import { assets } from "./stages/assets.ts";
@@ -12,6 +13,7 @@ import { board } from "./stages/board.ts";
 import { critic } from "./stages/critic.ts";
 import { direction } from "./stages/direction.ts";
 import { director } from "./stages/director.ts";
+import { material } from "./stages/material.ts";
 import { mix } from "./stages/mix.ts";
 import { plan } from "./stages/plan.ts";
 import { render } from "./stages/render.ts";
@@ -24,6 +26,7 @@ import { writer } from "./stages/writer.ts";
 
 type Run = [StageName, (p: Project, force: boolean) => Promise<void>][];
 const LEGACY: Run = [
+  ["material", material],
   ["plan", plan],
   ["research", research],
   ["writer", writer],
@@ -41,6 +44,7 @@ const LEGACY: Run = [
 // Director, assets and annotate still make pictures when the video needs them; the scene stage then builds on them.
 // Direction walks the script as the viewer and plans holds, cues and demonstrations before the voice is recorded.
 const ENGINE: Run = [
+  ["material", material],
   ["plan", plan],
   ["research", research],
   ["writer", writer],
@@ -76,6 +80,8 @@ if (args[0] === "new") {
     stages: {},
     costs: [],
   };
+  const from = flag("material");
+  if (from) p.input.files = storeMaterial(from, dir(p), process.env.HOST && process.env.HOST !== "127.0.0.1" ? UPLOAD_LIMITS.public : UPLOAD_LIMITS.local);
   await save(p);
   console.log(`project ${p.id}`);
 } else {

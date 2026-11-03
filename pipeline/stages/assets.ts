@@ -18,6 +18,7 @@ import { decodeMaskToRaster, parseImageStream, recordsOfKind, type ResponsesEven
 import type { Asset, ImageType, Project, Shot, StyleFile } from "../../schemas/project.ts";
 import { download, MIN_SIDE, searchArchives, type Candidate } from "../lib/archives.ts";
 import { json, post, PRICE } from "../lib/meta.ts";
+import { ownPictures } from "../lib/material.ts";
 import { asked, charge, dir, stage, style, topic } from "../lib/project.ts";
 import { hash, PYTHON, write } from "../lib/util.ts";
 
@@ -407,6 +408,14 @@ async function make(p: Project, shot: Shot, s: StyleFile, spend: Spend, folder: 
   }
   const rel = `assets/${shot.id}.jpg`;
   const abs = join(dir(p), rel);
+  if (req.kind === "own") {
+    const pic = ownPictures(p).find((x) => x.card.name === req.query);
+    if (!pic) throw new Error(`assets: ${shot.id} names the user's picture "${req.query}", which is not in the project`);
+    await write(abs, new Uint8Array());
+    toJpeg(join(dir(p), pic.path), abs);
+    spend.notes.push(`${shot.id} the user's own picture: ${req.query}`);
+    return { shotId: shot.id, kind: "real", path: rel, title: req.query, source: "Your file", why: `The user's own picture: ${pic.card.about}`, size: dims(abs), look: req.focus };
+  }
   let asset: Asset | undefined;
   let why = "";
   if (req.kind === "real" && req.query) {

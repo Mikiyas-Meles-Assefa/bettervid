@@ -2,9 +2,10 @@
 // receipts from the fact sheet so outlets, quotes and URLs are never invented.
 import type { AssetRequest, ImageType, Project, Shot, ShotType } from "../../schemas/project.ts";
 import { json } from "../lib/meta.ts";
+import { ownPictures, picturesText } from "../lib/material.ts";
 import { asked, charge, prompt, stage, style, topic } from "../lib/project.ts";
 
-export type Planned = { beatId: string; type: ShotType; startWord: number; kind: "real" | "generated" | "drawn" | "none"; query: string; broadQuery: string; prompt: string; idea: string; draw: string; imageType: ImageType; subject: string; focus: string; mustBeReal: boolean; text: string; claimId: string };
+export type Planned = { beatId: string; type: ShotType; startWord: number; kind: "real" | "generated" | "drawn" | "own" | "none"; query: string; broadQuery: string; prompt: string; idea: string; draw: string; imageType: ImageType; subject: string; focus: string; mustBeReal: boolean; text: string; claimId: string };
 
 const str = { type: "string" } as const;
 const schema = {
@@ -22,7 +23,7 @@ const schema = {
           beatId: str,
           type: { type: "string", enum: ["photo_kenburns", "cutout_on_paper", "receipt", "kinetic_title"] },
           startWord: { type: "integer" },
-          kind: { type: "string", enum: ["real", "generated", "drawn", "none"] },
+          kind: { type: "string", enum: ["real", "generated", "drawn", "own", "none"] },
           query: str,
           broadQuery: str,
           prompt: str,
@@ -57,13 +58,28 @@ export async function director(p: Project, force = false) {
     .replace("{{realPolicy}}", REAL_POLICY[style(p.input.style).realAssets]);
   const words = n.words.map((w, i) => `${i} ${w.start.toFixed(2)}s ${w.text}`).join("\n");
   const user =
-    `Topic: ${topic(p)}\n\n${asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])])}\n\nScript beats:\n${JSON.stringify(p.script!.beats, null, 1)}\n\n` +
+    `Topic: ${topic(p)}\n\n${asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])])}\n\n${picturesText(p) ? `${picturesText(p)}\n\n` : ""}Script beats:\n${JSON.stringify(p.script!.beats, null, 1)}\n\n` +
     `Fact sheet claims:\n${JSON.stringify(p.factSheet!.claims, null, 1)}\n\n${events(p)}Words (index, start time, word):\n${words}`;
   await stage(p, "director", [system, user], 0.2, async () => {
-    const r = await json<{ shots: Planned[] }>({ system, user, schema, schemaName: "shot_list", effort: "medium" });
+    const ask = (text: string) => json<{ shots: Planned[] }>({ system, user: text, schema, schemaName: "shot_list", effort: "medium" });
+    let r = await ask(user);
     charge(p, "director", r.usd, `${r.raw.usage?.input_tokens} in, ${r.raw.usage?.output_tokens} out`);
+    // A shot that names one of the user's pictures must name a real one: the plan goes back to be repaired.
+    const bad = wrongPictures(p, r.value.shots);
+    if (bad.length) {
+      r = await ask(`${user}\n\nYour last plan named pictures that do not exist: ${bad.join(", ")}. Use only the exact names listed, and return the whole plan.`);
+      charge(p, "director", r.usd, `repair: ${r.raw.usage?.input_tokens} in, ${r.raw.usage?.output_tokens} out`);
+      const still = wrongPictures(p, r.value.shots);
+      if (still.length) throw new Error(`director: the plan still names pictures that do not exist: ${still.join(", ")}`);
+    }
     p.shots = toShots(p, r.value.shots);
   }, force);
+}
+
+/** The names in a plan's "own" shots that are not the user's pictures. */
+export function wrongPictures(p: Project, shots: Planned[]): string[] {
+  const known = new Set(ownPictures(p).map((x) => x.card.name));
+  return shots.filter((s) => s.kind === "own" && !known.has(s.query)).map((s) => `"${s.query}"`);
 }
 
 // The direction's events, so each picture shows what its moment's eye should be on and nothing withheld turns up early.
@@ -129,6 +145,10 @@ export function request(s: Planned, shot: Shot): AssetRequest {
   if (s.kind === "drawn" || (s.kind === "none" && draw)) {
     shot.type = "photo_kenburns";
     return { kind: "drawn", query: "", prompt: "", draw: draw || s.idea || s.prompt || s.text, imageType: "diagram" };
+  }
+  if (s.kind === "own") {
+    shot.type = "photo_kenburns"; // the user's picture is shown whole, never cut up
+    return { kind: "own", query: s.query, prompt: "", focus: s.focus || undefined };
   }
   const a: AssetRequest = { kind: s.kind === "real" ? "real" : "generated", query: s.query, prompt: s.prompt, imageType: s.imageType, subject: s.subject || undefined };
   if (s.broadQuery && s.broadQuery !== s.query) a.broadQuery = s.broadQuery;

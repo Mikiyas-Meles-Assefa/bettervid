@@ -10,6 +10,7 @@ import type { Project, Script, WritingStep } from "../../schemas/project.ts";
 import { scriptSchema } from "../../schemas/project.ts";
 import { abilities } from "../lib/abilities.ts";
 import { json, text } from "../lib/meta.ts";
+import { materialText } from "../lib/material.ts";
 import { asked, charge, persona, prompt, save, seconds, stage, topic } from "../lib/project.ts";
 import { hash } from "../lib/util.ts";
 import { viewer } from "./plan.ts";
@@ -66,7 +67,9 @@ export async function writer(p: Project, force = false) {
   // The research angle is not passed on: the writer decides what the video is about from the whole research and from
   // the person who asked (their words and the plan's reading of why), which every writing step sees.
   const wishes = asked([...(p.plan?.story ?? []), p.plan?.tone ? `Tone: ${p.plan.tone}` : ""]);
-  const research = `Topic: ${topic(p)}\n\n${viewer(p)}\n\n${wishes ? `${wishes}\n\n` : ""}Common misconception: ${f.misconception || "none"}\n\nResearch:\n${f.story}\n\n${claims}`;
+  const files = materialText(p, 60000);
+  const own = files ? `\n\nThe video is built on the user's own material. What its files say comes first, in their terms, with their numbers and examples; the research checks and supports it. Every requirement below is met.\n\n${files}` : "";
+  const research = `Topic: ${topic(p)}\n\n${viewer(p)}\n\n${wishes ? `${wishes}\n\n` : ""}Common misconception: ${f.misconception || "none"}\n\nResearch:\n${f.story}\n\n${claims}${own}`;
   const prompts = [fill("writer", FREE), fill("cut", length), fill("review", length), prompt("structure"), fill("demonstrate", length), fill("revise", length)];
   await stage(p, "writer", [prompts, research, secs, p.plan?.visuals], 0.4, async () => {
     // Each finished step is saved with the key of its inputs, so a run that fails (say, on a network drop) resumes

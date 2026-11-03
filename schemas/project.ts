@@ -3,7 +3,7 @@
 import type { Scene, Theme } from "../engine/core/types.ts";
 import type { PartCard, Requirement } from "../engine/design/types.ts";
 
-export type StageName = "plan" | "research" | "writer" | "direction" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "material" | "plan" | "research" | "writer" | "direction" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
 
 export type Project = {
   id: string;
@@ -25,7 +25,9 @@ export type Project = {
   critic?: { verdict: string; tickets: { shotId: string; action: string; note: string }[] };
   // The user's material read once into part cards, with what one file requires of the video (engine/design/material).
   // `key`: a hash of what was read, so unchanged material is not read again.
-  material?: { cards: PartCard[]; requirements: Requirement[]; problems: string[]; key?: string };
+  // `uploaded`: which of these came from the user's uploaded files (input.files), so the scene stage adds its own
+  // pictures beside them and never reads the uploads again.
+  material?: { cards: PartCard[]; requirements: Requirement[]; problems: string[]; key?: string; uploaded?: { key: string; cards: string[]; problems: string[]; pictures: Record<string, string> } };
   // Cache: the hash of each stage's inputs when it last ran, so unchanged stages are skipped.
   stages: Partial<Record<StageName, { hash: string; at: string; ms: number }>>;
   costs: Cost[];
@@ -41,7 +43,10 @@ export type Input = {
   // Who writes the scene: "language" (each part in the scene language) or "intent" (an intent plan per part, which the
   // design brain composes). Absent: the scene stage's default (SCENE_AUTHOR_DEFAULT).
   sceneAuthor?: "language" | "intent";
+  files?: InputFile[]; // the user's own files, stored in the project's material folder
 };
+
+export type InputFile = { name: string; type: string; size: number; hash: string };
 
 // Stage 0: plan. What the user explicitly asked for in their message, sorted by which part of the work it concerns.
 // Empty fields mean the user said nothing about it and each stage decides the usual way.
@@ -149,7 +154,7 @@ export type Shot = {
 // `draw`: what the scene step should draw itself (a map, diagram, chart, timeline), for `kind` "drawn", or as the honest
 // fallback of a real shot whose image is not found.
 export type ImageType = "scene" | "object" | "diagram";
-export type AssetRequest = { kind: "real" | "generated" | "drawn"; query: string; broadQuery?: string; prompt: string; idea?: string; draw?: string; imageType?: ImageType; subject?: string; focus?: string; mustBeReal?: boolean };
+export type AssetRequest = { kind: "real" | "generated" | "drawn" | "own"; query: string; broadQuery?: string; prompt: string; idea?: string; draw?: string; imageType?: ImageType; subject?: string; focus?: string; mustBeReal?: boolean };
 // A drawn mark. Points are fractions of the image; `word` is the index of the spoken word it starts on.
 export type MarkTool = "ring" | "box" | "underline" | "arrow" | "line" | "dots" | "label" | "path";
 export type Mark = { tool: MarkTool; points: [number, number][]; word: number; text?: string; color?: "accent" | "highlight" | "ink" };

@@ -3,10 +3,11 @@
 // There is no login, so when public (HOST set) it limits what costs money and turns off editing.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { join, resolve } from "node:path";
 import { dir, load, ROOT, save, spent } from "../pipeline/lib/project.ts";
+import { freeName, inside, safeName, showSize, sizeProblem, typeLabel, uploadProblem, UPLOAD_LIMITS } from "../pipeline/lib/uploads.ts";
 import type { Project } from "../schemas/project.ts";
 
 const PORT = Number(process.env.PORT ?? 4173);
@@ -19,6 +20,11 @@ const LIMITS = {
 };
 const PUBLIC = resolve("app/public");
 const PREVIEWS = resolve("styles/previews");
+const UPLOADS = UPLOAD_LIMITS[PUBLIC_SITE ? "public" : "local"];
+// Files wait here, under a random token per visit, until the video starts. Ones never used go after a while.
+const STAGING = join(ROOT, ".uploads");
+const STAGED_HOURS = 6;
+const TOKEN = /^[a-f0-9]{24}$/;
 const MAX_PROMPT = 8000;
 const MAX_LOOK = 400;
 const LENGTHS: Record<string, number> = { auto: 0, short: 50, medium: 120, long: 240, longer: 390 };
@@ -30,13 +36,13 @@ const readStyle = (name: string) => JSON.parse(readFileSync(`styles/${name}.json
 
 // What each pipeline step is called on the page. A step this list does not know still shows, under its own name.
 const LABELS: Record<string, string> = {
-  plan: "Reading your request", research: "Researching the story", writer: "Writing the script", voice: "Recording the narration",
+  material: "Reading your files", plan: "Reading your request", research: "Researching the story", writer: "Writing the script", voice: "Recording the narration",
   director: "Planning the shots", board: "Planning the board", stage: "Laying out the worked steps", scene: "Building the scenes",
   assets: "Finding and making images", annotate: "Drawing on the images", timeline: "Cutting it together", mix: "Mixing the sound",
   render: "Rendering the video", critic: "Watching it back and fixing",
 };
 const VISUALS = new Set(["director", "board", "stage", "scene", "assets", "annotate"]);
-const USUAL = ["plan", "research", "writer", "voice", "visuals", "timeline", "mix", "render", "critic"];
+const PLAIN_RUN = ["plan", "research", "writer", "voice", "visuals", "timeline", "mix", "render", "critic"];
 const label = (k: string) => LABELS[k] ?? (k === "visuals" ? "Making the visuals" : k[0]!.toUpperCase() + k.slice(1));
 
 type Step = { key: string; label: string; state: "done" | "now" | "next" | "failed"; seconds?: number; reused?: boolean; percent?: number; details: string[] };
@@ -67,10 +73,36 @@ function limit(req: IncomingMessage, kind: keyof typeof LIMITS): string | undefi
 const NODE = [...(existsSync(".env") ? ["--env-file=.env"] : []), "--experimental-strip-types"];
 const FRIENDLY_BUDGET = "The budget for new work is used up. You can still watch any finished video, or replay how it was made.";
 
-function start(prompt: string, style: string, persona: string, length: string): Promise<string> {
+const stagedFiles = (token: string) => (existsSync(join(STAGING, token)) ? readdirSync(join(STAGING, token)).map((name) => ({ name, size: statSync(join(STAGING, token, name)).size })) : []);
+
+// Clears files whose video never started, and says how much is still waiting on disk.
+function tidyStaging(): number {
+  if (!existsSync(STAGING)) return 0;
+  let held = 0;
+  for (const token of readdirSync(STAGING)) {
+    const folder = join(STAGING, token);
+    if (Date.now() - statSync(folder).mtimeMs > STAGED_HOURS * 3600_000) rmSync(folder, { recursive: true, force: true });
+    else held += stagedFiles(token).reduce((n, f) => n + f.size, 0);
+  }
+  return held;
+}
+
+// The request's body up to a limit. Past it, the rest is drained and undefined comes back, so the visitor gets a clear
+// answer instead of a broken connection, and nothing more is held in memory.
+async function raw(req: IncomingMessage, max: number): Promise<Buffer | undefined> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const c of req) {
+    size += c.length;
+    if (size <= max) chunks.push(c);
+  }
+  return size <= max ? Buffer.concat(chunks) : undefined;
+}
+
+function start(prompt: string, style: string, persona: string, length: string, staged?: string): Promise<string> {
   // APP_UNTIL stops runs after one stage, for testing the page without paying for a whole video.
   const until = process.env.APP_UNTIL ? ["--until", process.env.APP_UNTIL] : [];
-  return run([...NODE, "pipeline/run.ts", "new", prompt, "--style", style, "--persona", persona, "--seconds", String(LENGTHS[length] ?? 0), ...until], "plan");
+  return run([...NODE, "pipeline/run.ts", "new", prompt, "--style", style, "--persona", persona, "--seconds", String(LENGTHS[length] ?? 0), ...until, ...(staged ? ["--material", join(STAGING, staged)] : [])], staged ? "material" : "plan");
 }
 
 // A log line from the pipeline, turned into what a viewer wants to know. Costs, retries and stack traces stay out.
@@ -185,12 +217,29 @@ function stepsFrom(p: Project): Step[] {
 }
 
 // Done and current steps, then the usual ones still to come, so a viewer sees how far along it is.
-function withNext(steps: Step[], finished: boolean): Step[] {
+function withNext(steps: Step[], finished: boolean, files: boolean): Step[] {
   if (finished) return steps;
+  const USUAL = files ? ["material", ...PLAIN_RUN] : PLAIN_RUN;
   const seen = new Set(steps.map((s) => (VISUALS.has(s.key) ? "visuals" : s.key)));
   const last = Math.max(-1, ...steps.map((s) => USUAL.indexOf(VISUALS.has(s.key) ? "visuals" : s.key)));
   const next = USUAL.slice(last + 1).filter((k) => !seen.has(k)).map((key) => ({ key, label: label(key), state: "next" as const, details: [] }));
   return [...steps, ...next];
+}
+
+// What was read from each of the user's files: the cards made from it and any problems, in plain words.
+function materialSummary(p: Project) {
+  const files = p.input.files ?? [];
+  if (!files.length) return undefined;
+  const read = !!p.material?.uploaded;
+  const from = (name: string, f: string) => name === f || name.startsWith(`${f}.`);
+  return files.map((f) => ({
+    name: f.name,
+    type: f.type,
+    size: showSize(f.size),
+    read,
+    cards: read ? p.material!.cards.filter((c) => from(c.name, f.name)).map((c) => ({ title: c.name === f.name ? c.kind : c.name.slice(f.name.length + 1), about: plain(c.about, 200), headings: Object.entries(c.parts).filter(([k]) => /(^|\.)heading\.\d+$/.test(k)).slice(0, 8).map(([, x]) => plain(x.text ?? "", 80)), ok: c.checked.ok })) : [],
+    problems: read ? p.material!.uploaded!.problems.filter((x) => x.startsWith(`${f.name}`)).map((x) => plain(x.replace(`${f.name}: `, ""))) : [],
+  }));
 }
 
 // What the page shows for a project: only what the viewer needs, never the raw file.
@@ -213,7 +262,8 @@ function summary(p: Project) {
     takeaway: p.script?.takeaway,
     plan: p.plan,
     stages: Object.keys(p.stages),
-    steps: withNext(steps, !live),
+    steps: withNext(steps, !live, !!p.input.files?.length),
+    material: materialSummary(p),
     stage: job?.stage ?? (p.render ? "done" : "stopped"),
     running: live,
     error: job?.error,
@@ -221,7 +271,7 @@ function summary(p: Project) {
     narration: draft?.narration,
     scriptStep: p.script ? "final" : draft?.step,
     seconds: p.narration ? Math.round(p.narration.seconds) : undefined,
-    facts: p.factSheet ? { claims: p.factSheet.claims.length, sources: p.factSheet.sources.map((s) => ({ title: s.publisher || s.title, url: s.url })) } : undefined,
+    facts: p.factSheet ? { claims: p.factSheet.claims.length, sources: p.factSheet.sources.map((s) => ({ title: s.url.startsWith("file:") ? `${s.publisher}: ${s.title}` : s.publisher || s.title, url: /^https?:/.test(s.url) ? s.url : undefined })) } : undefined,
     shots: p.timeline?.clips.filter((c) => c.type !== "credits").length,
     real: assets.filter((a) => a.kind === "real").length,
     generated: assets.filter((a) => a.kind === "generated").length,
@@ -297,15 +347,43 @@ createServer(async (req, res) => {
     if (path === "/api/videos" && req.method === "GET") return send(res, 200, projects());
     if (path === "/api/videos" && req.method === "POST") {
       const b = await body(req);
-      const prompt = String(b.prompt ?? "").trim();
-      if (!prompt) return send(res, 400, { error: "Tell it what the video is about." });
+      const staged = TOKEN.test(String(b.uploads ?? "")) && stagedFiles(b.uploads).length ? (b.uploads as string) : undefined;
+      const prompt = String(b.prompt ?? "").trim() || (staged ? "Make a video from the attached files." : "");
+      if (!prompt) return send(res, 400, { error: "Tell it what the video is about, or add your files." });
       if (prompt.length > MAX_PROMPT) return send(res, 400, { error: "That message is too long." });
       if (running) return send(res, 409, { error: "A video is already being made. It takes a few minutes. You can watch it from the gallery." });
       const blocked = limit(req, "video");
       if (blocked) return send(res, 429, { error: blocked });
       const style = styleNames().includes(b.style) ? b.style : "collage";
       const persona = names("personas").includes(b.persona) ? b.persona : "auto";
-      return send(res, 200, { id: await start(prompt, style, persona, b.length) });
+      const id = await start(prompt, style, persona, b.length, staged);
+      // The run copied the files into its project before announcing its id.
+      if (staged) rmSync(join(STAGING, staged), { recursive: true, force: true });
+      return send(res, 200, { id });
+    }
+    if (path === "/api/uploads" && req.method === "POST") {
+      const url = new URL(req.url ?? "/", "http://x");
+      const name = safeName(url.searchParams.get("name") ?? "file");
+      const given = url.searchParams.get("token") ?? "";
+      if (given && !TOKEN.test(given)) return send(res, 400, { error: "That upload is not valid." });
+      const token = given || randomBytes(12).toString("hex");
+      const bytes = await raw(req, UPLOADS.file);
+      if (!bytes) return send(res, 413, { error: `${name} is too big. The limit is ${showSize(UPLOADS.file)} per file.` });
+      const held = tidyStaging();
+      if (held + bytes.length > UPLOADS.staged) return send(res, 507, { error: "The site is holding too many files right now. Try again later." });
+      const waiting = stagedFiles(token);
+      const problem = sizeProblem(name, bytes.length, waiting.map((f) => f.size), UPLOADS) ?? uploadProblem(name, bytes);
+      if (problem) return send(res, 400, { error: problem });
+      const folder = join(STAGING, token);
+      mkdirSync(folder, { recursive: true });
+      const stored = freeName(name, (n) => waiting.some((f) => f.name === n));
+      writeFileSync(inside(folder, stored), bytes);
+      return send(res, 200, { token, file: { name: stored, type: typeLabel(stored), size: showSize(bytes.length) } });
+    }
+    const upload = /^\/api\/uploads\/([a-f0-9]{24})\/([^/]+)$/.exec(path);
+    if (upload && req.method === "DELETE") {
+      rmSync(inside(join(STAGING, upload[1]!), safeName(decodeURIComponent(upload[2]!))), { force: true });
+      return send(res, 200, {});
     }
     if (path === "/api/styles" && req.method === "POST") {
       const b = await body(req);

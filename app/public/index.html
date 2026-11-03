@@ -24,6 +24,22 @@
   h1 { font-family: var(--serif); font-size: clamp(32px, 6vw, 52px); line-height: 1.06; letter-spacing: -0.02em; margin: 0 0 12px; font-weight: 700; }
   .lede { color: var(--soft); font-size: 18px; margin: 0 0 24px; max-width: 640px; }
   textarea { width: 100%; min-height: 120px; padding: 16px 18px; resize: vertical; background: var(--card); color: var(--ink); border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 18px; }
+  /* The user's files: a drop zone around the prompt, and a chip for each file. */
+  .drop { position: relative; }
+  .drop.over textarea { border-color: var(--accent); outline: 2.5px solid var(--accent); outline-offset: 2px; }
+  .attach { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+  .attach label { cursor: pointer; font-size: 15px; font-weight: 600; padding: 7px 12px; border: 1.5px solid var(--line); border-radius: 8px; }
+  .attach label:focus-within { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+  .attach input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 6px 6px 12px; background: var(--card); border: 1.5px solid var(--line); border-radius: 8px; font-size: 14px; }
+  .chip b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip small { color: var(--soft); white-space: nowrap; }
+  .chip button { background: none; border: 0; color: var(--soft); cursor: pointer; font: inherit; font-size: 18px; line-height: 1; width: 28px; height: 28px; }
+  .read-file { margin: 0 0 14px; }
+  .read-file b { font-weight: 600; }
+  .read-file small { color: var(--soft); margin-left: 6px; }
+  .read-file ul { margin: 4px 0 0; padding-left: 18px; font-size: 15px; color: var(--soft); }
+  .read-file .bad { color: var(--ink); font-weight: 600; }
   .field { margin-top: 22px; }
   .field > b { display: block; font-size: 15px; margin-bottom: 8px; }
   .field > b small { font-weight: 400; color: var(--soft); margin-left: 6px; }
@@ -298,21 +314,67 @@ function tile(v) {
     thumb, el("b", {}, v.title), el("small", {}, [v.seconds && minutes(v.seconds), v.style].filter(Boolean).join(", ")));
 }
 
+// The files added to the prompt: chips with name, type and size, sent one by one so a bad file is named at once.
+function attachments(area) {
+  const state = { token: undefined, sending: 0 };
+  const err = el("div", { class: "error", role: "alert" });
+  const add = async (files) => {
+    err.textContent = "";
+    for (const f of files) {
+      const chip = el("span", { class: "chip" }, el("b", {}, f.name), el("small", {}, "adding..."));
+      list.append(chip);
+      state.sending++;
+      try {
+        const r = await api(`/api/uploads?name=${encodeURIComponent(f.name)}${state.token ? `&token=${state.token}` : ""}`, { method: "POST", body: f });
+        state.token = r.token;
+        chip.replaceChildren(el("b", { title: r.file.name }, r.file.name), el("small", {}, `${r.file.type}, ${r.file.size}`),
+          el("button", { type: "button", "aria-label": `Remove ${r.file.name}`, onclick: async () => {
+            await api(`/api/uploads/${r.token}/${encodeURIComponent(r.file.name)}`, { method: "DELETE" }).catch((e) => { err.textContent = e.message; });
+            chip.remove();
+          } }, "×"));
+      } catch (e) {
+        chip.remove();
+        err.append(el("div", {}, e.message));
+      }
+      state.sending--;
+    }
+  };
+  const input = el("input", { type: "file", multiple: "", "aria-label": "Add your files", onchange: () => { add([...input.files]); input.value = ""; } });
+  const list = el("span", { class: "attach" });
+  const drop = (on) => (e) => { e.preventDefault(); area.classList.toggle("over", on); };
+  area.addEventListener("dragover", drop(true));
+  area.addEventListener("dragleave", drop(false));
+  area.addEventListener("drop", (e) => { drop(false)(e); add([...e.dataTransfer.files]); });
+  return { state, view: el("div", { class: "attach" }, el("label", {}, "Add your files", input), list), err };
+}
+
+// What was read from each file, so the person sees their material understood.
+function materialRead(files) {
+  return el("section", {}, el("h3", {}, "Your files"), files.map((f) => el("div", { class: "read-file" },
+    el("b", {}, f.name), el("small", {}, `${f.type}, ${f.size}`),
+    !f.read ? el("ul", {}, el("li", {}, "Not read yet")) : el("ul", {},
+      f.cards.map((c) => el("li", {}, `${c.title}: ${c.about}`, c.headings.length ? `. Headings: ${c.headings.join("; ")}` : "", c.ok ? null : " (did not fully check against the file)")),
+      f.problems.map((x) => el("li", { class: "bad" }, x))))));
+}
+
 async function home() {
   const [opts, videos] = await Promise.all([api("/api/options"), api("/api/videos")]);
   const prompt = el("textarea", { id: "prompt", placeholder: "How did anyone read the Rosetta Stone?\n\nOr tell it everything: the angle, the tone, what to skip.", "aria-label": "What should the video be about?" });
   const persona = el("select", { "aria-label": "Narrator" }, opts.personas.map((s) => el("option", { value: s.name }, s.label)));
   const err = el("div", { class: "error", role: "alert" });
   const go = el("button", { class: "make", type: "submit" }, "Make the video");
+  const area = el("div", { class: "drop" }, prompt);
+  const files = attachments(area);
   const form = el("form", { onsubmit: async (e) => {
     e.preventDefault();
-    go.disabled = true;
     err.textContent = "";
+    if (files.state.sending) { err.textContent = "Your files are still being added."; return; }
+    go.disabled = true;
     try {
-      const { id } = await post("/api/videos", { prompt: prompt.value, style: chosen.style, persona: persona.value, length: chosen.length });
+      const { id } = await post("/api/videos", { prompt: prompt.value, style: chosen.style, persona: persona.value, length: chosen.length, uploads: files.state.token });
       location.hash = id;
     } catch (e) { err.textContent = e.message; go.disabled = false; }
-  } }, prompt, picker(opts.styles), lengths(),
+  } }, area, files.view, files.err, picker(opts.styles), lengths(),
     el("div", { class: "row" }, go, el("details", {}, el("summary", {}, "Narrator"), persona)),
     opts.busy ? el("p", { class: "note" }, "A video is being made right now, so a new one will wait until it is done.") : null,
     err);
@@ -320,7 +382,7 @@ async function home() {
   const making = videos.filter((v) => v.running);
   app.replaceChildren(
     el("div", { class: "compose" }, el("h1", {}, "Turn a question into a video worth watching."),
-      el("p", { class: "lede" }, "It researches the story, writes and narrates it, makes the visuals in the style you pick, and checks its own work. Every fact shows its source."), form),
+      el("p", { class: "lede" }, "It researches the story, writes and narrates it, makes the visuals in the style you pick, and checks its own work. Every fact shows its source. Add your own documents, slides, spreadsheets, code or pictures, and it builds on them."), form),
     making.length ? el("div", { class: "field" }, el("h2", {}, "Being made now"), making.map((v) => el("p", {}, el("a", { href: `#${v.id}` }, v.title)))) : "",
     done.length ? el("div", {}, el("h2", {}, "Made so far"), el("p", { class: "note" }, "Tap one to watch it here."), el("div", { class: "gallery" }, done.map(tile))) : "");
 }
@@ -350,11 +412,12 @@ function render(v) {
     el("p", { class: "asked" }, v.takeaway ?? v.prompt),
     v.video && !v.running && el("div", { class: "tools" }, el("button", { type: "button", onclick: () => replay(v) }, "Replay how it was made"), v.captions && el("button", { type: "button", onclick: (e) => editCaptions(v, e.target) }, "Edit captions")),
     el("section", {}, el("h3", {}, v.video && !v.running ? "How it was made" : "Making it", el("small", {}, v.style)), steps(v)),
+    v.material && materialRead(v.material),
     v.plan && wishes(v.plan),
     v.narration && el("section", { class: "script" }, el("h3", {}, "The script", v.scriptStep && el("small", {}, SCRIPT_STEPS[v.scriptStep] ?? v.scriptStep)), v.narration.split(/\n\s*\n/).map((p) => el("p", {}, p))),
     v.shots && el("section", { class: "facts" }, [[v.facts?.claims, "sourced facts"], [v.shots, "shots"], [v.real, "real images"], [v.generated, "generated"], [v.marks, "drawn marks"], [`$${v.usd.toFixed(2)}`, "cost"]].filter(([n]) => n !== undefined).map(([n, t]) => el("div", {}, el("b", {}, String(n)), t))),
     v.critic && el("section", {}, el("h3", {}, "What the critic said"), el("p", {}, v.critic.verdict), v.critic.tickets.map((t) => el("p", { class: "ticket" }, el("b", {}, "Fixed: "), t.note))),
-    v.facts?.sources.length ? el("section", {}, el("h3", {}, "Sources"), el("ul", { class: "sources" }, v.facts.sources.map((s) => el("li", {}, el("a", { href: s.url, target: "_blank", rel: "noreferrer" }, s.title))))) : null,
+    v.facts?.sources.length ? el("section", {}, el("h3", {}, "Sources"), el("ul", { class: "sources" }, v.facts.sources.map((s) => el("li", {}, s.url ? el("a", { href: s.url, target: "_blank", rel: "noreferrer" }, s.title) : s.title)))) : null,
   ];
   const box = el("div", { class: "screen" + (v.video ? " playing" : "") }, screen);
   const links = v.video ? el("div", { class: "after" }, el("a", { href: `/videos/${v.id}.mp4`, download: `${v.id}.mp4` }, "Download"), el("a", { href: "#" }, "Make another")) : el("div", { class: "after" }, el("a", { href: "#" }, "Back"));
