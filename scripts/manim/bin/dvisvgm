@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+# Stand-in for dvisvgm on machines without it (BasicTeX has no dvisvgm, and brew's formula pulls all of TeX Live).
+# Takes the arguments Manim passes. Reads the DVI itself, has MetaPost turn each glyph into a path, writes the SVG.
+# Keeps Manim's `dvisvgm:raw <g id=...>` markers, so MathTex parts still work. Hosting should use the real dvisvgm.
+import re, struct, subprocess, sys, tempfile
+from pathlib import Path
+
+out = next(a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--output="))
+d = Path([a for a in sys.argv[1:] if not a.startswith("--")][-1]).read_bytes()
+BP = 72 / 72.27 / 65536  # scaled points to big points
+
+
+def tfm_widths(name, size):
+    path = subprocess.run(["kpsewhich", name + ".tfm"], capture_output=True, text=True).stdout.strip()
+    t = Path(path).read_bytes()
+    h = struct.unpack(">12H", t[:24])
+    lh, bc, ec = h[1], h[2], h[3]
+    info = 24 + lh * 4
+    wtab = info + (ec - bc + 1) * 4
+
+    def fix(i):
+        return struct.unpack(">i", t[wtab + i * 4 : wtab + i * 4 + 4])[0] / 2**20
+
+    return {c: fix(t[info + (c - bc) * 4]) * size for c in range(bc, ec + 1)}
+
+
+fonts, items, glyphs = {}, [], set()
+p, h, v, w, x, y, z, cur, st = 0, 0, 0, 0, 0, 0, 0, None, []
+
+
+def u(n):
+    global p
+    r = int.from_bytes(d[p : p + n], "big")
+    p += n
+    return r
+
+
+def s(n):
+    global p
+    r = int.from_bytes(d[p : p + n], "big", signed=True)
+    p += n
+    return r
+
+
+def glyph(c):
+    f = fonts[cur]
+    items.append(("g", f[0], c, h, v, f[1] / f[2]))
+    glyphs.add((f[0], c))
+    return f[3].get(c, 0)
+
+
+def fontdef(k):
+    global p
+    p += 4
+    size, design, a, l = u(4), u(4), u(1), u(1)
+    name = d[p + a : p + a + l].decode()
+    p += a + l
+    fonts[k] = (name, size, design, tfm_widths(name, size))
+
+
+while p < len(d):
+    o = u(1)
+    if o <= 127:
+        h += glyph(o)
+    elif 128 <= o <= 131:
+        h += glyph(u(o - 127))
+    elif 133 <= o <= 136:
+        glyph(u(o - 132))
+    elif o in (132, 137):
+        a, b = s(4), s(4)
+        if a > 0 and b > 0:
+            items.append(("r", h, v, b, a))
+        if o == 132:
+            h += b
+    elif o == 139:
+        p += 44
+        h = v = w = x = y = z = 0
+        st = []
+    elif o == 140:
+        break
+    elif o == 141:
+        st.append((h, v, w, x, y, z))
+    elif o == 142:
+        h, v, w, x, y, z = st.pop()
+    elif 143 <= o <= 146:
+        h += s(o - 142)
+    elif o == 147:
+        h += w
+    elif 148 <= o <= 151:
+        w = s(o - 147)
+        h += w
+    elif o == 152:
+        h += x
+    elif 153 <= o <= 156:
+        x = s(o - 152)
+        h += x
+    elif 157 <= o <= 160:
+        v += s(o - 156)
+    elif o == 161:
+        v += y
+    elif 162 <= o <= 165:
+        y = s(o - 161)
+        v += y
+    elif o == 166:
+        v += z
+    elif 167 <= o <= 170:
+        z = s(o - 166)
+        v += z
+    elif 171 <= o <= 234:
+        cur = o - 171
+    elif 235 <= o <= 238:
+        cur = u(o - 234)
+    elif 239 <= o <= 242:
+        n = u(o - 238)
+        t = d[p : p + n].decode("latin1")
+        p += n
+        m = re.match(r"dvisvgm:raw\s*(.*)", t)
+        if m:
+            items.append(("x", m.group(1)))
+    elif 243 <= o <= 246:
+        fontdef(u(o - 242))
+    elif o == 247:
+        p += 13
+        k = u(1)
+        p += k
+    elif o == 138:
+        pass
+    else:
+        raise SystemExit(f"dvi opcode {o}")
+
+# MetaPost writes each glyph as a path in <defs>, named GLYPHfont_code.
+with tempfile.TemporaryDirectory() as tmp:
+    mp = 'prologues:=3;outputformat:="svg";outputtemplate:="o.svg";beginfig(1);\n'
+    for i, (f, c) in enumerate(sorted(glyphs)):
+        mp += f'draw char{c} infont "{f}" shifted ({i * 20},0);\n'
+    Path(tmp, "o.mp").write_text(mp + "endfig;end\n")
+    subprocess.run(["mpost", "-interaction=batchmode", "o.mp"], cwd=tmp, stdout=subprocess.DEVNULL, check=True)
+    svg = Path(tmp, "o.svg").read_text()
+defs = re.search(r"<defs>.*?</defs>", svg, re.S).group(0)
+
+body = []
+for it in items:
+    if it[0] == "x":
+        body.append(it[1])
+    elif it[0] == "g":
+        _, f, c, gx, gy, m = it
+        body.append(f'<g transform="translate({gx * BP:.4f} {gy * BP:.4f}) scale({m:.5f})"><use xlink:href="#GLYPH{f}_{c}"/></g>')
+    else:
+        _, rx, ry, rw, rh = it
+        body.append(f'<rect x="{rx * BP:.4f}" y="{(ry - rh) * BP:.4f}" width="{rw * BP:.4f}" height="{rh * BP:.4f}"/>')
+Path(out).write_text(
+    '<?xml version="1.0"?><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">'
+    + defs + "<g>" + "".join(body) + "</g></svg>"
+)
