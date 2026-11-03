@@ -3,7 +3,7 @@
 // Writes <outPrefix>.mp4 (about 360 px wide) and <outPrefix>-frames/ (one still a second, 216 px wide).
 import { mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../../engine/render/bundle.ts";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import { themeFrom } from "../../engine/render/theme.ts";
 
@@ -12,7 +12,7 @@ const scene = JSON.parse(readFileSync(file!, "utf8"));
 const theme = themeFrom(style);
 const browserExecutable = process.env.BETTERVID_CHROME;
 const concurrency = Number(process.env.RENDER_CONCURRENCY ?? 3);
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
 const inputProps = { scene, theme };
 const composition = await selectComposition({ serveUrl, id: "Scene", inputProps, browserExecutable });
 await renderMedia({ serveUrl, composition, inputProps, codec: "h264", imageFormat: "jpeg", concurrency, crf: 28, scale: 1 / 3, browserExecutable, chromiumOptions: { gl: "angle" }, outputLocation: `${out}.mp4` });

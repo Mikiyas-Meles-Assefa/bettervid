@@ -12,7 +12,8 @@ import { captions } from "../../pipeline/stages/timeline.ts";
 import type { Project } from "../../schemas/project.ts";
 import { frameOf, loadCase, picturesOf, type Case } from "./case.ts";
 import { failed, measureCase, type CaseMeasure } from "./measure.ts";
-import { BENCH, RESULTS, WORK, folderOf } from "./paths.ts";
+import { bundled } from "../../engine/render/bundle.ts";
+import { BENCH, BUNDLES, RESULTS, WORK, folderOf } from "./paths.ts";
 import { settingsOf } from "./settings.ts";
 
 type Step = (run: string, ids: string[], flags: Set<string>) => Promise<void>;
@@ -100,13 +101,7 @@ export const tile = (s: { width: number; height: number }): [number, number] => 
 const SHEET = { fps: 4, cols: 4, rows: 2 };
 const windowSeconds = (SHEET.cols * SHEET.rows) / SHEET.fps;
 
-let bundled: string | undefined;
-async function serveUrl(): Promise<string> {
-  if (bundled) return bundled;
-  const { bundle } = await import("@remotion/bundler");
-  bundled = await bundle({ entryPoint: join(BENCH, "clip.tsx") });
-  return bundled;
-}
+const serveUrl = () => bundled(join(BENCH, "clip.tsx"), { cache: BUNDLES });
 
 // The timed words, cut into the sheets' windows, with each hold as a silence.
 export function transcript(p: Project): string[] {

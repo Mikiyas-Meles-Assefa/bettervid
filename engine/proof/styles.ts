@@ -2,7 +2,7 @@
 // Usage: node --experimental-strip-types engine/proof/styles.ts <outDir> [--stills <frame,frame>] [<style> ...]
 // With --stills it renders only those frames as PNGs, which is enough to judge a look.
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import { compile } from "../core/compile.ts";
 import type { Step, Theme } from "../core/types.ts";
@@ -21,7 +21,7 @@ const out = args.shift()!;
 const stillsAt = args[0] === "--stills" ? (args.shift(), args.shift()!.split(",").map(Number)) : undefined;
 const styles = args.length ? args : styleNames();
 const { steps, frames } = scene();
-const serveUrl = await bundle({ entryPoint: resolve("engine/proof/styles-preview.tsx") });
+const serveUrl = await bundled(resolve("engine/proof/styles-preview.tsx"));
 
 for (const name of styles) {
   const theme = themeFrom(name);

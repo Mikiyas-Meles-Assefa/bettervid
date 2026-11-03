@@ -3,7 +3,7 @@
 // clip of 5,000 moving parts that measures real render speed.
 // Usage: node --experimental-strip-types engine/proof/rendering.ts <outDir> <style> [<style> ...] [--crowd]
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { compile } from "../core/compile.ts";
 import type { NodeSpec, Props, SceneDoc, Step } from "../core/types.ts";
@@ -153,7 +153,7 @@ function crowd(): { doc: SceneDoc; frames: number } {
 const args = process.argv.slice(2);
 const wantCrowd = args.includes("--crowd");
 const [out, ...styles] = args.filter((a) => a !== "--crowd");
-const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
 for (const name of styles) {
   const theme = themeFrom(name);
   for (const [label, made] of wantCrowd ? ([["crowd", crowd()]] as const) : ([["rendering", scene()]] as const)) {

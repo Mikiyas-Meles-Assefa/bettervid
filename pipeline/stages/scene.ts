@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DemoPhase, DirectionEvent, Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
 import { when } from "../../engine/core/compile.ts";
+import { bundled } from "../../engine/render/bundle.ts";
 import { evaluate } from "../../engine/core/evaluate.ts";
 import type { CompileContext, Kit, Resolved, Scene, Theme } from "../../engine/core/types.ts";
 import { KITS } from "../../engine/kits/index.ts";
@@ -518,9 +519,8 @@ async function slot<T>(fn: () => Promise<T>): Promise<T> {
 
 function openRenderer(): Promise<Renderer> {
   renderer ??= (async () => {
-    const { bundle } = await import("@remotion/bundler");
     const { openBrowser } = await import("@remotion/renderer");
-    const serveUrl = await bundle({ entryPoint: join(process.cwd(), "engine/render/preview.tsx") });
+    const serveUrl = await bundled(join(process.cwd(), "engine/render/preview.tsx"));
     const browser = await openBrowser("chrome", { browserExecutable: process.env.BETTERVID_CHROME ?? null, chromiumOptions: { gl: "angle" } });
     return { serveUrl, browser, close: () => browser.close({ silent: true }) };
   })();

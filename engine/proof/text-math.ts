@@ -3,7 +3,7 @@
 // layout makes room when something joins it. Nothing here shows a box: only the parts themselves are drawn.
 // Usage: node --experimental-strip-types engine/proof/text-math.ts <outDir> <style> [<style> ...]
 import { join, resolve } from "node:path";
-import { bundle } from "@remotion/bundler";
+import { bundled } from "../render/bundle.ts";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { compile } from "../core/compile.ts";
 import type { CompileContext, Step, Theme } from "../core/types.ts";
@@ -86,7 +86,7 @@ export function buildProof(theme: Theme) {
 
 if (process.argv[1]?.endsWith("text-math.ts")) {
   const [out, ...styles] = process.argv.slice(2);
-  const serveUrl = await bundle({ entryPoint: resolve("engine/render/preview.tsx") });
+  const serveUrl = await bundled(resolve("engine/render/preview.tsx"));
   for (const name of styles) {
     const theme = themeFrom(name);
     const scene = buildProof(theme);

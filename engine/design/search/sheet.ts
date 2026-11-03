@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { Scene, Theme } from "../../core/types.ts";
+import { bundled } from "../../render/bundle.ts";
 
 export interface StillRenderer {
   /** Renders the given frames of a scene to JPEG files under `dir`; returns their paths in the order of `frames`. */
@@ -63,21 +64,16 @@ sheet.save(out, quality=80)
 /**
  * Stills with the engine's preview composition (engine/render/preview.tsx) through Remotion, bundled once per process.
  * `scale` sizes the stills against the scene's frame (0.2 of 1080x1920 is 216x384). A bundle is about 200 MB: with
- * `bundleDir` it is written there once and reused by later runs; without it, it is deleted when the process exits.
+ * `bundleDir` (a cache folder, see engine/render/bundle.ts) it is kept there and reused by later runs until sources change;
+ * without it, it is deleted when the process exits.
  */
 export function remotionStills(o: { theme: Theme; scale: number; chrome?: string; bundleDir?: string }): StillRenderer {
   let served: Promise<string> | undefined;
   const browserExecutable = o.chrome ?? process.env.BETTERVID_CHROME;
   return {
     async stills(scene, frames, dir, tag) {
-      const { bundle } = await import("@remotion/bundler");
       const { renderStill, selectComposition } = await import("@remotion/renderer");
-      served ??= (async () => {
-        if (o.bundleDir && existsSync(join(o.bundleDir, "index.html"))) return o.bundleDir;
-        const url = await bundle({ entryPoint: resolve(import.meta.dirname, "../../render/preview.tsx"), ...(o.bundleDir ? { outDir: o.bundleDir } : {}) });
-        if (!o.bundleDir) process.on("exit", () => rmSync(url, { recursive: true, force: true }));
-        return url;
-      })();
+      served ??= bundled(resolve(import.meta.dirname, "../../render/preview.tsx"), o.bundleDir ? { cache: o.bundleDir } : {});
       const serveUrl = await served;
       const inputProps = { scene, theme: o.theme };
       const composition = await selectComposition({ serveUrl, id: "Scene", inputProps, browserExecutable });
