@@ -27,7 +27,7 @@ type Pace = "slow" | "normal" | "fast";
 type Mom = {
   word: number; line: number; show?: string; extraShow: string[]; keep: string[]; becomes: { id: string; text?: string; n?: number }[];
   from: { a: string; b: string }[]; compare?: [string, string]; arrows: { a: string; b: string; label: string }[];
-  ask?: string; reveal?: string; wrong: string[]; stress: boolean; pace: Pace;
+  ask?: string; reveal?: string; wrong: string[]; stress: boolean; pace: Pace; plain?: boolean;
 };
 
 const quoted = (s: string) => /"([^"]*)"/.exec(s)?.[1];
@@ -79,6 +79,7 @@ function parse(src: string, notes: string[]) {
     } else if (key === "reveal") cur.reveal = ids(rest)[0] ?? cur.reveal;
     else if (key === "wrong") cur.wrong.push(...ids(rest));
     else if (key === "stress") cur.stress = true;
+    else if (key === "plain") cur.plain = true;
     else if (key === "pace") {
       const p = rest.toLowerCase();
       if (p === "slow" || p === "normal" || p === "fast") cur.pace = p;
@@ -129,7 +130,7 @@ const SAFE = safeArea(W, H);
 const SW = SAFE.w * 0.94; // a little under the safe width: glow and tracking make real words wider than measured
 const Y_TOP = SAFE.y - SAFE.h / 2;
 const Y_BOT = Math.min(SAFE.y + SAFE.h / 2, H * 0.78); // the bottom 22% is kept clear for captions and phone UI
-const Y0 = Y_TOP + 0.42 * (Y_BOT - Y_TOP); // optical center
+const Y0 = Y_TOP + 0.47 * (Y_BOT - Y_TOP); // optical center: just above the middle of the region that is kept clear of UI
 const MIN_FS = 0.045 * W;
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -140,10 +141,13 @@ const paceMul = (p: Pace) => (p === "slow" ? 1.4 : p === "fast" ? 0.7 : 1);
 const durMove = (px: number, p: Pace) => Math.max(1, Math.round(Math.min(28, Math.max(10, 10 + 0.35 * Math.sqrt(px))) * paceMul(p) * feelMul));
 
 // Pictures the user gave: a name, a file, a size and named parts (boxes as fractions of the picture).
-type Pic = { name: string; src: string; w: number; h: number; about: string; parts: Map<string, [number, number, number, number]> };
+// A picture that is a chart may carry its data (from the user's data file, or read off the picture): then the engine can
+// redraw it in the style, every bar addressable, starting exactly on the original's bars.
+type ChartData = { kind: "bars"; title?: string; xname?: string; labels: string[]; values: number[]; ymax: number; plot: [number, number, number, number]; barFrac?: number };
+type Pic = { name: string; src: string; w: number; h: number; about: string; parts: Map<string, [number, number, number, number]>; data?: ChartData; barsOf: Map<string, number[]> };
 const pics = new Map<string, Pic>();
 {
-  let material: Record<string, { size?: [number, number]; about?: string; parts?: Record<string, { box: [number, number, number, number] }> }> = {};
+  let material: Record<string, { size?: [number, number]; about?: string; parts?: Record<string, { box: [number, number, number, number] }>; data?: ChartData }> = {};
   try {
     material = JSON.parse(readFileSync(join(dir, "material.json"), "utf8"));
   } catch {}
@@ -153,7 +157,22 @@ const pics = new Map<string, Pic>();
     const size = material[name]?.size ?? (png ? [bytes.readUInt32BE(16), bytes.readUInt32BE(20)] : [1000, 750]);
     const mime = file.toLowerCase().endsWith(".png") ? "png" : "jpeg";
     const parts = new Map(Object.entries(material[name]?.parts ?? {}).map(([k, v]) => [k, v.box] as [string, [number, number, number, number]]));
-    pics.set(name, { name, src: `data:image/${mime};base64,${bytes.toString("base64")}`, w: size[0], h: size[1], about: material[name]?.about ?? "", parts });
+    const data = material[name]?.data;
+    // A part of a chart with data is the bars whose centers fall inside the part's box.
+    const barsOf = new Map<string, number[]>();
+    if (data) {
+      const n = data.values.length;
+      const [px0, , px1] = data.plot;
+      for (const [part, [u0, , u1]] of parts) {
+        const idx = data.values.map((_, i) => i).filter((i) => {
+          const u = px0 + ((i + 0.5) * (px1 - px0)) / n;
+          return u >= u0 && u <= u1;
+        });
+        if (idx.length) barsOf.set(part, idx);
+      }
+      notes.push(`picture ${name} is a chart with its data (${n} bars): it is shown as it is first, then redrawn in the style on its own bars`);
+    }
+    pics.set(name, { name, src: `data:image/${mime};base64,${bytes.toString("base64")}`, w: size[0], h: size[1], about: material[name]?.about ?? "", parts, data, barsOf });
     if (!material[name]) notes.push(`picture ${name} has no material entry: it is a picture with no parts`);
   }
 }
@@ -193,6 +212,14 @@ for (const m of parsed.moments) if (m.word >= request.words.length || m.word < 0
 const sorted = parsed.moments.map((m, i) => ({ m, i })).sort((a, b) => Math.min(a.m.word, request.words.length - 1) - Math.min(b.m.word, request.words.length - 1) || a.i - b.i).map((x) => x.m);
 if (sorted.some((m, i) => m !== parsed.moments[i])) notes.push("moments were not in word order: sorted by word");
 
+// A number in a text, and what it counts: a symbol ($ % and the like) is a unit by itself, otherwise the word after it.
+const numOf = (t: string) => {
+  const m = /\d[\d,]*(?:\.\d+)?/.exec(t);
+  if (!m) return undefined;
+  const symbols = t.replace(m[0], "").replace(/[^$%\u20ac\u00a3]/g, "");
+  const after = t.slice(m.index + m[0].length).trim().split(/\s+/)[0]!.toLowerCase().replace(/[^a-z]/g, "").replace(/s$/, "");
+  return { v: Number(m[0].replace(/,/g, "")), unit: symbols || after };
+};
 const subjectOf = (m: Mom): string | undefined => m.reveal ?? m.show ?? m.becomes[0]?.id ?? m.arrows[0]?.b ?? m.wrong[0];
 const dwellOf = (m: Mom) => Math.round(Math.max(m.pace === "slow" ? 1.5 : m.pace === "fast" ? 0.7 : 1.0, m.reveal || m.ask || m.stress ? 1.4 : 0) * FPS);
 const tag = (m: Mom) => `@${m.word}`;
@@ -234,7 +261,7 @@ if (!K) throw new Error("the intent has no moments");
 type Cls = "subject" | "support" | "question" | "ph";
 type Slot = { id: string; cls: Cls; wrong: boolean; reveal: boolean; born?: string; ask?: boolean; part?: string; parts?: string[] };
 type PArrow = { t: string; pic: string; part: string; to: boolean };
-type Plan = { slots: Slot[]; pair?: [string, string]; arrows: { a: string; b: string; label: string }[]; parrows: PArrow[]; subject?: string; stress: boolean; question?: string; phFor?: string };
+type Plan = { slots: Slot[]; pair?: [string, string]; partPair?: { pic: string; parts: [string, string] }; inferred?: boolean; arrows: { a: string; b: string; label: string }[]; parrows: PArrow[]; subject?: string; stress: boolean; question?: string; phFor?: string };
 const sticky = new Set<string>();
 const plans: Plan[] = [];
 const rank = new Map<string, number>();
@@ -272,8 +299,13 @@ fms.forEach((f, k) => {
   if (m.extraShow.length) notes.push(`${tag(m)} has more than one show: only "${m.show}" is the subject, ${m.extraShow.map((x) => `"${x}"`).join(", ")} kept as support`);
   if (!subj && !m.compare && !q) notes.push(`${tag(m)} has no show: nothing is the subject`);
   let pair = m.compare && m.compare[0] !== m.compare[1] ? m.compare : undefined;
+  let partPair: Plan["partPair"];
   if (pair && (pr(pair[0]) || pr(pair[1]))) {
-    notes.push(`${tag(m)} compare ${pair[0]} ${pair[1]} involves a picture: both are shown and the part is outlined`);
+    const [ra, rb] = [pr(pair[0]), pr(pair[1])];
+    if (ra?.part && rb?.part && ra.name === rb.name && pics.get(ra.name)!.data) {
+      partPair = { pic: ra.name, parts: [ra.part, rb.part] };
+      notes.push(`${tag(m)} compare ${pair[0]} ${pair[1]}: two parts of a chart with data, so both are lit and each gets its level line on the chart's own scale`);
+    } else notes.push(`${tag(m)} compare ${pair[0]} ${pair[1]} involves a picture: both are shown and the part is outlined`);
     for (const x of pair) add(x, "support");
     pair = undefined;
   }
@@ -334,7 +366,27 @@ fms.forEach((f, k) => {
     if (s.cls === "question") continue;
     if (!rank.has(key)) rank.set(key, rank.size);
   }
-  plans.push({ slots, pair: pair && has(pair[0]) && has(pair[1]) ? (pair as [string, string]) : undefined, arrows: plainArrows, parrows, subject: subj, stress: m.stress, question: q, phFor });
+  // Inferred comparison: two quantities of the same kind on screen together are weighed on one shared scale, unless the
+  // author related them already, or a chart with data is on screen (then quantities become levels on the chart).
+  let inferred = false;
+  const chartOn = slots.some((sl) => pics.get(sl.id)?.data);
+  if (!pair && !partPair && !chartOn && !m.plain) {
+    const qs = slots
+      .filter((sl) => (sl.cls === "subject" || sl.cls === "support") && defs.has(sl.id) && !defs.get(sl.id)!.many)
+      .map((sl) => ({ sl, n: numOf(defs.get(sl.id)!.text) }))
+      .filter((x) => x.n && x.n.v > 0 && x.n.unit);
+    outer: for (let i = 0; i < qs.length; i++)
+      for (let j = i + 1; j < qs.length; j++)
+        if (qs[i]!.n!.unit === qs[j]!.n!.unit && qs[i]!.n!.v !== qs[j]!.n!.v) {
+          const ab = [qs[i]!.sl.id, qs[j]!.sl.id].sort((x, y) => (rank.get(x) ?? 99) - (rank.get(y) ?? 99)) as [string, string];
+          pair = ab;
+          inferred = true;
+          if (subj && ab.includes(subj)) for (const sl of slots) if (ab.includes(sl.id)) sl.cls = "subject";
+          notes.push(`${tag(m)} inferred: "${defs.get(ab[0])!.text}" and "${defs.get(ab[1])!.text}" are both in ${qs[i]!.n!.unit} and on screen together, so they are compared on one scale (turn off with plain)`);
+          break outer;
+        }
+  }
+  plans.push({ slots, pair: pair && has(pair[0]) && has(pair[1]) ? (pair as [string, string]) : undefined, partPair, inferred, arrows: plainArrows, parrows, subject: subj, stress: m.stress, question: q, phFor });
 });
 // Which pictures ever share the frame with words: those keep the smaller stage in every moment, so the box stays put.
 const picRoom = new Set<string>();
@@ -429,22 +481,15 @@ plans.forEach((p, k) => {
 // ---------------------------------------------------------------------------------------------------------------
 // 6. Layout: a one-column solve per moment.
 // ---------------------------------------------------------------------------------------------------------------
-type St = { x: number; y: number; s: number; op: number; color: string; w: number; h: number; cls: Cls; ver: number; n: number; wrong: boolean; reveal: boolean; fs: number; dotsY: number; labY: number; label: string; len: number; bar: boolean; z: number; ox: number; oy: number; sub?: string; sup?: string[]; pts: number[] };
-type Item = { id: string; type: "text" | "ph" | "many" | "strike" | "bar" | "arrow" | "pic" | "parrow" | "card"; st: St; born?: string };
+type St = { x: number; y: number; s: number; op: number; color: string; w: number; h: number; cls: Cls; ver: number; n: number; wrong: boolean; reveal: boolean; fs: number; dotsY: number; labY: number; label: string; len: number; bar: boolean; z: number; ox: number; oy: number; sub?: string; sup?: string[]; pts: number[]; lit?: string[]; levels?: Lv[] };
+type Lv = { part: string; v: number; tag: string };
+type Item = { id: string; type: "text" | "ph" | "many" | "strike" | "bar" | "arrow" | "pic" | "parrow" | "card" | "vbar"; st: St; born?: string };
 const blank = (): St => ({ x: 0, y: 0, s: 1, op: 1, color: C.subject, w: 0, h: 0, cls: "support", ver: 0, n: 0, wrong: false, reveal: false, fs: 0, dotsY: 0, labY: 0, label: "", len: 0, bar: false, z: 1, ox: 0, oy: 0, pts: [] });
 const LINE = 1.12; // line height in em
 const PITCH = 40; // dot spacing in the dots group's own units
 const gridOf = (e: Ent) => {
   const cols = Math.ceil(Math.sqrt(e.maxN));
   return { cols, rows: Math.ceil(e.maxN / cols) };
-};
-// A number in a text, and what it counts: a symbol ($ % and the like) is a unit by itself, otherwise the word after it.
-const numOf = (t: string) => {
-  const m = /\d[\d,]*(?:\.\d+)?/.exec(t);
-  if (!m) return undefined;
-  const symbols = t.replace(m[0], "").replace(/[^$%\u20ac\u00a3]/g, "");
-  const after = t.slice(m.index + m[0].length).trim().split(/\s+/)[0]!.toLowerCase().replace(/[^a-z]/g, "").replace(/s$/, "");
-  return { v: Number(m[0].replace(/,/g, "")), unit: symbols || after };
 };
 
 // Pictures are drawn at a reference size of REFW and scaled as a group. Their content group zooms and pans inside a clip.
@@ -468,7 +513,38 @@ function viewOf(p: Pic, part: string | undefined, mode: "subject" | "support") {
   return { z, ox: -z * (cu - 0.5) * REFW, oy: -z * (cv - 0.5) * refH(p) };
 }
 // Where a part lands on screen, given the picture's placed state.
+// A chart with data, redrawn: every bar at its place, in the chart's own box (title row, plot, label row), or exactly
+// on the original picture's bars (photo), which is where the redrawn bars start.
+function chartGeom(st: St, p: Pic, mode: "own" | "photo") {
+  const d = p.data!;
+  const n = d.values.length;
+  if (mode === "photo") {
+    const pw = st.w;
+    const ph = (pw * p.h) / p.w;
+    const left = st.x - pw / 2;
+    const top = st.y - ph / 2;
+    const [u0, v0, u1, v1] = d.plot;
+    const slot = ((u1 - u0) * pw) / n;
+    const base = top + v1 * ph;
+    const plotH = (v1 - v0) * ph;
+    return { bars: d.values.map((v, i) => ({ x: left + u0 * pw + (i + 0.5) * slot, w: slot * (d.barFrac ?? 0.72), h: (v / d.ymax) * plotH })), base, plotH, left: left + u0 * pw, right: left + u1 * pw, titleY: top + 0.08 * ph, labY: base + 0.05 * ph, pw, ph };
+  }
+  const left = st.x - st.w / 2;
+  const top = st.y - st.h / 2;
+  const titleH = d.title ? MIN_FS * 1.8 : 0;
+  const labH = MIN_FS * 1.6;
+  const base = top + st.h - labH;
+  const plotH = base - (top + titleH + 24);
+  const slot = st.w / n;
+  return { bars: d.values.map((v, i) => ({ x: left + (i + 0.5) * slot, w: slot * 0.7, h: (v / d.ymax) * plotH })), base, plotH, left, right: left + st.w, titleY: top + titleH / 2, labY: base + labH / 2 + 4, pw: st.w, ph: st.h };
+}
 function screenBox(st: St, p: Pic, part: string) {
+  if (p.data) {
+    const g = chartGeom(st, p, "own");
+    const idx = p.barsOf.get(part) ?? [];
+    const bs = idx.map((i) => g.bars[i]!);
+    return { x0: Math.min(...bs.map((b) => b.x - b.w / 2)), y0: Math.min(...bs.map((b) => g.base - b.h)), x1: Math.max(...bs.map((b) => b.x + b.w / 2)), y1: g.base };
+  }
   const [u0, v0, u1, v1] = p.parts.get(part)!;
   const X = (u: number) => st.x + st.s * (st.ox + st.z * (u - 0.5) * REFW);
   const Y = (v: number) => st.y + st.s * (st.oy + st.z * (v - 0.5) * refH(p));
@@ -477,7 +553,7 @@ function screenBox(st: St, p: Pic, part: string) {
 const roundedRect = (x0: number, y0: number, x1: number, y1: number, r: number) => `M${x0 + r} ${y0}H${x1 - r}Q${x1} ${y0} ${x1} ${y0 + r}V${y1 - r}Q${x1} ${y1} ${x1 - r} ${y1}H${x0 + r}Q${x0} ${y1} ${x0} ${y1 - r}V${y0 + r}Q${x0} ${y0} ${x0 + r} ${y0}Z`;
 
 type Placed = { id: string; dx: number; dy: number; w: number; h: number; st: Partial<St> };
-type Dec = { type: "bar" | "arrow"; id: string; dx: number; dy: number; len: number; color: string; owner?: string };
+type Dec = { type: "bar" | "arrow" | "vbar"; id: string; dx: number; dy: number; len: number; color: string; owner?: string; w?: number; op?: number };
 type Block = { rank: number; h: number; items: Placed[]; decor: Dec[]; subjectDy?: number };
 
 function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; order: string[] } {
@@ -533,6 +609,12 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
       // The stage: full width at its own aspect (or limited in height), the same size in every moment it shares with words.
       const p = pics.get(s.id)!;
       const asp = p.w / p.h;
+      if (p.data) {
+        // A chart with data is redrawn in the style: the full column width, and the same box in every moment.
+        const ch = (lone || !picRoom.has(s.id) ? 0.78 : 0.5) * AVAIL * cp;
+        const lit = plan.partPair?.pic === s.id ? plan.partPair.parts : s.part ? [s.part] : [];
+        return { rank: -0.5, h: ch, items: [{ id: s.id, dx: 0, dy: ch / 2, w: SW, h: ch, st: { cls: s.cls, op: 1, s: 1, z: 1, ox: 0, oy: 0, sub: s.part, sup: s.parts, lit } }], decor: [], subjectDy: subjectLike ? ch / 2 : undefined };
+      }
       const w = Math.min(SW, (lone || !picRoom.has(s.id) ? 0.88 : 0.55) * AVAIL * asp) * cp;
       const h = w / asp;
       const v = viewOf(p, s.part ?? s.parts?.[0], s.part ? "subject" : "support");
@@ -575,6 +657,29 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
     const emMax = Math.max(...texts.filter((t) => t.e.type === "text").map((t) => t.e.ems[t.ver]!), 0.2);
     const nums = texts.map((t) => (t.e.type === "text" ? numOf(t.e.texts[t.ver]!) : undefined));
     const bars = !manyIn && nums[0] && nums[1] && nums[0].unit === nums[1].unit && Math.max(nums[0].v, nums[1].v) > 0;
+    if (bars) {
+      // Two quantities of one kind: columns side by side on one baseline, heights on one scale, each value standing on
+      // its own column. The tall frame has the height for it, and a glance reads the ratio before any word.
+      const colW = (SW - gap) / 2;
+      const mx = Math.max(nums[0]!.v, nums[1]!.v);
+      const Hb = 0.3 * H * (subjectLike ? cj : cs);
+      const f0 = subjectLike ? Math.min(0.11 * W * cj, (colW * 0.96) / emMax) : Math.min(supportFs, (colW * 0.96) / emMax);
+      const fsC = Math.max(f0, Math.min(MIN_FS, (colW * 0.96) / emMax));
+      const sizedC = texts.map((t) => ({ ...t, fs: t.s.wrong ? fsC * 0.9 : fsC, box: textBox(t.e, t.ver, t.s.wrong ? fsC * 0.9 : fsC) }));
+      const textH = Math.max(...sizedC.map((t) => t.box.h));
+      const hC = textH + 24 + Hb;
+      const placedC: Placed[] = [];
+      const decorC: Dec[] = [];
+      sizedC.forEach((t, i) => {
+        const dx = (i === 0 ? -1 : 1) * (colW / 2 + gap / 2);
+        const bh = Math.max(8, (nums[i]!.v / mx) * Hb);
+        const st: Partial<St> = { cls: subjectLike ? "subject" : "support", wrong: t.s.wrong, reveal: t.s.reveal, ver: t.ver, color: colorFor(t.s, subjectLike), op: opFor(t.s, subjectLike), fs: t.fs, s: t.fs / 100 };
+        placedC.push({ id: t.s.id, dx, dy: hC - bh - 24 - t.box.h / 2, w: t.box.w, h: t.box.h, st });
+        decorC.push({ type: "vbar", id: `vbar.${t.s.id}`, dx, dy: hC, len: bh, w: colW * 0.62, color: t.s.wrong ? C.wrong : t.s.reveal ? C.answer : subjectLike ? C.subject : C.muted, op: t.s.wrong ? 0.55 : subjectLike ? 1 : 0.6, owner: t.s.id });
+      });
+      if (tell) notes2.push(`${tag(f.m)} compare ${a} ${b}: ${nums[0]!.v} against ${nums[1]!.v} ${nums[0]!.unit}, as two columns on one baseline and one scale, the value standing on each`);
+      return { rank: Math.min(rank.get(a) ?? 0, rank.get(b) ?? 0), h: hC, items: placedC, decor: decorC, subjectDy: subjectLike ? hC - Hb / 2 : undefined };
+    }
     // Compared quantities get magnitude bars; the bars need the whole column to span, so the pair is stacked.
     const side = !bars && emMax * supportFs <= halfW;
     if (tell) notes2.push(`${tag(f.m)} compare ${a} ${b}: ${side ? "side by side" : "stacked"}`);
@@ -761,15 +866,19 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
       const id = p.id === "ph" ? "ph" : p.id.startsWith("q.") || p.id.startsWith("lab.") ? p.id : key(p.id);
       items.set(id, { id, type, st, born: slotOf.get(p.id)?.born ? key(sid(slotOf.get(p.id)!.born!)!) : undefined });
       order.push(id);
-      if (st.wrong) items.set(`strike.${p.id}`, { id: `strike.${p.id}`, type: "strike", st: { ...blank(), x: st.x, y: st.y, len: p.w + 40, color: C.wrong, op: 1 } });
+      // A wrong thing is struck through its first line (the value), not between its lines.
+      const nl = e.type === "text" ? e.lines[st.ver]!.length : 1;
+      const firstW = e.type === "text" ? em(e.lines[st.ver]![0]!) * st.fs : p.w;
+      if (st.wrong) items.set(`strike.${p.id}`, { id: `strike.${p.id}`, type: "strike", st: { ...blank(), x: st.x, y: st.y - ((nl - 1) / 2) * LINE * st.fs, len: firstW + 40, color: C.wrong, op: 1 } });
     }
     for (const d of b.decor) {
-      const st = { ...blank(), x: W / 2 + d.dx, y: y + d.dy, len: d.len, color: d.color, op: 1 };
+      const st = { ...blank(), x: W / 2 + d.dx, y: y + d.dy, len: d.len, color: d.color, op: d.op ?? 1, w: d.w ?? 0 };
       items.set(d.id, { id: d.id, type: d.type, st });
     }
   }
   // Arrows to or from a part of a picture: drawn from the words to the part's box on screen, through the current zoom.
-  plan.parrows.forEach((pa, i) => {
+  const localArrows: PArrow[] = [];
+  const drawPArrow = (pa: PArrow, i: number) => {
     const ti = items.get(key(pa.t));
     const pi = items.get(key(pa.pic));
     if (!ti || !pi || card) return;
@@ -791,13 +900,60 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
     const R = rot(-0.5);
     const id = `parrow.${i}.${pa.t}.${pa.part}`;
     items.set(id, { id, type: "parrow", st: { ...blank(), pts: [x1, y1, x2, y2, L[0]!, L[1]!, x2, y2, R[0]!, R[1]!].map((v) => Math.round(v * 10) / 10) } });
-  });
+  };
+  // Charts with data: a quantity said while a part of the chart is in view becomes a level line on that part, on the
+  // chart's own scale, and its words take the line's color; a part compared with another gets its remembered level.
+  // A word (not a quantity) shown while one part is held is pointed at that part.
+  for (const [cid, ci] of items) {
+    if (ci.type !== "pic") continue;
+    const pic = pics.get(cid.slice(2))!;
+    if (!pic.data) continue;
+    const parts = [...new Set([...(ci.st.lit ?? []), ci.st.sub, ...(ci.st.sup ?? [])].filter((x): x is string => !!x && pic.barsOf.has(x)))];
+    const levels: Lv[] = [];
+    for (const [tid, ti] of items) {
+      if (ti.type !== "text" || !tid.startsWith("t.")) continue;
+      const e = entOfKey(tid)!;
+      const nv = numOf(e.texts[ti.st.ver]!);
+      if (!nv) continue;
+      let best: { part: string; d: number } | undefined;
+      for (const part of parts) {
+        const vs = pic.barsOf.get(part)!.map((i) => pic.data!.values[i]!);
+        const mean = vs.reduce((a, b) => a + b, 0) / vs.length;
+        if (nv.v < Math.min(...vs) * 0.75 || nv.v > Math.max(...vs) * 1.25) continue;
+        const d = Math.abs(nv.v - mean) / mean;
+        if (!best || d < best.d) best = { part, d };
+      }
+      if (!best || levels.some((l) => l.part === best!.part)) continue;
+      levels.push({ part: best.part, v: nv.v, tag: "" });
+      anchorMem.set(`${pic.name}.${best.part}`, nv.v);
+      ti.st.color = C.pointer;
+      notes2.push(`${tag(f.m)} "${e.texts[ti.st.ver]}" is a level of ${pic.name}.${best.part}: a line is drawn at ${nv.v} across its bars, and the words take the line's color`);
+    }
+    for (const part of plan.partPair?.pic === pic.name ? plan.partPair.parts : []) {
+      if (levels.some((l) => l.part === part)) continue;
+      const vs = pic.barsOf.get(part)!.map((i) => pic.data!.values[i]!);
+      const v = anchorMem.get(`${pic.name}.${part}`) ?? Math.round(vs.reduce((a, b) => a + b, 0) / vs.length);
+      levels.push({ part, v, tag: String(v) });
+    }
+    if (levels.some((l) => l.tag)) notes2.push(`${tag(f.m)} ${pic.name}: compared parts show their levels (${levels.map((l) => `${l.part} ${l.v}`).join(", ")}), the values said earlier are reused`);
+    ci.st.levels = levels;
+    // Point a lone word at the one part in view.
+    const subjT = plan.subject ? items.get(key(plan.subject)) : undefined;
+    const held = [ci.st.sub, ...(ci.st.sup ?? [])].filter((x): x is string => !!x && pic.barsOf.has(x));
+    if (subjT && subjT.type === "text" && !numOf(entOfKey(subjT.id)!.texts[subjT.st.ver]!) && held.length === 1 && !plan.parrows.length && !card) {
+      localArrows.push({ t: plan.subject!, pic: pic.name, part: held[0]!, to: true });
+      notes2.push(`${tag(f.m)} inferred: "${entOfKey(subjT.id)!.texts[0]}" is shown while ${pic.name}.${held[0]} is held, so a pointer joins them`);
+    }
+  }
+  [...plan.parrows, ...localArrows].forEach(drawPArrow);
   // Born from: the source must be on screen; otherwise it simply enters.
   for (const [id, it] of items) if (it.born && !items.has(it.born)) it.born = undefined;
   return { items, order };
 }
 
+const entOfKey = (id: string): Ent | undefined => (id === "ph" ? ents.get("ph") : id.startsWith("q.") || id.startsWith("lab.") ? ents.get(id) : id.startsWith("t.") || id.startsWith("p.") ? ents.get(id.slice(2)) : undefined);
 const laid: { items: Map<string, Item>; order: string[] }[] = [];
+const anchorMem = new Map<string, number>(); // chart part -> the value last said about it
 for (let k = 0; k < K; k++) laid.push(layoutMoment(k, notes));
 
 // Think time for each question, and decisions about the column.
@@ -820,7 +976,6 @@ const node = (id: string, kind: "group" | "path" | "text" | "image", props: Prop
 const circle = (r: number) => Array.from({ length: 16 }, (_, i) => [Math.round(r * Math.cos((i / 16) * 2 * Math.PI) * 10) / 10, Math.round(r * Math.sin((i / 16) * 2 * Math.PI) * 10) / 10]).flat();
 const used = new Set<string>();
 for (const l of laid) for (const id of l.items.keys()) used.add(id);
-const entOfKey = (id: string): Ent | undefined => (id === "ph" ? ents.get("ph") : id.startsWith("q.") || id.startsWith("lab.") ? ents.get(id) : id.startsWith("t.") || id.startsWith("p.") ? ents.get(id.slice(2)) : undefined);
 const makeText = (id: string, e: Ent, role: "title" | "heading" | "label") => {
   node(id, "group", { opacity: 0, scaleX: 0.01, scaleY: 0.01, x: W / 2, y: H / 2 });
   e.lines.forEach((ls, v) =>
@@ -836,6 +991,19 @@ for (const [id, e] of ents) {
   node(P, "group", { opacity: 0, scaleX: 0.01, scaleY: 0.01, x: W / 2, y: H / 2, clip: [-REFW / 2, -rh / 2, REFW / 2, -rh / 2, REFW / 2, rh / 2, -REFW / 2, rh / 2] });
   node(`${P}.c`, "group", {}, P);
   node(`${P}.c.img`, "image", { src: pic.src, w: REFW, h: rh }, `${P}.c`);
+  if (pic.data) {
+    // The redrawn chart: bars, a baseline, labels, a title, and one level line and tag per part that can be lit.
+    const d = pic.data;
+    d.values.forEach((_, i) => node(`${P}.bar${i}`, "path", { points: [-0.5, 0, 0.5, 0, 0.5, -1, -0.5, -1], closed: 1, fill: C.subject, opacity: 0, scaleX: 1, scaleY: 0 }));
+    node(`${P}.base`, "path", { points: [0, 0, 1, 0], stroke: C.subject, strokeWidth: 4, opacity: 0, scaleX: 1 });
+    d.labels.forEach((t, i) => node(`${P}.lab${i}`, "text", { text: t, size: MIN_FS, role: "label", color: C.muted, opacity: 0 }));
+    if (d.title) node(`${P}.title`, "text", { text: d.title, size: MIN_FS, role: "label", color: C.muted, opacity: 0 });
+    for (const part of pic.barsOf.keys()) {
+      node(`${P}.lv.${part}`, "path", { points: [0, 0, 1, 0], stroke: C.pointer, strokeWidth: 7, lineCap: "round", opacity: 0, trimEnd: 0, scaleX: 1 });
+      node(`${P}.lt.${part}`, "text", { text: "", size: MIN_FS * 1.25, role: "heading", color: C.pointer, opacity: 0 });
+    }
+    continue;
+  }
   for (const part of picParts.get(id) ?? []) {
     const [u0, v0, u1, v1] = pic.parts.get(part)!;
     const [x0, y0, x1, y1] = [(u0 - 0.5) * REFW, (v0 - 0.5) * rh, (u1 - 0.5) * REFW, (v1 - 0.5) * rh];
@@ -863,6 +1031,7 @@ for (const [id, e] of ents) {
 }
 for (const id of used) {
   if (id.startsWith("strike.")) node(id, "path", { points: [-0.5, 0, 0.5, 0], stroke: C.wrong, strokeWidth: 10, lineCap: "butt", opacity: 0, trimEnd: 0, scaleX: 100 });
+  else if (id.startsWith("vbar.")) node(id, "path", { points: [-0.5, 0, 0.5, 0, 0.5, -1, -0.5, -1], closed: 1, fill: C.subject, opacity: 0, scaleX: 1, scaleY: 0 });
   else if (id.startsWith("bar.")) node(id, "path", { points: [0, -0.5, 1, -0.5, 1, 0.5, 0, 0.5], closed: 1, fill: C.key, opacity: 0, scaleX: 0, scaleY: 0.022 * W });
   else if (id.startsWith("parrow.")) node(id, "path", { points: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], stroke: C.pointer, strokeWidth: 8, opacity: 0, trimEnd: 0 });
   else if (id.startsWith("arrow.")) node(id, "path", { points: [0, 0, 0, 70, -18, 52, 0, 70, 18, 52], role: "pointer", stroke: C.pointer, strokeWidth: 8, opacity: 0, trimEnd: 0 });
@@ -899,6 +1068,8 @@ function target(it: Item): Triple[] {
     );
   } else if (it.type === "many") {
     out.push([id, "x", st.x], [id, "y", st.y], [id, "opacity", st.op], [`${id}.dots`, "y", st.dotsY], [`${id}.dots`, "scaleX", st.s], [`${id}.dots`, "scaleY", st.s], [`${id}.lab`, "y", st.labY], [`${id}.lab`, "text", st.label]);
+  } else if (it.type === "pic" && pics.get(id.slice(2))!.data) {
+    out.push(...chartTargets(it, "own"));
   } else if (it.type === "pic") {
     const P = id;
     out.push([P, "x", st.x], [P, "y", st.y], [P, "scaleX", st.s], [P, "scaleY", st.s], [P, "opacity", st.op], [`${P}.c`, "x", st.ox], [`${P}.c`, "y", st.oy], [`${P}.c`, "scaleX", st.z], [`${P}.c`, "scaleY", st.z]);
@@ -910,8 +1081,43 @@ function target(it: Item): Triple[] {
   } else if (it.type === "parrow") out.push([id, "points", st.pts], [id, "opacity", 1], [id, "trimEnd", 1]);
   else if (it.type === "card") out.push([id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.len], [id, "scaleY", st.h], [id, "opacity", 0.94]);
   else if (it.type === "strike") out.push([id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.len], [id, "opacity", 1], [id, "trimEnd", 1]);
+  else if (it.type === "vbar") out.push([id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.w], [id, "scaleY", st.len], [id, "opacity", st.op], [id, "fill", st.color]);
   else if (it.type === "bar") out.push([id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.len], [id, "opacity", 1], [id, "fill", st.color]);
   else out.push([id, "x", st.x], [id, "y", st.y], [id, "opacity", 1], [id, "trimEnd", 1]);
+  return out;
+}
+// The redrawn chart's targets. In "own" the original picture is hidden and the bars stand in the chart's box, lit by
+// what the moment holds; in "photo" the original shows and the bars wait, unseen, exactly on its bars.
+function chartTargets(it: Item, mode: "own" | "photo"): Triple[] {
+  const P = it.id;
+  const pic = pics.get(P.slice(2))!;
+  const d = pic.data!;
+  const st = it.st;
+  const g = chartGeom(st, pic, mode);
+  const out: Triple[] = [];
+  const pg = chartGeom(st, pic, "photo");
+  out.push([P, "x", st.x], [P, "y", st.y], [P, "scaleX", pg.pw / REFW], [P, "scaleY", pg.pw / REFW], [P, "opacity", mode === "photo" ? 1 : 0]);
+  const lit = new Set((st.lit ?? []).flatMap((x) => pic.barsOf.get(x) ?? []));
+  const held = new Set([st.sub, ...(st.sup ?? [])].flatMap((x) => (x ? pic.barsOf.get(x) ?? [] : [])));
+  const focus = lit.size > 0 || held.size > 0;
+  g.bars.forEach((b, i) => {
+    const color = lit.has(i) ? C.pointer : C.subject;
+    const op = mode === "photo" ? 0 : !focus || lit.has(i) || held.has(i) ? 1 : 0.22;
+    out.push([`${P}.bar${i}`, "x", b.x], [`${P}.bar${i}`, "y", g.base], [`${P}.bar${i}`, "scaleX", b.w], [`${P}.bar${i}`, "scaleY", b.h], [`${P}.bar${i}`, "fill", color], [`${P}.bar${i}`, "opacity", op]);
+    out.push([`${P}.lab${i}`, "x", b.x], [`${P}.lab${i}`, "y", g.labY], [`${P}.lab${i}`, "opacity", mode === "photo" ? 0 : lit.has(i) ? 1 : 0.75], [`${P}.lab${i}`, "color", lit.has(i) ? C.pointer : C.muted]);
+  });
+  out.push([`${P}.base`, "x", g.left], [`${P}.base`, "y", g.base], [`${P}.base`, "scaleX", g.right - g.left], [`${P}.base`, "opacity", mode === "photo" ? 0 : 1]);
+  if (d.title) out.push([`${P}.title`, "x", st.x], [`${P}.title`, "y", g.titleY], [`${P}.title`, "opacity", mode === "photo" ? 0 : 1]);
+  for (const part of pic.barsOf.keys()) {
+    const lv = mode === "own" ? st.levels?.find((l) => l.part === part) : undefined;
+    const idx = pic.barsOf.get(part)!;
+    const x0 = g.bars[idx[0]!]!.x - g.bars[idx[0]!]!.w / 2 - 12;
+    const x1 = g.bars[idx.at(-1)!]!.x + g.bars[idx.at(-1)!]!.w / 2 + 12;
+    const y = lv ? g.base - (lv.v / d.ymax) * g.plotH : g.base;
+    out.push([`${P}.lv.${part}`, "x", x0], [`${P}.lv.${part}`, "y", y], [`${P}.lv.${part}`, "scaleX", x1 - x0], [`${P}.lv.${part}`, "opacity", lv ? 1 : 0], [`${P}.lv.${part}`, "trimEnd", lv ? 1 : 0]);
+    out.push([`${P}.lt.${part}`, "x", (x0 + x1) / 2], [`${P}.lt.${part}`, "y", y - MIN_FS * 1.1], [`${P}.lt.${part}`, "opacity", lv?.tag ? 1 : 0]);
+    if (lv?.tag) out.push([`${P}.lt.${part}`, "text", lv.tag]);
+  }
   return out;
 }
 const dotRange = (it: Item, from: number, to: number) => Array.from({ length: Math.max(0, to - from) }, (_, j) => `${it.id}.d${from + j}`);
@@ -960,7 +1166,7 @@ for (let k = 0; k < K; k++) {
   const maxMove = Math.max(0, ...movers.map((id) => durMove(pxOf(id), pace)));
   const mvOff0 = exits.length ? Math.round(dEx * 0.6) : 0;
   const enOff0 = mvOff0 + (movers.length ? Math.round(maxMove * 0.5) : 0);
-  const entering = enters.filter((id) => id !== lastId && cur.get(id)!.type !== "bar" && cur.get(id)!.type !== "strike");
+  const entering = enters.filter((id) => id !== lastId && cur.get(id)!.type !== "bar" && cur.get(id)!.type !== "vbar" && cur.get(id)!.type !== "strike");
   entering.sort((a, b) => {
     const rankOf = (id: string) => (cur.get(id)!.type === "card" ? -1 : cur.get(id)!.type === "arrow" || cur.get(id)!.type === "parrow" ? 1000 : order.indexOf(id) < 0 ? 999 : order.indexOf(id));
     return rankOf(a) - rankOf(b);
@@ -1054,6 +1260,39 @@ for (let k = 0; k < K; k++) {
   // Entrances: decelerate, staggered; the carrier of the moment arrives last.
   const enterOne = (id: string, at: number, isLast: boolean) => {
     const it = cur.get(id)!;
+    if (it.type === "pic" && pics.get(id.slice(2))!.data) {
+      // The user's chart arrives as it is. When the moment is long enough to see it, its bars are then redrawn in place
+      // (the new bars appear exactly on the old ones), the original fades, and the chart grows into the stage, every
+      // bar keeping its identity. When it is short, the bars grow in one by one, left to right.
+      const photo = chartTargets(it, "photo");
+      const own = chartTargets(it, "own");
+      const room = (onsets[k + 1] ?? FRAMES) - at;
+      const pic = pics.get(id.slice(2))!;
+      if (room >= 50) {
+        for (const [n, p, v] of photo) put(n, p, v, t0 - 1);
+        put(id, "opacity", 0, t0 - 1);
+        put(id, "opacity", 1, at, 10, "out");
+        const tm = at + Math.min(60, Math.max(24, Math.round(room * 0.45)));
+        pic.data!.values.forEach((_, i) => put(`${id}.bar${i}`, "opacity", 1, tm, 6, "out"));
+        put(id, "opacity", 0, tm + 6, 10, "in");
+        for (const [n, p, v] of own) {
+          if (n === id && p === "opacity") continue;
+          const late = /\.(lv|lt|lab\d+|title|base)/.test(n) || p === "fill";
+          put(n, p, v, late ? tm + 22 : tm + 6, late ? 14 : 24, "smooth");
+        }
+        notes.push(`${tag(f.m)} ${pic.name}: the user's own chart shows as it is for ${((tm - at) / FPS).toFixed(1)} s, then its ${pic.data!.values.length} bars are redrawn on top of the originals and the chart grows to fill the stage`);
+      } else {
+        for (const [n, p, v] of own) {
+          const bar = /\.bar(\d+)$/.exec(n);
+          if (bar && p === "scaleY") {
+            put(n, p, 0, t0 - 1);
+            put(n, p, v, at + 2 * Number(bar[1]), 14, "out");
+          } else put(n, p, v, at, 10, "out");
+        }
+        notes.push(`${tag(f.m)} ${pic.name}: the chart is redrawn in the style, its bars growing in one by one`);
+      }
+      return;
+    }
     const e = entOfKey(id);
     const born = it.born ? (prev.get(it.born) ?? cur.get(it.born)) : undefined;
     const reveal = it.st.reveal && (it.type === "text" || it.type === "many");
@@ -1088,6 +1327,9 @@ for (let k = 0; k < K; k++) {
       } else if (it.type === "strike" || it.type === "arrow" || it.type === "parrow") {
         if (p === "opacity") from = 1;
         if (p === "trimEnd") (from = 0, (ease = "smooth"), (frames = 14));
+      } else if (it.type === "vbar") {
+        if (p === "scaleY") (from = 0, (ease = "smooth"), (frames = 20));
+        if (p === "opacity") (from = 0, (frames = 6));
       } else if (it.type === "bar") {
         if (p === "scaleX") (from = 0, (ease = "smooth"), (frames = 16));
         if (p === "opacity") (from = 0, (frames = 6));
@@ -1121,11 +1363,12 @@ for (let k = 0; k < K; k++) {
   for (const id of enters) {
     const it = cur.get(id)!;
     if (it.type === "bar") enterOne(id, subjAt + 4, false);
+    if (it.type === "vbar") enterOne(id, subjAt + 2, false);
     if (it.type === "strike") (enterOne(id, subjAt + Math.round(base * 0.7), false), notes.push(`${tag(f.m)} wrong ${id.slice(7)}: a strike line draws across it and it shrinks to 0.85`));
   }
 
   for (const [id, it] of cur) {
-    if (it.type !== "pic") continue;
+    if (it.type !== "pic" || pics.get(id.slice(2))!.data) continue;
     const before = prev.get(id)?.st;
     const pic = pics.get(id.slice(2))!;
     const pct = (part: string) => `${Math.round((pic.parts.get(part)![2] - pic.parts.get(part)![0]) * 100)}%`;

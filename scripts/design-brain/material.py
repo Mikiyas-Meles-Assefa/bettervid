@@ -47,7 +47,10 @@ parts = {
     "week9": {"box": fr(boxes[9]), "about": "week 9, the first tall bar, 96 signups"},
     "jump": {"box": fr(span(9, 12)), "about": "weeks 9 to 12, about 120 signups a week"},
 }
-material = {"chart": {"file": "chart.png", "size": [W, H], "about": "a bar chart of weekly signups over 12 weeks", "parts": parts}}
+# What a chart reader returns besides the parts: the numbers behind the bars, read from the data file when the user gave
+# one, or digitized from the picture when not, with the plot box so a redrawn chart can start exactly on the original.
+data = {"kind": "bars", "title": "Weekly signups, last 12 weeks", "xname": "week", "labels": [str(i + 1) for i in range(len(vals))], "values": vals, "ymax": 140, "plot": fr((x0, y0, x1, y1)), "barFrac": round((bw - 28) / bw, 3)}
+material = {"chart": {"file": "chart.png", "size": [W, H], "about": "a bar chart of weekly signups over 12 weeks", "parts": parts, "data": data}}
 with open(f"{out}/material.json", "w") as fh:
     json.dump(material, fh, indent=1)
 print("ok")
