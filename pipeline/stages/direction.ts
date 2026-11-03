@@ -341,6 +341,9 @@ export function problems(raw: RawPlan, words: string[], steps: Map<string, strin
         played.set(key, Math.max(done, ph.to));
       }
     }
+    // Once the steps are known, every phase of a computed demonstration names the steps it plays: the scene's parts are
+    // written at the same time and each needs to know where the ones before it leave the thing.
+    if (key && real && e.demo.phases.length && e.demo.phases.every((ph) => !ph.from && !ph.to)) out.push(`event ${e.id}: the steps of ${e.demo.truth.kind} are listed; give each phase of "${e.demo.what}" the steps it plays (from, to, counted from 1)`);
   });
   // A question the viewer is asked needs time to think before the script answers it.
   const waited = new Set(events.flatMap((e) => e.holds.map((h) => h.afterCue)));
@@ -537,7 +540,7 @@ export async function direction(p: Project, force = false) {
         `\n\nYour plan so far:\n${JSON.stringify(raw)}\n\n` +
         (found.length ? `It breaks these rules. Fix each one and return the whole plan:\n${found.map((x) => `- ${x}`).join("\n")}\n\n` : "") +
         (steps.size
-          ? "The engine computed the real steps of your demonstrations. Check every phase against them: the steps a phase plays " +
+          ? "The engine computed the real steps of your demonstrations. Fill in from and to for every phase now, and check every phase against them: the steps a phase plays " +
             "must be the ones its words and holds are about, the slow first instance must cover the whole first instance, and a " +
             "hold meant to show a step must come where that step plays. Change phases, holds or cues to fit; never the script. " +
             "Under each thing is how the engine draws it on this frame and which way its moves go. Where the script's words say a direction (down, up, left, right, into, out of), the picture must move that way: when it does not, set the kit's form in truth.data (its guide line names the forms), and every part of the scene then draws it the same. " +

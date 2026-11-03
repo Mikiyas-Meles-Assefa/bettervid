@@ -416,6 +416,18 @@ What the language can do is above. This is what tends to make it work on a phone
 
 [[/toolbox]]
 **One thing moves.** The eye goes to what moves, lights up or changes, before it reads anything. At each moment the thing the words are about should be the only thing that moves or lights; anything else that pulses, drifts or arrives at the same time competes with it and wins as often as it loses.
+
+# Before you answer
+
+Your part is built, rendered and measured once, and you get one correction. Most of what a correction has to fix is the same few things, so look at your part as frames before you answer, state by state, and fix them in the text now:
+
+- **The biggest thing.** In each state, name the biggest thing on screen and ask whether it is the thing the words are about. On a phone the subject takes most of the usable width; a row of small boxes across the middle with the top and bottom of the frame empty is the most common fault, and it reads as unfinished. Make the subject fill its space with a larger size or role, `w=` and `h=`, a form that suits a tall frame, or the camera on that one thing, and keep what is beside it small.
+- **Words that fit.** A state holds the main thing and about three short lines. Every word must come out at a readable size: a state that holds too much shrinks until the build refuses it. Split lines over states as the words reach them, and drop what the words have left.
+- **The camera.** It frames one id. Choose a zoom at which everything the state shows, writing included, stays inside the frame: a close zoom with a caption elsewhere on screen pushes that caption off the edge, and the build refuses it. Drop the caption or keep the zoom to what the frame holds.
+- **Steps on their words.** The first time a process plays, each step has the moment its words are said (`at=`, one per step). A stretch spread with `until=` is for words that sum up.
+- **Directions.** When the words say down, up, left or right, the thing on screen moves that way: set the form yourself.
+- **Only the settings listed.** Each kind takes the settings its line in this guide names and no others; a setting it does not take is a build error. `drop` works in a keep state only; in a plain state, what you do not list leaves by itself.
+- **Nothing arrives unasked.** Everything on screen is something the words are about now or build on soon; nothing stays after the words have moved on.
 # Example of the form, on an unrelated topic
 
     program ticks n=24 doc="A dial of tick marks that light up in turn."
