@@ -14,19 +14,28 @@ const BASE = process.env.META_BASE_URL ?? "https://api.meta.ai/v1";
 export const PRICE = {
   "muse-spark-1.3": { in: 1.25e-6, cached: 0.15e-6, out: 4.25e-6 },
   "muse-spark-1.2": { in: 1.25e-6, cached: 0.15e-6, out: 4.25e-6 },
+  "muse-spark-1.3-contributor": { in: 0.1e-6, cached: 0.002e-6, out: 0.2e-6 },
+  "muse-spark-1.2-contributor": { in: 0.1e-6, cached: 0.002e-6, out: 0.2e-6 },
   "muse-wonder-1.0": { in: 4e-6, cached: 0.2e-6, out: 20e-6 },
   webSearch: 2.5e-3,
   image: 0.01,
   sam: 0.0025,
 } as const;
 
+// Spark calls go to the Contributor tier unless META_TIER=standard: about 12 times cheaper, but Meta may train on what is
+// sent and it allows 150 requests a minute (429s are retried below). Wonder has no Contributor tier.
+export const CONTRIBUTOR = (process.env.META_TIER ?? "contributor") !== "standard";
+export const wireModel = (m: string): string => (CONTRIBUTOR && /^muse-spark-1\.[23]$/.test(m) ? `${m}-contributor` : m);
+
 export type Usage = { input_tokens?: number; output_tokens?: number; input_tokens_details?: { cached_tokens?: number } };
 
 export function tokenCost(model: keyof typeof PRICE, u: Usage = {}, searches = 0): number {
-  const p = PRICE[model] as { in: number; cached: number; out: number };
+  const p = PRICE[wireModel(model) as keyof typeof PRICE] as { in: number; cached: number; out: number };
   const cached = u.input_tokens_details?.cached_tokens ?? 0;
   return ((u.input_tokens ?? 0) - cached) * p.in + cached * p.cached + (u.output_tokens ?? 0) * p.out + searches * PRICE.webSearch;
 }
+
+const withTier = (b: any) => (b && typeof b.model === "string" ? { ...b, model: wireModel(b.model) } : b);
 
 // POST with retries: network errors, 429 (Retry-After) and 5xx. Other errors throw with the body.
 export async function post(path: string, body: unknown, tries = 5): Promise<any> {
@@ -38,7 +47,7 @@ export async function post(path: string, body: unknown, tries = 5): Promise<any>
         method: "POST",
         // A FormData body (multipart, as /images/edits needs) sets its own content type.
         headers: { authorization: `Bearer ${env("META_API_KEY")}`, ...(body instanceof FormData ? {} : { "content-type": "application/json" }) },
-        body: body instanceof FormData ? body : JSON.stringify(body),
+        body: body instanceof FormData ? body : JSON.stringify(withTier(body)),
         signal: AbortSignal.timeout(10 * 60_000),
       });
       // Read the body inside the try: on this network a connection can drop mid-response ("terminated", read ETIMEDOUT).
