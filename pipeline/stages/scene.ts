@@ -23,9 +23,16 @@ import { parse, type Item, type State } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { better, decode, hide, inventory, issuesFrom, judgeSchema, keptAt, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
 import { json, text } from "../lib/meta.ts";
-import { asked, charge, dir, prompt, stage, topic } from "../lib/project.ts";
+import { asked, charge, checkBudget, dir, prompt, stage, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
+import { designRunner, type DesignInputs } from "../lib/design-run.ts";
+import { checkPlan, INTENT_GUIDE, intentRepair, intentSystem, materialText, stripFence } from "../lib/intent-author.ts";
+import { metaReasoner } from "../lib/reasoner-meta.ts";
+import { readProject, type MaterialFile } from "../../engine/design/material/index.ts";
+import { viewingFrom } from "../../engine/design/suggest.ts";
+import type { PartCard, Reasoner, Viewing } from "../../engine/design/types.ts";
+import { basename } from "node:path";
 
 const VERSION = 5; // bump when the way sections are written or checked changes, so cached sections are redone
 const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
@@ -357,8 +364,96 @@ export function plainMoments(source: string, opts: BuildOptions): string {
 // The sections of this video: by the direction's events when there is a direction, else by the script's beats.
 export const sectionsOf = (p: Project): Range[] => splitSections(p.narration!.words, SIZE, p.direction?.events ?? []);
 
-// The whole scene document, ready for `build()`.
-export const joinScene = (plan: ScenePlan) => joinSections(plan.sections);
+// The whole scene document, ready for `build()`: the parts written in the scene language. Parts the design brain
+// composed are compiled scenes, joined by `wholeScene`.
+export const joinScene = (plan: ScenePlan) => joinSections(plan.sections.filter((s) => s.author !== "intent"));
+
+// Who writes the scene when neither the call nor the project says: the scene language, until the intent path is chosen.
+export const SCENE_AUTHOR_DEFAULT: "language" | "intent" = "language";
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The whole scene: the language parts built as one document, and each composed part shown only in its own window.
+
+type Window = { from: number; to: number };
+
+// Opacity keys that are `inside` in the windows and `outside` elsewhere, changing in one frame at each edge.
+export function windowKeys(windows: Window[], inside: number, outside: number): { at: number; value: number }[] {
+  // Windows that touch or overlap are one window, so nothing flickers where one part hands over to the next.
+  const merged: Window[] = [];
+  for (const w of [...windows].filter((x) => x.to > x.from).sort((a, b) => a.from - b.from)) {
+    const last = merged.at(-1);
+    if (last && w.from <= last.to) last.to = Math.max(last.to, w.to);
+    else merged.push({ ...w });
+  }
+  const keys = [{ at: 0, value: merged[0] && merged[0].from <= 0 ? inside : outside }];
+  for (const w of merged) {
+    if (w.from > 0) keys.push({ at: w.from - 1, value: outside }, { at: w.from, value: inside });
+    keys.push({ at: w.to - 1, value: inside }, { at: w.to, value: outside });
+  }
+  return keys.filter((k, i) => i === 0 || k.at > keys[i - 1]!.at);
+}
+
+// A compiled scene under a new root group, with every id prefixed so it cannot clash with another part's.
+function prefixed(scene: Scene, root: string): Pick<Scene, "nodes" | "tracks" | "events"> {
+  const id = (x: string) => `${root}${x}`;
+  const nodes = scene.nodes.map((n) => ({ ...n, id: id(n.id), parent: n.parent === undefined ? root : id(n.parent), props: typeof n.props.mask === "string" && n.props.mask ? { ...n.props, mask: id(n.props.mask) } : n.props }));
+  const tracks = scene.tracks.map((t) => ({ ...t, target: id(t.target), ...(t.prop === "mask" ? { keys: t.keys.map((k) => (typeof k.value === "string" && k.value ? { ...k, value: id(k.value) } : k)) } : {}) }));
+  return { nodes, tracks, events: scene.events };
+}
+
+/** The language scene with each composed part laid over it: a composed part shows only from its first word until the
+ * next part begins, and the language parts are hidden while it shows. */
+export function gateScenes(base: Scene, parts: { id: string; scene: Scene; from: number; to: number }[]): Scene {
+  if (!parts.length) return base;
+  const windows = parts.map((x) => ({ from: Math.max(0, x.from), to: Math.min(base.frames, x.to) })).filter((w) => w.to > w.from);
+  const BASE = "language__";
+  const nodes: Scene["nodes"] = [{ id: BASE, kind: "group", props: { opacity: 1 } }, ...base.nodes.map((n) => (n.parent === undefined ? { ...n, parent: BASE } : n))];
+  const tracks: Scene["tracks"] = [...base.tracks, { target: BASE, prop: "opacity", keys: windowKeys(windows, 0, 1) }];
+  const events = [...base.events];
+  const held = [...(base.held ?? [])];
+  for (const x of parts) {
+    const root = `${x.id}__`;
+    const w = { from: Math.max(0, x.from), to: Math.min(base.frames, x.to) };
+    const inner = prefixed(x.scene, root);
+    nodes.push({ id: root, kind: "group", props: { opacity: 0 } }, ...inner.nodes);
+    tracks.push(...inner.tracks, { target: root, prop: "opacity", keys: windowKeys([w], 1, 0) });
+    events.push(...inner.events.filter((e) => e.at === undefined || (e.at >= w.from && e.at < w.to)));
+    held.push(...(x.scene.held ?? []).filter((h) => h.to > w.from && h.from < w.to).map((h) => ({ ...h, from: Math.max(h.from, w.from), to: Math.min(h.to, w.to) })));
+  }
+  return { ...base, nodes, tracks, events, ...(held.length ? { held } : {}) };
+}
+
+// Image sources in a compiled scene, changed one by one.
+export function mapSources(scene: Scene, fn: (src: string) => string): Scene {
+  const nodes = scene.nodes.map((n) => (n.kind === "image" && typeof n.props.src === "string" ? { ...n, props: { ...n.props, src: fn(n.props.src) } } : n));
+  const tracks = scene.tracks.map((t) => (t.prop === "src" ? { ...t, keys: t.keys.map((k) => (typeof k.value === "string" ? { ...k, value: fn(k.value) } : k)) } : t));
+  return { ...scene, nodes, tracks };
+}
+
+/** The whole video's scene for `frames` frames. `assets` maps asset names to sources the renderer loads (the project
+ * paths for the player, data URLs for stills); composed parts are stored with project paths and mapped the same way. */
+export async function wholeScene(p: Project, assets: Record<string, string>, frames: number): Promise<{ scene?: Scene; problems: { line: number; message: string }[]; source: string }> {
+  const plan = p.scene!;
+  const opts = sceneBuildOptions(p, assets);
+  const ctx = { ...opts.ctx, frames };
+  const source = joinScene(plan);
+  const composed = plan.sections.filter((s) => s.author === "intent");
+  const byPath = new Map(Object.entries(plan.assets).map(([name, path]) => [path, assets[name] ?? path]));
+  const parts = composed.map((s) => {
+    if (!s.design) throw new Error(`scene: part ${s.id} was composed but names no scene file`);
+    const scene = mapSources(JSON.parse(readFileSync(join(dir(p), s.design.file), "utf8")) as Scene, (src) => byPath.get(src) ?? src);
+    const order = [...plan.sections].sort((a, b) => a.firstWord - b.firstWord);
+    const next = order[order.indexOf(s) + 1];
+    return { id: s.id, scene, from: when({ word: s.firstWord }, ctx), to: next ? when({ word: next.firstWord }, ctx) : frames };
+  });
+  let base: Scene;
+  if (plan.sections.length > composed.length) {
+    const r = await build(source, { ...opts, ctx });
+    if (!r.scene) return { problems: r.problems, source };
+    base = r.scene;
+  } else base = { fps: ctx.fps, width: ctx.width, height: ctx.height, frames, background: parts[0]?.scene.background ?? "#ffffff", nodes: [], tracks: [], events: [] };
+  return { scene: gateScenes(base, parts), problems: [], source };
+}
 
 export const kitKinds = () => SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
 
@@ -833,9 +928,11 @@ export async function gate(job: Job, before: string, after: Written, named: Issu
 // What still breaks a frame in a version: severe issues seen, and severe measured findings.
 export const severeOf = (judged: Judged["issues"], measured: Seen["measured"]): Issue[] => issuesFrom(judged, measured).filter((x) => x.severity >= 3);
 
-async function writeSection(job: Job, draft: string): Promise<Written & { looks: string[] }> {
+// `start`: an answer already written in the scene language (an intent author who wrote today's language instead), which
+// is checked, repaired and looked at as a first answer would be.
+async function writeSection(job: Job, draft: string, start?: string): Promise<Written & { looks: string[] }> {
   job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing`);
-  let w = await compose(job, undefined, draft ? `${job.request}\n\nA first draft of your part, made from the director's shots. Keep its pictures where they serve the words and build on it. Its camera lines frame each picture on its subject, measured for this frame, so keep them unless you move the picture; words you add over a picture take role=caption:\n${draft}` : job.request);
+  let w = start !== undefined ? await compose(job, start, job.request, true) : await compose(job, undefined, draft ?`${job.request}\n\nA first draft of your part, made from the director's shots. Keep its pictures where they serve the words and build on it. Its camera lines frame each picture on its subject, measured for this frame, so keep them unless you move the picture; words you add over a picture take role=caption:\n${draft}` : job.request);
   let usd = w.usd;
   let rounds = w.rounds;
   const looks: string[] = [];
@@ -1001,16 +1098,158 @@ export function requestFor(p: Project, ranges: Range[], i: number, cast: CastPar
   const list = (c: Carry[]) => c.map((x) => `- ${x.id}: ${x.what}${x.parts?.length ? ` Its pieces have the ids ${x.parts.join(", ")}.` : ""}${x.use ? ` The next part: ${x.use}` : ""}`).join("\n");
   const carry = i === 0 ? "Your part opens the video." : cast[i - 1]!.handoff.length ? `When your part begins, the part before has left these on screen, for your words to build on:\n${list(cast[i - 1]!.handoff)}\nWhere your first words build on one, list it in your first state with the same id, and its pieces with theirs, so the viewer sees it stay rather than being drawn again; then change it as your words need, and drop it once they have moved on. Anything you leave out of your first state leaves as your part begins, which is right when your words turn to something else.` : "The part before yours leaves nothing you need, so start fresh.";
   const handoff = i === ranges.length - 1 ? "Your part ends the video." : cast[i]!.handoff.length ? `The next part builds on these, so have them on screen, with these ids, as your last word is spoken. Until then show them only where your own words use them:\n${list(cast[i]!.handoff)}` : "The next part starts fresh, so end your part however suits your words.";
+  const { arc, narration, spoken } = partContext(p, ranges, i, cast, true);
+  const body = fill(prompt("scene"), { first: String(r.firstWord), last: String(r.lastWord), prefix: `${r.id}_`, carry, handoff, arc, pictures: pics ? `\nPictures you can show with \`image id asset=NAME\`:\n${pics}\n` : "", narration, direction: directionText(p, r) });
+  return `${header}${body}\nYour words (number, seconds, word):\n${spoken}`;
+}
+
+// What every author of a part is told about the whole: what each part shows, the narration with the part marked, and
+// the part's own words with their times and the silences the voice left.
+function partContext(p: Project, ranges: Range[], i: number, cast: CastPart[], holdMomentsToo: boolean) {
+  const r = ranges[i]!;
+  const words = p.narration!.words;
   const arc = cast.map((c, k) => `${k + 1}. words ${ranges[k]!.firstWord} to ${ranges[k]!.lastWord}${k === i ? " (yours)" : ""}: ${c.shows}`).join("\n");
   const plain = (a: number, b: number) => words.slice(a, b).map((w) => w.text).join(" ");
   const narration = `${plain(0, r.firstWord)}\n[your part starts]\n${plain(r.firstWord, r.lastWord + 1)}\n[your part ends]\n${plain(r.lastWord + 1, words.length)}`.trim();
-  const body = fill(prompt("scene"), { first: String(r.firstWord), last: String(r.lastWord), prefix: `${r.id}_`, carry, handoff, arc, pictures: pics ? `\nPictures you can show with \`image id asset=NAME\`:\n${pics}\n` : "", narration, direction: directionText(p, r) });
   const silences = new Map((p.narration?.holds ?? []).map((h) => [h.afterWord, h]));
   const spoken = words.slice(r.firstWord, r.lastWord + 1).map((w, k) => {
     const h = silences.get(r.firstWord + k);
-    return `${r.firstWord + k} ${w.start.toFixed(1)} ${w.text}${h ? `\n   (silence: hold ${h.id}, ${h.start.toFixed(1)} to ${(h.start + h.seconds).toFixed(1)} s, @${h.id} to @${h.id}.end)` : ""}`;
+    return `${r.firstWord + k} ${w.start.toFixed(1)} ${w.text}${h ? `\n   (silence: hold ${h.id}, ${h.start.toFixed(1)} to ${(h.start + h.seconds).toFixed(1)} s${holdMomentsToo ? `, @${h.id} to @${h.id}.end` : ""})` : ""}`;
   }).join("\n");
-  return `${header}${body}\nYour words (number, seconds, word):\n${spoken}`;
+  return { arc, narration, spoken };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The intent path: an author writes what matters at each moment of its part, and the design brain composes it.
+
+/** The intent author's request for part `i`: the same video, direction and words the language author gets, without the
+ * language's rules, and with the user's material listed by its named parts. */
+export function intentRequestFor(p: Project, ranges: Range[], i: number, cast: CastPart[], header: string, material: string): string {
+  const r = ranges[i]!;
+  const { arc, narration, spoken } = partContext(p, ranges, i, cast, false);
+  const parts = ranges.length > 1
+    ? `This video is planned in parts, each by a different author at the same time, and each part is composed on its own. You plan one: the spoken words ${r.firstWord} to ${r.lastWord}. Use the video's own word numbers in every \`@N\`, as listed below. Your first moment is \`@${r.firstWord}\`, and no moment starts after word ${r.lastWord}: the next part takes over right after it. Declare every thing your part shows, even one an earlier part showed.`
+    : `You plan the whole video: the spoken words ${r.firstWord} to ${r.lastWord}. Your first moment is \`@${r.firstWord}\`.`;
+  return [
+    `${header}${parts}`,
+    // Hold moments are the scene language's; an intent plan places its moments on spoken words.
+    directionText(p, r).replace(/from @h\d+ to @h\d+\.end/g, "").replace(/@h\d+\.end/g, "the hold's end").replace(/,\s*\./g, ".").trim(),
+    ranges.length > 1 ? `What the viewer mainly sees in each part of the video, so yours fits the whole:\n${arc}` : "",
+    material,
+    `The whole narration, for context. Your part is between the markers:\n${narration}`,
+    `Your words (number, seconds, word):\n${spoken}`,
+  ].filter(Boolean).join("\n\n") + "\n";
+}
+
+/** The user's files as the material readers take them: the director's pictures and the notes the user supplied. */
+export function materialFiles(p: Project, pics: Picture[]): MaterialFile[] {
+  const files: MaterialFile[] = pics.map((x) => ({ name: x.name, file: basename(x.path), path: join(dir(p), x.path), size: x.size, about: x.about, kind: "image" }));
+  if (p.plan?.material?.trim()) files.push({ name: "notes", file: "notes.txt", text: p.plan.material, about: "notes, facts or sources the user supplied", kind: "notes" });
+  return files;
+}
+
+/** The material read once into part cards (p.material), and again only when the files change. */
+export async function readMaterialOnce(p: Project, files: MaterialFile[], reasoner: Reasoner): Promise<NonNullable<Project["material"]>> {
+  const key = hash(files.map((f) => [f.name, f.file, f.path, f.text, f.size]));
+  if (p.material?.key === key) return p.material;
+  if (!files.length) return (p.material = { cards: [], requirements: [], problems: [], key });
+  const r = await readProject(files, reasoner, { request: `${topic(p)}${p.plan?.intent ? `. ${p.plan.intent}` : ""}` });
+  if (r.pending.length) throw new Error(`scene: the material reader left ${r.pending.length} tasks unanswered: ${r.pending.slice(0, 3).join(", ")}`);
+  for (const c of r.cards.filter((c) => !c.checked.ok)) console.log(`  !!! material ${c.name} did not check: ${c.checked.notes.slice(0, 2).join(" | ")}`);
+  return (p.material = { cards: r.cards, requirements: r.requirements, problems: r.problems, key });
+}
+
+// How the video is watched, as far as the project says: the frame, a phone feed, and the captions the timeline burns in
+// (video/Video.tsx: a band from 1640 to 1810 px of a 1920 px frame). The director confirms or replaces it.
+export function projectViewing(p: Project): Viewing {
+  const [width, height] = p.input.frame ?? [WIDTH, HEIGHT];
+  return viewingFrom({
+    width, height, fps: FPS,
+    screen: height > width ? "phone in a feed" : "screen watched on purpose",
+    frameWidthMm: height > width ? 65 : 300,
+    distanceMm: height > width ? 300 : 600,
+    watch: height > width ? "glancing in a feed" : "watching on purpose",
+    captions: { show: true, box: [0, 1640 / 1920, 1, 1810 / 1920], why: "the timeline burns the narration in as captions" },
+    why: "the project's frame, with the timeline's captions",
+  });
+}
+
+// `spend`: what the plan's own calls cost, for the stage to charge; the design brain's calls are charged as they are made.
+type IntentWritten = { section: SceneSection; notes: string[]; decisions: string[]; spend: number } | { language: string; usd: number; rounds: number };
+
+/** One part on the intent path: the plan is written and repaired from its checks, then composed by the design brain.
+ * An answer written wholly in the scene language is handed back, for the language path to take. */
+async function writeIntent(job: Job, it: { system: string; request: string; cards: PartCard[]; requirements: PartCard["requirements"]; loadable: Record<string, string>; paths: Record<string, string>; brief: string }): Promise<IntentWritten> {
+  const { p, range } = job;
+  const words = p.narration!.words.map((w) => ({ text: w.text, start: w.start, end: w.end }));
+  job.log(`  ${range.id} (words ${range.firstWord} to ${range.lastWord}): planning the intent`);
+  let usd = 0;
+  let src = "";
+  let next = it.request;
+  let problems: string[] = ["the model never answered"];
+  let notes: string[] = [];
+  let round = 0;
+  let plan: ReturnType<typeof checkPlan>["plan"] | undefined;
+  for (round = 1; round <= BUILD_ROUNDS; round++) {
+    try {
+      const r = await text({ system: it.system, user: next, effort: "medium", maxOutput: 32000 });
+      usd += r.usd;
+      src = stripFence(r.value);
+    } catch (e) {
+      usd += (e as { usd?: number }).usd ?? 0;
+      job.log(`    ${range.id} intent round ${round}: the model failed: ${(e as Error).message.slice(0, 160)}`);
+      continue;
+    }
+    const c = checkPlan(src, words, it.cards, range);
+    if (c.language) {
+      job.log(`    ${range.id}: the answer is written in the scene language, so it takes the language path`);
+      return { language: src, usd, rounds: round };
+    }
+    [problems, notes, plan] = [c.problems, c.notes, c.plan];
+    job.log(`    ${range.id} intent round ${round}: ${c.plan.moments.length} moments, ${c.plan.things.length} things, ${problems.length} problems`);
+    for (const x of problems.slice(0, 4)) job.log(`      ${x.slice(0, 180)}`);
+    if (!problems.length) break;
+    next = intentRepair(it.request, src, problems, MAX_PROBLEMS);
+  }
+  const rounds = Math.min(round, BUILD_ROUNDS);
+  mkdirSync(job.folder, { recursive: true });
+  writeFileSync(join(job.folder, "intent.txt"), src);
+  const spend = usd;
+  const failed = (why: string[]): IntentWritten => ({ section: { id: range.id, firstWord: range.firstWord, lastWord: range.lastWord, source: src, ok: false, rounds, usd: +usd.toFixed(4), author: "intent" }, notes: [...why, ...notes.map((x) => `parse: ${x}`)], decisions: [], spend });
+  if (problems.length || !plan) return failed(problems);
+
+  // The design brain, with a reasoner of its own so this part's cost is its own; every call is charged as it is made.
+  const reasoner = metaReasoner({
+    charge: (x, detail) => charge(p, "scene", x, `${range.id} ${detail}`),
+    checkBudget: () => checkBudget(0.05),
+  });
+  const { run, agents } = designRunner();
+  const opts = job.opts;
+  const inputs: DesignInputs = {
+    plan, words, range, frames: opts.ctx.frames,
+    holds: (p.narration?.holds ?? []).map((h) => ({ id: h.id, afterWord: h.afterWord, seconds: h.seconds, purpose: p.direction?.events.flatMap((e) => e.holds ?? []).find((x) => x.id === h.id)?.purpose })),
+    cards: it.cards, requirements: it.requirements, assets: it.loadable, brief: it.brief, direction: directionText(p, range).trim() || undefined,
+    theme: opts.ctx.theme, styleName: p.input.style, viewing: projectViewing(p),
+  };
+  try {
+    const out = await run(join(job.folder, "design"), inputs, reasoner, agents);
+    usd += reasoner.ledger.usd;
+    // Stored with the project's paths, so the player serves the pictures and the timeline credits them.
+    const back = new Map(Object.entries(it.loadable).map(([name, url]) => [url, it.paths[name] ?? url]));
+    const file = join("scene", range.id, "design-scene.json");
+    writeFileSync(join(dir(p), file), JSON.stringify(mapSources(out.scene, (s) => back.get(s) ?? s)));
+    const decisions = [
+      ...out.decisions.map((d) => `${range.id} ${d.moment === undefined ? "video" : `@${plan!.moments[d.moment]?.word ?? d.moment}`} ${d.area} [${d.from}]: ${d.choice}${d.why ? ` (${d.why})` : ""}`),
+      ...out.corrections.map((c) => `${range.id} correction${c.moment === undefined ? "" : ` @${plan!.moments[c.moment]?.word ?? c.moment}`}: "${c.was}" is now "${c.now}" (${c.source})`),
+    ];
+    for (const c of out.corrections) job.log(`  ${range.id}: the director corrected "${c.was}" to "${c.now}" (${c.source})`);
+    const section: SceneSection = { id: range.id, firstWord: range.firstWord, lastWord: range.lastWord, source: src, ok: true, rounds, usd: +usd.toFixed(4), author: "intent", design: { file, decisions, notes: out.notes } };
+    return { section, notes: [...notes.map((x) => `parse: ${x}`), ...out.notes], decisions, spend };
+  } catch (e) {
+    usd += reasoner.ledger.usd;
+    job.log(`  ${range.id}: !!! the design brain failed: ${(e as Error).message.slice(0, 200)}`);
+    return failed([`the design brain failed: ${(e as Error).message}`]);
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1239,8 +1478,9 @@ export const sceneHeader = (p: Project) => [
   asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])]),
 ].filter(Boolean).join("\n\n") + "\n\n";
 
-export async function scene(p: Project, force = false) {
+export async function scene(p: Project, force = false, o: { author?: "language" | "intent" } = {}) {
   const words = p.narration!.words;
+  const author = o.author ?? p.input.sceneAuthor ?? SCENE_AUTHOR_DEFAULT;
   // Every part's step numbers come from the plan's demonstrations, so they must show their words before any is written.
   if (demoFit(p).length) await fitDemos(p);
   const ranges = sectionsOf(p);
@@ -1259,7 +1499,7 @@ export async function scene(p: Project, force = false) {
   const library = loadLibrary().map((x) => x.name);
   const done = new Set(doneTickets(p));
   const tickets = sceneTickets(p, ranges).filter((t) => !done.has(t.key));
-  const inputs = [VERSION, CHECKS, tickets.map((t) => t.key), words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
+  const inputs = [VERSION, CHECKS, tickets.map((t) => t.key), words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? [], ...(author === "intent" ? [author, readFileSync(INTENT_GUIDE, "utf8")] : [])];
   const estimate = 0.03 + ranges.length * 0.12;
   await stage(p, "scene", inputs, estimate, async () => {
     const root = join(dir(p), "scene");
@@ -1289,7 +1529,22 @@ export async function scene(p: Project, force = false) {
       const sections: SceneSection[] = new Array(ranges.length);
       const notes: string[][] = ranges.map(() => []);
       const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)), opts, folder: join(root, range.id), log: (l) => console.log(l) }));
-      const keys = jobs.map((job, i) => hash(VERSION, job.request, drafts[i], job.carry, job.handoff, system));
+      // The intent path: the material read once into cards, and one plan request per part.
+      let intent: { system: string; requests: string[]; cards: PartCard[]; requirements: PartCard["requirements"]; brief: string } | undefined;
+      if (author === "intent") {
+        const reader = metaReasoner({ effort: { reader: "medium" }, charge: (x, detail) => charge(p, "scene", x, `material ${detail}`), checkBudget: () => checkBudget(0.05) });
+        const m = await readMaterialOnce(p, materialFiles(p, pics), reader);
+        const unread = pics.filter((x) => !m.cards.some((c) => c.name === x.name));
+        const material = [materialText(m.cards, m.requirements), unread.length ? `Pictures you can show by name:\n${describe(unread)}` : "", drawings(p).trim()].filter(Boolean).join("\n\n");
+        intent = {
+          system: intentSystem({ kits: SCENE_KITS, programs: loadLibrary() }),
+          requests: ranges.map((_, i) => intentRequestFor(p, ranges, i, cast, header, material)),
+          cards: m.cards,
+          requirements: m.requirements,
+          brief: `${header}The user's request: ${p.input.prompt}`,
+        };
+      }
+      const keys = jobs.map((job, i) => (intent ? hash(VERSION, "intent", intent.requests[i], intent.system, intent.cards, job.request, system) : hash(VERSION, job.request, drafts[i], job.carry, job.handoff, system)));
       let nextJob = 0;
       const worker = async () => {
         for (let i = nextJob++; i < ranges.length; i = nextJob++) {
@@ -1304,7 +1559,24 @@ export async function scene(p: Project, force = false) {
           }
           const folder = join(root, range.id);
           const job = jobs[i]!;
-          const w = await writeSection(job, drafts[i]!);
+          let start: string | undefined;
+          let preRounds = 0;
+          if (intent) {
+            const it = await writeIntent(job, { system: intent.system, request: intent.requests[i]!, cards: intent.cards, requirements: intent.requirements, loadable, paths: assets, brief: intent.brief });
+            if ("section" in it) {
+              spent.usd += it.spend;
+              sections[i] = it.section;
+              notes[i] = it.notes;
+              mkdirSync(folder, { recursive: true });
+              writeFileSync(file, JSON.stringify({ key, section: sections[i], notes: notes[i] }, null, 1));
+              console.log(`  ${range.id}: ${it.section.ok ? "composed" : "FAILED"} from an intent plan in ${it.section.rounds} rounds, ${it.decisions.length} decisions, $${it.section.usd.toFixed(3)}`);
+              continue;
+            }
+            spent.usd += it.usd;
+            [start, preRounds] = [it.language, it.rounds];
+          }
+          const w = await writeSection(job, drafts[i]!, start);
+          w.rounds += preRounds;
           spent.usd += w.usd;
           const ok = !w.problems.length && !!w.result.scene;
           // Stored with hold moments as word moments, so joining, the player and the critic read it as any scene.
@@ -1324,7 +1596,9 @@ export async function scene(p: Project, force = false) {
         const byPart = new Map<number, string[]>();
         for (const t of tickets) for (const id of t.sections) {
           const i = ranges.findIndex((r) => r.id === id);
-          if (i >= 0) (byPart.get(i) ?? byPart.set(i, []).get(i)!).push(t.text);
+          // A composed part is redone by the design brain, not repaired line by line; its tickets stay in the critic's notes.
+          if (i >= 0 && sections[i]?.author === "intent") console.log(`  ${id}: a ticket names this composed part; it is left for the design brain: ${t.text.slice(0, 160)}`);
+          else if (i >= 0) (byPart.get(i) ?? byPart.set(i, []).get(i)!).push(t.text);
         }
         console.log(`  ${tickets.length} tickets from watching the video send back ${[...byPart.keys()].map((i) => ranges[i]!.id).join(", ")}`);
         await Promise.all([...byPart].map(async ([i, list]) => {
@@ -1354,11 +1628,16 @@ export async function scene(p: Project, force = false) {
         }));
         writeFileSync(join(root, TICKETS_DONE), JSON.stringify([...done, ...tickets.map((t) => t.key)], null, 1));
       }
-      p.scene = { sections, assets };
+      // What the design brain decided for each composed part, and every correction the director made, kept visible.
+      const decisions = sections.flatMap((s) => s.design?.decisions ?? []);
+      p.scene = { sections, assets, ...(decisions.length ? { decisions } : {}) };
       // The parts join into one scene. Where the whole does not build, the problem goes back to the part whose lines it
       // names, with the error, and that part is repaired and joined again; there is no lesser scene to stand in.
-      let joined = joinWithSpans(sections);
-      let whole = await build(joined.text, opts);
+      // Composed parts are compiled scenes already, so only the language parts join as a document.
+      const languageParts = () => sections.filter((s) => s.author !== "intent");
+      const buildJoined = async (text: string): Promise<BuildResult> => (languageParts().length ? build(text, opts) : { problems: [], stats: { states: 0, parts: 0, programs: 0, programMs: 0 } });
+      let joined = joinWithSpans(languageParts());
+      let whole = await buildJoined(joined.text);
       for (let round = 1; round <= JOIN_ROUNDS && whole.problems.length; round++) {
         const lines = joined.text.split("\n");
         const byPart = new Map<number, string[]>();
@@ -1386,8 +1665,8 @@ export async function scene(p: Project, force = false) {
           writeFileSync(join(job.folder, "scene.txt"), w.source);
           writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notesOf(job.folder, notes[i]!) }, null, 1));
         }));
-        joined = joinWithSpans(sections);
-        whole = await build(joined.text, opts);
+        joined = joinWithSpans(languageParts());
+        whole = await buildJoined(joined.text);
       }
       writeFileSync(join(root, "scene.txt"), joined.text);
       const failed = sections.filter((s) => !s.ok);
@@ -1399,6 +1678,12 @@ export async function scene(p: Project, force = false) {
         throw new Error(`scene: ${failed.length ? `sections ${failed.map((s) => s.id).join(", ")} could not be repaired` : "the joined scene does not build"}. No lesser visual stands in for them.\n${lines.join("\n")}`);
       }
       console.log(`  joined scene: ${whole.stats.states} states, ${whole.stats.parts} parts, ${whole.stats.programs} programs`);
+      if (sections.some((s) => s.author === "intent")) {
+        // The whole video as the timeline will show it: composed parts laid over the language parts, each in its window.
+        const all = await wholeScene(p, loadable, opts.ctx.frames);
+        if (!all.scene) throw new Error(`scene: the whole scene does not build with its composed parts:\n${formatProblems(all.problems.slice(0, 10))}`);
+        console.log(`  whole scene: ${sections.filter((s) => s.author === "intent").length} composed parts, ${all.scene.nodes.length} nodes, ${decisions.length} decisions kept`);
+      }
       const severe = notes.flatMap((n, i) => n.filter((x) => x.startsWith("severe on screen")).map((x) => `${ranges[i]!.id}: ${x}`));
       if (severe.length) console.log(`  !!! sections shipped with severe problems on screen (a fix and a rewrite could not remove them):\n${severe.map((x) => `    ${x.slice(0, 220)}`).join("\n")}`);
     } catch (e) {

@@ -8,7 +8,10 @@ import { join } from "node:path";
 import type { Project } from "../../schemas/project.ts";
 import { languagePrompt } from "../../engine/language/author.ts";
 import { picturesOf } from "./case.ts";
-import { BUILD_ROUNDS, check, describe, plainMoments, repairRequest, requestFor, review, reviewRequest, sceneBuildOptions, sceneHeader, type Checked, type Job } from "../../pipeline/stages/scene.ts";
+import { BUILD_ROUNDS, check, describe, intentRequestFor, MAX_PROBLEMS, plainMoments, repairRequest, requestFor, review, reviewRequest, SCENE_KITS, sceneBuildOptions, sceneHeader, type Checked, type Job, type Range } from "../../pipeline/stages/scene.ts";
+import { checkPlan, intentRepair, intentSystem, materialText, stripFence } from "../../pipeline/lib/intent-author.ts";
+import { loadLibrary } from "../../engine/language/library.ts";
+import type { PartCard, Requirement } from "../../engine/design/types.ts";
 
 export type AuthorState = {
   round: number;
@@ -47,7 +50,7 @@ export function prepare(p: Project, folder: string) {
   saveState(folder, { round: 0, stage: "build" });
 }
 
-const strip = (s: string) => s.replace(/^\s*```[\w-]*\s*\n/, "").replace(/\n```\s*$/, "").trim() + "\n";
+const strip = stripFence;
 
 // Takes the author's answer (answer.txt), checks it as the stage does, and says what happens next: a prompt in
 // next.md, or done, with the final part in scene.txt.
@@ -93,3 +96,64 @@ export async function submit(p: Project, folder: string): Promise<{ next: "answe
 }
 
 export const exists = (f: string) => existsSync(f);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The intent author: the same case planned in the intent language, as the scene stage's intent path asks it, with the
+// very checks and repairs it runs. Its files live in <case folder>/intent/; a plan that checks is written to intent.txt
+// for the design brain (scripts/design-brain/compose.ts) to compose.
+
+export type IntentState = { round: number; stage: "plan" | "done"; ok?: boolean; language?: boolean; problems?: string[]; notes?: string[] };
+const intentFolder = (folder: string) => join(folder, "intent");
+const intentStatePath = (folder: string) => join(intentFolder(folder), "author.json");
+export const loadIntentState = (folder: string): IntentState => JSON.parse(read(intentStatePath(folder)));
+const saveIntentState = (folder: string, s: IntentState) => writeFileSync(intentStatePath(folder), JSON.stringify(s, null, 1));
+
+// What the stage would read for the case's material: bench read's cards.json, when the case has material.
+const cardsOf = (folder: string): { cards: PartCard[]; requirements: Requirement[] } => (existsSync(join(folder, "cards.json")) ? JSON.parse(read(join(folder, "cards.json"))) : { cards: [], requirements: [] });
+
+export function intentJobFor(p: Project, folder: string): { system: string; request: string; range: Range; cards: PartCard[] } {
+  const range: Range = { id: "s1", firstWord: 0, lastWord: p.narration!.words.length - 1 };
+  const { cards, requirements } = cardsOf(folder);
+  const pics = picturesOf(p).filter((x) => !cards.some((c) => c.name === x.name));
+  const material = [materialText(cards, requirements), pics.length ? `Pictures you can show by name:\n${describe(pics)}` : ""].filter(Boolean).join("\n\n");
+  const cast = [{ shows: p.direction?.arc ?? "", handoff: [] }];
+  return { system: intentSystem({ kits: SCENE_KITS, programs: loadLibrary() }), request: intentRequestFor(p, [range], 0, cast, sceneHeader(p), material), range, cards };
+}
+
+/** Writes the intent author's system prompt and first request, and resets its state. */
+export function intentPrepare(p: Project, folder: string) {
+  const dir = intentFolder(folder);
+  mkdirSync(dir, { recursive: true });
+  if (!existsSync(join(folder, "project.json"))) writeFileSync(join(folder, "project.json"), JSON.stringify(p, null, 1));
+  const job = intentJobFor(p, folder);
+  writeFileSync(join(dir, "system.md"), job.system);
+  writeFileSync(join(dir, "request.md"), job.request);
+  writeFileSync(join(dir, "next.md"), job.request);
+  saveIntentState(folder, { round: 0, stage: "plan" });
+}
+
+/** Checks the intent author's answer (intent/answer.txt) as the stage does: a plan that checks is written to
+ * intent/intent.txt; one with problems goes back as a repair request in intent/next.md, for up to BUILD_ROUNDS rounds. */
+export function intentSubmit(p: Project, folder: string): { next: "answer" | "done"; message: string } {
+  const dir = intentFolder(folder);
+  const s = loadIntentState(folder);
+  if (s.stage === "done") return { next: "done", message: "already done" };
+  const job = intentJobFor(p, folder);
+  const answer = stripFence(read(join(dir, "answer.txt")));
+  const words = p.narration!.words.map((w) => ({ text: w.text, start: w.start, end: w.end }));
+  const c = checkPlan(answer, words, job.cards, job.range);
+  s.round += 1;
+  writeFileSync(join(dir, `round-${s.round}.txt`), answer);
+  if (c.language) {
+    saveIntentState(folder, { ...s, stage: "done", ok: false, language: true });
+    return { next: "done", message: "the answer is written in the scene language, which the stage hands to the language path: run the language bench (`submit`) for it" };
+  }
+  if (!c.problems.length || s.round >= BUILD_ROUNDS) {
+    if (!c.problems.length) writeFileSync(join(dir, "intent.txt"), answer);
+    saveIntentState(folder, { ...s, stage: "done", ok: !c.problems.length, problems: c.problems, notes: c.notes });
+    return { next: "done", message: c.problems.length ? `done, but the plan still has ${c.problems.length} problems after ${s.round} rounds` : `done: ${c.plan.moments.length} moments, ${c.plan.things.length} things, in intent/intent.txt` };
+  }
+  writeFileSync(join(dir, "next.md"), intentRepair(job.request, answer, c.problems, MAX_PROBLEMS));
+  saveIntentState(folder, { ...s, problems: c.problems, notes: c.notes });
+  return { next: "answer", message: `round ${s.round}: ${c.problems.length} problems; repair request in intent/next.md` };
+}
