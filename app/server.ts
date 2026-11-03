@@ -1,11 +1,14 @@
 // The web app: a small server around the real pipeline. It starts runs, reports each step in plain words as it
-// happens, serves finished videos and style previews, and lets a visitor describe a new style in words.
-// There is no login, so when public (HOST set) it limits what costs money and turns off editing.
+// happens, keeps a line of waiting videos (batch), serves finished videos, thumbnails, the studio's view of each project
+// and style previews, and lets a visitor describe a new style in words.
+// There is no login, so when public (HOST set) it limits what costs money and turns off editing and the line's controls.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { join, resolve } from "node:path";
+import { create, DRY, enqueue, next, pause, position, remove, state as queueState } from "./queue.ts";
+import { label, plain, projectFile, PICTURE_TYPES, studio, thumb } from "./studio.ts";
 import { dir, load, ROOT, save, spent } from "../pipeline/lib/project.ts";
 import { freeName, inside, safeName, showSize, sizeProblem, typeLabel, uploadProblem, UPLOAD_LIMITS } from "../pipeline/lib/uploads.ts";
 import type { Project } from "../schemas/project.ts";
@@ -26,6 +29,7 @@ const STAGING = join(ROOT, ".uploads");
 const STAGED_HOURS = 6;
 const TOKEN = /^[a-f0-9]{24}$/;
 const MAX_PROMPT = 8000;
+const MAX_BATCH = PUBLIC_SITE ? 5 : 30;
 const MAX_LOOK = 400;
 const LENGTHS: Record<string, number> = { auto: 0, short: 50, medium: 120, long: 240, longer: 390 };
 const ID = /^[a-z0-9-]{1,80}$/;
@@ -34,16 +38,8 @@ const names = (folder: string) => (existsSync(folder) ? readdirSync(folder).filt
 const styleNames = () => [...names("styles"), ...names("styles/custom").map((n) => `custom/${n}`)];
 const readStyle = (name: string) => JSON.parse(readFileSync(`styles/${name}.json`, "utf8"));
 
-// What each pipeline step is called on the page. A step this list does not know still shows, under its own name.
-const LABELS: Record<string, string> = {
-  material: "Reading your files", plan: "Reading your request", research: "Researching the story", writer: "Writing the script", voice: "Recording the narration",
-  director: "Planning the shots", board: "Planning the board", stage: "Laying out the worked steps", scene: "Building the scenes",
-  assets: "Finding and making images", annotate: "Drawing on the images", timeline: "Cutting it together", mix: "Mixing the sound",
-  render: "Rendering the video", critic: "Watching it back and fixing",
-};
 const VISUALS = new Set(["director", "board", "stage", "scene", "assets", "annotate"]);
-const PLAIN_RUN = ["plan", "research", "writer", "voice", "visuals", "timeline", "mix", "render", "critic"];
-const label = (k: string) => LABELS[k] ?? (k === "visuals" ? "Making the visuals" : k[0]!.toUpperCase() + k.slice(1));
+const PLAIN_RUN = ["plan", "research", "writer", "voice", "visuals", "timeline", "mix", "render", "mux", "critic"];
 
 type Step = { key: string; label: string; state: "done" | "now" | "next" | "failed"; seconds?: number; reused?: boolean; percent?: number; details: string[] };
 type Job = { id?: string; stage: string; log: string[]; steps: Step[]; done: boolean; error?: string };
@@ -162,15 +158,19 @@ function run(args: string[], stage: string, id?: string): Promise<string> {
       }
       if (running === job) running = undefined;
       if (!job.id) fail(new Error(job.error));
+      setTimeout(pump, 500);
     });
   });
 }
 
-// Model words for the page: no em dashes, and short.
-const plain = (s: string, max = 220) => {
-  const t = s.replace(/\s*[—–]\s*/g, ", ").replace(/\s+-\s+/g, ", ").trim();
-  return t.length > max ? `${t.slice(0, max - 3)}...` : t;
-};
+// The next waiting video, when nothing is being made. Each one resumes its own record from the first stage.
+function pump() {
+  if (running || styling) return;
+  const id = next();
+  if (!id) return;
+  const until = process.env.APP_UNTIL ? ["--until", process.env.APP_UNTIL] : [];
+  run([...NODE, "pipeline/run.ts", id, ...until], "plan", id).catch(() => {});
+}
 
 // Writes a style from a description in a child process, so a crash there never takes the site down.
 function makeStyle(description: string): StyleJob {
@@ -199,6 +199,7 @@ function makeStyle(description: string): StyleJob {
       job.error = why.includes("budget:") ? FRIENDLY_BUDGET : why.replace(/^\s*\w*Error:\s*/, "").replace(/^style writer:\s*/, "");
     }
     if (styling === job) styling = undefined;
+    setTimeout(pump, 500);
   });
   return job;
 }
@@ -253,24 +254,29 @@ function summary(p: Project) {
     style = { name: p.input.style, label: readStyle(p.input.style).label };
   } catch {}
   const draft = p.writing?.at(-1);
+  const queued = live ? undefined : position(p.id);
+  const fps = p.timeline?.fps ?? 30;
+  const video = !!p.render && existsSync(join(dir(p), "video.mp4"));
   return {
     id: p.id,
     createdAt: p.createdAt,
     prompt: p.input.prompt,
     style: style?.label ?? p.input.style,
+    styleName: p.input.style,
+    queued,
     title: p.script?.title ?? draft?.title ?? p.plan?.topic ?? p.input.prompt,
     takeaway: p.script?.takeaway,
     plan: p.plan,
     stages: Object.keys(p.stages),
     steps: withNext(steps, !live, !!p.input.files?.length),
     material: materialSummary(p),
-    stage: job?.stage ?? (p.render ? "done" : "stopped"),
+    stage: job?.stage ?? (queued ? "queued" : p.render ? "done" : Object.keys(p.stages).length ? "stopped" : "new"),
     running: live,
     error: job?.error,
     writing: p.writing?.map((w) => ({ step: w.step, words: w.narration.split(/\s+/).length, notes: w.notes })),
     narration: draft?.narration,
     scriptStep: p.script ? "final" : draft?.step,
-    seconds: p.narration ? Math.round(p.narration.seconds) : undefined,
+    seconds: p.timeline ? Math.round(p.timeline.frames / fps) : p.narration ? Math.round(p.narration.seconds) : undefined,
     facts: p.factSheet ? { claims: p.factSheet.claims.length, sources: p.factSheet.sources.map((s) => ({ title: s.url.startsWith("file:") ? `${s.publisher}: ${s.title}` : s.publisher || s.title, url: /^https?:/.test(s.url) ? s.url : undefined })) } : undefined,
     shots: p.timeline?.clips.filter((c) => c.type !== "credits").length,
     real: assets.filter((a) => a.kind === "real").length,
@@ -278,7 +284,9 @@ function summary(p: Project) {
     marks: assets.reduce((n, a) => n + (a.marks?.length ?? 0), 0),
     critic: p.critic,
     usd: +p.costs.reduce((s, c) => s + c.usd, 0).toFixed(2),
-    video: !!p.render && existsSync(join(dir(p), "video.mp4")),
+    video,
+    thumb: video ? `/p/${p.id}/thumb.jpg` : undefined,
+    files: p.input.files?.length ?? 0,
     captions: PUBLIC_SITE ? undefined : p.timeline?.captions.map((c) => c.words.map((w) => w.text).join(" ")),
   };
 }
@@ -295,6 +303,22 @@ function projects() {
       }
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+// The hand-picked row on the home page: app/showcase.json lists project ids, each with a line on what to watch for.
+function showcase() {
+  let list: { id: string; why?: string }[] = [];
+  try {
+    list = JSON.parse(readFileSync("app/showcase.json", "utf8")).videos ?? [];
+  } catch {}
+  return list.flatMap((s) => {
+    if (!ID.test(s.id) || !existsSync(join(ROOT, s.id, "video.mp4"))) return [];
+    try {
+      return [{ ...summary(load(s.id)), why: s.why }];
+    } catch {
+      return [];
+    }
+  });
 }
 
 const send = (res: ServerResponse, code: number, body: unknown) => {
@@ -345,17 +369,60 @@ createServer(async (req, res) => {
       return send(res, 200, { styles: cards, personas: names("personas").map((n) => ({ name: n, label: JSON.parse(readFileSync(`personas/${n}.json`, "utf8")).label })), busy: !!running, styling: styling?.id });
     }
     if (path === "/api/videos" && req.method === "GET") return send(res, 200, projects());
+    if (path === "/api/showcase") return send(res, 200, showcase());
+    if (path === "/api/queue" && req.method === "GET") {
+      const q = queueState();
+      return send(res, 200, { ...q, controls: !PUBLIC_SITE, running: running?.id, items: q.items.flatMap((id) => (existsSync(join(ROOT, id, "project.json")) ? [summary(load(id))] : [])) });
+    }
+    if (path === "/api/queue" && req.method === "POST") {
+      if (PUBLIC_SITE) return send(res, 403, { error: "The line can only be paused on the machine that runs it." });
+      const b = await body(req);
+      pause(!!b.paused, b.paused ? "Paused by hand." : undefined);
+      if (!b.paused) pump();
+      return send(res, 200, queueState());
+    }
+    const unqueue = /^\/api\/queue\/([a-z0-9-]+)$/.exec(path);
+    if (unqueue && req.method === "DELETE") {
+      if (PUBLIC_SITE) return send(res, 403, { error: "Waiting videos can only be removed on the machine that runs them." });
+      return remove(unqueue[1]!) ? send(res, 200, queueState()) : send(res, 404, { error: "That video is not waiting in line." });
+    }
+    // Several videos at once: each becomes a waiting project, made one after another behind the budget cap.
+    if (path === "/api/batch" && req.method === "POST") {
+      const b = await body(req);
+      const prompts: string[] = (Array.isArray(b.prompts) ? b.prompts : []).map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
+      if (!prompts.length) return send(res, 400, { error: "Write at least one video, one per line." });
+      if (prompts.length > MAX_BATCH) return send(res, 400, { error: `Up to ${MAX_BATCH} videos at a time.` });
+      if (prompts.some((x) => x.length > MAX_PROMPT)) return send(res, 400, { error: "One of those is too long." });
+      const style = styleNames().includes(b.style) ? b.style : "collage";
+      const persona = names("personas").includes(b.persona) ? b.persona : "auto";
+      const made: string[] = [];
+      let refused: string | undefined;
+      for (const prompt of prompts) {
+        if ((refused = limit(req, "video"))) break;
+        made.push((await create({ prompt, style, persona, seconds: LENGTHS[b.length] ?? 0, publicSite: PUBLIC_SITE })).id);
+      }
+      enqueue(made);
+      pump();
+      return send(res, made.length ? 200 : 429, { ids: made, refused, error: made.length ? undefined : refused });
+    }
     if (path === "/api/videos" && req.method === "POST") {
       const b = await body(req);
       const staged = TOKEN.test(String(b.uploads ?? "")) && stagedFiles(b.uploads).length ? (b.uploads as string) : undefined;
       const prompt = String(b.prompt ?? "").trim() || (staged ? "Make a video from the attached files." : "");
       if (!prompt) return send(res, 400, { error: "Tell it what the video is about, or add your files." });
       if (prompt.length > MAX_PROMPT) return send(res, 400, { error: "That message is too long." });
-      if (running) return send(res, 409, { error: "A video is already being made. It takes a few minutes. You can watch it from the gallery." });
       const blocked = limit(req, "video");
       if (blocked) return send(res, 429, { error: blocked });
       const style = styleNames().includes(b.style) ? b.style : "collage";
       const persona = names("personas").includes(b.persona) ? b.persona : "auto";
+      // Something is being made already, or others are waiting: this one joins the line instead of being turned away.
+      if (running || styling || queueState().items.length || DRY) {
+        const p = await create({ prompt, style, persona, seconds: LENGTHS[b.length] ?? 0, staged: staged && join(STAGING, staged), publicSite: PUBLIC_SITE });
+        if (staged) rmSync(join(STAGING, staged), { recursive: true, force: true });
+        enqueue([p.id]);
+        pump();
+        return send(res, 200, { id: p.id, queued: position(p.id) });
+      }
       const id = await start(prompt, style, persona, b.length, staged);
       // The run copied the files into its project before announcing its id.
       if (staged) rmSync(join(STAGING, staged), { recursive: true, force: true });
@@ -402,7 +469,10 @@ createServer(async (req, res) => {
       return send(res, 200, { steps: job.steps, done: job.done, error: job.error, notes: job.notes, style: job.style && existsSync(`styles/${job.style}.json`) ? styleCard(job.style) : undefined });
     }
     const one = /^\/api\/videos\/([a-z0-9-]+)$/.exec(path);
-    if (one && ID.test(one[1]!) && existsSync(join(ROOT, one[1]!, "project.json"))) return send(res, 200, summary(load(one[1]!)));
+    if (one && ID.test(one[1]!) && existsSync(join(ROOT, one[1]!, "project.json"))) {
+      const p = load(one[1]!);
+      return send(res, 200, { ...summary(p), ...studio(p) });
+    }
     const edit = /^\/api\/videos\/([a-z0-9-]+)\/captions$/.exec(path);
     if (edit && req.method === "POST" && ID.test(edit[1]!) && existsSync(join(ROOT, edit[1]!, "project.json"))) {
       if (PUBLIC_SITE) return send(res, 403, { error: "Editing is turned off on the public site." });
@@ -419,6 +489,21 @@ createServer(async (req, res) => {
       await save(p);
       return send(res, 200, { id: await run([...NODE, "pipeline/run.ts", p.id, "--only", "render"], "render", p.id) });
     }
+    // A project's pictures for the studio (stills, images, the user's pages) and its gallery thumbnail.
+    const pic = /^\/p\/([a-z0-9-]+)\/(.+)$/.exec(path);
+    if (pic && ID.test(pic[1]!)) {
+      if (pic[2] === "thumb.jpg") {
+        const p = existsSync(join(ROOT, pic[1]!, "project.json")) ? load(pic[1]!) : undefined;
+        const file = p && (await thumb(p.id, p.timeline ? p.timeline.frames / p.timeline.fps : p.narration?.seconds));
+        return file ? stream(req, res, file, "image/jpeg", "public, max-age=300") : send(res, 404, { error: "No picture yet." });
+      }
+      let rel = "";
+      try {
+        rel = decodeURIComponent(pic[2]!);
+      } catch {}
+      const file = rel ? projectFile(pic[1]!, rel) : undefined;
+      return file ? stream(req, res, file, PICTURE_TYPES[file.slice(file.lastIndexOf(".")).toLowerCase()]!, "public, max-age=3600") : send(res, 404, { error: "Not found." });
+    }
     const mp4 = /^\/videos\/([a-z0-9-]+)\.mp4$/.exec(path);
     if (mp4 && ID.test(mp4[1]!)) return stream(req, res, join(ROOT, mp4[1]!, "video.mp4"), "video/mp4");
     const shown = /^\/previews\/((?:custom\/)?[a-z0-9-]+)\.(jpg|webm)$/.exec(path);
@@ -431,4 +516,7 @@ createServer(async (req, res) => {
   } catch (e: any) {
     send(res, 500, { error: e.message });
   }
-}).listen(PORT, HOST, () => console.log(`bettervid on http://${HOST}:${PORT}, $${spent().toFixed(2)} spent so far`));
+}).listen(PORT, HOST, () => {
+  console.log(`bettervid on http://${HOST}:${PORT}, $${spent().toFixed(2)} spent so far${DRY ? ", batch is dry (records only)" : ""}`);
+  pump();
+});
