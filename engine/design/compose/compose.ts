@@ -120,7 +120,10 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const parts = new Map(Object.entries(c.parts).filter(([, p]) => p.box).map(([k, p]) => [k, p.box!] as const));
     const base: A.Pic = { name: c.name, src, w: size[0], h: size[1], about: c.about, parts };
     if (c.data && (c.data.kind === "bars" || !c.data.kind)) {
-      const data = { ...c.data, ymax: c.data.ymax ?? A.niceCeil(Math.max(...c.data.values)) };
+      // The redrawn chart's scale reaches every level a moment asks of it (a share of its total may lie past its longest bar).
+      const asked = design.moments.flatMap((md) => md.proposals.map((p) => p.value)).filter((p) => p.kind === "level" && p.ids[0]?.split(".")[0] === c.name).map((p) => Number(p.args?.value)).filter((v) => Number.isFinite(v));
+      const ymax = c.data.ymax ?? A.niceCeil(Math.max(...c.data.values));
+      const data = { ...c.data, ymax, ...(asked.length && Math.max(...asked) > ymax ? { reach: Math.max(...asked) } : {}) };
       const chart: A.Chart = { ...base, data, barsOf: A.barsOfParts(data, parts) };
       pics.set(c.name, chart);
       notes.push(`material ${c.name} is a chart with its data (${data.values.length} bars): it can be redrawn on its own bars${data.plot ? "" : "; its reading gives no plot box, so the redraw cannot start on the original's bars"}`);
@@ -1034,7 +1037,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       const pi = items.get(key(pa.pic));
       if (!ti || !pi) return;
       const pic = pics.get(pa.pic)!;
-      const bx = isChart(pic) ? A.chartPartBox(pi.st, pic, pa.part, L) : pic.parts.has(pa.part) ? A.partOnScreen(pi.st, pic, pa.part) : undefined;
+      const bx = isChart(pic) ? A.chartValueEnd(pi.st, pic, pa.part, L) : pic.parts.has(pa.part) ? A.partOnScreen(pi.st, pic, pa.part) : undefined;
       if (!bx) return;
       const id = `parrow.${i}.${pa.t}.${pa.part}`;
       items.set(id, { id, type: "parrow", st: { ...blank(), pts: A.pointerPoints(ti.st, bx, pa.to, { gap: V.px("pointer.gap", f.i), head: V.px("pointer.head", f.i), inset: V.px("pointer.gap", f.i) }) } });
