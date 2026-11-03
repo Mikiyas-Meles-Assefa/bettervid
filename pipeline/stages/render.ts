@@ -11,6 +11,8 @@ import { imageCredits } from "./timeline.ts";
 const CRF = Number(process.env.RENDER_CRF ?? 23);
 // Spike S7: 4 workers was fastest on the M4 (performance cores); more is slower.
 const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? 4);
+// A smaller render for drafts and comparisons: 0.75 gives 810 by 1440 (the scale must give whole pixels).
+const SCALE = Number(process.env.RENDER_SCALE ?? 1);
 
 // What the composition gets. Remotion hands the props to the page for every frame, so their size costs on every frame:
 // a 1.8 MB scene (6 minutes) rendered at 18 frames/s against 27 for the same frames with small props. Each engine
@@ -53,6 +55,7 @@ export async function render(p: Project, force = false) {
         crf: CRF,
         imageFormat: "jpeg",
         concurrency,
+        scale: SCALE,
         outputLocation: join(dir(p), "video.mp4"),
         onProgress: ({ progress }) => {
           if (progress - last >= 0.25) console.log(`  render ${Math.round(progress * 100)}%`), (last = progress);

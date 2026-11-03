@@ -107,6 +107,7 @@ Events cover every word exactly once, in order: the first starts at word 0, each
 - `goal`: one line, what this video is for and what the viewer should have or feel at the end.
 - `promise`: what the opening must confirm within the first seconds.
 - `arc`: the emotional shape of the whole in a phrase.
+- `look`: {{look}}
 - For each event: `job` (its purpose in plain words), `knows`, `waiting` (empty if nothing), `look`, `feel`, `rhythm` (`long`: held, the viewer stays with one thing; `short`: quick succession), `reveal` (the word where a gap closes and what it reveals, or word -1 and empty), `withhold`, `holds`, `demo` (empty `what` and no phases if none), `sound` (a sound or music move tied to a moment here, or empty), `camera` (the intent: still, drift, push in, cut, or empty).
 - `cues`.
 

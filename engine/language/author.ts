@@ -94,9 +94,21 @@ export function languagePrompt(opts: BuildOptions): string {
     nodes: String(LIMITS.nodes),
     roles: roleDocs().map((r) => `- \`${r.name}\`${r.doc ? `: ${r.doc}` : ""}`).join("\n"),
     truthKinds: truthKinds(kits).map((k) => `\`${k}\``).join(", ") || "none in this engine",
+    leans: leansText(ctx.theme),
   };
   const roles = rolesSupported(kinds.map((k) => k.name));
-  return withLooks(read("engine-language.md"), roles).replace(/\{\{(\w+)\}\}/g, (_, k: string) => fill[k] ?? "");
+  // The design brain's toolbox (engine/language/toolbox.ts) is taught only to a writer whose engine has it.
+  const toolbox = kits.some((k) => k.name === "toolbox");
+  if (!toolbox) fill.leans = "";
+  return withLooks(read("engine-language.md").replace(toolbox ? /^$/ : /\{\{leans\}\}\n/, ""), roles).replace(/\[\[toolbox\]\]\n?([\s\S]*?)\[\[\/toolbox\]\]\n?/g, (_, body: string) => (toolbox ? body : "")).replace(/\{\{(\w+)\}\}/g, (_, k: string) => fill[k] ?? "");
+}
+
+// The style's motion leanings, as suggestions the writer weighs against what the words need (engine/style/design.ts).
+export function leansText(theme: CompileContext["theme"]): string {
+  const leans = theme.design?.moves?.leans ?? [];
+  if (!leans.length) return "";
+  const word: Record<string, string> = { travel: "a thing keeps its id and glides (move= and ease= on a state)", cut: "`@N cut`", fade: "enter=fade", spring: "ease=spring, or `do spring`", drop: "enter=slam, or `do fall`", morph: "`do morph`", arc: "`do arc`", hop: "`do hop`", follow: "`do follow`", orbit: "`do orbit`", squash: "`do squash`", jiggle: "`do jiggle`", wiggle: "`do wiggle`" };
+  return `\nThis style leans toward these moves. They are suggestions, not rules: use one where it serves the words, and anything else where it does not.\n${leans.map((l) => `- ${l.move}${word[l.move] ? ` (${word[l.move]})` : ""}: ${l.why}`).join("\n")}\n`;
 }
 
 // Kinds whose kit plays computed steps: the things that work a process out for real.

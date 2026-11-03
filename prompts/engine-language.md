@@ -72,6 +72,34 @@ A picture, or a shape as a field of color, can fill the whole frame behind every
 Empty room: `space h=80`
 {{kits}}
 
+[[toolbox]]
+# Things as themselves
+
+A real thing the words are about (a kettle, a bridge, a heart, a lever, a planet, a coffee cup, a ship) can be drawn as itself, with parts that carry state, instead of a box with its name on it. A viewer who sees the cup fill learns more than one who reads "cup: full".
+
+    depict kettle "a steel stovetop kettle, half full of water, with a whistle on its spout"
+    depict cup "a white espresso cup on its saucer" tier=sprite parts=handle,coffee
+    depict tower "the tower in the photo" asset=NAME parts=top,base
+
+The quoted words are what the engine's depicter reads, so say what the thing is, plainly and exactly: what kind of thing, what it is made of, what is in it, how full or how big, and anything the words will point at. The depicter also reads the verbs your scene has it do and the relations it stands in, and answers with a drawing at the thing's real size, in the style's own line and colors. Three ways to draw it, all the same to the rest of the scene:
+
+- drawn (the default): flat vector parts the engine builds, with states that animate exactly (a level, a color, a needle, a hand, a valve);
+- `tier=sprite`: a picture made in this video's style and cut into the parts you name with `parts=`, for a thing whose look carries the moment and that no drawn kind can make (a character, an animal, a product); its parts can take a tint, move, turn or hide;
+- `asset=NAME`: one of the pictures you can show, the user's own or one found, with the parts you name found on it; it stays the real picture, and its parts can be marked, tinted or framed.
+
+After the part builds, you are told what each depicted thing can do: its states with their ranges and what they are now, its verbs, its parts, and the points it meets other things by. Use exactly those names. A state starts other than the depicter's when you give it on the line, and changes with `do change`; a verb is a whole action the thing knows how to do, played with `do act`:
+
+    depict jug "a glass jug of lemonade" level=0.9
+    do change jug level=0.3 frames=60                the level falls over two seconds
+    do change jug color=pink frames=40               a color the depicter named for it
+    do act jug verb="pours into" to=glass amount=200 frames=90
+    do act bell verb="rings" frames=30
+
+With `to=` and `amount=`, contents leave one thing and arrive in the other, both levels moving together, in the thing's own units. A thing's parts are `ID.PART` everywhere an id goes (`light kettle.spout`, `tag cup.handle "hold here"`, `camera kettle.whistle`, `mark ring tower.top`), so the eye can be sent to the part the words name while the whole stays in view. A depicted thing travels, enters, leaves and is dropped like any other thing, and keeps its states across keep states.
+
+Use it when the thing has a body and the words are about what it is or what happens to it: a level that rises, a color that turns, a part that moves, a size that matters. Words, shapes and diagrams stay better for ideas that have no body (a reason, a rule, a number), and a box with a label stays fine for a thing the words only name in passing.
+
+[[/toolbox]]
 # What a thing is for
 
 [[roles]]
@@ -99,7 +127,39 @@ Indent to put things inside an arrangement, which can nest. Everything goes in `
     ring id arrows=1                            around a circle, optional arrows from each to the next
     chain id dir=down|up|right|left             a line with arrows between neighbors
     free id w=900 h=900                         by percent: each child has at=X,Y from the top left
+[[toolbox]]
+    stage id w=900 h=1300                       one scene: things where they really are, by relations (below)
+    board id w=1 h=3                            a canvas larger than the frame, written over states (see A board)
+[[/toolbox]]
 
+[[toolbox]]
+A stage is one scene: things where they really are relative to each other, at their true relative sizes, not stacked like a list. List its things, then, under them, say where each one is, in plain words: a thing's id, your words for where it is, the other thing's id, then an optional quoted place on it or a distance.
+
+    stage table w=900 h=1300
+      depict pot "a clay teapot with a long spout"
+      depict cup "a small glazed tea cup"
+      depict tray "a round wooden tray"
+      box note "Jasmine" cm=8,3
+      pot above cup "6 cm"
+      cup sits on tray "the right side"
+      pot stands on tray "the left side"
+      note tied to pot "the lid"
+
+Relation words: on, on top of, over, above, under, below, beneath, in, inside, into, beside, next to, near, left of, right of, against, behind, in front of, around, to, tied to, hangs from, at, and at, on or in the PLACE of ("at the end of", "on the edge of", "in the middle of"). The words before them ("sits", "stands", "tied", "hangs") are yours and are kept. A quoted place names a part or a point of the other thing ("the lid", "the far end", "the left side"); a quoted length ("6 cm", "2 m") is a distance.
+
+Every thing in a stage is drawn at one real scale: a depicted thing knows its real size, and `cm=W,H` gives a shape or picture its own. So a cup on a tray is a cup on a tray, a ship beside a dock is as long as it really is, and a person under a tree is small. What everything else rests on (a floor, a field, a table, the sea) may run past the stage's sides, so the things on it stay big enough to see; `bleed=no` keeps all of it inside. `focus=ID share=0.5` closes in on one thing until it fills that share of the stage, with the rest of the scene around it and running off the edges: the way to show a small thing in its real surroundings and still at a size the eye can read.
+
+    stage harbor w=900 h=1200 focus=buoy share=0.4
+      depict sea "calm sea water"
+      depict boat "a small red fishing boat"
+      depict buoy "an orange mooring buoy"
+      boat floats on sea
+      buoy floats on sea "near the boat"
+      boat tied to buoy
+
+A stage keeps every thing's place for the whole stretch of keep states, so things can join it, change and leave while the rest holds still: write the stage in a plain state and add things to it in keep states with `into=ID` and their relation lines. Relations that cannot all hold at once are reported, so say only where things really are, and give each thing one place. Use a stage whenever things on screen are in one place together and where they are matters (on, under, tied to, inside, how big beside each other); use rows, stacks and grids for things that are side by side only to be compared or listed.
+
+[[/toolbox]]
 [[roles]]
 `role=panel` on a row, stack or grid sets it on a panel, like a card, drawn the style's way.
 [[/roles]]
@@ -164,6 +224,81 @@ Properties for `set`: x, y, scaleX, scaleY, rotate, skew, opacity, drawn (0 to 1
 
 Behaviors:
 {{behaviors}}
+{{leans}}
+[[toolbox]]
+# How things move
+
+How a thing gets from one state to the next is a choice of its own, and it carries meaning: a glide says "the same thing, somewhere else", a cut says "now something new", a spring says "it landed", a hop says "it jumped there by itself". Each move below is one way; pick the one whose feel matches what the words say is happening, and let the rest of the frame keep still while it plays.
+
+**travel**: a thing keeps its id and goes to its new place and size by the shortest way. Write it in its new arrangement in the next state; `move=` is how many frames, `ease=` its feel. The default for anything that stays.
+
+    @20 keep move=24 ease=smooth
+    row shelf
+      box jar1 "flour"
+      box jar2 "sugar"
+
+**cut**: everything is in its new state on one frame, with no motion between, as a film cuts. For a new place, a new time or a new idea, where gliding would say "the same thing" when it is not.
+
+    @31 cut
+    text then "Ten years later" role=title
+
+**fade**: things arrive or leave by fading where they are, with no travel. For quiet arrivals that should not pull the eye, and for something that replaces another in place. `enter=fade` on a state or a line.
+
+    @12 keep enter=fade
+    text aside "most people never notice" role=note
+
+**stay**: a keep state that lists only what changes leaves everything else exactly where it is. For the long stretches where one thing works and the rest must hold still, so the eye knows where to look.
+
+    @18 keep
+    light gear2
+
+**morph**: a shape's outline reshapes into another's, matching like with like (a circle into a square, a bar into a longer bar, a seed into a sprout). For one thing becoming another. A shape's outline is `ID.shape`.
+
+    do morph seed.shape to=sprout.shape frames=30
+
+**spring**: a thing reaches a value on a real spring, overshooting a little and settling, keeping the speed it has. `ease=spring` on a state gives every travel of that state the feel; `do spring` springs one value, such as a size.
+
+    @26 keep ease=spring move=20
+    do spring badge scaleX=1.2 scaleY=1.2 stiffness=200 damping=12
+
+**drop**: a thing falls into place under gravity and lands. `enter=slam` drops a new thing in large and lands it with a jolt; `do fall` drops a thing already on screen, bouncing on the frame's floor (or `floor=`, in its parent's units), with `squash=` on each bounce. For weight, impact and things that arrive with force.
+
+    box stamp "APPROVED" role=key enter=slam
+    do fall crate bounce=0.4 squash=0.2
+
+**arc**: a thing goes to a place along a true circular arc, as a thrown or swung thing does. `to=ID` lands it where another thing is; `bend=` is how far the arc bows (negative bows the other way). Then list it where it landed in the next state.
+
+    do arc coin to=jar bend=0.4 frames=30
+
+**hop**: a whole jump with weight: it crouches, stretches in flight, squashes on landing and settles. In place it is a beat of life or a yes; with `to=ID` it jumps over to another thing.
+
+    do hop frog to=pad height=200 frames=40
+    do hop token frames=30
+
+**follow**: a thing travels along a line, at an even speed. The line is any path on screen: an arrow, a link, a mark's line, a shape's outline. `orient=1` turns it to face along the line. For routes, flows and journeys.
+
+    arrow home -> school id=route
+    do follow bus path=route frames=90 orient=1
+
+**orbit**: a thing circles another, which may itself be moving, for `turns` turns. For cycles, satellites, and things that go round.
+
+    do orbit moon around=earth turns=1 frames=120
+
+**squash**: an impact or a beat: it flattens, rebounds past normal and settles, keeping its volume. For a landing, a hit, a press, the beat a word lands on.
+
+    do squash ball amount=0.3 axis=y
+
+**jiggle**: a dying wobble on top of whatever else it is doing: follow-through after a stop, a thing that was just struck or set down. `prop=` says what wobbles.
+
+    do jiggle sign prop=rotate size=8 cycles=3
+
+**wiggle**: restless motion from smooth noise, on top, for as long as it lasts: something alive, nervous, hot, buzzing or waiting.
+
+    do wiggle flame prop=y size=6 speed=3 frames=90
+
+A move that carries no change in what the words say is noise: one thing moves at a time, and the others stay. The style's leanings above are where to start, never a rule.
+
+[[/toolbox]]
 
 # The camera
 
@@ -177,6 +312,37 @@ The camera starts at rest, showing the frame as laid out. It keeps its view thro
 
 `frames` is how long the move takes (in a cut, it is there at once). `drift` keeps it pushing closer by that much each second after it lands, until its next move: the slow push-in that keeps a still picture alive. When a picture fills the frame, the camera never shows past its edges. Anything can be framed: a part of a diagram, a node of a graph, a word.
 
+[[toolbox]]
+# A board
+
+A board is one canvas larger than the frame, written a piece at a time while the camera travels over it, like a teacher's whiteboard or a planning wall. Nothing on it ever shrinks, moves or reshuffles: each thing keeps the place and size it got when it was written, and at the end the whole board can be seen at once.
+
+    board b1 w=1 h=3 follow=writing             one screen wide, three screens tall
+
+`w` and `h` are in screens (default 1 each), so `w=2 h=2` is four screens in a square. A board is the whole frame: write it alone at the top of a state and put everything else inside it. Inside, a thing with `at=X,Y` has its center there, in percent of the board from its top left (as in `free`); things with no `at=` are written down the board in reading order, top to bottom, `gap=` apart, centered or at `align=left|right`. Everything on a board is laid out at the size it would have on a normal frame, so it reads when the camera is on it. Write the board in one plain state and add to it in keep states with `into=b1`, so what is already written stays. Writing that would run past the board's edge is reported: make the board larger or place the writing elsewhere.
+
+At rest the camera shows the board's top left screen. `follow=` says what moves it, and the default is `no`: the camera stays where your camera lines put it, and writing that lands out of view is reported. With `follow=writing` the camera goes to what each state writes on the board, moving as little as it must to show it whole and never past the board's edges; a camera line in a state takes over for that state. `camera ID` frames any part of the board, and `camera b1` shows the whole board. The whole view is an overview: its words are small there, which is fine for looking back over what was built, so show it when the writing is done, not while new words arrive.
+
+Use a board when the words build one argument, derivation, plan or story piece by piece and the viewer gains from seeing each piece stay where it was put and the whole at the end: a proof, a route, a timeline, a recipe, a chain of causes. A board is one place, so a scene that goes somewhere else cuts away from it.
+
+    @0
+    board b1 w=1 h=3 follow=writing
+      text q "How does a letter cross the world?" role=title
+    @5 keep
+    stack step1 into=b1 at=50,30
+      box post "post box"
+      text p1 "collected in the evening"
+    @11 keep
+    stack step2 into=b1 at=50,60
+      box sort "sorting hall"
+      text p2 "read by machine, bagged by city"
+    arrow post -> sort
+    @18 keep
+    text end "delivered by hand" role=answer into=b1 at=50,90
+    @24 keep
+    camera b1
+
+[[/toolbox]]
 # Readable
 
 Nothing the engine places (tags, labels, the words of a graph or a program) is drawn smaller than the style's readable size; laid-out text that would come out smaller is reported, so put less on screen. `dim` and `focus` never fade the rest below a level that stays readable. A scene can change both for itself with a line before its first state: `read text=0.04 dim=0.5` (text is the smallest text as a share of the frame's width; dim is the lowest opacity). Every word is checked against what is behind it: a color that does not stand out from its panel, shape or the surface is reported (with no color, the engine picks one that reads), words straight on a photo need a card, words never sit on other words or on pictures, and a camera that would cut words at the frame's edge or put them under the captions is reported. A plain state and the keep states after it are laid out together: everything any of them shows has its room from the first, so what stays keeps its place and size while other things arrive and leave (a growing table never shrinks, a question added under a diagram does not push it up), and something that replaces a dropped thing takes its place, so write the later things of a stretch as keep states rather than a new plain state when the board should hold still. A kit, graph, program or picture in the main column is the subject: it grows into the height the words leave and sits at the middle, with a title above and what comes under it below; the words keep their role sizes. A kit whose process unfolds in levels picks a form for the frame it is in and for its data: on a tall frame a merge sort is drawn by level (its split tree going down, or across when that lets the values be clearly larger), and its steps are the same in every form, so leave the form to it unless the scene needs one; `form=` asks for one. When a computed demonstration's values come out small (many values on a phone), the camera follows its work on its own: it shows the whole when the steps begin, moves in on what the steps work on (step by step at pace=slow, a few steps at a time and wider when quicker), and pulls back to the whole when a `do steps` stretch ends; it never cuts a tag or words that just arrived, and it leaves the camera alone wherever the scene moves it. `follow=no` on the kit keeps it still. Words attached to things (tags, labels) get room the layout leaves free for them, never sit on writing or on a formula's symbols, and go to the smallest readable size or to a free place with a line back before they would cover any.
@@ -238,6 +404,16 @@ What the language can do is above. This is what tends to make it work on a phone
 
 **A silence is for looking.** When the voice stops for a hold, the viewer's whole attention moves to the picture, so the picture has to keep working: a step plays, a part lights, a question waits on screen for the answer. An empty pause teaches nothing, and a busy one teaches nothing either: during a hold nothing else moves, arrives or lights up, so the one thing the hold is about has the eye to itself. A prediction hold shows what the viewer is asked to guess and withholds the answer until the voice gives it.
 
+[[toolbox]]
+**Show the thing, not its name.** When the words are about a real thing and what happens to it, the viewer understands faster by seeing it happen: the jug's level falling as it pours, the leaf turning brown, the gate swinging open. Depict it, change its states on the words that say they change, and point at its parts with light, tags and the camera. A box with a label is a placeholder; a depicted thing is the explanation. Keep the words on screen to the few the picture cannot say: a number, a name, the takeaway.
+
+**Where things are is part of the meaning.** Things that are together in the world go together on screen: on, under, inside, tied to, at their real sizes. A stage says it in the viewer's own terms, and a scale that is true (the tiny seed beside the tall tree) teaches before any word does. Close in with `focus=` or the camera on the small thing that matters, rather than drawing it at a false size.
+
+**Motion is meaning.** Choose a move for what it says: a cut for a new idea, a glide for the same thing elsewhere, a spring or a squash for a landing, an arc or a hop for a thing that goes by itself, a follow for a route, a wiggle for something alive. Play it on the word it belongs to, and keep everything else still while it plays.
+
+**A board keeps the argument.** When the words build something piece by piece, a board lets every piece stay where it was written while the camera goes to the next, and ends on the whole: the viewer sees how the pieces fit, which no single frame can show.
+
+[[/toolbox]]
 **One thing moves.** The eye goes to what moves, lights up or changes, before it reads anything. At each moment the thing the words are about should be the only thing that moves or lights; anything else that pulses, drifts or arrives at the same time competes with it and wins as often as it loses.
 # Example of the form, on an unrelated topic
 
@@ -271,4 +447,43 @@ What the language can do is above. This is what tends to make it work on a phone
     light three
     mark ring three
 
+[[toolbox]]
+# Example of the form with things as themselves, on another unrelated topic
+
+    @0
+    text title "Why a kettle whistles" role=title
+    stage stove w=900 h=1300
+      depict kettle "a steel stovetop kettle with a whistle cap on its spout, half full of cold water" level=0.5
+      depict hob "a black gas stove top with one burner"
+      kettle sits on hob "the burner"
+    @6 keep
+    depict flame "a small blue gas flame" tier=sprite parts=tip into=stove
+    flame under kettle
+    do wiggle flame prop=scaleY size=0.08 speed=4 until=@40
+    tag hob "full heat" side=left
+    @12 keep
+    do act kettle verb="boils" frames=90
+    light kettle
+    tag kettle "water turns to steam" side=right
+    @19 keep move=30 ease=smooth
+    camera kettle zoom=1.15 frames=45 ease=smooth
+    light kettle.contents
+    drop tag.hob
+    @24 keep
+    camera zoom=1 frames=30
+    circle puff "steam" w=180 h=180 into=stove enter=pop
+    puff above kettle "the spout"
+    mark line stove at=0.6,0.45,0.75,0.1 id=rise
+    do follow puff path=rise frames=24
+    do jiggle kettle prop=rotate size=3 cycles=4
+    @30 cut
+    row why gap=60
+      circle narrow "narrow hole" w=260
+      circle fast "fast air" w=320
+    arrow narrow -> fast
+    @36 keep ease=spring move=18
+    text answer "fast air through a narrow hole sings" role=answer
+    do squash answer amount=0.2
+
+[[/toolbox]]
 Write the scene for the request below. Every `@N` must be a real word number. Refer only to things that are on screen at that state.

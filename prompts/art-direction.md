@@ -1,0 +1,5 @@
+The look is the video's art direction, one for the whole video, which every scene writer is given beside its own part. Write it for this video's purpose, viewer and material, in plain words a writer can act on; the style already sets colors, type and line, so say what the style alone cannot:
+- `emphasis`: how the thing that matters now is made to stand out across this video (light on it while the rest stays at full color, a push in, scale, a mark, color as meaning), and what is never used for emphasis here.
+- `scale`: how big things are shown and how much fills the frame (one large subject edge to edge, a whole system small then close-ups of its parts, real objects at true relative size), and when that changes.
+- `motifs`: shapes, objects, gestures or framings that recur and carry meaning across the video (the same container every time a quantity is held, the same arrow for cause), so the viewer learns them once.
+- `texture`: the feel of the picture over time (calm and spacious, dense and quick, hand-made, clinical), and how motion carries it.

@@ -2,11 +2,12 @@
 // first pass plans what carries from one section into the next, then Spark writes every section at the same time in the
 // scene language, with the video's own word numbers so the sections join into one document in order. Each section is
 // built by the engine and repaired from its errors, then rendered to a few still frames that Spark looks at beside the
-// words, and repaired again from what it sees. No fallback: a section that cannot be repaired is reported loudly.
+// words, and repaired again from what it sees; then the design brain's instruments read it and Spark reviews it with
+// their readings beside the frames, and the writer repairs it from both (reviewRound). No fallback: a section that cannot be repaired is reported loudly.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DemoPhase, DirectionEvent, Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
+import type { DemoPhase, DirectionEvent, DirectionPlan, Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
 import { when } from "../../engine/core/compile.ts";
 import { bundled } from "../../engine/render/bundle.ts";
 import { evaluate } from "../../engine/core/evaluate.ts";
@@ -24,18 +25,25 @@ import { parse, type Item, type State } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { better, decode, hide, inventory, issuesFrom, judgeSchema, keptAt, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
 import { json, text } from "../lib/meta.ts";
-import { asked, charge, checkBudget, dir, prompt, stage, topic } from "../lib/project.ts";
+import { asked, charge, checkBudget, dir, prompt, stage, style, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 import { designRunner, type DesignInputs } from "../lib/design-run.ts";
 import { checkPlan, INTENT_GUIDE, intentRepair, intentSystem, materialText, stripFence } from "../lib/intent-author.ts";
 import { metaReasoner } from "../lib/reasoner-meta.ts";
+import { frameReadings, partNotes, type PartNotes } from "../lib/instrument-notes.ts";
 import { readProject, type MaterialFile } from "../../engine/design/material/index.ts";
 import { suggestViewing, viewingFrom } from "../../engine/design/suggest.ts";
 import type { PartCard, Reasoner, Viewing } from "../../engine/design/types.ts";
 import { basename } from "node:path";
+import { emptyToolbox, prepareToolbox, toolboxKit, toolboxNotes, type Toolbox, type ToolboxMakers } from "../../engine/language/toolbox.ts";
+import { lookSchema } from "./direction.ts";
+import { metaDepictMakers, spriteStyle } from "../lib/depict-makers.ts";
+import { mend, unwrap } from "../lib/mend.ts";
+import { imageFile, tasteNotes, tasteReview, type TasteContext } from "../../engine/review/taste.ts";
+import type { Ask } from "../../engine/review/model.ts";
 
-const VERSION = 5; // bump when the way sections are written or checked changes, so cached sections are redone
+const VERSION = 6; // bump when the way sections are written or checked changes, so cached sections are redone
 const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
@@ -47,6 +55,7 @@ const LOOK_SCALE = 0.6; // frames Spark sees: 648 by 1152, near full size
 const PARALLEL = 6;
 export const MAX_PROBLEMS = 25;
 const JOIN_ROUNDS = 2; // repairs of the parts a joined scene that does not build names
+export const REVIEW_ROUNDS = 2; // repairs from the instruments and a reviewer, after the look
 
 export type Range = { id: string; firstWord: number; lastWord: number };
 // A thing one section hands to the next: what it is, the ids of its pieces (so they stay the same things on screen rather
@@ -344,7 +353,28 @@ export const SCENE_KITS: Kit[] = [...KITS, mathFormulas];
 export function sceneContext(p: Project, theme: Theme = themeFrom(p.input.style)): CompileContext {
   const words = p.narration!.words.map((w) => ({ text: w.text, start: w.start }));
   const [width, height] = p.input.frame ?? [WIDTH, HEIGHT];
-  return { fps: FPS, width, height, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: SCENE_KITS };
+  return { fps: FPS, width, height, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: usesToolbox(p) ? [...SCENE_KITS, toolboxKit(toolboxOf(p))] : SCENE_KITS };
+}
+
+// Path A: the writer keeps writing whole scenes, and the language also offers the design brain's abilities (depicted
+// things, staging, the motion vocabulary with the style's leanings, the director's look) and a review round of
+// instruments and stills. The depictions a project's scenes asked for are kept in scene/toolbox.json, so every build of
+// its scene (the stage, the join, the timeline, the scripts) draws the same things.
+export const usesToolbox = (p: Project) => (p.input.sceneAuthor ?? SCENE_AUTHOR_DEFAULT) === "toolbox";
+const TOOLBOXES = new Map<string, Toolbox>();
+const toolboxFile = (p: Project) => join(dir(p), "scene", "toolbox.json");
+export function toolboxOf(p: Project): Toolbox {
+  const file = toolboxFile(p);
+  let box = TOOLBOXES.get(file);
+  if (!box) {
+    box = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Toolbox) : emptyToolbox();
+    TOOLBOXES.set(file, box);
+  }
+  return box;
+}
+export function saveToolbox(p: Project) {
+  mkdirSync(join(dir(p), "scene"), { recursive: true });
+  writeFileSync(toolboxFile(p), JSON.stringify(toolboxOf(p), null, 1));
 }
 
 // Build options for this project's scene. `assets` maps asset names to an image source the renderer can load.
@@ -456,7 +486,7 @@ export async function wholeScene(p: Project, assets: Record<string, string>, fra
   return { scene: gateScenes(base, parts), problems: [], source };
 }
 
-export const kitKinds = () => SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
+export const kitKinds = () => [...SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph"), "depict"];
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Pictures: the director's images, offered to Spark by name.
@@ -566,8 +596,13 @@ export type Job = {
   opts: BuildOptions; // assets here are loadable sources, for stills
   folder: string;
   log: (line: string) => void;
+  review?: boolean; // false: no review round after the look (reviewRound)
+  once?: boolean; // one repair round: write, build, look once, one repair with every note (writeOnce)
+  taste?: Ask; // the taste review's model calls (Spark when not given); tests pass a fake
+  // Path A: what prepares the depictions a part asks for before each build, and the toolbox they are kept in.
+  toolbox?: { box: Toolbox; makers: ToolboxMakers; inflight: Map<string, Promise<void>>; save: () => void };
 };
-type Written = { source: string; result: BuildResult; problems: string[]; warnings: string[]; usd: number; rounds: number };
+export type Written = { source: string; result: BuildResult; problems: string[]; warnings: string[]; usd: number; rounds: number };
 
 const endFrame = (job: Job) => (job.next ? when({ word: job.next.firstWord }, job.opts.ctx) - 2 : job.opts.ctx.frames - 1);
 
@@ -575,6 +610,10 @@ export type Checked = { result: BuildResult; problems: string[]; warnings: strin
 
 export async function check(job: Job, written: string): Promise<Checked> {
   const kinds = kitKinds();
+  // Depicted things are drawn from the depicter's answers, so they are prepared before the part is built; what could
+  // not be prepared goes back to the writer with the build's own problems.
+  const unmade = job.toolbox ? (await prepareToolbox(plainMoments(written, job.opts), kinds, job.toolbox.box, job.toolbox.makers, job.toolbox.inflight)).problems : [];
+  if (job.toolbox) job.toolbox.save();
   const result = await build(written, job.opts);
   const source = plainMoments(written, job.opts);
   const built = result.problems.map((p) => (p.line ? `line ${p.line}: ${p.message}` : p.message));
@@ -588,7 +627,7 @@ export async function check(job: Job, written: string): Promise<Checked> {
   // computed steps played by the thing that computes them. Both go back for repair; a part that still misses a
   // demonstration is reported rather than failed, as a hand-off is.
   const direction = directed(source, job.p, job.range, kinds);
-  return { result, problems: [...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x)), ...direction.withholds, ...direction.truth], warnings: [...carry, ...handoff, ...direction.demos], notes: [...shape.filter(leftOut), ...needs(written)] };
+  return { result, problems: [...unmade, ...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x)), ...direction.withholds, ...direction.truth], warnings: [...carry, ...handoff, ...direction.demos], notes: [...shape.filter(leftOut), ...needs(written)] };
 }
 
 // Lines a writer leaves when a hold is too short for what the direction asks of it: `# needs h2 6s: why`. They go to
@@ -631,7 +670,9 @@ export function truthPlan(p: Project, range: Range): TruthPart[] {
   }
   return [...things.values()].map(({ phases, ...t }) => ({
     ...t,
-    done: Math.max(0, ...phases.filter((ph) => ph.word < range.firstWord).map((ph) => ph.to)),
+    // Where it stands as the range begins: after the steps played before it, or, in a video that opens partway through
+    // a process, just before the first step any phase plays.
+    done: Math.max(0, phases.length ? Math.min(...phases.map((ph) => ph.from)) - 1 : 0, ...phases.filter((ph) => ph.word < range.firstWord).map((ph) => ph.to)),
     plays: phases.filter((ph) => ph.word >= range.firstWord && ph.word <= range.lastWord).map(({ word: _w, ...ph }) => ph),
   }));
 }
@@ -688,7 +729,9 @@ export function review(job: Job, written: string, result: BuildResult): string {
   const source = plainMoments(written, job.opts);
   const from = when({ word: job.range.firstWord }, job.opts.ctx);
   const extra = result.scene ? overPictures(source, result.scene, from, endFrame(job), kinds) : [];
-  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra });
+  // What each depicted thing can do, so the writer can use its states, verbs and parts.
+  const things = job.toolbox ? toolboxNotes(source, kinds, job.toolbox.box, job.opts.ctx.theme) : [];
+  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra: [...extra, ...things.map((x) => `Depicted: ${x}`)] });
 }
 
 // What goes back to the writer: a part with build problems, and a part that builds with what code can see about it.
@@ -749,7 +792,7 @@ async function compose(job: Job, start: string | undefined, prior: string, revie
 // the engine, and judged by Spark with the words, the exact on-screen text and the research facts. A fix changes only
 // what was named, the changed version is kept only if it measures and looks better, and then the look stops.
 
-type Seen = { moments: Moment[]; files: string[]; measured: { frame: number; findings: Finding[]; words: string[] }[] };
+export type Seen = { moments: Moment[]; files: string[]; measured: { frame: number; findings: Finding[]; words: string[] }[] };
 
 const lookPart = (name: "Judge" | "Fix" | "Recheck") => (prompt("scene-look").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
 
@@ -788,12 +831,14 @@ function lookHeader(job: Job, w: Written): string {
   return `Topic: ${topic(p)}\nVisual style: ${p.input.style || "default"}\n\nResearch facts the video is built on:\n${facts || "(none listed)"}${steps}\n\nThis part's narration:\n${said}`;
 }
 
-function frameContent(seen: Seen, only?: Set<number>, label = "Frame"): unknown[] {
+// `extra`: more lines for frame k (from 0), such as what the instruments read on it.
+function frameContent(seen: Seen, only?: Set<number>, label = "Frame", extra?: (k: number) => string): unknown[] {
   return seen.moments.flatMap((m, k) => {
     if (only && !only.has(k + 1)) return [];
     const found = seen.measured[k]!.findings.map((f) => `[${f.severity}] ${f.note}`);
+    const more = extra?.(k);
     return [
-      { type: "input_text", text: `${label} ${k + 1}, at ${(m.frame / FPS).toFixed(1)} s (${m.why}). Words around it: ${m.words ? `"${m.words}"` : "(a pause)"}\nOn screen: ${seen.measured[k]!.words.join(" / ") || "(no writing)"}\nMeasured: ${found.join("; ") || "nothing found"}` },
+      { type: "input_text", text: `${label} ${k + 1}, at ${(m.frame / FPS).toFixed(1)} s (${m.why}). Words around it: ${m.words ? `"${m.words}"` : "(a pause)"}\nOn screen: ${seen.measured[k]!.words.join(" / ") || "(no writing)"}\nMeasured: ${found.join("; ") || "nothing found"}${more ? `\nInstruments on this frame:\n${more}` : ""}` },
       { type: "input_image", image_url: `data:image/jpeg;base64,${readFileSync(seen.files[k]!).toString("base64")}` },
     ];
   });
@@ -928,9 +973,223 @@ export async function gate(job: Job, before: string, after: Written, named: Issu
 // What still breaks a frame in a version: severe issues seen, and severe measured findings.
 export const severeOf = (judged: Judged["issues"], measured: Seen["measured"]): Issue[] => issuesFrom(judged, measured).filter((x) => x.severity >= 3);
 
+// ---------------------------------------------------------------------------------------------------------------------
+// The review round (path A): after the build, the look and its fix, the part is read by the design brain's instruments
+// (pipeline/lib/instrument-notes.ts, with their suggestions for this project's viewing) and reviewed by Spark looking at
+// its stills with those readings beside each frame. Both go back to the writer as notes, and it repairs its own part.
+// A repair is kept only when it builds, keeps what it promised the parts around it, and the gate finds it no worse;
+// otherwise the version before stays and the round stops. Code decides nothing about layout, motion or timing here: the
+// instruments report, the reviewer says what it sees and what matters for this video, the writer decides what changes.
+
+// The model calls and renders of a review round, so it can run with stand-ins (scene.test.ts) and live.
+export type ReviewCalls = {
+  see: (w: Written, folder: string) => Promise<Seen>;
+  review: (w: Written, seen: Seen, notes: PartNotes) => Promise<{ judged: Judged; usd: number }>;
+  write: (user: unknown[]) => Promise<{ value: string; usd: number }>;
+  compose: (reply: string) => Promise<Written>;
+  gate: (before: string, after: Written, named: Issue[], label: string) => Promise<{ keep: boolean; usd: number; why: string }>;
+};
+
+const reviewPart = (name: "Review" | "Repair" | "Once") => (prompt("scene-review").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
+
+/** What the instruments read on a built part: its window of the video, the project's viewing, the words and silences. */
+export function measurePart(job: Job, scene: Scene): PartNotes {
+  const words = job.p.narration!.words.map((w) => ({ text: w.text, start: w.start, ...("end" in w && typeof w.end === "number" ? { end: w.end } : {}) }));
+  const holds = (job.opts.holds ?? []).map((h) => ({ id: h.id, from: h.start, to: h.start + h.seconds }));
+  return partNotes({ scene, words, viewing: projectViewing(job.p), window: [when({ word: job.range.firstWord }, job.opts.ctx), endFrame(job) + 1], holds });
+}
+
+const readingsOn = (job: Job, scene: Scene, seen: Seen) => (k: number) => frameReadings(scene, projectViewing(job.p), seen.moments[k]!.frame);
+const NOTES_HEAD = "The instruments' readings over your part (times are seconds of the video, places are shares of the frame):";
+
+/** What goes back to the writer from a review: its part, the reviewer's issues, the instruments' notes, and the frames named. */
+export function reviewRepairRequest(job: Job, w: Written, issues: Issue[], notes: PartNotes, seen: Seen): unknown[] {
+  const shown = new Set(issues.flatMap((x) => x.frames).filter((f) => f >= 1 && f <= seen.moments.length).slice(0, 4));
+  return [
+    { type: "input_text", text: `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(w.source)}\n\n${reviewPart("Repair")}\n\nIssues the reviewer saw:\n${issueText(issues)}\n\n${NOTES_HEAD}\n${notes.lines.join("\n")}\n\nThe frames the issues name, with what the instruments read on each:` },
+    ...frameContent(seen, shown, "Frame", readingsOn(job, w.result.scene!, seen)),
+  ];
+}
+
+const liveReview = (job: Job): ReviewCalls => ({
+  see: (w, folder) => see(job, w.result.scene!, w.source, folder),
+  review: async (w, seen, notes) => {
+    const user = [{ type: "input_text", text: `${lookHeader(job, w)}\n\n${NOTES_HEAD}\n${notes.lines.join("\n")}` }, ...frameContent(seen, undefined, "Frame", readingsOn(job, w.result.scene!, seen))];
+    const r = await json<Judged>({ system: reviewPart("Review"), user, schema: judgeSchema, schemaName: "review", effort: "medium" });
+    return { judged: r.value, usd: r.usd };
+  },
+  write: (user) => text({ system: job.system, user, effort: "medium", maxOutput: 32000 }),
+  compose: (reply) => compose(job, reply, `${job.request}\n\nYour part:\n${reply}`),
+  gate: (before, after, named, label) => gate(job, before, after, named, label),
+});
+
+// Warnings that are about the join (hand-offs, the direction's demonstrations), which a repair must not add to.
+const joinWarnings = (w: Written) => w.warnings.filter((x) => !x.startsWith("severe on screen") && !x.startsWith("hold ")).length;
+
+/** At most REVIEW_ROUNDS rounds of instruments, reviewer and writer on a built part; returns the version kept. */
+export async function reviewRound(job: Job, start: Written, calls: ReviewCalls = liveReview(job)): Promise<{ w: Written; usd: number; rounds: number; log: string[] }> {
+  let w = start;
+  let usd = 0;
+  let rounds = 0;
+  const log: string[] = [];
+  for (let round = 1; round <= REVIEW_ROUNDS && w.result.scene; round++) {
+    const folder = join(job.folder, `review${round}`);
+    mkdirSync(folder, { recursive: true });
+    const notes = measurePart(job, w.result.scene);
+    writeFileSync(join(folder, "instruments.txt"), `${notes.lines.join("\n")}\n`);
+    const seen = await calls.see(w, folder);
+    const r = await calls.review(w, seen, notes);
+    usd += r.usd;
+    writeFileSync(join(folder, "review.json"), JSON.stringify(r.judged, null, 1));
+    // The reviewer read the instruments beside the frames and says what matters for this video; blemishes stay.
+    const issues: Issue[] = r.judged.issues.filter((x) => x.severity >= 2).map((x, i) => ({ ...x, id: `r${i + 1}`, source: "seen" }));
+    job.log(`  ${job.range.id} review ${round}: design ${r.judged.design}/5, ${issues.length} issues${issues.length ? `: ${issues.map((x) => x.what.slice(0, 80)).join(" | ")}` : ""}`);
+    if (!issues.length) {
+      log.push("fine");
+      break;
+    }
+    let reply: string;
+    try {
+      const x = await calls.write(reviewRepairRequest(job, w, issues, notes, seen));
+      usd += x.usd;
+      reply = x.value;
+    } catch (e) {
+      usd += (e as { usd?: number }).usd ?? 0;
+      log.push(`repair failed: ${(e as Error).message.slice(0, 120)}`);
+      break;
+    }
+    if (reply.trim() === w.source.trim()) {
+      log.push("the writer kept it as it was");
+      break;
+    }
+    const fixed = await calls.compose(reply);
+    usd += fixed.usd;
+    rounds += fixed.rounds;
+    if (fixed.problems.length || !fixed.result.scene) {
+      job.log(`  ${job.range.id} review ${round}: the repair does not build (${fixed.problems.slice(0, 2).join(" | ").slice(0, 200)}); kept the version before`);
+      log.push("repair did not build, kept before");
+      break;
+    }
+    if (joinWarnings(fixed) > joinWarnings(w)) {
+      log.push("repair missed a hand-off, kept before");
+      break;
+    }
+    const g = await calls.gate(w.source, fixed, issues, `review${round}`);
+    usd += g.usd;
+    job.log(`  ${job.range.id} review ${round}: ${g.keep ? "kept the repair" : "kept the version before"} (${g.why})`);
+    if (!g.keep) {
+      log.push("repair not better, kept before");
+      break;
+    }
+    log.push("repaired");
+    w = fixed;
+  }
+  return { w, usd, rounds, log };
+}
+
 // `start`: an answer already written in the scene language (an intent author who wrote today's language instead), which
 // is checked, repaired and looked at as a first answer would be.
+// Build and mend in code: slips the build names with exactly one fix are made before any model sees the part.
+async function checkMended(job: Job, written: string, fixed: string[]): Promise<{ source: string; c: Checked }> {
+  let source = unwrap(written);
+  let c = await check(job, source);
+  for (let pass = 0; pass < 3 && c.result.problems.length; pass++) {
+    const m = mend(source, c.result.problems);
+    if (!m.fixed.length) break;
+    fixed.push(...m.fixed);
+    source = m.source;
+    c = await check(job, source);
+  }
+  return { source, c };
+}
+
+// The taste review on a part's stills (engine/review/taste.ts): an art director's judgment from the frames and the
+// part's context, run beside the look on the same stills. Its notes join the one repair request; it adds a call, not a round.
+export function tasteContext(job: Job): TasteContext {
+  const p = job.p;
+  const s = style(p.input.style);
+  const words = p.narration!.words.slice(job.range.firstWord, job.range.lastWord + 1).map((w) => w.text).join(" ");
+  const events = eventsIn(p, job.range);
+  const v = projectViewing(p);
+  return {
+    words,
+    purpose: events.map((e) => `${e.job}; the eye should be on ${e.look}`).join(" Then: ") || "carry these words",
+    ...(p.plan?.intent || p.direction?.goal ? { intent: [p.plan?.intent, p.direction?.goal].filter(Boolean).join(". ") } : {}),
+    style: { name: s.name, palette: Object.entries(s.palette ?? {}).map(([k, x]) => `${k} ${x}`), fonts: [...new Set(Object.values(s.fonts ?? {}))], ...(s.art?.scene ? { texture: s.art.scene } : {}) },
+    platform: `${v.screen}, ${v.width} by ${v.height}, ${v.watch}`,
+  };
+}
+export async function tasteFor(job: Job, seen: Seen, ask: Ask): Promise<string[]> {
+  const t0 = seen.moments[0]?.frame ?? 0;
+  const frames = seen.moments.map((m, k) => ({ at: (m.frame - t0) / FPS, image: imageFile(seen.files[k]!) }));
+  return tasteNotes(await tasteReview(ask, frames, tasteContext(job)));
+}
+// The taste review's calls on Spark, charged with the part's other calls.
+const sparkAsk = (pay: (usd: number) => void): Ask => async <T>(c: Parameters<Ask>[0]) => {
+  const r = await json<T>({ system: c.system, user: c.user as string, schema: c.schema as Record<string, unknown>, schemaName: c.name, effort: c.effort ?? "medium", ...(c.model ? { model: c.model as never } : {}) });
+  pay(r.usd);
+  return r.value;
+};
+
+// One repair round (the project's `sceneRepair: "once"`): the writer writes, the part is built and mended in code, rendered
+// once and looked at, and every note goes back together in a single request: the build's problems and notes, what code
+// sees, the look's issues on the frames, and the instruments' readings when the part has them. The repair is kept if it
+// builds; only a repair that does not build is asked again, with its build problems.
+async function writeOnce(job: Job, draft: string): Promise<Written & { looks: string[]; repairs: number; fixed: string[] }> {
+  job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing, one repair round`);
+  let usd = 0;
+  const fixed: string[] = [];
+  const ask = async (user: string | unknown[]): Promise<string> => {
+    const r = await text({ system: job.system, user: user as string, effort: "medium", maxOutput: 32000 });
+    usd += r.usd;
+    return r.value;
+  };
+  const first = await checkMended(job, await ask(draft ? `${job.request}\n\nA first draft of your part, made from the director's shots:\n${draft}` : job.request), fixed);
+  const built = (c: Checked) => !c.problems.length && !!c.result.scene;
+  const written = (source: string, c: Checked, rounds: number): Written => ({ source, result: c.result, problems: c.problems, warnings: [...c.warnings, ...c.notes], usd, rounds });
+  let request: string | unknown[];
+  let repairs = 1;
+  const looks: string[] = [];
+  if (built(first.c)) {
+    const w = written(first.source, first.c, 1);
+    const seen = await see(job, first.c.result.scene!, first.source, join(job.folder, "once"));
+    // The look and, on path A, the taste review read the same stills at the same time.
+    const [j, taste] = await Promise.all([judge(job, w, seen), job.toolbox ? tasteFor(job, seen, job.taste ?? sparkAsk((x) => (usd += x))).catch((e) => (job.log(`  ${job.range.id} taste review failed: ${(e as Error).message.slice(0, 160)}`), [] as string[])) : Promise.resolve([] as string[])]);
+    usd += j.usd;
+    const issues = issuesFrom(j.judged.issues, seen.measured);
+    const said = review(job, first.source, first.c.result);
+    const notes = job.toolbox ? measurePart(job, first.c.result.scene!) : undefined;
+    writeFileSync(join(job.folder, "once", "issues.json"), JSON.stringify({ design: j.judged.design, issues, said, warnings: first.c.warnings, instruments: notes?.lines ?? [], taste }, null, 1));
+    job.log(`  ${job.range.id} look: design ${j.judged.design}/5, ${issues.length} issues, ${first.c.warnings.length} build notes${notes ? `, ${notes.lines.length} instrument lines` : ""}${job.toolbox ? `, taste: ${taste.length ? `${taste.length} notes` : "ship"}` : ""}`);
+    if (!issues.length && !first.c.warnings.length && !said.trim() && !taste.length) return { ...w, usd, looks: ["fine"], repairs: 0, fixed };
+    const shown = new Set(issues.flatMap((x) => x.frames).filter((f) => f >= 1 && f <= seen.moments.length).slice(0, 4));
+    const parts = [
+      `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(first.source)}\n\n${reviewPart("Once")}`,
+      first.c.warnings.length ? `What the build reports:\n${first.c.warnings.map((x) => `- ${x}`).join("\n")}` : "",
+      said.trim() ? `What code sees:\n${said}` : "",
+      issues.length ? `Issues the reviewer saw on the frames:\n${issueText(issues)}` : "",
+      taste.length ? `An art director looked at the same frames:\n${taste.map((x) => `- ${x}`).join("\n")}` : "",
+      notes ? `${NOTES_HEAD}\n${notes.lines.join("\n")}` : "",
+      shown.size ? "The frames the issues name:" : "",
+    ].filter(Boolean).join("\n\n");
+    request = [{ type: "input_text", text: parts }, ...frameContent(seen, shown.size ? shown : new Set([1]), "Frame", notes ? readingsOn(job, first.c.result.scene!, seen) : undefined)];
+  } else request = repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings]);
+  let next = await checkMended(job, await ask(request), fixed);
+  if (!built(next.c)) {
+    repairs++;
+    job.log(`  ${job.range.id}: the repair does not build (${next.c.problems.slice(0, 2).join(" | ").slice(0, 200)}); asking once more with its build problems`);
+    next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings])), fixed);
+  }
+  if (built(next.c)) looks.push("repaired");
+  else if (built(first.c)) {
+    looks.push("repair did not build, kept the first");
+    return { ...written(first.source, first.c, 1 + repairs), usd, looks, repairs, fixed };
+  } else looks.push("did not build");
+  return { ...written(next.source, next.c, 1 + repairs), usd, looks, repairs, fixed };
+}
+
 async function writeSection(job: Job, draft: string, start?: string): Promise<Written & { looks: string[] }> {
+  if (job.once && start === undefined) return writeOnce(job, draft);
   job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing`);
   let w = start !== undefined ? await compose(job, start, job.request, true) : await compose(job, undefined, draft ?`${job.request}\n\nA first draft of your part, made from the director's shots. Keep its pictures where they serve the words and build on it. Its camera lines frame each picture on its subject, measured for this frame, so keep them unless you move the picture; words you add over a picture take role=caption:\n${draft}` : job.request);
   let usd = w.usd;
@@ -966,6 +1225,19 @@ async function writeSection(job: Job, draft: string, start?: string): Promise<Wr
       usd += (e as { usd?: number }).usd ?? 0;
       job.log(`  ${job.range.id} look: FAILED to look: ${(e as Error).message.slice(0, 200)}`);
       looks.push(`failed: ${(e as Error).message.slice(0, 200)}`);
+    }
+    if (job.review !== false) {
+      try {
+        const r = await reviewRound(job, w);
+        // What the look left severe stays reported on a repaired version: the review does not say it is gone.
+        const severe = w.warnings.filter((x) => x.startsWith("severe on screen"));
+        [w, usd, rounds] = [r.w === w ? w : { ...r.w, warnings: [...r.w.warnings, ...severe] }, usd + r.usd, rounds + r.rounds];
+        looks.push(...r.log.map((x) => `review: ${x}`));
+      } catch (e) {
+        usd += (e as { usd?: number }).usd ?? 0;
+        job.log(`  ${job.range.id} review: FAILED: ${(e as Error).message.slice(0, 200)}`);
+        looks.push(`review failed: ${(e as Error).message.slice(0, 200)}`);
+      }
     }
   }
   return { ...w, usd, rounds, looks };
@@ -1479,6 +1751,46 @@ function directionSummary(p: Project, ranges: Range[]): string {
   return `How the video is directed, event by event:\n${lines.join("\n")}${things.length ? `\n${things.join("\n")}` : ""}\n\n`;
 }
 
+// The director's look, as every path A writer reads it beside its own part.
+export const lookText = (p: Project) => {
+  const l = p.direction?.look;
+  return l ? `\n\nThe look of the whole video, from its director, for every part (art direction to carry out in your own way, not rules):\n- Emphasis: ${l.emphasis}\n- Scale: ${l.scale}\n- Motifs: ${l.motifs}\n- Texture: ${l.texture}\n` : "";
+};
+
+// A direction plan written before the look was part of it gets the look in one call of the director's own guide.
+async function ensureLook(p: Project) {
+  if (!p.direction || p.direction.look) return;
+  const user = [`Topic: ${topic(p)}`, `Visual style: ${p.input.style || "default"}`, `Goal: ${p.direction.goal}`, `Promise: ${p.direction.promise}`, `Arc: ${p.direction.arc}`, `Events:\n${p.direction.events.map((e) => `${e.id}: ${e.job}; eye on ${e.look}; feel ${e.feel}`).join("\n")}`, `The narration:\n${p.narration?.words.map((w) => w.text).join(" ") ?? ""}`].join("\n\n");
+  const r = await json<NonNullable<DirectionPlan["look"]>>({ system: `You are the director of this video and have planned it already. Now write its look.\n\n${prompt("art-direction")}`, user, schema: lookSchema, schemaName: "look", effort: "medium" });
+  p.direction.look = r.value;
+  charge(p, "scene", r.usd, "the director's look");
+  console.log(`  look: ${JSON.stringify(r.value).slice(0, 300)}`);
+}
+
+// What prepares path A's depictions: the depicter on Muse Spark, the style's art, and the makers of sprites and pictures.
+function toolboxFor(p: Project, spent: { usd: number }): NonNullable<Job["toolbox"]> {
+  const depicter = metaReasoner({ effort: { depicter: "medium" }, charge: (x, detail) => ((spent.usd += x), console.log(`  depicter ${detail}: $${x.toFixed(4)}`)), checkBudget: () => checkBudget(0.05) });
+  const s = style(p.input.style);
+  const makers: ToolboxMakers = { depicter, style: spriteStyle(s), purpose: [p.plan?.intent, topic(p)].filter(Boolean).join(": "), sprites: true, ...depictMakers(p, spent) };
+  return { box: toolboxOf(p), makers, inflight: new Map(), save: () => saveToolbox(p) };
+}
+
+// Sprite and picture makers for path A (pipeline/lib/depict-makers.ts), when this run has them.
+function depictMakers(p: Project, spent: { usd: number }): Partial<ToolboxMakers> {
+  const pay = (x: number, detail: string) => ((spent.usd += x), console.log(`  ${detail}: $${x.toFixed(4)}`));
+  const reasoner = metaReasoner({ effort: { reader: "medium" }, charge: pay, checkBudget: () => checkBudget(0.05) });
+  const made = metaDepictMakers({ reasoner, charge: pay, checkBudget: (x) => checkBudget(x ?? 0.05) });
+  const paths = Object.fromEntries(pictures(p).map((x) => [x.name, join(dir(p), x.path)]));
+  return {
+    sprite: made.sprite,
+    picture: async ({ desc, asset, parts }) => {
+      if (asset !== undefined && !paths[asset]) throw new Error(`there is no picture called ${asset}; the pictures are ${Object.keys(paths).join(", ") || "none"}`);
+      const r = await made.picture!(desc, asset !== undefined ? paths[asset] : undefined, parts.map((name) => ({ name, phrase: name, mask: true })));
+      return { card: r.card, src: r.src, ...(r.masks ? { masks: r.masks } : {}), tier: r.tier };
+    },
+  };
+}
+
 // What every part's request starts with: the topic, why the viewer wants it, and what the user asked for on purpose.
 export const sceneHeader = (p: Project) => [
   `Topic: ${topic(p)}`,
@@ -1507,7 +1819,9 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
   const library = loadLibrary().map((x) => x.name);
   const done = new Set(doneTickets(p));
   const tickets = sceneTickets(p, ranges).filter((t) => !done.has(t.key));
-  const inputs = [VERSION, CHECKS, tickets.map((t) => t.key), words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? [], ...(author === "intent" ? [author, readFileSync(INTENT_GUIDE, "utf8")] : [])];
+  // Path A gives every writer the director's look; a plan written before the look existed gets one now, once.
+  if (author === "toolbox") await ensureLook(p);
+  const inputs = [VERSION, CHECKS, tickets.map((t) => t.key), words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? [], ...(author === "intent" ? [author, readFileSync(INTENT_GUIDE, "utf8")] : []), ...(author === "toolbox" ? [author, prompt("scene-review")] : [])];
   const estimate = 0.03 + ranges.length * 0.12;
   await stage(p, "scene", inputs, estimate, async () => {
     const root = join(dir(p), "scene");
@@ -1536,7 +1850,8 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
 
       const sections: SceneSection[] = new Array(ranges.length);
       const notes: string[][] = ranges.map(() => []);
-      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)), opts, folder: join(root, range.id), log: (l) => console.log(l) }));
+      const toolbox = author === "toolbox" ? toolboxFor(p, spent) : undefined;
+      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox && p.input.sceneRepair !== "once", once: p.input.sceneRepair === "once", ...(toolbox ? { toolbox } : {}) }));
       // The intent path: the material read once into cards, and one plan request per part.
       let intent: { system: string; requests: string[]; cards: PartCard[]; requirements: PartCard["requirements"]; brief: string } | undefined;
       if (author === "intent") {

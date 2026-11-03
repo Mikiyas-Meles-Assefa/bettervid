@@ -137,6 +137,9 @@ export function makeDepiction(def: KindDef, spec: PropSpec, theme: Theme, look: 
   const verbs: Record<string, VerbDef> = { ...POSE_VERBS, ...k.verbs };
   // The spec's own verbs: the plan's words mapped onto the kind's verbs or onto state changes.
   for (const [name, sv] of Object.entries(spec.verbs ?? {})) {
+    // A verb the kind has by that very name is what this thing does under it (a burette with a tap drips from it); a
+    // mapping only adds names the kind does not have.
+    if (k.verbs[name.toLowerCase()]) continue;
     if (sv.like) {
       const base = findVerb(verbs, sv.like);
       if (!base) throw new Error(`${id}: verb "${name}" is like "${sv.like}", which ${def.name} does not have`);
