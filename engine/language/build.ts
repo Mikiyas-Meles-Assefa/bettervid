@@ -1741,11 +1741,11 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   };
   // The closest view, up to `most`, that shows the region whole, with the tags and the words just arrived, and leaves
   // every other line of words whole or wholly out of view: centered on them, or moved just enough to clear a cut line.
-  // Words a state puts up or changes beside the followed thing (a caption, a rule, a question) are what the viewer reads
-  // as its steps play, so the view keeps them in, and goes only as close as they allow.
+  // Every line of words beside the followed thing (a heading, a caption, a question) is what the viewer reads as its
+  // steps play, so the view keeps them all in, and goes only as close as they allow.
   const viewOn = (area: Box, most: number, from: number, to: number, own: Seen[] = [], target = ""): View | undefined => {
     const seen = stateWords.filter((w, i) => w.at < to && (stateWords[i + 1]?.at ?? Infinity) > from);
-    const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => w.tags.has(x.id) && !x.id.startsWith(`${target}.`)).map((x) => x.box))]);
+    const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => x.slot !== target && !x.id.startsWith(`${target}.`)).map((x) => x.box))]);
     // The kit's own words where its steps put them, too: a value half out of view is as unreadable as a cut line.
     const cuts = (v: View) => [...seen.flatMap((w) => cutFrom(v, w.words, w.tags)), ...cutFrom(v, own)];
     for (let z = Math.min(most, 0.94 * Math.min(safe.w / Math.max(1, r.w), safe.h / Math.max(1, r.h))); z >= 1.12; z *= 0.93) {

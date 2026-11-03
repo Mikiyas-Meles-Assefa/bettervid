@@ -28,6 +28,7 @@ import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 
 const VERSION = 5; // bump when the way sections are written or checked changes, so cached sections are redone
+const CHECKS = 2; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
@@ -1161,7 +1162,7 @@ export async function scene(p: Project, force = false) {
   ].filter(Boolean).join("\n\n") + "\n\n";
   const prompts = ["scene", "scene-cast", "scene-look", "scene-demo", "engine-language", "engine-repair"].map(prompt);
   const library = loadLibrary().map((x) => x.name);
-  const inputs = [VERSION, words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
+  const inputs = [VERSION, CHECKS, words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
   const estimate = 0.03 + ranges.length * 0.12;
   await stage(p, "scene", inputs, estimate, async () => {
     const root = join(dir(p), "scene");
