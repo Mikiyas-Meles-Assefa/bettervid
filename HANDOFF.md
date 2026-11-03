@@ -1,8 +1,31 @@
-# HANDOFF (updated 2026-10-30)
+# HANDOFF (updated 2026-11-03, evening)
 
 For the next agent picking up bettervid. Read `AGENTS.md`, then `docs/PLAN.md` (v2, source of truth), then `research/DECISIONS.md`.
 
-## Latest state (Nov 2)
+## Latest state (Nov 3, about 19:45 Doha)
+Deadline: code freeze Wed Nov 4, noon ET (20:00 Doha); submit by 18:00 ET, hard deadline 21:00 ET. Nothing for the submission exists yet (README, demo video, hosting). main is 177 commits ahead of origin and has never been pushed; pushing is Miki's call.
+
+**Read first:** `AGENTS.md` (Miki's own words), `NEXT.md`, `docs/ROADMAP.md` ("Wave 4 status" and "How waves are judged"), `docs/DESIGN-BRAIN.md`, `docs/layers.html` (status chart), and the memory rules in `/Users/miki/.claude/projects/-Users-miki-Desktop-deskt-bettervid/memory/`.
+
+**Rules from today:** every Claude agent doing development runs on Opus; the product roles in test videos are real Muse Spark (Contributor tier, the default in `pipeline/lib/meta.ts`; `META_TIER=standard` switches back). No bench: judge with real clips made through the pipeline that Miki watches, never with bench runs, replays or grading. Judge against the best human work, never against our old engine. Code never decides layout, motion or timing: agents (Spark) write, code carries out and measures. One repair round per section. Equal depth for every tool in the writer's guide, no topic examples. Zero hardcoding; styles may lean choices only as suggestions.
+
+**On main:** wave 4's design brain (`engine/design/`), its three fixes (staging with relations at real scale, steadiness with the full motion vocabulary offered to agents, the hand-drawn texture and empty-first-moment fixes), uploads in the app with PDF, Word, PowerPoint and Excel readers (`pipeline/stages/material.ts`), the Contributor tier, the taste review module (`engine/review/taste.ts`, `prompts/taste-review.md`), and the bundle cleanup. Tests: test:engine 545, test:pipeline 130, tsc clean.
+
+**On branches, not merged:**
+- `claude/path-a-b76481` (19 commits ahead of main): path A, the planned main scene path. Spark writes each scene in the scene language with the design brain as a toolbox (`engine/language/toolbox.ts`: depict, sprites made with Muse Image plus SAM, real and found pictures, the stage with relations, the board, every motion), the director's video-wide look, the new tools taught at the old tools' depth in `prompts/engine-language.md` (the old path's guide is byte-identical), one repair round per section (build, look once, every note in one request, unambiguous slips mended in code), and the taste review joined to that round. Selected per project by `"sceneAuthor": "toolbox"`; the old path is still the default. Tests: engine 558, pipeline 141. Report: `docs/briefs/path-a-report.md` on that branch.
+- `claude/taste-rerun-45ab70`: a report only (`docs/briefs/taste-rerun-report.md`).
+- `sound` and `speed`: Codex is building these now in `.worktrees/sound` and `.worktrees/speed` from `docs/briefs/sound.md` and `docs/briefs/speed.md`. They report in `docs/briefs/sound-report.md` and `speed-report.md` in their worktrees. The school ChatGPT account may not have the keys; their paid real checks may need to run here after merging.
+- Uploads round 2 (`docs/briefs/uploads-2.md`, Pro account) was briefed; no `uploads-2` branch exists yet.
+
+**What the clips showed (merge sort, neon, same narration):** `projects/merge-min-a` (path A), `merge-min-b` (old path), `merge-min-a2` (path A with the taste review), each 1:08; the scene stage plus render takes about 4 to 5 minutes for a 1-minute clip when the voice is reused, and a full new 1-minute video takes about 15 minutes. A and B look nearly the same: Spark used none of the new tools (empty `scene/toolbox.json`), and both show small numbers in a mostly empty frame. The taste review named exactly that with specific fixes, but Spark applied only the cheap line-level ones. The first section got no review because its first draft did not build.
+
+**Proposed next fixes for path A (not started, Miki has not approved yet):** (1) send the stills to the writer with the repair notes, so it sees its own frame; (2) the taste reviewer gives its fixes as scene-language lines; (3) find why the sort kit draws itself small on a tall frame (possibly an engine sizing bug); (4) run the look and taste review after a build repair too, still within one round. Then re-run `merge-min-a` once. Muse Wonder as the repair writer was offered and declined for now.
+
+**Then the submission:** merge path A into main (behind its switch), README and submission text, 3 or 4 showcase videos with Spark (one from uploaded files, one with real objects where staging and depictions matter), Miki's decisions on hosting and pushing, the demo video.
+
+**Spend:** Meta budget $100, $64.46 on the ledger (`projects/spend.jsonl`), plus about $10 in older worktree ledgers. Clips today cost cents each on the Contributor tier.
+
+## Earlier state (Nov 2)
 **Next job: the universal engine.** Read `docs/ENGINE-PLAN.md`, then start with the foundation. `docs/FABLE-START.md` is the starting prompt. The user wants it as ambitious as possible and is fine with many parallel subagents. It sits on top of Remotion. The user dislikes the word "object" for what viewers see: on screen everything must feel like part of the video, with no boxes.
 
 Hackathon deadline: Wed Nov 4, 21:00 ET, code freeze noon ET, aim to submit by 18:00 ET. Dev budget: $25, with $20.47 on the ledger plus about $0.60 untracked; a higher cap is needed for this work. A Manim test is in progress in `scripts/manim/`; its report will be `research/spikes/S12-manim.md`. Manim is optional.
