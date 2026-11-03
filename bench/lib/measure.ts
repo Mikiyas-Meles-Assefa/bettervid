@@ -11,20 +11,23 @@
 // - pace: the rate of change varies across events (Cutting's 1/f finding; direction-check's checkTempo), long events
 //   are not busier than short ones, and demonstrations go slowly where asked, faster later, and come to rest.
 // - load: how many new things arrive within two seconds and how many independent changes pull at once (working
-//   memory holds about four chunks; Lang's limited capacity). The share of seconds over either line costs.
+//   memory holds about four chunks; Lang's limited capacity). The share of seconds over either line costs. A stream of
+//   look-alike things (drops, particles) counts as one thing and one pull, as every viewer reads it.
 // - holds: each silence keeps the picture working on what the event is about (no frozen frame, nothing unrelated
 //   pulling), and a predict hold never shows its answer.
 // - reveal: withheld things stay off screen until their moment, and the opening shows the promise.
 // - read: the layout measures from look.ts on a frame every half second: words cut by the frame, under the style's
 //   readable size, writing on writing, a covered picture, a mostly empty frame.
 import type { Scene } from "../../engine/core/types.ts";
-import { FLAT, activity, attachments, beats, belongs, checkPredict, cleanMap, holds, members, says, pulls, runChecks, sample, sourceWords, spans, type IdMap, type Mapped, type Report, type Samples } from "../../pipeline/lib/direction-check.ts";
+import { FLAT, attachments, beats, belongs, checkPredict, cleanMap, holds, members, says, runChecks, sample, sourceWords, spans, type IdMap, type Mapped, type Report, type Samples } from "../../pipeline/lib/direction-check.ts";
 import { inventory, keptAt, measureLayout, readOf } from "../../pipeline/lib/look.ts";
 import { kitKinds } from "../../pipeline/stages/scene.ts";
 import type { Project } from "../../schemas/project.ts";
 import type { Theme } from "../../engine/core/types.ts";
 import { parse, type Item } from "../../engine/language/syntax.ts";
 import { DEFAULTS, type Settings } from "./settings.ts";
+import { countLoad, sampled, streams } from "../../engine/design/instruments/index.ts";
+import { blend, hexRgb, ratio } from "../../engine/design/instruments/color.ts";
 
 export type Scores = { eye?: number; lag: number; pace: number; load: number; holds?: number; reveal?: number; read: number; depict?: number };
 export type CaseMeasure = {
@@ -120,31 +123,20 @@ const lagScore = (lag: number | null, set: Settings["lag"]) => (lag === null ? 0
 // ---------------------------------------------------------------------------------------------------------------------
 // Load.
 
-export function load(s: Samples, lines: Settings["load"] = DEFAULTS.load): { seconds: number; overNew: number; overPull: number; peakNew: number; peakPull: number; newPerSecond: number } {
+export function load(s: Samples, lines: Settings["load"] = DEFAULTS.load, scene?: Scene): { seconds: number; overNew: number; overPull: number; peakNew: number; peakPull: number; newPerSecond: number; streams: { ids: string[]; arrivals: number }[] } {
   // Arrivals: a thing becoming visible. Each counts, even when a whole state arrives at once: six new labels in one
-  // beat are still six things to take in.
-  const arrivals: number[] = [];
-  s.ids.forEach((_, r) => {
-    const v = s.visible[r]!;
-    for (let f = 0; f < s.frames; f++) if (v[f] && (f === 0 || !v[f - 1])) arrivals.push(f);
-  });
-  arrivals.sort((a, b) => a - b);
-  const groups = arrivals;
-  const seconds = Math.max(1, Math.floor(s.frames / s.fps));
+  // beat are still six things to take in. A stream of look-alike things (drops, particles, a flock) is one thing that
+  // arrives when it starts, and one pull (the instruments' stream grouping, engine/design/instruments/load.ts).
+  const found = scene ? streams(sampled(scene), lines.stream) : [];
+  const rows = s.ids.map((id, r) => ({ id, visible: s.visible[r]!, active: s.active[r]! }));
+  const c = countLoad(rows, s.fps, s.frames, found.map((x) => x.ids), { gap: Math.round(lines.stream.gap * s.fps), span: 2 * s.fps, sameFate: 0.8 });
   let overNew = 0;
   let overPull = 0;
-  let peakNew = 0;
-  let peakPull = 0;
-  for (let k = 0; k < seconds; k++) {
-    const from = k * s.fps;
-    const n = groups.filter((f) => f >= from - s.fps && f < from + s.fps).length;
-    const pull = pulls(s, activity(s, from, from + s.fps), from, from + s.fps).length;
-    peakNew = Math.max(peakNew, n);
-    peakPull = Math.max(peakPull, pull);
-    if (n > lines.newLine) overNew++;
-    if (pull > lines.pullLine) overPull++;
+  for (const p of c.perSecond) {
+    if (p.new > lines.newLine) overNew++;
+    if (p.pull > lines.pullLine) overPull++;
   }
-  return { seconds, overNew, overPull, peakNew, peakPull, newPerSecond: round(groups.length / (s.frames / s.fps), 2) };
+  return { seconds: c.seconds, overNew, overPull, peakNew: c.peakNew, peakPull: c.peakPull, newPerSecond: c.newPerSecond, streams: found.map((x) => ({ ids: x.ids, arrivals: x.arrivals })) };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -236,21 +228,8 @@ export function readability(scene: Scene, theme: Theme, s: Samples): { frames: n
 // cannot be read are not saved by a good layout. `read` is the mean over settled frames.
 
 
-type RGB = [number, number, number];
-function rgbOf(c: string | undefined): RGB | undefined {
-  if (!c) return undefined;
-  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})([0-9a-f]{2})?$/i.exec(c.trim());
-  if (!m) return undefined;
-  const h = m[1]!.length === 3 ? m[1]!.split("").map((x) => x + x).join("") : m[1]!;
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
-const lin = (c: number) => {
-  const s = c / 255;
-  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-};
-const lum = (c: RGB) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
-const ratio = (a: RGB, b: RGB) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
-const blend = (fg: RGB, bg: RGB, o: number): RGB => [0, 1, 2].map((i) => fg[i]! * o + bg[i]! * (1 - o)) as RGB;
+// Colors and contrast are the instruments' (engine/design/instruments/color.ts); hex only, as this measure always read.
+const rgbOf = hexRgb;
 const boxArea = (r: { x0: number; y0: number; x1: number; y1: number }) => Math.max(0, r.x1 - r.x0) * Math.max(0, r.y1 - r.y0);
 const overlap = (a: { x0: number; y0: number; x1: number; y1: number }, b: typeof a) => boxArea({ x0: Math.max(a.x0, b.x0), y0: Math.max(a.y0, b.y0), x1: Math.min(a.x1, b.x1), y1: Math.min(a.y1, b.y1) });
 
@@ -483,7 +462,7 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
   const pace = mean([variation * (1 - 0.5 * mismatch), demoScore, order].filter((x): x is number => x !== undefined));
 
   // load
-  const ld = load(s, set.load);
+  const ld = load(s, set.load, scene);
   const loadScore = clamp(1 - (ld.overNew + ld.overPull) / ld.seconds);
 
   // holds
