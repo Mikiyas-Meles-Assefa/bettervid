@@ -10,8 +10,9 @@ import { themeFrom } from "../../render/theme.ts";
 import type { AgentTask, Answer, Reasoner } from "../types.ts";
 import {
   changesToSteps, checkSpec, depict, depicterTask, depictionFrom, getSprite, KINDS, loadSprite, pictureDepiction, propNodes, resolve,
-  saveSprite, spriteDepiction, spriteRequest, suggestLook, transfer, type Depiction, type PropSpec, type SpriteMaker,
+  saveSprite, spriteDepiction, spriteRequest, suggestLook, suggestMagnify, transfer, type Depiction, type PropSpec, type SpriteMaker,
 } from "./index.ts";
+import { sampled } from "../instruments/sample.ts";
 import { SAMPLES } from "./samples.ts";
 
 const theme: Theme = themeFrom("flat");
@@ -108,6 +109,55 @@ test("containers hold real volumes, and transfer moves an amount between two", (
   assert.ok(Math.abs(glass.capacity!.at(Number(glass.state.level)) - (vg + 12)) < 0.05);
   assert.match(bur.read!()!, /mL$/);
   assert.ok(t.changes.length > 0);
+});
+
+test("a container with a volume scale: what a transfer moves is what its scale reads, whatever its drawn size", () => {
+  // A burette drawn 1.6 cm wide and 60 cm tall would hold far more than its 50 mL scale between the marks.
+  const spec: PropSpec = { kind: "container", label: "burette", size: { w: 1.6, h: 60, unit: "cm" }, params: { profile: [[0.5, 0], [0.5, 1]], outlet: { length: 0.14, width: 0.32, tap: true }, scale: { top: 0, bottom: 50, from: 0.04, to: 0.96, major: 10, minor: 1, unit: "mL" }, contents: [{ name: "titrant", level: 0.9, color: "clear" }] }, colors: { clear: "#d9eef5dd" }, why: "test" } as PropSpec;
+  const flask = depictionFrom(SAMPLES[0]!.spec, theme, { id: "g", look });
+  const bur = depictionFrom(spec, theme, { id: "b", look });
+  const reading = () => Number(bur.read!()!.replace(/[^\d.-]/g, ""));
+  const before = reading();
+  const t = transfer(bur, flask, 17.25, { frames: 60 });
+  assert.equal(t.moved, 17.25);
+  assert.ok(Math.abs(reading() - before - 17.25) < 0.05, `read ${before} then ${reading()} after 17.25 mL`);
+  // Between the marks the vessel holds what the scale spans.
+  assert.ok(bur.notes.some((n) => /volumes follow its mL scale/.test(n)), bur.notes.join(" | "));
+  // A scale in litres calibrates the same way.
+  const big = depictionFrom({ ...spec, params: { ...spec.params, scale: { top: 0, bottom: 2, from: 0.1, to: 0.9, major: 1, minor: 0.5, unit: "L" } } } as PropSpec, theme, { id: "c", look });
+  const r0 = Number(big.read!()!.replace(/[^\d.-]/g, ""));
+  transfer(big, flask, 250, { frames: 30 });
+  assert.ok(Math.abs(Number(big.read!()!.replace(/[^\d.-]/g, "")) - r0 - 0.25) < 0.005);
+});
+
+test("a sphere's highlight sits inside its outline, so its clip shows no notch at the edge", () => {
+  for (const name of ["felt ball", "planet"]) {
+    const d = depictionFrom(SAMPLES.find((x) => x.name === name)!.spec, theme, { id: "s", look });
+    const sc = scene(d, 400, 400);
+    const items = sampled(sc).items(10);
+    const shape = items.find((it) => it.id === "s.shape")!.full;
+    const shine = items.find((it) => it.id === "s.shine")!;
+    const [cx, cy, r] = [(shape.x0 + shape.x1) / 2, (shape.y0 + shape.y1) / 2, (shape.x1 - shape.x0) / 2];
+    // Every corner of the highlight's own box lies inside the circle.
+    for (const [x, y] of [[shine.full.x0, shine.full.y0], [shine.full.x1, shine.full.y0], [shine.full.x0, shine.full.y1], [shine.full.x1, shine.full.y1]]) assert.ok(Math.hypot(x! - cx, y! - cy) < r, `${name}: highlight corner ${x},${y} outside the body`);
+  }
+});
+
+test("a flow's moving parts are magnified by the design's value, not a constant, and the suggestion comes from the viewing", () => {
+  const spec = SAMPLES.find((x) => x.name === "drops")!.spec;
+  const size = (m?: number) => {
+    const d = depictionFrom({ ...spec, params: { ...spec.params, ...(m ? { magnify: m } : {}) } } as PropSpec, theme, { id: "f", look });
+    const pts = d.nodes.find((n) => n.id === "f.d0")!.props!.points as number[];
+    return Math.max(...pts.filter((_, i) => i % 2 === 0)) * 2;
+  };
+  assert.ok(Math.abs(size(3) / size() - 3) < 0.05, `magnify 3 draws ${size(3) / size()} times`);
+  const phone = { width: 1080, height: 1920, fps: 30, screen: "phone", frameWidthMm: 65, distanceMm: 300, watch: "glancing in a feed", uiZones: [], captions: { show: false, why: "" }, why: "test" };
+  const big = { ...phone, width: 1920, height: 1080, screen: "big screen", frameWidthMm: 1210, distanceMm: 2500 };
+  // A drop drawn at 20 px: on a phone it needs magnifying; drawn large enough it does not.
+  const small = suggestMagnify(20, phone);
+  assert.ok(small.value > 1 && /arcmin/.test(small.why), small.why);
+  assert.equal(suggestMagnify(2000, phone).value, 1);
+  assert.notEqual(suggestMagnify(20, big).value, small.value);
 });
 
 test("checkSpec finds problems a repair round can fix", () => {

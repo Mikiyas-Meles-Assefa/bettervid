@@ -108,8 +108,10 @@ export const body: KindDef = {
       }
     });
     if (shine > 0 && form !== "outline") {
-      const hl = form === "sphere" ? ellipse(-R * 0.36, -R * 1.42, R * 0.2, R * 0.12, 20).map((p) => p) : [[-W / 2 + W * 0.1, -H * 0.82], [-W / 2 + W * 0.1, -H * 0.32]] as Pt[];
-      add(`${id}.shine`, "path", form === "sphere" ? { points: flat(hl), closed: 1, fill: "#ffffff", stroke: "none", opacity: 0.38 * shine, rotate: -30 } : { points: flat(hl), stroke: "#ffffff", strokeWidth: L * 1.2, fill: "none", opacity: 0.3 * shine }, `${id}.marks`);
+      // A sphere's highlight is an ellipse tipped about its own center (upper left of the body), well inside the outline;
+      // tipped about the body's origin it would swing out past the left edge and show as a notch in the clip.
+      if (form === "sphere") add(`${id}.shine`, "path", { x: -R * 0.36, y: -R * 1.42, rotate: -30, points: flat(ellipse(0, 0, R * 0.2, R * 0.12, 20)), closed: 1, fill: "#ffffff", stroke: "none", opacity: 0.38 * shine }, `${id}.marks`);
+      else add(`${id}.shine`, "path", { points: flat([[-W / 2 + W * 0.1, -H * 0.82], [-W / 2 + W * 0.1, -H * 0.32]] as Pt[]), stroke: "#ffffff", strokeWidth: L * 1.2, fill: "none", opacity: 0.3 * shine }, `${id}.marks`);
     }
     // A crack runs from the top edge into the body.
     const crack: Pt[] = Array.from({ length: 9 }, (_, i) => [W * 0.06 * (i % 2 ? 1 : -1) + W * 0.03 * i * 0.3, lerp(-H * 0.98, -H * 0.38, i / 8)] as Pt);

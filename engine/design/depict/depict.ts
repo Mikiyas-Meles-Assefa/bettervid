@@ -1,5 +1,7 @@
 // Tier 1 entry: a PropSpec and the style's theme to a Depiction, the check a repair round reads, the look a style
 // suggests, and helpers that move contents between two things and turn changes into scene steps.
+import { legibility as legibilityInstrument } from "../instruments/legibility.ts";
+import type { Viewing } from "../types.ts";
 import type { Ease, Step, Theme, Value } from "../../core/types.ts";
 import { KINDS } from "./kinds/index.ts";
 import { makeDepiction, findVerb } from "./make.ts";
@@ -127,3 +129,17 @@ export function changesToSteps(changes: Change[], at: number): Step[] {
   }
   return [...groups.values()].sort((a, b) => a.at - b.at).map((g) => ({ at: g.at, set: g.set, move: { frames: g.frames, ease: g.ease } }));
 }
+
+/**
+ * How many times its true size a moving part (a drop, a particle, a stream's width) should be drawn so this viewing
+ * sees it: until it subtends `need` arcminutes on the viewer's eye. `need` is the designer's; its suggestion is the
+ * viewing's readable size for words (the legibility instrument's `readable`), as a moving speck smaller than a letter a
+ * viewer can read in passing is not seen. Returns 1 when the true size is already enough. A suggestion, with its reason.
+ */
+export function suggestMagnify(truePx: number, viewing: Viewing, need = suggestLegibility(viewing).readable): { value: number; why: string } {
+  const mm = (truePx / Math.max(1, viewing.width)) * viewing.frameWidthMm;
+  const angle = ((2 * Math.atan(mm / 2 / Math.max(1, viewing.distanceMm)) * 180) / Math.PI) * 60;
+  const value = angle > 0 ? Math.max(1, Math.round((need / angle) * 10) / 10) : 1;
+  return { value, why: `at true size it is ${angle.toFixed(1)} arcmin on ${viewing.screen} at ${viewing.distanceMm} mm; seen in passing needs about ${need.toFixed(0)} arcmin (the viewing's readable size), so ${value === 1 ? "true size is enough" : `drawn ${value} times its size`}` };
+}
+const suggestLegibility = (v: Viewing) => legibilityInstrument.suggest(v) as { readable: number };
