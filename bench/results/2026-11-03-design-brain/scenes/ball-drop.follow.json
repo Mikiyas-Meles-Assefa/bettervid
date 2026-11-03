@@ -1,0 +1,14 @@
+[
+  {"sheet": 1, "looking": "A big dark bowling ball and a small yellow tennis ball on a chalkboard", "waiting": "What the two balls will do", "confusing": ""},
+  {"sheet": 2, "looking": "The two balls, still hanging motionless", "waiting": "For them to drop", "confusing": ""},
+  {"sheet": 3, "looking": "The two balls, still motionless", "waiting": "For the drop to start", "confusing": "Nothing has moved for 6 seconds"},
+  {"sheet": 4, "looking": "The yellow title 'Which lands first?' appears at the top, with a faint question mark", "waiting": "The answer, the balls dropping", "confusing": ""},
+  {"sheet": 5, "looking": "The title and the question mark, balls still frozen", "waiting": "The drop and the answer", "confusing": "A long silent pause with no movement"},
+  {"sheet": 6, "looking": "The balls finally fall, with a dashed line showing they stay level", "waiting": "To see who lands first", "confusing": "The fall is quick and the question mark and title vanish abruptly"},
+  {"sheet": 7, "looking": "The big yellow chalk text 'They land together' with the balls low on screen", "waiting": "Why they land together", "confusing": "I did not see them actually hit the ground"},
+  {"sheet": 8, "looking": "The two balls drifting down the screen, no other text", "waiting": "The rest of the explanation", "confusing": "The balls are moving and it is unclear what they show"},
+  {"sheet": 9, "looking": "The balls and the chalk words 'air resistance' appearing", "waiting": "How air resistance matters", "confusing": "The term appears without any picture of air or its effect"},
+  {"sheet": 10, "looking": "The words 'air resistance' under the still balls", "waiting": "An example of air resistance splitting them", "confusing": "No demonstration of it"},
+  {"sheet": 11, "looking": "The same 'air resistance' text and balls", "waiting": "Nothing, it seems to be ending", "confusing": "It is not clear why it barely matters here"},
+  {"sheet": 12, "looking": "The final still frame with the balls and 'air resistance'", "waiting": "nothing", "confusing": ""}
+]

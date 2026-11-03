@@ -1,0 +1,38 @@
+feel calm
+for new
+
+thing rest "160 (shipping and everything else)"
+thing half "half the queue"
+
+@0
+  show slide.title
+@4
+  show slide.total
+  keep slide.title
+@7
+  show slide.login
+@11
+  show slide.login
+  reveal slide.login
+  pace slow
+@14
+  show slide.billing
+  keep slide.login
+@19
+  show slide.shipping
+  keep slide.login slide.billing
+@23
+  show slide.other
+  keep slide.shipping slide.login
+  ask "Shipping + other = ?"
+  pace slow
+@24
+  show rest
+  reveal rest
+  keep slide.login
+@26
+  show slide.login
+  keep slide.total
+  slide.login -> half "half the queue goes away"
+  stress
+  pace slow

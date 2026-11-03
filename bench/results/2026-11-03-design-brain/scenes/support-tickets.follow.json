@@ -1,0 +1,11 @@
+[
+{"sheet":1,"looking":"A small chart card that then turns into a bar chart with '840 tickets' in big orange","waiting":"The breakdown of the 840 tickets","confusing":"The first card is tiny and unreadable before it switches"},
+{"sheet":2,"looking":"Login / password bar highlighted orange with 412","waiting":"The other causes","confusing":""},
+{"sheet":3,"looking":"The orange 412 login bar, then billing starting to light up","waiting":"Billing number","confusing":""},
+{"sheet":4,"looking":"Billing bar in orange with 268","waiting":"Shipping and other","confusing":""},
+{"sheet":5,"looking":"Shipping bar 97, then a 'SHIPPING + OTHER = ?' headline and other 63","waiting":"The combined total","confusing":"Numbers 97 and 63 appear before the narration gives them, a little busy"},
+{"sheet":6,"looking":"Big orange '160 (shipping and everything else)'","waiting":"What the point is","confusing":""},
+{"sheet":7,"looking":"Login bar turning orange with an arrow pointing down to 'half the queue'","waiting":"Conclusion to finish","confusing":""},
+{"sheet":8,"looking":"Login bar with arrow down to 'half the queue'","waiting":"Nothing, the end","confusing":""},
+{"sheet":9,"looking":"Same final frame held, silent","waiting":"nothing","confusing":""}
+]

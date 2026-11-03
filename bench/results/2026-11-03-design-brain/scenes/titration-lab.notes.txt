@@ -1,0 +1,20 @@
+feel serious, for new, style chalkboard, 9 moments, 110 nodes
+@0 ask has no reveal in the next two moments: the question stands alone
+@51 "burette" stays as context: it belongs to one apparatus with flask
+@15 burette drips into flask: they are composed as one apparatus, burette's tip over flask's mouth, whenever both are on screen
+object burette: "a glass burette with a tap, full of clear sodium hydroxide, with a volume scale" reads as a burette with liquid in it
+object flask: "a conical flask holding clear acid with a few drops of phenolphthalein" reads as a flask with liquid in it
+object timer: "a stopwatch that counts seconds" reads as a clock face with a hand
+@0 ask: think time 6.2 s
+@15 burette drips into flask in a quick stream: 38 drops until 13.2 s, about 17.25 mL, so the reading moves to 18.22 mL; drops that land while flask flashes make a bloom of color that fades
+@22 flask flashes pink: from here every drop that lands blooms and fades
+@22 still for 3.4 s: a very slow push 1 to 1.02 keeps the frame alive
+@31 flask swirls: it rocks on its base, 7 degrees each way, settling in 1.6 s
+@34 flask turns pink: its contents shift to that color over 0.9 s and stay
+@38 burette drips into flask one drop at a time (each drop hangs at the tip, then falls): 2 drops until 18.1 s, about 0.10 mL, so the reading moves to 18.32 mL; drops that land while flask flashes make a bloom of color that fades
+@38 still for 3.3 s: a very slow push 1 to 1.02 keeps the frame alive
+@46 flask turns faint pink: its contents shift to that color over 0.9 s and stay
+@46 stress: the subject is one size step larger and the camera pushes in slowly to 1.05 over 1.1 s
+@51 timer runs 30 s: its hand sweeps 180 degrees until the next moment, the time written under it
+@51 stress: the subject is one size step larger and the camera pushes in slowly to 1.05 over 2.1 s
+@53 burette reads: the camera closes in 2.4x on the liquid's surface and the reading 18.32 mL stands beside it (read off the drawn scale, which the drops really emptied)

@@ -1,0 +1,15 @@
+[
+{"sheet":1,"looking":"A chalkboard with the title 'When do you stop?' and a flask, a tube appearing above it","waiting":"What is being dripped and why; the answer to the title question","confusing":""},
+{"sheet":2,"looking":"The tube and flask, caption naming burette and acid","waiting":"Something to drip into the flask","confusing":"Nothing is dripping yet; the flask liquid looks plain grey"},
+{"sheet":3,"looking":"Same static drawing, caption about phenolphthalein","waiting":"Something to happen; what phenolphthalein does","confusing":"Nothing moves for several seconds; unexplained word"},
+{"sheet":4,"looking":"Small drops falling from the tube into the flask","waiting":"A change in the liquid","confusing":"The title disappeared; drops are tiny and pale"},
+{"sheet":5,"looking":"Bright pink blobs appearing in the liquid","waiting":"What the pink means","confusing":""},
+{"sheet":6,"looking":"Pink patches in the liquid fading","waiting":"When the pink will stay","confusing":""},
+{"sheet":7,"looking":"The flask tilting and swirling, pink shrinking","waiting":"The point where pink stays","confusing":""},
+{"sheet":8,"looking":"The whole liquid turning pink","waiting":"Slowing down the drops","confusing":"The whole flask going pink suddenly looks like the finish, yet the narration says slow down"},
+{"sheet":9,"looking":"Single drops falling into a pink flask","waiting":"The stopping point","confusing":"The pink is already strong, so it is unclear what is faint later"},
+{"sheet":10,"looking":"The pink fading to a lighter, faint pink","waiting":"How long it must last","confusing":""},
+{"sheet":11,"looking":"A stopwatch marked 30 s beside the pale pink flask","waiting":"The next step after the wait","confusing":""},
+{"sheet":12,"looking":"The stopwatch finishing, then the view starting to change","waiting":"What to read","confusing":"Caption 'Then read the' ends mid-sentence"},
+{"sheet":13,"looking":"A zoomed burette scale with 18.32 mL","waiting":"nothing","confusing":"Why 18.32 mL matters is not explained"}
+]

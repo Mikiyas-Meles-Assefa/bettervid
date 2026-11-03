@@ -1,0 +1,18 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "A bar chart on cream, then '840 tickets' flies in big and orange with the bars animating. The motion grabs me, though the chart is small at first."},
+    {"sheet": 2, "watching": true, "noticed": "The bars are sorting and Login/Password gets highlighted in orange with '412'. The highlight is a clear focus."},
+    {"sheet": 3, "watching": true, "noticed": "The Login bar is orange and the Billing bar becomes 268. Changing colour keeps the eye moving down the chart."},
+    {"sheet": 4, "watching": true, "noticed": "Billing is highlighted with 268 and the Shipping bar comes in with 97. A steady stream of numbers, still readable."},
+    {"sheet": 5, "watching": true, "noticed": "'SHIPPING + OTHER = ?' appears in big orange, with a question mark. A puzzle gets my attention."},
+    {"sheet": 6, "watching": true, "noticed": "The question holds on the same frame for a while, and the 'Other' bar is highlighted with 63. It drags a little, but the puzzle keeps me."},
+    {"sheet": 7, "watching": true, "noticed": "'160 (shipping and everything else)' appears big and orange. The payoff is clear, and an arrow starts to point at the login bar."},
+    {"sheet": 8, "watching": false, "noticed": "Arrow and 'half the queue' are still on screen after the point is made, and the frame barely moves. I would swipe here."},
+    {"sheet": 9, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 10, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 11, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 12, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 13, "watching": false, "noticed": "Not looked at. I had already swiped away."}
+  ],
+  "swiped_at": 8,
+  "remembers": "Last quarter we got 840 support tickets. Login problems were 412, almost half, billing 268, and shipping plus everything else only 160, so fixing login would cut about half the queue."}
