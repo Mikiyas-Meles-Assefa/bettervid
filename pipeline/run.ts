@@ -17,6 +17,7 @@ import { direction } from "./stages/direction.ts";
 import { director } from "./stages/director.ts";
 import { material } from "./stages/material.ts";
 import { mix } from "./stages/mix.ts";
+import { mux } from "./stages/mux.ts";
 import { plan } from "./stages/plan.ts";
 import { render } from "./stages/render.ts";
 import { research } from "./stages/research.ts";
@@ -41,6 +42,7 @@ const LEGACY: Run = [
   ["timeline", timeline],
   ["mix", mix],
   ["render", render],
+  ["mux", mux],
   ["critic", critic],
 ];
 // Director, assets and annotate still make pictures when the video needs them; the scene stage then builds on them.
@@ -61,6 +63,7 @@ const ENGINE: Run = [
   ["timeline", timeline],
   ["mix", mix],
   ["render", render],
+  ["mux", mux],
   ["critic", critic],
 ];
 

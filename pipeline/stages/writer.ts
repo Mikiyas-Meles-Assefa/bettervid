@@ -110,7 +110,7 @@ export async function writer(p: Project, force = false) {
     // revision is read again, until it does. Notes still open after the last round are reported, and the trail keeps them.
     const check = async () => {
       const read = steps.at(-1)!;
-      await step("check", () => text({ system: prompts[4]!.replace("{{thread}}", kept), user: `${research}\n\nThe narration:\n\n${show(read)}`, effort: "high" }), (reply) => parseCheck(reply, read));
+      await step("check", () => text({ system: prompts[4]!.replace("{{thread}}", kept), user: `${research}\n\nThe narration:\n\n${show(read)}`, effort: "medium" }), (reply) => parseCheck(reply, read));
       return steps.at(-1)!.notes;
     };
     let notes = await check();

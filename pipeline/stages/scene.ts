@@ -166,6 +166,45 @@ export function pieces(source: string): Pieces {
   return out;
 }
 
+// A repair may answer with only the states it changes. They replace the base's states at the same moment (a new moment
+// is put in word order), a returned program replaces the one with its name, and a state answered as its @ line with
+// the single word `remove` under it goes. An answer that carries every one of the base's moments is a whole part and
+// is taken as it is; an answer with no state at all is returned untouched, so the build reports what is wrong with it.
+export function mergeReply(base: string, reply: string): string {
+  const b = pieces(base);
+  const r = pieces(reply);
+  const keyOf = (text: string) => {
+    const first = text.split("\n").find((l) => /^\s*@/.test(l)) ?? "";
+    const at = /^\s*(@\S+)/.exec(first)?.[1] ?? "";
+    return `${at}${/\bkeep\b/.test(first) ? " keep" : ""}`;
+  };
+  // Only states that start at a moment count; words with no @ line are not a part, so the build gets them as they are.
+  r.states = r.states.filter((s) => keyOf(s.text));
+  if (!r.states.length || !b.states.length) return reply;
+  const replyKeys = new Set(r.states.map((s) => keyOf(s.text)));
+  if (b.states.every((s) => replyKeys.has(keyOf(s.text)))) return reply;
+  const programs = new Map(b.programs.map((p) => [p.name, p.text]));
+  for (const p of r.programs) programs.set(p.name, p.text);
+  const states = b.states.map((s) => ({ key: keyOf(s.text), word: s.word, text: s.text }));
+  for (const s of r.states) {
+    const key = keyOf(s.text);
+    const body = s.text.split("\n").filter((l) => !/^\s*@/.test(l)).join("\n").trim();
+    const i = states.findIndex((x) => x.key === key);
+    if (body === "remove") {
+      if (i >= 0) states.splice(i, 1);
+      continue;
+    }
+    if (i >= 0) states[i] = { key, word: s.word, text: s.text };
+    else {
+      let at = states.length;
+      for (let j = 0; j < states.length; j++) if (states[j]!.word > s.word) { at = j; break; }
+      states.splice(at, 0, { key, word: s.word, text: s.text });
+    }
+  }
+  const bg = r.bg ?? b.bg;
+  return [bg ? `bg ${bg}` : "", ...programs.values(), ...states.map((s) => s.text)].filter(Boolean).join("\n");
+}
+
 const runs = (text: string) => [...text.matchAll(/^\s*run\s+([A-Za-z][\w-]*)/gm)].map((m) => m[1]!);
 const rename = (text: string, from: string, to: string) => text.replace(new RegExp(`^(\\s*run\\s+)${from.replace(/[-]/g, "\\-")}(?=\\s|$)`, "gm"), `$1${to}`);
 
@@ -739,7 +778,9 @@ export function review(job: Job, written: string, result: BuildResult): string {
 }
 
 // What goes back to the writer: a part with build problems, and a part that builds with what code can see about it.
-export const repairRequest = (job: Job, src: string, list: string[]) => `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(src)}\n\n${prompt("engine-repair")}\nProblems:\n${list.slice(0, MAX_PROBLEMS).join("\n")}`;
+export const repairRequest = (job: Job, src: string, list: string[]) => `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(src)}\n\n${prompt("engine-repair")}${job.once ? `\n${PARTIAL_ANSWER}` : ""}\nProblems:\n${list.slice(0, MAX_PROBLEMS).join("\n")}`;
+// In the one-round loop, every repair may answer with only the states it changes (mergeReply joins them to the part).
+const PARTIAL_ANSWER = "Return only the states you change, each whole from its @ line, and any program block you change, whole; every state you leave out stays exactly as it is. A new state is returned with its own @ moment. A state to remove is returned as its @ line with the single word `remove` under it. Returning the whole part is also fine.";
 export const reviewRequest = (job: Job, src: string, said: string) => `${job.request}\n\nYour part builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(src)}\n\n${said}`;
 
 async function compose(job: Job, start: string | undefined, prior: string, reviewed = start === undefined): Promise<Written> {
@@ -801,7 +842,8 @@ export type Seen = { moments: Moment[]; files: string[]; measured: { frame: numb
 const lookPart = (name: "Judge" | "Fix" | "Recheck") => (prompt("scene-look").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
 
 // Renders the frames worth seeing three ways (as is, without words, without words and pictures) and measures them.
-async function see(job: Job, scene: Scene, source: string, folder: string): Promise<Seen> {
+// `light`: only as is, for an eye that reads the frames and not the pixel measures (the check after a repair).
+async function see(job: Job, scene: Scene, source: string, folder: string, light = false): Promise<Seen> {
   const ctx = job.opts.ctx;
   const starts = parse(plainMoments(source, job.opts), kitKinds()).doc.states.map((s) => when(s.at, ctx));
   const words = job.p.narration!.words;
@@ -810,8 +852,8 @@ async function see(job: Job, scene: Scene, source: string, folder: string): Prom
   const frames = moments.map((m) => m.frame);
   const [files, bare, empty] = await Promise.all([
     renderStills(scene, ctx.theme, frames, join(folder, "shown"), LOOK_SCALE),
-    renderStills(hide(scene, ["text"]), ctx.theme, frames, join(folder, "bare"), 0.5),
-    renderStills(hide(scene, ["text", "image"]), ctx.theme, frames, join(folder, "empty"), 0.5),
+    light ? Promise.resolve([] as string[]) : renderStills(hide(scene, ["text"]), ctx.theme, frames, join(folder, "bare"), 0.5),
+    light ? Promise.resolve([] as string[]) : renderStills(hide(scene, ["text", "image"]), ctx.theme, frames, join(folder, "empty"), 0.5),
   ]);
   writeFileSync(join(folder, "scene.txt"), source);
   const read = readOf(ctx.theme);
@@ -819,7 +861,8 @@ async function see(job: Job, scene: Scene, source: string, folder: string): Prom
     const things = inventory(scene, frame);
     const shown = decode(files[k]!, 540);
     const changing = moments[k]!.why === "changing";
-    const findings = merge(measureLayout(things, ctx.width, ctx.height, read, changing, keptAt(scene, frame)), measurePixels(things, shown, decode(bare[k]!), decode(empty[k]!), ctx.width, changing));
+    const layout = measureLayout(things, ctx.width, ctx.height, read, changing, keptAt(scene, frame));
+    const findings = light ? layout : merge(layout, measurePixels(things, shown, decode(bare[k]!), decode(empty[k]!), ctx.width, changing));
     return { frame, findings, words: wordsOnScreen(things) };
   });
   writeFileSync(join(folder, "measured.json"), JSON.stringify(measured, null, 1));
@@ -1094,8 +1137,8 @@ export async function reviewRound(job: Job, start: Written, calls: ReviewCalls =
 // `start`: an answer already written in the scene language (an intent author who wrote today's language instead), which
 // is checked, repaired and looked at as a first answer would be.
 // Build and mend in code: slips the build names with exactly one fix are made before any model sees the part.
-async function checkMended(job: Job, written: string, fixed: string[]): Promise<{ source: string; c: Checked }> {
-  let source = unwrap(written);
+async function checkMended(job: Job, written: string, fixed: string[], base?: string): Promise<{ source: string; c: Checked }> {
+  let source = base === undefined ? unwrap(written) : mergeReply(base, unwrap(written));
   let c = await check(job, source);
   for (let pass = 0; pass < 3 && c.result.problems.length; pass++) {
     const m = mend(source, c.result.problems);
@@ -1190,7 +1233,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   for (let tries = 0; !built(first.c) && tries < 2; tries++) {
     repairs++;
     log(`the draft does not build (${buildProblems(first.c)}); asking with its build problems`);
-    first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings])), fixed);
+    first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings])), fixed, first.source);
   }
   if (!built(first.c)) {
     looks.push("did not build");
@@ -1225,11 +1268,11 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
     "Your part as it renders, with what the instruments read on each frame:",
   ].filter(Boolean).join("\n\n");
   repairs++;
-  let next = await checkMended(job, await ask([{ type: "input_text", text: parts }, ...frameContent(seen, shown, "Frame", readings)]), fixed);
+  let next = await checkMended(job, await ask([{ type: "input_text", text: parts }, ...frameContent(seen, shown, "Frame", readings)]), fixed, first.source);
   if (!built(next.c)) {
     repairs++;
     log(`the repair does not build (${buildProblems(next.c)}); asking once more with its build problems`);
-    next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings])), fixed);
+    next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings])), fixed, next.source);
   }
   if (!built(next.c)) {
     looks.push("repair did not build, kept the first");
@@ -1241,7 +1284,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   if (verdict?.verdict === "revise") {
     const folder = join(job.folder, "once", "check");
     const scene2 = next.c.result.scene!;
-    const seen2 = await see(job, scene2, next.source, folder);
+    const seen2 = await see(job, scene2, next.source, folder, true);
     const readings2 = readingsOn(job, scene2, seen2);
     const again = await tasteVerdictFor(job, seen2, taste, readings2, verdict.fixes).catch((e) => (log(`taste check failed: ${(e as Error).message.slice(0, 160)}`), undefined));
     writeFileSync(join(folder, "check.json"), JSON.stringify({ asked: verdict.fixes, verdict: again ?? null }, null, 1));
@@ -1259,13 +1302,13 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
         "The repaired frames, with what the instruments read on each:",
       ].filter(Boolean).join("\n\n");
       repairs++;
-      let third = await checkMended(job, await ask([{ type: "input_text", text: text2 }, ...frameContent(seen2, new Set(spreadOf(seen2, 5)), "Frame", readings2)]), fixed);
+      let third = await checkMended(job, await ask([{ type: "input_text", text: text2 }, ...frameContent(seen2, new Set(spreadOf(seen2, 5)), "Frame", readings2)]), fixed, next.source);
       // A re-composition is the change most likely to break the build, and the one most worth keeping, so like the
       // first repair it gets its build problems back once before it is given up.
       if (!built(third.c)) {
         repairs++;
         log(`the last repair does not build (${buildProblems(third.c)}); asking once more with its build problems`);
-        third = await checkMended(job, await ask(repairRequest(job, third.source, [...third.c.problems, ...third.c.warnings])), fixed);
+        third = await checkMended(job, await ask(repairRequest(job, third.source, [...third.c.problems, ...third.c.warnings])), fixed, third.source);
       }
       if (built(third.c)) {
         next = third;

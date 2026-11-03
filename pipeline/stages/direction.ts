@@ -140,6 +140,51 @@ const truthKey = (d: RawDemo) => `${d.truth.kind.trim()} ${d.truth.data.replace(
 const hasDemo = (e: RawEvent) => !!e.demo.what.trim() || e.demo.phases.length > 0;
 const hasTruth = (e: RawEvent) => hasDemo(e) && !!e.demo.truth.kind.trim();
 
+// A truth thing's settings written as a scene line ("sort s data=[5,2] algo=merge") or as loose name=value pairs instead
+// of JSON: the pairs are read into the object the kit takes. Names that only name the thing (its kind, an id) are left
+// out. Returns undefined when the text has no name=value pairs at all, so real nonsense still goes back to the model.
+export function settingsFromLine(text: string, kind: string): Record<string, unknown> | undefined {
+  // name=value pairs, where a value is a quoted string, a bracketed list or object (nested brackets balanced), or a word.
+  const pairs: [string, string][] = [];
+  const re = /([A-Za-z_][\w-]*)=/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    let i = m.index + m[0].length;
+    let raw = "";
+    const open = text[i];
+    if (open === '"') {
+      const close = text.indexOf('"', i + 1);
+      raw = text.slice(i, close < 0 ? text.length : close + 1);
+    } else if (open === "[" || open === "{") {
+      let depth = 0;
+      let j = i;
+      for (; j < text.length; j++) {
+        if (text[j] === "[" || text[j] === "{") depth++;
+        else if (text[j] === "]" || text[j] === "}") depth--;
+        if (depth === 0) break;
+      }
+      raw = text.slice(i, j + 1);
+    } else raw = /^[^\s,]*/.exec(text.slice(i))?.[0] ?? "";
+    pairs.push([m[1]!, raw]);
+    re.lastIndex = i + raw.length;
+  }
+  if (!pairs.length) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [name, raw] of pairs) {
+    if (name === "id" || name === "kind" || name === kind) continue;
+    let v: unknown = raw;
+    try {
+      v = JSON.parse(raw);
+    } catch {
+      v = raw.replace(/^"|"$/g, "");
+    }
+    out[name] = v;
+  }
+  return out;
+}
+// A setting the kit refuses because it only names the thing (`id`, `kind`): taken out, since the plan's thing has no id.
+const NAMING = new Set(["id", "kind", "name"]);
+
 // The real steps of every truth thing the plan names, by its kind and data, and how the kit draws it on this frame
 // (which way its moves go), so the planner can match the picture to the words. A thing the kit refuses comes back as a problem.
 export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): { steps: Map<string, string[]>; drawn: Map<string, string>; problems: string[] } {
@@ -158,17 +203,25 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
     try {
       data = JSON.parse(e.demo.truth.data);
     } catch {
-      problems.push(`event ${e.id}: truth.data must be a JSON object of the kind's settings, and ${JSON.stringify(e.demo.truth.data)} is not JSON`);
-      continue;
+      data = settingsFromLine(e.demo.truth.data, kind);
+      if (!data) {
+        problems.push(`event ${e.id}: truth.data must be a JSON object of the kind's settings, and ${JSON.stringify(e.demo.truth.data)} is not JSON`);
+        continue;
+      }
+      console.log(`    event ${e.id}: truth.data read from a settings line into ${JSON.stringify(data)}`);
     }
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       problems.push(`event ${e.id}: truth.data must be a JSON object of the kind's settings, such as the ones its guide line shows`);
       continue;
     }
+    // Settings that only name the thing are taken out before the kit sees them: a plan's thing has no id of its own.
+    for (const k of Object.keys(data)) if (NAMING.has(k)) delete (data as Record<string, unknown>)[k];
     try {
       // Built through the kit itself, so settings it does not take are refused here as they would be in the scene.
       const make = ctx.kits?.find((k) => k.kinds?.[kind])?.kinds?.[kind];
       make?.({ id: "demo", kind, props: {}, data: data as Record<string, unknown> }, ctx);
+      // The mended settings are what the plan keeps, so every later reader sees the same JSON.
+      e.demo.truth.data = JSON.stringify(data);
       steps.set(key, truthSteps(kind, "demo", data as Record<string, unknown>, ctx));
       const how = truthDrawn(kind, "demo", data as Record<string, unknown>, ctx);
       if (how) drawn.set(key, how);
@@ -432,7 +485,7 @@ export async function direction(p: Project, force = false) {
     let feedback = "";
     const shown = new Set<string>();
     for (let round = 1; ; round++) {
-      const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: "high" });
+      const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: round === 1 ? "high" : "medium" });
       const raw = r.value;
       const { steps, drawn, problems: refused } = demoSteps(raw, ctx, kinds);
       const found = [...refused, ...problems(raw, words, steps), ...unspoken(raw, words, steps)];

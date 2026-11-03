@@ -3,7 +3,7 @@
 import type { Scene, Theme } from "../engine/core/types.ts";
 import type { PartCard, Requirement } from "../engine/design/types.ts";
 
-export type StageName = "material" | "plan" | "research" | "writer" | "direction" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "critic";
+export type StageName = "material" | "plan" | "research" | "writer" | "direction" | "voice" | "director" | "board" | "stage" | "scene" | "assets" | "annotate" | "art" | "cutouts" | "timeline" | "mix" | "render" | "mux" | "critic";
 
 export type Project = {
   id: string;

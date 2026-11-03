@@ -7,7 +7,7 @@ import type { CompileContext } from "../../engine/core/types.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { Project, Script } from "../../schemas/project.ts";
 import { truthKindNames } from "../lib/abilities.ts";
-import { applyCues, coverage, demoSteps, problems, scriptWords, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
+import { applyCues, coverage, demoSteps, problems, scriptWords, settingsFromLine, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
 import { events } from "./director.ts";
 import { SCENE_KITS } from "./scene.ts";
 
@@ -201,7 +201,7 @@ test("demonstrations are checked against the steps the kit really computes", () 
   const bad = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "sort", data: '{"data":[1]}' }, phases: [] } })]);
   assert.match(demoSteps(bad, ctx, kinds).problems[0]!, /refuses/);
   const extra = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "sort", data: '{"data":[3,1,2],"id":"s"}' }, phases: [] } })]);
-  assert.match(demoSteps(extra, ctx, kinds).problems[0]!, /no setting "id"/);
+  assert.deepEqual(demoSteps(extra, ctx, kinds).problems, []); // an id only names the thing: mended out, not a round
   const unknown = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "teleport", data: "{}" }, phases: [] } })]);
   assert.match(demoSteps(unknown, ctx, kinds).problems[0]!, /does not have/);
 });
@@ -216,4 +216,19 @@ test("the planner is told how a truth thing is drawn and which way its moves go,
   assert.match([...auto.drawn.values()][0]!, /^drawn as levels/);
   const row = demoSteps(sorting({ algo: "merge", data: [5, 1, 7, 3], show: "boxes", form: "row" }), ctx, kinds);
   assert.match([...row.drawn.values()][0]!, /form=row.*moves down out of the row/);
+});
+
+test("a truth thing's settings written as a scene line or with an id are read as the kit's settings, without a model round", () => {
+  assert.deepEqual(settingsFromLine("sort s data=[5,2,8,1] algo=merge show=boxes form=down", "sort"), { data: [5, 2, 8, 1], algo: "merge", show: "boxes", form: "down" });
+  assert.deepEqual(settingsFromLine('det d data=[[3,8],[4,6]] label="two by two"', "det"), { data: [[3, 8], [4, 6]], label: "two by two" });
+  assert.equal(settingsFromLine("just words, no settings", "sort"), undefined);
+  const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: 1, theme: themeFrom("neon"), kits: SCENE_KITS };
+  const kinds = truthKindNames();
+  const phase = { from: 1, to: 1, pace: "slow" as const, at: { word: 7, hold: "", cue: "" }, until: none, replay: false, why: "" };
+  const rawPlan = plan([event("e1", 0, 5), event("e2", 6, 9, { demo: { what: "merging", truth: { kind: "sort", data: "sort s data=[5,2,8,1] algo=merge show=boxes" }, phases: [phase] } })]);
+  const r = demoSteps(rawPlan, ctx, kinds);
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(JSON.parse(rawPlan.events[1]!.demo.truth.data), { data: [5, 2, 8, 1], algo: "merge", show: "boxes" });
+  const withId = plan([event("e1", 0, 5), event("e2", 6, 9, { demo: { what: "merging", truth: { kind: "sort", data: JSON.stringify({ id: "s", data: [3, 1, 2], algo: "bubble" }) }, phases: [phase] } })]);
+  assert.deepEqual(demoSteps(withId, ctx, kinds).problems, []);
 });

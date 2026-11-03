@@ -72,7 +72,7 @@ export async function mix(p: Project, force = false) {
     }
     await write(join(dir(p), "sound-measurement.json"), JSON.stringify({ lufs: c.input_i, truePeak: c.input_tp, credits: use.credits, made: use.made, usd: decision.usd }, null, 2));
     t.audio = "mix.wav";
-    delete p.stages.render;
+    delete p.stages.mux;
     console.log(`  ${hits.length} effects (${hits.map((h) => h.name).join(", ")}), music ${cues.map((c) => c.name).join(", ")}, ${c.input_i} LUFS, ${c.input_tp} dBTP`);
     if (use.made.length) console.log(`  generated kit: ${use.made.join(", ")}`);
     charge(p, "mix", 0, `ElevenLabs ${use.credits} credits for ${use.made.join(", ") || "nothing (kit cached)"}; ${c.input_i} LUFS`);
