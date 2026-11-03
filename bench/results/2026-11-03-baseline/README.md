@@ -78,3 +78,20 @@ Depict (blend) lowest: frostline-ad 0.03 (a box labelled BOTTLE), led-vs-bulb 0.
 - depict: the watch test agrees with the designer (rank correlation 0.31 with the designer's overall; their issue lists name the same boxes and labels). The free signal agrees with the watch test (0.55) but overrates any program drawing (a climbing dot counts as drawn), which is why the watch weighs more.
 - holds: agrees with the designer on each dead hold it names; against the scroller's swipe point it does not rank (-0.20), because people swipe for many reasons besides a hold, and several clips have no hold near where they swiped.
 - quiz: no longer at the ceiling (0.86), and the hard questions separate clips that do the plan's demonstration (fresh-water, route-finding, water-cycle-recap's ordered replay: 1.00) from those that do not (death-zone, led-vs-bulb, titration-lab, square-knot: 0.33; life-expectancy 0, its chart has no year ticks). A few hard questions are weak (the words imply the answer: matrix-rotation's are answered from the narration too); the words-only column shows which, and they should be replaced.
+
+## Per-case settings
+
+The numbers in the two sections above were scored with the phone-teaching defaults for every case. The measures now read every threshold from the case's own `measure` block (its viewing context and what good means for it, derived once from the request, intent and audience and recorded in the case file) over the defaults in `bench/lib/settings.ts`. `scores.md` and `summary.json` hold the numbers with those settings, and `scores.md` lists each case's raw instrument readings beside its scores. No watch test was rerun; only the free measures and the depict blend were recomputed.
+
+What the derived settings change:
+
+- Viewing context: classroom screens (ball-drop, insertion-sort, magna-carta, matrix-rotation, vaccine-memory, water-cycle-recap) look about 15% narrower than a phone at arm's length, so they need text 15% larger; the all-hands meeting screen (support-tickets) needs 45% larger; laptops at a desk (two-factor, off-by-one) need less. read moves: support-tickets 0.49 to 0.16, matrix-rotation 0.78 to 0.64, magna-carta 0.65 to 0.57, ball-drop 0.55 to 0.48, two-factor 0.36 to 0.51.
+- Still holds: where the plan asks the picture to wait ("nothing moves toward the answer", "the question waits", "stays lit"), the hold scores on nothing unrelated moving instead of on change. 19 holds are declared still, 17 of them in cases that built. holds moves from 0.44 to 0.80; running-max's predict hold goes 0.19 to 1, ball-drop's and fraction-division's frozen predict holds 0 to 1. A frozen hold the plan did not ask for still scores 0 (rust, fresh-water's answered predict hold).
+
+| measure | phone defaults | per-case settings |
+|---|---|---|
+| read | 0.52 | 0.50 |
+| holds | 0.44 | 0.80 |
+| free measures, mean | 0.66 | 0.70 |
+
+The scroller swiped during several of the still holds the plans ask for, so whether a still predict hold is right is now a question for the plan (and the plan stage's settings), not a fault the holds measure charges to the scene.

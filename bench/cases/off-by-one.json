@@ -71,6 +71,27 @@
    ]
   }
  ],
+ "measure": {
+  "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion.",
+  "context": {
+   "screen": "laptop",
+   "frame": "9:16",
+   "distance": "at a desk",
+   "attention": "paused and studied",
+   "why": "a team's code review channel, watched at a desk"
+  },
+  "read": {
+   "small": 0.023,
+   "comfortable": 0.046,
+   "glance": 220,
+   "page": 520
+  },
+  "holds": {
+   "still": [
+    "h1"
+   ]
+  }
+ },
  "quiz": [
   {
    "q": "What should the function return for five, and what did it return?",

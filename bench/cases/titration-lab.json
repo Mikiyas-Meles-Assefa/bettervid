@@ -87,6 +87,16 @@
    ]
   }
  ],
+ "measure": {
+  "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion.",
+  "context": {
+   "screen": "phone",
+   "frame": "9:16",
+   "distance": "arm's length",
+   "attention": "watching on purpose",
+   "why": "students refreshing before lab"
+  }
+ },
  "quiz": [
   {
    "q": "What goes in the burette, and what is in the flask?",

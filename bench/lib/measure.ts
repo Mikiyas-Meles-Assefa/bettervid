@@ -24,6 +24,7 @@ import { kitKinds } from "../../pipeline/stages/scene.ts";
 import type { Project } from "../../schemas/project.ts";
 import type { Theme } from "../../engine/core/types.ts";
 import { parse, type Item } from "../../engine/language/syntax.ts";
+import { DEFAULTS, type Settings } from "./settings.ts";
 
 export type Scores = { eye?: number; lag: number; pace: number; load: number; holds?: number; reveal?: number; read: number; depict?: number };
 export type CaseMeasure = {
@@ -58,7 +59,7 @@ export type Mention = { word: number; term: string; ids: string[]; outcome: "in_
 // For every spoken word that names something the screen writes, did a thing showing it arrive or change near the
 // word? In time: from half a second before to a second after the word starts. Late: up to three seconds after.
 // Already: it was on screen and did not answer. Missing: not on screen then, nor within three seconds.
-export function mentions(p: Project, s: Samples): Mention[] {
+export function mentions(p: Project, s: Samples, lagSet: Settings["lag"] = DEFAULTS.lag): Mention[] {
   const words = p.narration!.words;
   const terms = new Map<string, string[]>();
   for (const [id, text] of s.text) for (const t of content(text)) terms.set(t, [...new Set([...(terms.get(t) ?? []), id])]);
@@ -78,9 +79,9 @@ export function mentions(p: Project, s: Samples): Mention[] {
       for (let f = Math.max(1, from); f < Math.min(s.frames, to); f++) if (rows.some((r) => s.active[r]![f] || (s.visible[r]![f] && !s.visible[r]![f - 1]))) return f;
       return -1;
     };
-    const near = first(f0 - Math.round(0.5 * s.fps), f0 + Math.round(1.0 * s.fps));
+    const near = first(f0 - Math.round(lagSet.before * s.fps), f0 + Math.round(lagSet.after * s.fps));
     if (near >= 0) return out.push({ word: i, term, ids, outcome: "in_time", lag: round((near - f0) / s.fps, 2) });
-    const late = first(f0 + Math.round(1.0 * s.fps), f0 + Math.round(3.0 * s.fps));
+    const late = first(f0 + Math.round(lagSet.after * s.fps), f0 + Math.round(lagSet.late * s.fps));
     if (late >= 0) return out.push({ word: i, term, ids, outcome: "late", lag: round((late - f0) / s.fps, 2) });
     if (rows.some((r) => s.visible[r]![Math.min(s.frames - 1, f0)])) return out.push({ word: i, term, ids, outcome: "already" });
     out.push({ word: i, term, ids, outcome: "missing" });
@@ -89,12 +90,12 @@ export function mentions(p: Project, s: Samples): Mention[] {
 }
 
 // Each event's look should start to move or arrive near its first word, and a reveal's thing near the reveal word.
-function onsets(p: Project, s: Samples, ids: IdMap, attachedMap: Map<string, string[]>): { event: string; what: "look" | "reveal"; lag: number | null }[] {
+function onsets(p: Project, s: Samples, ids: IdMap, attachedMap: Map<string, string[]>, lagSet: Settings["lag"] = DEFAULTS.lag): { event: string; what: "look" | "reveal"; lag: number | null }[] {
   const words = p.narration!.words;
   const out: { event: string; what: "look" | "reveal"; lag: number | null }[] = [];
   const mine = (named: string[]) => s.ids.map((id, r) => ({ id, r })).filter((x) => named.some((m) => x.id === m || x.id.startsWith(`${m}.`) || (attachedMap.get(x.id) ?? []).some((t) => t === m || t.startsWith(`${m}.`)))).map((x) => x.r);
   const firstMove = (rows: number[], f0: number, limit: number) => {
-    for (let f = Math.max(1, f0 - Math.round(0.5 * s.fps)); f < Math.min(s.frames, f0 + limit); f++) if (rows.some((r) => s.active[r]![f] || (s.visible[r]![f] && !s.visible[r]![f - 1]))) return f;
+    for (let f = Math.max(1, f0 - Math.round(lagSet.before * s.fps)); f < Math.min(s.frames, f0 + limit); f++) if (rows.some((r) => s.active[r]![f] || (s.visible[r]![f] && !s.visible[r]![f - 1]))) return f;
     return -1;
   };
   for (const e of p.direction!.events) {
@@ -107,21 +108,19 @@ function onsets(p: Project, s: Samples, ids: IdMap, attachedMap: Map<string, str
     out.push({ event: e.id, what: "look", lag: f < 0 ? null : round((f - f0) / s.fps, 2) });
     if (e.reveal) {
       const r0 = Math.round(words[e.reveal.word]!.start * s.fps);
-      const g = firstMove(rows, r0, 3 * s.fps);
+      const g = firstMove(rows, r0, lagSet.late * s.fps);
       out.push({ event: e.id, what: "reveal", lag: g < 0 ? null : round((g - r0) / s.fps, 2) });
     }
   }
   return out;
 }
 
-const lagScore = (lag: number | null) => (lag === null ? 0 : lag <= 1 ? 1 : lag <= 2 ? 0.5 : 0.2);
+const lagScore = (lag: number | null, set: Settings["lag"]) => (lag === null ? 0 : lag <= set.full ? 1 : lag <= set.half ? 0.5 : 0.2);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Load.
 
-export const NEW_LINE = 6; // new things arriving within two seconds
-export const PULL_LINE = 3; // independent changes pulling within one second
-export function load(s: Samples): { seconds: number; overNew: number; overPull: number; peakNew: number; peakPull: number; newPerSecond: number } {
+export function load(s: Samples, lines: Settings["load"] = DEFAULTS.load): { seconds: number; overNew: number; overPull: number; peakNew: number; peakPull: number; newPerSecond: number } {
   // Arrivals: a thing becoming visible. Each counts, even when a whole state arrives at once: six new labels in one
   // beat are still six things to take in.
   const arrivals: number[] = [];
@@ -142,8 +141,8 @@ export function load(s: Samples): { seconds: number; overNew: number; overPull: 
     const pull = pulls(s, activity(s, from, from + s.fps), from, from + s.fps).length;
     peakNew = Math.max(peakNew, n);
     peakPull = Math.max(peakPull, pull);
-    if (n > NEW_LINE) overNew++;
-    if (pull > PULL_LINE) overPull++;
+    if (n > lines.newLine) overNew++;
+    if (pull > lines.pullLine) overPull++;
   }
   return { seconds, overNew, overPull, peakNew, peakPull, newPerSecond: round(groups.length / (s.frames / s.fps), 2) };
 }
@@ -153,15 +152,17 @@ export function load(s: Samples): { seconds: number; overNew: number; overPull: 
 // the hold's purpose: the event's look, its demonstration, the things the hold's `does` names, or the prompt it shows.
 // Per hold:
 // - work: the share of the hold's frames in which one of those things is changing. A frozen frame, a lone pulse in a
-//   three second hold, or a clock ticking beside a still picture is dead air. Half the hold working is full marks (a
-//   settle hold may rest once it has moved); none scores 0.
-// - focus: when unrelated things change more than the related ones, the eye is pulled off the purpose (x 0.5).
+//   three second hold, or a clock ticking beside a still picture is dead air. `holds.work` of the hold working is full
+//   marks (0.5 by default: a settle hold may rest once it has moved); none scores 0.
+// - focus: when unrelated things change more than the related ones, the eye is pulled off the purpose (x `distracted`).
+// - a hold the case declares still (`holds.still`: the plan wants the picture to wait) is not judged on change: it scores
+//   on nothing unrelated moving, 1 when nothing does, 0 when unrelated change fills `holds.work` of it.
 // - a predict hold that shows its answer scores 0.
 // A hold the voice talks over is not a hold the viewer gets and is not judged here (the audio check reports it).
 
-export type HoldWork = { id: string; purpose: string; seconds: number; work: number; other: number; answered: boolean; score: number };
+export type HoldWork = { id: string; purpose: string; seconds: number; still: boolean; work: number; other: number; answered: boolean; score: number };
 
-export function holdWork(p: Project, s: Samples, ids: IdMap, attached: Map<string, string[]>): HoldWork[] {
+export function holdWork(p: Project, s: Samples, ids: IdMap, attached: Map<string, string[]>, set: Settings["holds"] = DEFAULTS.holds): HoldWork[] {
   const out: HoldWork[] = [];
   const answered = new Set(checkPredict(s, holds(p.direction!, p.narration!), ids).map((t) => t.note.match(/Hold (\S+) /)?.[1]));
   for (const h of holds(p.direction!, p.narration!).filter((x) => x.voiced)) {
@@ -181,8 +182,9 @@ export function holdWork(p: Project, s: Samples, ids: IdMap, attached: Map<strin
     const n = to - from;
     const work = mine / n;
     const isAnswered = answered.has(h.id);
-    const score = isAnswered ? 0 : clamp(work / 0.5) * (other > mine ? 0.5 : 1);
-    out.push({ id: h.id, purpose: h.purpose, seconds: round(n / s.fps, 1), work: round(work, 2), other: round(other / n, 2), answered: isAnswered, score: round(score, 2) });
+    const still = set.still.includes(h.id);
+    const score = isAnswered ? 0 : still ? clamp(1 - other / n / set.work) : clamp(work / set.work) * (other > mine ? set.distracted : 1);
+    out.push({ id: h.id, purpose: h.purpose, seconds: round(n / s.fps, 1), still, work: round(work, 2), other: round(other / n, 2), answered: isAnswered, score: round(score, 2) });
   }
   return out;
 }
@@ -216,6 +218,8 @@ export function readability(scene: Scene, theme: Theme, s: Samples): { frames: n
 // at 40 cm: text of 7% of the frame's width (75 px at 1080) reads comfortably, 3.5% (38 px) not at all. The style's
 // own floor (`read.text`, 3%) is a hard limit for any text; this is the bar for text meant to be read in passing.
 //
+// The numbers below are the defaults (settings.ts); each case's `measure.read` may set its own.
+//
 // Per sampled settled frame:
 // - words: every line of text, weighted by its length, scores its size (3.5% to 7% of the width) times its contrast
 //   against what is drawn behind it (WCAG ratio 1.5 to 4.5, after its fade), so a long line of small or faint text
@@ -231,7 +235,6 @@ export function readability(scene: Scene, theme: Theme, s: Samples): { frames: n
 // The frame scores words x (0.5 + 0.5 x (0.3 density + 0.35 subject + 0.35 space)), times 0.4 when broken: words that
 // cannot be read are not saved by a good layout. `read` is the mean over settled frames.
 
-export const PHONE = { small: 0.035, comfortable: 0.07, contrastLow: 1.5, contrastOk: 4.5, glance: 140, page: 360, subject: 0.3 };
 
 type RGB = [number, number, number];
 function rgbOf(c: string | undefined): RGB | undefined {
@@ -253,7 +256,7 @@ const overlap = (a: { x0: number; y0: number; x1: number; y1: number }, b: typeo
 
 export type PhoneFrame = { t: number; words: number; density: number; subject: number; space: number; broken: boolean; score: number; chars: number; small: string[]; faint: string[] };
 
-export function phoneRead(scene: Scene, theme: Theme, s: Samples, lookAt?: (frame: number) => string[]): { frames: number; score: number; words: number; density: number; subject: number; space: number; broken: number; smallShare: number; faintShare: number; examples: string[]; worst: PhoneFrame[] } {
+export function phoneRead(scene: Scene, theme: Theme, s: Samples, lookAt?: (frame: number) => string[], PHONE: Settings["read"] = DEFAULTS.read): { frames: number; score: number; words: number; density: number; subject: number; space: number; broken: number; smallShare: number; faintShare: number; filledShare: number; emptyBand: number; examples: string[]; worst: PhoneFrame[] } {
   const W = scene.width;
   const H = scene.height;
   const paper = rgbOf(scene.background) ?? rgbOf(theme.colors.paper) ?? [255, 255, 255];
@@ -267,6 +270,7 @@ export function phoneRead(scene: Scene, theme: Theme, s: Samples, lookAt?: (fram
   });
   const cellArea = boxArea(cells[0]!);
   const out: PhoneFrame[] = [];
+  const raws: { filled: number; band: number }[] = [];
   let smallChars = 0;
   let faintChars = 0;
   let allChars = 0;
@@ -302,12 +306,12 @@ export function phoneRead(scene: Scene, theme: Theme, s: Samples, lookAt?: (fram
     // A picture is read too: shown narrower than the frame, its detail (a sketch's labels, a slide's lines) shrinks with
     // it. Each counts as much as a short line of words, full at 95% of the width, nothing at half.
     for (const t of things.filter((u) => u.kind === "image" && u.opacity >= 0.5 && boxArea(u.box) > W * H * 0.02)) {
-      const share = clamp(((t.box.x1 - t.box.x0) / W - 0.5) / 0.45);
+      const share = clamp(((t.box.x1 - t.box.x0) / W - PHONE.pictureLow) / (PHONE.pictureFull - PHONE.pictureLow));
       if (share < 0.5) small.push(`picture ${t.id} ${Math.round(((t.box.x1 - t.box.x0) / W) * 100)}% wide`);
-      wsum += 40;
-      wscore += 40 * share;
-      allChars += 40;
-      if (share < 0.5) smallChars += 40;
+      wsum += PHONE.pictureWeight;
+      wscore += PHONE.pictureWeight * share;
+      allChars += PHONE.pictureWeight;
+      if (share < 0.5) smallChars += PHONE.pictureWeight;
     }
     const words = wsum ? wscore / wsum : 1;
     const density = clamp(1 - (chars - PHONE.glance) / (PHONE.page - PHONE.glance));
@@ -322,11 +326,13 @@ export function phoneRead(scene: Scene, theme: Theme, s: Samples, lookAt?: (fram
       run = used.slice(r * cols, (r + 1) * cols).some(Boolean) ? 0 : run + 1;
       band = Math.max(band, run);
     }
-    const space = clamp((filled - 0.12) / 0.33) * clamp(1 - Math.max(0, band / rows - 0.2) / 0.35);
+    const space = clamp((filled - PHONE.filledLow) / (PHONE.filledFull - PHONE.filledLow)) * clamp(1 - Math.max(0, band / rows - PHONE.band) / PHONE.bandSpan);
     const found = measureLayout(things, W, H, read, false, keptAt(scene, f));
     const broken = found.some((x) => (x.kind === "off_frame" || x.kind === "overlap" || x.kind === "hidden_picture") && x.severity >= 3);
     // Words that cannot be read are not saved by a good layout: the layout scales what the words give, from half to all.
-    const score = words * (0.5 + 0.5 * (0.3 * density + 0.35 * subject + 0.35 * space)) * (broken ? 0.4 : 1);
+    const wt = PHONE.weights;
+    const score = words * (PHONE.layoutFloor + (1 - PHONE.layoutFloor) * (wt.density * density + wt.subject * subject + wt.space * space)) * (broken ? PHONE.broken : 1);
+    raws.push({ filled, band: band / rows });
     out.push({ t: round(f / s.fps, 1), words: round(words, 2), density: round(density, 2), subject: round(subject, 2), space: round(space, 2), broken, score: round(score, 2), chars, small: small.slice(0, 4), faint: faint.slice(0, 4) });
   }
   const avg = (k: keyof PhoneFrame) => round(mean(out.map((x) => Number(x[k]))), 3);
@@ -337,6 +343,7 @@ export function phoneRead(scene: Scene, theme: Theme, s: Samples, lookAt?: (fram
     words: avg("words"), density: avg("density"), subject: avg("subject"), space: avg("space"),
     broken: round(mean(out.map((x) => (x.broken ? 1 : 0))), 3),
     smallShare: round(allChars ? smallChars / allChars : 0, 3), faintShare: round(allChars ? faintChars / allChars : 0, 3),
+    filledShare: round(mean(raws.map((x) => x.filled)), 3), emptyBand: round(mean(raws.map((x) => x.band)), 3),
     examples,
     worst: [...out].sort((a, b) => a.score - b.score).slice(0, 3),
   };
@@ -368,7 +375,7 @@ const isName = (text: string | undefined) => {
 
 export type Depict = { drawn?: number; changes?: number; free?: number; units: { id: string; kind: string; as: "itself" | "symbol" | "word"; text?: string }[]; shown: string[]; told: string[] };
 
-export function depictFree(source: string, kinds: string[]): Depict {
+export function depictFree(source: string, kinds: string[], set: Settings["depict"] = DEFAULTS.depict): Depict {
   const { doc } = parse(source, kinds);
   const units = new Map<string, Depict["units"][number]>();
   const firstState = new Map<string, number>();
@@ -413,7 +420,7 @@ export function depictFree(source: string, kinds: string[]): Depict {
     }
   });
   const list = [...units.values()];
-  const score = { itself: 1, symbol: 0.5, word: 0 } as const;
+  const score = { itself: 1, symbol: set.symbol, word: 0 };
   const drawn = list.length ? mean(list.map((u) => score[u.as])) : source.trim() ? 0 : undefined;
   const changes = shown.length + told.length ? shown.length / (shown.length + told.length) : undefined;
   const parts = [drawn, changes].filter((x): x is number => x !== undefined);
@@ -423,7 +430,7 @@ export function depictFree(source: string, kinds: string[]): Depict {
 // ---------------------------------------------------------------------------------------------------------------------
 // Everything for one case.
 
-export function measureCase(p: Project, scene: Scene, source: string, theme: Theme, raw?: Mapped): CaseMeasure {
+export function measureCase(p: Project, scene: Scene, source: string, theme: Theme, raw?: Mapped, set: Settings = DEFAULTS): CaseMeasure {
   const kinds = kitKinds();
   const s = sample(scene);
   for (const [id, words] of sourceWords(source, kinds)) if (s.ids.includes(id) && !s.text.get(id)) s.text.set(id, words);
@@ -439,13 +446,13 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
   // eye
   const eyeRows = report ? report.look.map((r) => ({ ...r, share: has("look_absent").some((t) => t.event === r.event) || has("look_still").some((t) => t.event === r.event) ? 0 : r.share })) : [];
   const unmapped = ids?.unmapped ?? [];
-  const eye = report ? mean(eyeRows.filter((r) => !unmapped.includes(r.event)).map((r) => r.share)) : undefined;
+  const eye = report ? mean(eyeRows.filter((r) => !unmapped.includes(r.event) && !set.look.hidden.includes(r.event)).map((r) => r.share)) : undefined;
 
   // lag
-  const ms = mentions(p, s);
+  const ms = mentions(p, s, set.lag);
   const named = ms.length ? mean(ms.map((m) => (m.outcome === "in_time" ? 1 : m.outcome === "late" || m.outcome === "already" ? 0.5 : 0))) : undefined;
-  const on = ids ? onsets(p, s, ids, attached) : [];
-  const onset = on.length ? mean(on.map((x) => lagScore(x.lag))) : undefined;
+  const on = ids ? onsets(p, s, ids, attached, set.lag) : [];
+  const onset = on.length ? mean(on.map((x) => lagScore(x.lag, set.lag))) : undefined;
   const lag = mean([named, onset].filter((x): x is number => x !== undefined));
 
   // pace
@@ -458,7 +465,7 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
   })();
   // A plan that mixes long and short events asks for a clearly varied rate; one that does not still should not be a
   // metronome (direction-check FLAT).
-  const variation = clamp(cvRates / (new Set(rates.map((r) => r.rhythm)).size > 1 ? 0.4 : FLAT));
+  const variation = clamp(cvRates / (new Set(rates.map((r) => r.rhythm)).size > 1 ? set.pace.varied : FLAT));
   const mismatch = rates.filter((r) => r.rhythm === "long").length ? has("rhythm_mismatch").length / rates.filter((r) => r.rhythm === "long").length : 0;
   const demoRows = report?.demo ?? [];
   const demoBad = ["demo_rushed", "demo_still", "demo_unsettled"].flatMap(has);
@@ -476,11 +483,11 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
   const pace = mean([variation * (1 - 0.5 * mismatch), demoScore, order].filter((x): x is number => x !== undefined));
 
   // load
-  const ld = load(s);
+  const ld = load(s, set.load);
   const loadScore = clamp(1 - (ld.overNew + ld.overPull) / ld.seconds);
 
   // holds
-  const hw = ids ? holdWork(p, s, ids, attached) : [];
+  const hw = ids ? holdWork(p, s, ids, attached, set.holds) : [];
   const holdScore = hw.length ? mean(hw.map((h) => h.score)) : undefined;
 
   // reveal
@@ -493,11 +500,11 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
   const rd = readability(scene, theme, s);
   const layoutScore = clamp(1 - (rd.severe + 0.4 * rd.mild) / Math.max(1, rd.frames));
   const eventAt = (f: number) => list.find((x) => f >= x.from && f < x.to)?.event.id;
-  const phone = phoneRead(scene, theme, s, ids ? (f) => ids.events[eventAt(f) ?? ""]?.look ?? [] : undefined);
+  const phone = phoneRead(scene, theme, s, ids ? (f) => ids.events[eventAt(f) ?? ""]?.look ?? [] : undefined, set.read);
   const read = phone.score;
 
   // depict (the free signals; the report blends in the watch test)
-  const dp = depictFree(source, kinds);
+  const dp = depictFree(source, kinds, set.depict);
 
   const scores: Scores = { lag: round(lag), pace: round(pace), load: round(loadScore), read: round(read), ...(dp.free !== undefined ? { depict: dp.free } : {}), ...(eye !== undefined ? { eye: round(eye) } : {}), ...(holdScore !== undefined ? { holds: round(holdScore) } : {}), ...(reveal !== undefined ? { reveal: round(reveal) } : {}) };
   return {

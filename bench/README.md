@@ -38,6 +38,12 @@ Words are timed without a voice at about 2.4 words a second, weighted by length,
 
 An author agent (model `haiku`) is told: read `system.md` and `next.md`, write the whole answer to `answer.txt`, run `npm run -s bench -- submit <run> <case>`, and repeat while it says NEXT. The look step (Spark judging rendered stills) is not part of the bench. The id map (plan words to scene ids, which the direction check asks Spark for) is written to `map.md` with the same prompt and schema; a Claude agent answers `map.json`.
 
+## Settings: what good means for each case (`lib/settings.ts`)
+
+The measures are instruments: no threshold is a constant in the code. Each case file has a `measure` block with its viewing context (screen, frame shape, distance, how the viewer watches, and why) and any setting that departs from the defaults; everything it leaves out takes the default. The block is derived once per case, by a person or an agent reading the request, intent, audience and platform, and recorded in the case file with a note on how. The defaults are the derived settings for teaching on a phone: a 9:16 frame at arm's length, the eye meant to be on the event's look, every silence working toward its purpose. The numbers quoted below are those defaults.
+
+What a case can set: `read` (text sizes as shares of the frame's width, contrast, density, picture width, the subject's share, empty space, the layout's weights; read sizes scale with how wide the frame looks to the eye, so a classroom screen seen from the back needs larger text than a phone and a laptop at a desk smaller), `look.hidden` (events whose subject is meant to stay hidden, which eye skips: a suspense beat), `holds.still` (holds the plan asks to wait without motion, scored on nothing unrelated moving rather than on change), `holds.work`, `lag`, `load`, `pace.varied`, and `depict` (a symbol's score, the watch test's weight). `measure` stores the settings it used in each case's raw readings, and `report` lists the raw instrument readings beside the scores in `scores.md`, so a judge can reason over them.
+
 ## Free measures (no model; `lib/measure.ts`)
 
 All are 0 to 1, computed from the built scene sampled frame by frame and the narration timing, the same for every case; raw values sit beside them in `summary.json`.

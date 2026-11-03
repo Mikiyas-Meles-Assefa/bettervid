@@ -4,14 +4,14 @@
   "cases": 28,
   "built": 26,
   "passed": 25,
-  "overall": 0.661,
+  "overall": 0.698,
   "eye": 0.682,
   "lag": 0.76,
   "pace": 0.639,
   "load": 0.904,
-  "holds": 0.442,
+  "holds": 0.796,
   "reveal": 0.904,
-  "read": 0.519,
+  "read": 0.499,
   "learner": 0.862,
   "wordsOnly": 0.576,
   "gain": 0.287,
@@ -42,7 +42,7 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.774,
+   "overall": 0.875,
    "scores": {
     "lag": 0.962,
     "pace": 1,
@@ -50,7 +50,7 @@
     "read": 0.495,
     "depict": 1,
     "eye": 0.734,
-    "holds": 0,
+    "holds": 0.81,
     "reveal": 1
    },
    "learner": 0.9285714285714286,
@@ -219,10 +219,11 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 2.5,
+      "still": true,
       "work": 0,
       "other": 0.09,
       "answered": false,
-      "score": 0
+      "score": 0.81
      }
     ],
     "read": {
@@ -235,6 +236,8 @@
      "broken": 0,
      "smallShare": 0.378,
      "faintShare": 0,
+     "filledShare": 0.131,
+     "emptyBand": 0.362,
      "examples": [
       "small \"HERE'S THE TRICK.\" 55 px",
       "small \"A FOR ACTION\" 48 px",
@@ -302,6 +305,67 @@
        "empty at 1.5 s: 17% of the usable frame has anything in it; the largest empty band is 63% of its height"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a tip for Instagram"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -313,15 +377,15 @@
    "passed": true,
    "rounds": 3,
    "reviewed": "nothing to say",
-   "overall": 0.611,
+   "overall": 0.727,
    "scores": {
     "lag": 0.662,
     "pace": 0.941,
     "load": 1,
-    "read": 0.549,
+    "read": 0.476,
     "depict": 0.5,
     "eye": 0.236,
-    "holds": 0,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 0.7857142857142857,
@@ -491,22 +555,25 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 3,
+      "still": true,
       "work": 0,
       "other": 0,
       "answered": false,
-      "score": 0
+      "score": 1
      }
     ],
     "read": {
      "frames": 36,
-     "score": 0.549,
-     "words": 0.771,
+     "score": 0.476,
+     "words": 0.673,
      "density": 1,
      "subject": 0.51,
      "space": 0.312,
      "broken": 0.167,
      "smallShare": 0.344,
      "faintShare": 0,
+     "filledShare": 0.342,
+     "emptyBand": 0.401,
      "examples": [
       "small \"bowling\" 54 px",
       "small \"tennis\" 54 px"
@@ -514,12 +581,12 @@
      "worst": [
       {
        "t": 18,
-       "words": 0.83,
+       "words": 0.78,
        "density": 1,
        "subject": 0.51,
        "space": 0.09,
        "broken": true,
-       "score": 0.25,
+       "score": 0.23,
        "chars": 44,
        "small": [
         "\"bowling\" 54 px",
@@ -529,12 +596,12 @@
       },
       {
        "t": 18.5,
-       "words": 0.83,
+       "words": 0.78,
        "density": 1,
        "subject": 0.51,
        "space": 0.09,
        "broken": true,
-       "score": 0.25,
+       "score": 0.23,
        "chars": 44,
        "small": [
         "\"bowling\" 54 px",
@@ -544,12 +611,12 @@
       },
       {
        "t": 19,
-       "words": 0.83,
+       "words": 0.78,
        "density": 1,
        "subject": 0.51,
        "space": 0.09,
        "broken": true,
-       "score": 0.25,
+       "score": 0.23,
        "chars": 44,
        "small": [
         "\"bowling\" 54 px",
@@ -574,6 +641,67 @@
        "overlap at 18.0 s: writing on top of writing: \"can split\" and \"bowling\" (100% of the smaller); \"can split\" and \"tennis\" (86% of the smaller)"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a prediction moment for physics students in class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -732,6 +860,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2.5,
+      "still": false,
       "work": 0.23,
       "other": 0,
       "answered": false,
@@ -748,6 +877,8 @@
      "broken": 0,
      "smallShare": 0,
      "faintShare": 0.062,
+     "filledShare": 0.9,
+     "emptyBand": 0.022,
      "examples": [
       "faint \"Your body can't\" 3.0:1",
       "faint \"adapt\" 3.0:1",
@@ -806,6 +937,65 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose",
+      "why": "a tense moment for an adventure channel"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -1047,6 +1237,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 1.5,
+      "still": false,
       "work": 0.53,
       "other": 0,
       "answered": false,
@@ -1063,6 +1254,8 @@
      "broken": 0,
      "smallShare": 0.444,
      "faintShare": 0,
+     "filledShare": 0.33,
+     "emptyBand": 0.063,
      "examples": [
       "small \"5 CM\" 43 px",
       "small \"TWO TONS\" 43 px",
@@ -1126,6 +1319,65 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a short for a curious driver"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -1137,7 +1389,7 @@
    "passed": true,
    "rounds": 2,
    "reviewed": "kept",
-   "overall": 0.636,
+   "overall": 0.761,
    "scores": {
     "lag": 0.833,
     "pace": 0.667,
@@ -1145,7 +1397,7 @@
     "read": 0.783,
     "depict": 0.5,
     "eye": 0.565,
-    "holds": 0,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 0.8125,
@@ -1360,19 +1612,21 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 3,
+      "still": true,
       "work": 0,
       "other": 0,
       "answered": false,
-      "score": 0
+      "score": 1
      },
      {
       "id": "h2",
       "purpose": "settle",
       "seconds": 2,
+      "still": true,
       "work": 0,
       "other": 0,
       "answered": false,
-      "score": 0
+      "score": 1
      }
     ],
     "read": {
@@ -1385,6 +1639,8 @@
      "broken": 0,
      "smallShare": 0.158,
      "faintShare": 0,
+     "filledShare": 0.445,
+     "emptyBand": 0.199,
      "examples": [
       "small \"dividing by a half is mu\" 40 px"
      ],
@@ -1442,6 +1698,68 @@
       },
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose",
+      "why": "a parent watching to explain it to a child"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1",
+       "h2"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -1453,7 +1771,7 @@
    "passed": true,
    "rounds": 2,
    "reviewed": "nothing to say",
-   "overall": 0.769,
+   "overall": 0.832,
    "scores": {
     "lag": 0.787,
     "pace": 0.639,
@@ -1461,7 +1779,7 @@
     "read": 0.867,
     "depict": 1,
     "eye": 0.862,
-    "holds": 0,
+    "holds": 0.5,
     "reveal": 1
    },
    "learner": 1,
@@ -1639,6 +1957,7 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 2.5,
+      "still": true,
       "work": 0.03,
       "other": 0,
       "answered": true,
@@ -1648,10 +1967,11 @@
       "id": "h2",
       "purpose": "settle",
       "seconds": 2,
+      "still": true,
       "work": 0,
       "other": 0,
       "answered": false,
-      "score": 0
+      "score": 1
      }
     ],
     "read": {
@@ -1664,6 +1984,8 @@
      "broken": 0,
      "smallShare": 0.129,
      "faintShare": 0,
+     "filledShare": 0.917,
+     "emptyBand": 0,
      "examples": [
       "small \"How much is lakes and ri\" 56 px",
       "small \"2 of the 3 are ice\" 48 px",
@@ -1722,6 +2044,68 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a general audience on social media"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1",
+       "h2"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -1906,6 +2290,7 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 2,
+      "still": false,
       "work": 0.75,
       "other": 0.08,
       "answered": false,
@@ -1922,6 +2307,8 @@
      "broken": 0,
      "smallShare": 0.402,
      "faintShare": 0,
+     "filledShare": 0.392,
+     "emptyBand": 0.103,
      "examples": [
       "small \"BOTTLE\" 33 px",
       "small \"ALL DAY.\" 33 px",
@@ -1981,6 +2368,65 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "an ad hook for Reels"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -1992,7 +2438,7 @@
    "passed": true,
    "rounds": 2,
    "reviewed": "nothing to say",
-   "overall": 0.777,
+   "overall": 0.902,
    "scores": {
     "lag": 0.917,
     "pace": 0.937,
@@ -2000,7 +2446,7 @@
     "read": 0.713,
     "depict": 0.875,
     "eye": 0.774,
-    "holds": 0,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 0.8571428571428571,
@@ -2189,10 +2635,11 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": true,
       "work": 0,
       "other": 0,
       "answered": false,
-      "score": 0
+      "score": 1
      }
     ],
     "read": {
@@ -2205,6 +2652,8 @@
      "broken": 0,
      "smallShare": 0.344,
      "faintShare": 0,
+     "filledShare": 0.701,
+     "emptyBand": 0.111,
      "examples": [
       "small \"ALMOST EVERY SOLID SINKS\" 45 px",
       "small \"ALMOST EVERY SOLID SINKS\" 48 px",
@@ -2263,6 +2712,67 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a curious viewer, short form"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -2274,12 +2784,12 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.834,
+   "overall": 0.833,
    "scores": {
     "lag": 0.925,
     "pace": 0.486,
     "load": 1,
-    "read": 0.756,
+    "read": 0.75,
     "depict": 1,
     "eye": 0.837,
     "holds": 0.67,
@@ -2463,6 +2973,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 1.5,
+      "still": false,
       "work": 0.33,
       "other": 0,
       "answered": false,
@@ -2471,14 +2982,16 @@
     ],
     "read": {
      "frames": 52,
-     "score": 0.756,
-     "words": 0.854,
+     "score": 0.75,
+     "words": 0.848,
      "density": 1,
      "subject": 0.509,
      "space": 0.892,
      "broken": 0.019,
      "smallShare": 0.037,
      "faintShare": 0.141,
+     "filledShare": 0.417,
+     "emptyBand": 0.13,
      "examples": [
       "small \"SORTED\" 50 px",
       "faint \"4\" 2.3:1",
@@ -2550,6 +3063,65 @@
        "overlap at 7.0 s: writing on top of writing: \"4\" and \"1\" (40% of the smaller)"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a short for an intro CS class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -2561,7 +3133,7 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.627,
+   "overall": 0.69,
    "scores": {
     "lag": 0.859,
     "pace": 0.454,
@@ -2569,7 +3141,7 @@
     "read": 0.513,
     "depict": 0.05,
     "eye": 0.642,
-    "holds": 0.5,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 0.7142857142857143,
@@ -2743,10 +3315,11 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": true,
       "work": 0.25,
       "other": 0,
       "answered": false,
-      "score": 0.5
+      "score": 1
      }
     ],
     "read": {
@@ -2759,6 +3332,8 @@
      "broken": 0,
      "smallShare": 0.35,
      "faintShare": 0,
+     "filledShare": 0.263,
+     "emptyBand": 0.255,
      "examples": [
       "small \"old bulb\" 42 px",
       "small \"LED\" 42 px",
@@ -2822,6 +3397,67 @@
       },
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "someone deciding about bulbs, short form"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -2833,7 +3469,7 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.719,
+   "overall": 0.748,
    "scores": {
     "lag": 0.764,
     "pace": 0.917,
@@ -2841,7 +3477,7 @@
     "read": 0.697,
     "depict": 1,
     "eye": 0.603,
-    "holds": 0.77,
+    "holds": 1,
     "reveal": 0
    },
    "learner": 0.6666666666666666,
@@ -3007,10 +3643,11 @@
       "id": "h1",
       "purpose": "settle",
       "seconds": 2,
+      "still": true,
       "work": 0.38,
       "other": 0,
       "answered": false,
-      "score": 0.77
+      "score": 1
      }
     ],
     "read": {
@@ -3023,6 +3660,8 @@
      "broken": 0,
      "smallShare": 0.133,
      "faintShare": 0.013,
+     "filledShare": 0.525,
+     "emptyBand": 0.132,
      "examples": [
       "small \"1900\" 44 px",
       "small \"today\" 44 px",
@@ -3087,6 +3726,67 @@
       },
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a data story for a general audience"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -3098,12 +3798,12 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.737,
+   "overall": 0.728,
    "scores": {
     "lag": 0.875,
     "pace": 0.9,
     "load": 0.923,
-    "read": 0.646,
+    "read": 0.572,
     "depict": 0.467,
     "eye": 0.683,
     "holds": 0.4,
@@ -3328,6 +4028,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 1.5,
+      "still": false,
       "work": 0.2,
       "other": 0,
       "answered": false,
@@ -3336,14 +4037,16 @@
     ],
     "read": {
      "frames": 50,
-     "score": 0.646,
-     "words": 0.68,
+     "score": 0.572,
+     "words": 0.604,
      "density": 1,
      "subject": 0.786,
      "space": 0.987,
      "broken": 0,
      "smallShare": 0.089,
      "faintShare": 0.022,
+     "filledShare": 0.668,
+     "emptyBand": 0.069,
      "examples": [
       "small \"CHARTER\" 36 px",
       "small \"seal\" 48 px",
@@ -3354,28 +4057,13 @@
      ],
      "worst": [
       {
-       "t": 12.5,
-       "words": 0.1,
-       "density": 1,
-       "subject": 1,
-       "space": 0.48,
-       "broken": false,
-       "score": 0.09,
-       "chars": 11,
-       "small": [
-        "\"CHARTER\" 36 px",
-        "\"seal\" 48 px"
-       ],
-       "faint": []
-      },
-      {
        "t": 7.5,
-       "words": 0.1,
+       "words": 0.04,
        "density": 1,
        "subject": 1,
        "space": 1,
        "broken": false,
-       "score": 0.1,
+       "score": 0.04,
        "chars": 11,
        "small": [
         "\"CHARTER\" 36 px",
@@ -3385,12 +4073,27 @@
       },
       {
        "t": 8,
-       "words": 0.1,
+       "words": 0.04,
        "density": 1,
        "subject": 1,
        "space": 1,
        "broken": false,
-       "score": 0.1,
+       "score": 0.04,
+       "chars": 11,
+       "small": [
+        "\"CHARTER\" 36 px",
+        "\"seal\" 48 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 8.5,
+       "words": 0.04,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.04,
        "chars": 11,
        "small": [
         "\"CHARTER\" 36 px",
@@ -3407,6 +4110,65 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a clip for a history class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -3418,15 +4180,15 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.82,
+   "overall": 0.831,
    "scores": {
     "lag": 0.833,
     "pace": 0.525,
     "load": 1,
-    "read": 0.782,
+    "read": 0.641,
     "depict": 1,
     "eye": 0.652,
-    "holds": 0.77,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 1,
@@ -3603,38 +4365,45 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": true,
       "work": 0.38,
       "other": 0,
       "answered": false,
-      "score": 0.77
+      "score": 1
      }
     ],
     "read": {
      "frames": 50,
-     "score": 0.782,
-     "words": 0.863,
+     "score": 0.641,
+     "words": 0.705,
      "density": 1,
      "subject": 0.476,
      "space": 1,
      "broken": 0,
-     "smallShare": 0.053,
+     "smallShare": 0.234,
      "faintShare": 0,
+     "filledShare": 0.803,
+     "emptyBand": 0.004,
      "examples": [
       "small \"point three, one\" 49 px",
+      "small \"0 × 3 + (−1) × 1 = −1\" 62 px",
+      "small \"0 × 3 + (−1) × 1 = −1\" 58 px",
+      "small \"1 × 3 + 0 × 1 = 3\" 58 px",
       "small \"(3, 1)\" 43 px",
       "small \"(-1, 3)\" 43 px"
      ],
      "worst": [
       {
        "t": 23.5,
-       "words": 0.76,
+       "words": 0.59,
        "density": 1,
        "subject": 0.16,
        "space": 1,
        "broken": false,
-       "score": 0.65,
+       "score": 0.51,
        "chars": 62,
        "small": [
+        "\"1 × 3 + 0 × 1 = 3\" 58 px",
         "\"(3, 1)\" 43 px",
         "\"(-1, 3)\" 43 px"
        ],
@@ -3642,14 +4411,15 @@
       },
       {
        "t": 24,
-       "words": 0.76,
+       "words": 0.59,
        "density": 1,
        "subject": 0.28,
        "space": 1,
        "broken": false,
-       "score": 0.66,
+       "score": 0.52,
        "chars": 62,
        "small": [
+        "\"1 × 3 + 0 × 1 = 3\" 58 px",
         "\"(3, 1)\" 43 px",
         "\"(-1, 3)\" 43 px"
        ],
@@ -3657,14 +4427,15 @@
       },
       {
        "t": 24.5,
-       "words": 0.76,
+       "words": 0.59,
        "density": 1,
        "subject": 0.28,
        "space": 1,
        "broken": false,
-       "score": 0.66,
+       "score": 0.52,
        "chars": 62,
        "small": [
+        "\"1 × 3 + 0 × 1 = 3\" 58 px",
         "\"(3, 1)\" 43 px",
         "\"(-1, 3)\" 43 px"
        ],
@@ -3679,6 +4450,67 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a linear algebra class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -3690,7 +4522,7 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.779,
+   "overall": 0.862,
    "scores": {
     "lag": 0.686,
     "pace": 0.875,
@@ -3698,7 +4530,7 @@
     "read": 0.53,
     "depict": 1,
     "eye": 0.808,
-    "holds": 0.33,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 1,
@@ -3846,10 +4678,11 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": true,
       "work": 0.17,
       "other": 0,
       "answered": false,
-      "score": 0.33
+      "score": 1
      }
     ],
     "read": {
@@ -3862,6 +4695,8 @@
      "broken": 0,
      "smallShare": 0.487,
      "faintShare": 0,
+     "filledShare": 0.875,
+     "emptyBand": 0.035,
      "examples": [
       "small \"SOUTHERN CANADA\" 43 px",
       "small \"UP TO 4,000 KM\" 43 px",
@@ -3925,6 +4760,67 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a nature short"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -4111,6 +5007,8 @@
      "broken": 0,
      "smallShare": 0.39,
      "faintShare": 0,
+     "filledShare": 0.596,
+     "emptyBand": 0.098,
      "examples": [
       "small \"HEART\" 51 px",
       "small \"GILLS\" 43 px",
@@ -4181,6 +5079,65 @@
        "overlap at 11.5 s: writing on top of writing: \"HEART\" and \"BODY\" (46% of the smaller)"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a fun fact for TikTok"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -4234,7 +5191,7 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.803,
+   "overall": 0.844,
    "scores": {
     "lag": 0.833,
     "pace": 0.833,
@@ -4242,7 +5199,7 @@
     "read": 0.214,
     "depict": 1,
     "eye": 0.875,
-    "holds": 0.67,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 1,
@@ -4431,10 +5388,11 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 1.5,
+      "still": true,
       "work": 0.33,
       "other": 0,
       "answered": false,
-      "score": 0.67
+      "score": 1
      }
     ],
     "read": {
@@ -4447,6 +5405,8 @@
      "broken": 1,
      "smallShare": 0.626,
      "faintShare": 0,
+     "filledShare": 0.768,
+     "emptyBand": 0,
      "examples": [
       "small \"2\" 45 px",
       "small \"4\" 45 px",
@@ -4518,6 +5478,67 @@
        "off_frame at 0.5 s: cut by the frame edge: \"FASTEST WAY HOME TO\" (20% outside)"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a curious app user"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -4529,7 +5550,7 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.504,
+   "overall": 0.579,
    "scores": {
     "lag": 0.817,
     "pace": 0.626,
@@ -4537,7 +5558,7 @@
     "read": 0.626,
     "depict": 0,
     "eye": 0.466,
-    "holds": 0,
+    "holds": 0.6,
     "reveal": 0.5
    },
    "learner": 1,
@@ -4694,10 +5715,11 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 2.5,
+      "still": true,
       "work": 0,
       "other": 0.2,
       "answered": false,
-      "score": 0
+      "score": 0.6
      }
     ],
     "read": {
@@ -4710,6 +5732,8 @@
      "broken": 0.162,
      "smallShare": 0.199,
      "faintShare": 0,
+     "filledShare": 0.356,
+     "emptyBand": 0.329,
      "examples": [
       "small \"an estimate, but close f\" 44 px",
       "small \"an estimate, but close f\" 45 px"
@@ -4769,6 +5793,67 @@
        "off_frame at 12.5 s: cut by the frame edge: \"How long does\" (33% outside), \"money take to\" (32% outside), \"double?\" (20% outside)"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a quick clip from personal notes"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -4780,7 +5865,7 @@
    "passed": false,
    "rounds": 4,
    "reviewed": "",
-   "overall": 0.741,
+   "overall": 0.842,
    "scores": {
     "lag": 0.883,
     "pace": 0.611,
@@ -4788,7 +5873,7 @@
     "read": 0.385,
     "depict": 1,
     "eye": 0.859,
-    "holds": 0.19,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 0.875,
@@ -4970,10 +6055,11 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 2.5,
+      "still": true,
       "work": 0.09,
       "other": 0,
       "answered": false,
-      "score": 0.19
+      "score": 1
      }
     ],
     "read": {
@@ -4986,6 +6072,8 @@
      "broken": 0,
      "smallShare": 0.789,
      "faintShare": 0,
+     "filledShare": 0.832,
+     "emptyBand": 0.065,
      "examples": [
       "small \"let best = 0\" 49 px",
       "small \"for (const x of [3, 7, 2\" 49 px",
@@ -5053,6 +6141,67 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose",
+      "why": "a short for beginners learning to code"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -5265,6 +6414,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": false,
       "work": 0,
       "other": 0,
       "answered": false,
@@ -5281,6 +6431,8 @@
      "broken": 0,
      "smallShare": 0.475,
      "faintShare": 0,
+     "filledShare": 0.717,
+     "emptyBand": 0.144,
      "examples": [
       "small \"Fe\" 36 px"
      ],
@@ -5349,6 +6501,65 @@
        "empty at 2.0 s: 22% of the usable frame has anything in it; the largest empty band is 50% of its height"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "glancing in a feed",
+      "why": "a curious adult"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -5540,6 +6751,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": false,
       "work": 0.7,
       "other": 0,
       "answered": false,
@@ -5556,6 +6768,8 @@
      "broken": 0,
      "smallShare": 0.549,
      "faintShare": 0,
+     "filledShare": 0.817,
+     "emptyBand": 0.003,
      "examples": [
       "small \"TWO CROSSINGS\" 47 px",
       "small \"TWO CROSSINGS\" 48 px",
@@ -5621,6 +6835,65 @@
       },
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose",
+      "why": "someone tying the knot right now, phone in hand"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -5632,15 +6905,15 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.588,
+   "overall": 0.637,
    "scores": {
     "lag": 0.863,
     "pace": 0.463,
     "load": 0.944,
-    "read": 0.488,
+    "read": 0.164,
     "depict": 0.25,
     "eye": 0.409,
-    "holds": 0.29,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 0.875,
@@ -5817,50 +7090,57 @@
       "id": "h1",
       "purpose": "predict",
       "seconds": 1.5,
+      "still": true,
       "work": 0.29,
       "other": 0,
       "answered": false,
-      "score": 0.58
+      "score": 1
      },
      {
       "id": "h2",
       "purpose": "settle",
       "seconds": 2,
+      "still": true,
       "work": 0,
       "other": 0,
       "answered": false,
-      "score": 0
+      "score": 1
      }
     ],
     "read": {
      "frames": 35,
-     "score": 0.488,
-     "words": 0.56,
+     "score": 0.164,
+     "words": 0.188,
      "density": 1,
      "subject": 0.299,
      "space": 0.943,
      "broken": 0,
-     "smallShare": 0.465,
+     "smallShare": 0.921,
      "faintShare": 0.009,
+     "filledShare": 0.458,
+     "emptyBand": 0.087,
      "examples": [
+      "small \"Last quarter we\" 65 px",
+      "small \"got\" 65 px",
       "faint \"Last quarter we\" 2.5:1",
       "faint \"got\" 2.5:1",
-      "small \"412\" 44 px",
-      "small \"LOGIN\" 49 px",
-      "small \"ALMOST HALF\" 41 px",
-      "small \"268\" 35 px"
+      "small \"Last quarter we\" 67 px",
+      "small \"got\" 67 px"
      ],
      "worst": [
       {
        "t": 0.5,
-       "words": 0.25,
+       "words": 0.06,
        "density": 1,
        "subject": 0.14,
        "space": 1,
        "broken": false,
-       "score": 0.21,
+       "score": 0.05,
        "chars": 18,
-       "small": [],
+       "small": [
+        "\"Last quarter we\" 65 px",
+        "\"got\" 65 px"
+       ],
        "faint": [
         "\"Last quarter we\" 2.5:1",
         "\"got\" 2.5:1"
@@ -5868,35 +7148,35 @@
       },
       {
        "t": 12.5,
-       "words": 0.38,
+       "words": 0.1,
        "density": 1,
        "subject": 0.23,
        "space": 0.63,
        "broken": false,
-       "score": 0.3,
+       "score": 0.08,
        "chars": 56,
        "small": [
+        "\"SUPPORT TICKETS\" 67 px",
         "\"412\" 44 px",
         "\"LOGIN\" 49 px",
-        "\"268\" 35 px",
-        "\"BILLING\" 49 px"
+        "\"268\" 35 px"
        ],
        "faint": []
       },
       {
        "t": 13,
-       "words": 0.43,
+       "words": 0.11,
        "density": 1,
        "subject": 0.23,
        "space": 0.86,
        "broken": false,
-       "score": 0.36,
+       "score": 0.09,
        "chars": 65,
        "small": [
+        "\"SUPPORT TICKETS\" 67 px",
         "\"412\" 44 px",
         "\"LOGIN\" 49 px",
-        "\"268\" 35 px",
-        "\"BILLING\" 49 px"
+        "\"268\" 35 px"
        ],
        "faint": []
       }
@@ -5909,6 +7189,68 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "meeting room screen",
+      "frame": "9:16",
+      "distance": "across a meeting room",
+      "attention": "watching on purpose",
+      "why": "an all-hands meeting"
+     },
+     "read": {
+      "small": 0.051,
+      "comfortable": 0.102,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1",
+       "h2"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -6118,6 +7460,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": false,
       "work": 0.52,
       "other": 0.03,
       "answered": false,
@@ -6134,6 +7477,8 @@
      "broken": 0.021,
      "smallShare": 0.329,
      "faintShare": 0,
+     "filledShare": 0.287,
+     "emptyBand": 0.09,
      "examples": [
       "small \"acid +\" 50 px",
       "small \"phenolphthalein\" 50 px",
@@ -6197,6 +7542,65 @@
       },
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose",
+      "why": "students refreshing before lab"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -6376,6 +7780,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 1.5,
+      "still": false,
       "work": 0,
       "other": 0.42,
       "answered": false,
@@ -6392,6 +7797,8 @@
      "broken": 0,
      "smallShare": 0.548,
      "faintShare": 0,
+     "filledShare": 0.733,
+     "emptyBand": 0.002,
      "examples": [
       "small \"trailhead\" 39 px",
       "small picture sk 63% wide",
@@ -6458,6 +7865,65 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "phone",
+      "frame": "9:16",
+      "distance": "arm's length",
+      "attention": "watching on purpose",
+      "why": "a hiking club's directions, watched to remember the turn"
+     },
+     "read": {
+      "small": 0.035,
+      "comfortable": 0.07,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -6469,15 +7935,15 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.655,
+   "overall": 0.732,
    "scores": {
     "lag": 0.734,
     "pace": 0.5,
     "load": 1,
-    "read": 0.363,
+    "read": 0.508,
     "depict": 0.5,
     "eye": 0.617,
-    "holds": 0.53,
+    "holds": 1,
     "reveal": 1
    },
    "learner": 0.6875,
@@ -6647,37 +8113,39 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": true,
       "work": 0.27,
       "other": 0,
       "answered": false,
-      "score": 0.53
+      "score": 1
      }
     ],
     "read": {
      "frames": 52,
-     "score": 0.363,
-     "words": 0.591,
+     "score": 0.508,
+     "words": 0.757,
      "density": 1,
      "subject": 0.576,
      "space": 0.961,
      "broken": 0.346,
-     "smallShare": 0.491,
+     "smallShare": 0.471,
      "faintShare": 0,
+     "filledShare": 0.483,
+     "emptyBand": 0.154,
      "examples": [
       "small \"SOMETHING YOU KNOW\" 43 px",
       "small \"SOMETHING YOU HAVE\" 43 px",
-      "small \"CODE\" 43 px",
-      "small \"THIEF'S LOGIN\" 49 px"
+      "small \"CODE\" 43 px"
      ],
      "worst": [
       {
        "t": 25,
-       "words": 0.55,
+       "words": 0.73,
        "density": 1,
        "subject": 0.28,
        "space": 1,
        "broken": true,
-       "score": 0.19,
+       "score": 0.26,
        "chars": 77,
        "small": [
         "\"SOMETHING YOU KNOW\" 43 px",
@@ -6687,12 +8155,12 @@
       },
       {
        "t": 25.5,
-       "words": 0.55,
+       "words": 0.73,
        "density": 1,
        "subject": 0.28,
        "space": 1,
        "broken": true,
-       "score": 0.19,
+       "score": 0.26,
        "chars": 77,
        "small": [
         "\"SOMETHING YOU KNOW\" 43 px",
@@ -6702,12 +8170,12 @@
       },
       {
        "t": 26,
-       "words": 0.55,
+       "words": 0.73,
        "density": 1,
        "subject": 0.28,
        "space": 1,
        "broken": true,
-       "score": 0.19,
+       "score": 0.26,
        "chars": 77,
        "small": [
         "\"SOMETHING YOU KNOW\" 43 px",
@@ -6729,6 +8197,67 @@
        "off_frame at 0.5 s: cut by the frame edge: \"SOMEONE STEALS\" (11% outside), \"YOUR PASSWORD.\" (10% outside)"
       ]
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "laptop",
+      "frame": "9:16",
+      "distance": "at a desk",
+      "attention": "watching on purpose",
+      "why": "a staff explainer sent by IT"
+     },
+     "read": {
+      "small": 0.028,
+      "comfortable": 0.056,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": [
+       "h1"
+      ]
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -6740,12 +8269,12 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.518,
+   "overall": 0.511,
    "scores": {
     "lag": 0.701,
     "pace": 0.229,
     "load": 1,
-    "read": 0.258,
+    "read": 0.2,
     "depict": 0.667,
     "eye": 0.818,
     "holds": 0.47,
@@ -6917,6 +8446,7 @@
       "id": "h1",
       "purpose": "look",
       "seconds": 2,
+      "still": false,
       "work": 0.23,
       "other": 0,
       "answered": false,
@@ -6925,15 +8455,18 @@
     ],
     "read": {
      "frames": 51,
-     "score": 0.258,
-     "words": 0.292,
+     "score": 0.2,
+     "words": 0.229,
      "density": 1,
      "subject": 0.636,
      "space": 0.877,
      "broken": 0,
-     "smallShare": 0.799,
+     "smallShare": 0.915,
      "faintShare": 0,
+     "filledShare": 0.532,
+     "emptyBand": 0.067,
      "examples": [
+      "small \"shows your immune system\" 65 px",
       "small \"B CELLS\" 44 px",
       "small \"only the few whose shape\" 33 px",
       "small \"MATCHING\" 41 px",
@@ -6942,12 +8475,12 @@
      "worst": [
       {
        "t": 7.5,
-       "words": 0.02,
+       "words": 0,
        "density": 1,
        "subject": 0.6,
        "space": 1,
        "broken": false,
-       "score": 0.02,
+       "score": 0,
        "chars": 44,
        "small": [
         "\"B CELLS\" 44 px",
@@ -6957,12 +8490,12 @@
       },
       {
        "t": 8,
-       "words": 0.03,
+       "words": 0,
        "density": 1,
        "subject": 0.6,
        "space": 1,
        "broken": false,
-       "score": 0.03,
+       "score": 0,
        "chars": 52,
        "small": [
         "\"B CELLS\" 44 px",
@@ -6973,12 +8506,12 @@
       },
       {
        "t": 8.5,
-       "words": 0.03,
+       "words": 0,
        "density": 1,
        "subject": 0.6,
        "space": 1,
        "broken": false,
-       "score": 0.03,
+       "score": 0,
        "chars": 52,
        "small": [
         "\"B CELLS\" 44 px",
@@ -6999,6 +8532,65 @@
       },
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "a short for a health class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   },
@@ -7010,12 +8602,12 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.63,
+   "overall": 0.626,
    "scores": {
     "lag": 0.875,
     "pace": 0.5,
     "load": 0.818,
-    "read": 0.212,
+    "read": 0.185,
     "depict": 0,
     "eye": 0.631,
     "holds": 1,
@@ -7213,6 +8805,7 @@
       "id": "h1",
       "purpose": "recap",
       "seconds": 2.5,
+      "still": false,
       "work": 0.87,
       "other": 0,
       "answered": false,
@@ -7221,14 +8814,16 @@
     ],
     "read": {
      "frames": 37,
-     "score": 0.212,
-     "words": 0.244,
+     "score": 0.185,
+     "words": 0.214,
      "density": 1,
      "subject": 0.445,
      "space": 0.757,
      "broken": 0,
      "smallShare": 0.804,
      "faintShare": 0,
+     "filledShare": 0.37,
+     "emptyBand": 0.179,
      "examples": [
       "small \"Evaporation\" 39 px",
       "small \"Condensation\" 39 px",
@@ -7239,53 +8834,53 @@
      ],
      "worst": [
       {
-       "t": 4,
-       "words": 0.19,
+       "t": 13,
+       "words": 0.14,
        "density": 1,
-       "subject": 0.25,
+       "subject": 0.21,
        "space": 0.71,
        "broken": false,
-       "score": 0.15,
-       "chars": 83,
+       "score": 0.11,
+       "chars": 79,
        "small": [
-        "\"Evaporation\" 48 px",
+        "\"Evaporation\" 39 px",
         "\"Condensation\" 39 px",
         "\"Precipitation\" 39 px",
-        "\"Collection\" 39 px"
+        "\"Collection\" 48 px"
        ],
        "faint": []
       },
       {
-       "t": 4.5,
-       "words": 0.19,
+       "t": 13.5,
+       "words": 0.14,
        "density": 1,
-       "subject": 0.25,
+       "subject": 0.21,
        "space": 0.71,
        "broken": false,
-       "score": 0.15,
-       "chars": 83,
+       "score": 0.11,
+       "chars": 79,
        "small": [
-        "\"Evaporation\" 48 px",
+        "\"Evaporation\" 39 px",
         "\"Condensation\" 39 px",
         "\"Precipitation\" 39 px",
-        "\"Collection\" 39 px"
+        "\"Collection\" 48 px"
        ],
        "faint": []
       },
       {
-       "t": 5,
-       "words": 0.19,
+       "t": 14,
+       "words": 0.14,
        "density": 1,
-       "subject": 0.25,
+       "subject": 0.21,
        "space": 0.71,
        "broken": false,
-       "score": 0.15,
-       "chars": 83,
+       "score": 0.11,
+       "chars": 79,
        "small": [
-        "\"Evaporation\" 48 px",
+        "\"Evaporation\" 39 px",
         "\"Condensation\" 39 px",
         "\"Precipitation\" 39 px",
-        "\"Collection\" 39 px"
+        "\"Collection\" 48 px"
        ],
        "faint": []
       }
@@ -7298,6 +8893,65 @@
       "kinds": {},
       "examples": []
      }
+    },
+    "settings": {
+     "context": {
+      "screen": "classroom screen",
+      "frame": "9:16",
+      "distance": "across a classroom",
+      "attention": "watching on purpose",
+      "why": "the end of a lesson in class"
+     },
+     "read": {
+      "small": 0.04,
+      "comfortable": 0.081,
+      "contrastLow": 1.5,
+      "contrastOk": 4.5,
+      "glance": 140,
+      "page": 360,
+      "pictureLow": 0.5,
+      "pictureFull": 0.95,
+      "pictureWeight": 40,
+      "subject": 0.3,
+      "filledLow": 0.12,
+      "filledFull": 0.45,
+      "band": 0.2,
+      "bandSpan": 0.35,
+      "layoutFloor": 0.5,
+      "weights": {
+       "density": 0.3,
+       "subject": 0.35,
+       "space": 0.35
+      },
+      "broken": 0.4
+     },
+     "look": {
+      "hidden": []
+     },
+     "lag": {
+      "before": 0.5,
+      "after": 1,
+      "late": 3,
+      "full": 1,
+      "half": 2
+     },
+     "load": {
+      "newLine": 6,
+      "pullLine": 3
+     },
+     "pace": {
+      "varied": 0.4
+     },
+     "holds": {
+      "work": 0.5,
+      "distracted": 0.5,
+      "still": []
+     },
+     "depict": {
+      "symbol": 0.5,
+      "watchWeight": 0.6
+     },
+     "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion."
     }
    }
   }

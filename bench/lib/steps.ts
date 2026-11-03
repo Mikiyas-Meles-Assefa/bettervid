@@ -13,6 +13,7 @@ import type { Project } from "../../schemas/project.ts";
 import { loadCase, picturesOf, type Case } from "./case.ts";
 import { failed, measureCase, type CaseMeasure } from "./measure.ts";
 import { BENCH, RESULTS, WORK, folderOf } from "./paths.ts";
+import { settingsOf } from "./settings.ts";
 
 type Step = (run: string, ids: string[], flags: Set<string>) => Promise<void>;
 const read = (f: string) => readFileSync(f, "utf8");
@@ -73,7 +74,9 @@ export const measure: Step = async (run, ids) => {
     }
     const mapFile = join(folder, "map.json");
     const raw = existsSync(mapFile) ? (json<Mapped>(mapFile)) : undefined;
-    const m = measureCase(b.p, b.scene, b.source, optionsOf(b.p).ctx.theme, raw);
+    const set = settingsOf(loadCase(id));
+    const m = measureCase(b.p, b.scene, b.source, optionsOf(b.p).ctx.theme, raw, set);
+    m.raw.settings = set;
     rows.push(m);
     writeFileSync(join(folder, "measure.json"), JSON.stringify(m, null, 1));
     console.log(`${id}: overall ${m.overall.toFixed(2)} ${Object.entries(m.scores).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(", ")}${raw ? "" : " (no id map: eye, holds and reveal not judged)"}`);
@@ -259,7 +262,8 @@ export const report: Step = async (run, ids) => {
     // Depiction: the free signals and the watch test, the watch weighing more (it sees the finished picture).
     const depictFree = (m?.scores as Record<string, number> | undefined)?.depict;
     const depictSeen = existsSync(join(folder, "depict.json")) ? depictWatch(json<DepictWatch>(join(folder, "depict.json"))) : undefined;
-    const depict = depictSeen === undefined ? depictFree : depictFree === undefined ? depictSeen : 0.4 * depictFree + 0.6 * depictSeen;
+    const ww = settingsOf(c).depict.watchWeight;
+    const depict = depictSeen === undefined ? depictFree : depictFree === undefined ? depictSeen : (1 - ww) * depictFree + ww * depictSeen;
     // Retention: the share of the clip's sheets the distracted viewer was still watching.
     const kept = scroll ? (scroll.swiped_at ? (scroll.swiped_at - 1) / Math.max(1, scroll.sheets.length) : 1) : undefined;
     for (const f of ["scene.txt", "map.json", "learner.json", "words.json", "follow.json", "designer.json", "scroll.json", "depict.json"]) if (existsSync(join(folder, f))) copyFileSync(join(folder, f), join(out, "scenes", `${id}.${f}`));
@@ -307,7 +311,17 @@ export const report: Step = async (run, ids) => {
     ...rows.map((r) => `| ${r.id} | ${r.use} | ${r.style.replace(/^custom\//, "").replace(/-[0-9a-f]{4}$/, "")} | ${r.built ? `yes (${r.rounds}${r.passed ? "" : ", checks fail"})` : "NO"} | ${f2(r.gain)} | ${f2(gap(r.hard, r.hardWordsOnly))} | ${f2(r.overall)} | ${keys.map((k) => f2((r.scores as Record<string, number>)[k])).join(" | ")} | ${f2(r.depictFree)} | ${f2(r.depictSeen)} | ${f2(r.depict)} | ${f2(r.learner)} | ${f2(r.wordsOnly)} | ${f2(r.hard)} | ${f2(r.hardWordsOnly)} | ${f2(r.follow?.onLook)} | ${f2(r.follow?.confused)} | ${r.designer ? r.designer.overall : "-"} | ${f2(r.scroller?.kept)} | ${f2(r.scroller?.remembers)} |`),
     `| **all** | | | ${overall.built}/${overall.cases} | ${f2(overall.gain)} | ${f2(overall.hardGap)} | ${f2(overall.overall)} | ${keys.map((k) => f2((overall as Record<string, number | null>)[k])).join(" | ")} | ${f2(overall.depictFree)} | ${f2(overall.depictSeen)} | ${f2(overall.depict)} | ${f2(overall.learner)} | ${f2(overall.wordsOnly)} | ${f2(overall.hard)} | ${f2(overall.hardWordsOnly)} | ${f2(overall.followOnLook)} | ${f2(overall.followConfused)} | ${f2(overall.designer)} | ${f2(overall.scrollKept)} | ${f2(overall.scrollRemembers)} |`,
   ];
+  // The instruments' raw readings beside the scores, so a judge can reason over them with the case's own settings.
+  const readings = rows.filter((r) => r.built).map((r) => {
+    const x = r.raw as Record<string, any>;
+    const rd = x.read ?? {};
+    const set = x.settings ?? settingsOf(loadCase(r.id));
+    const hs = (x.holds ?? []).map((h: any) => `${h.id} ${h.purpose}${h.still ? " (still)" : ""}: working ${h.work}, unrelated ${h.other}${h.answered ? ", answer shown" : ""}`).join("; ") || "none";
+    const dp = x.depict ?? {};
+    const units = (dp.units ?? []).reduce((a: Record<string, number>, u: any) => ({ ...a, [u.as]: (a[u.as] ?? 0) + 1 }), {});
+    return `- **${r.id}** (${set.context.screen}, ${set.context.frame}, ${set.context.attention}): read: words ${rd.words}, small ${rd.smallShare}, faint ${rd.faintShare}, subject ${rd.subject}, frame in use ${rd.filledShare}, empty band ${rd.emptyBand}, broken ${rd.broken}${(rd.examples ?? []).length ? ` (${rd.examples.slice(0, 3).join("; ")})` : ""}. holds: ${hs}. depict: ${Object.entries(units).map(([k, v]) => `${v} ${k}`).join(", ") || "no picture"}; changes ${(dp.shown ?? []).length} shown, ${(dp.told ?? []).length} told. load: peak ${x.load?.peakNew} new in 2 s, ${x.load?.peakPull} pulls. mentions: ${x.mentions?.in_time}/${x.mentions?.total} in time.`;
+  });
   const notes = rows.filter((r) => r.tickets.length).map((r) => `- **${r.id}**: ${r.tickets.slice(0, 3).join(" / ").slice(0, 600)}`);
-  writeFileSync(join(out, "scores.md"), `# Bench run ${run}\n\nThe main teaching number is the **teach gap**: the video learner minus the words-only learner over the whole quiz, what the picture teaches beyond the narration. "hard gap" is the same over the hard, picture-dependent questions. Free measures are 0 to 1; "free" is their mean (depict there is the free signal only); "depict" blends the free signal (0.4) with the watch test (0.6); quiz scores are the share right; "confused" is the share of 2 s windows where the follow viewer reported confusion. Columns are explained in bench/README.md.\n\n${table.join("\n")}\n\n## Direction tickets (severity 2 and 3)\n\n${notes.join("\n")}\n`);
+  writeFileSync(join(out, "scores.md"), `# Bench run ${run}\n\nThe main teaching number is the **teach gap**: the video learner minus the words-only learner over the whole quiz, what the picture teaches beyond the narration. "hard gap" is the same over the hard, picture-dependent questions. Free measures are 0 to 1; "free" is their mean (depict there is the free signal only); "depict" blends the free signal with the watch test by the case's depict.watchWeight (0.6 to the watch by default); quiz scores are the share right; "confused" is the share of 2 s windows where the follow viewer reported confusion. Columns are explained in bench/README.md.\n\n${table.join("\n")}\n\n## Instrument readings\n\nRaw values behind the scores, read against each case's settings (its measure block over the defaults in bench/lib/settings.ts).\n\n${readings.join("\n")}\n\n## Direction tickets (severity 2 and 3)\n\n${notes.join("\n")}\n`);
   console.log(join(out, "scores.md"));
 };

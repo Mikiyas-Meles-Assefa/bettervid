@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { DemoPhase, DirectionEvent, DirectionPlan, Hold, Project, Word } from "../../schemas/project.ts";
 import { truthSteps } from "../../engine/kits/steps.ts";
 import { SIZE, sceneContext } from "../../pipeline/stages/scene.ts";
+import type { CaseSettings } from "./settings.ts";
 
 type Anchor = string | { hold: string };
 export type CaseEvent = Omit<DirectionEvent, "firstWord" | "lastWord" | "holds" | "reveal" | "demo"> & {
@@ -36,6 +37,9 @@ export type Case = {
   arc: string;
   events: CaseEvent[];
   quiz: Question[];
+  // What good means for this case: its viewing context and any measure setting that departs from the defaults
+  // (lib/settings.ts). Derived once from the request, intent, audience and platform, and recorded here.
+  measure?: CaseSettings;
 };
 
 export const CASES = join(import.meta.dirname, "..", "cases");
