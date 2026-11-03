@@ -1,0 +1,21 @@
+{"things": [
+{"thing": "June 1215 (date)", "as": "word", "sheet": 1, "note": "Written as a serif heading."},
+{"thing": "rebel barons", "as": "word", "sheet": 1, "note": "Only in the line 'Rebel barons force King John to seal a charter'; no people drawn."},
+{"thing": "King John", "as": "word", "sheet": 1, "note": "Only named in text, and later 'A king' as text; no figure, crown or portrait."},
+{"thing": "the charter (Magna Carta)", "as": "symbol", "sheet": 1, "note": "A generic cream page with grey placeholder lines and a heading bar; reads as 'a document' but not as a medieval charter (no script, no parchment shape)."},
+{"thing": "the seal", "as": "symbol", "sheet": 2, "note": "A cream ring/disc with two short tag strokes at the foot of the page; a plain circle that reads as a seal mostly by convention."},
+{"thing": "Runnymede (place)", "as": "word", "sheet": 3, "note": "Only a small 'RUNNYMEDE' label under the page; no meadow, river or map."},
+{"thing": "feudal fees and forests", "as": "word", "sheet": 4, "note": "Only the line 'Most of it: feudal fees and forests'; nothing drawn."},
+{"thing": "the clause", "as": "symbol", "sheet": 6, "note": "A yellow highlight over a few placeholder lines in the page; the clause's words are then shown as a sentence (see below)."},
+{"thing": "clause text 'No free man shall be imprisoned except by the lawful judgment of his peers or the law of the land'", "as": "itself", "sheet": 10, "note": "The sentence is written out in full, building phrase by phrase; it overlaps the shrunken page and seal so 'imprisoned' sits on top of the seal circle."},
+{"thing": "free man / prison", "as": "absent", "sheet": 8, "note": "No person, cell or bars; only the words."},
+{"thing": "peers / law of the land", "as": "word", "sheet": 10, "note": "Only within the sentence; 'or the law of the land' is a yellow sticker."},
+{"thing": "the law (above the king)", "as": "word", "sheet": 12, "note": "A yellow 'THE LAW' sticker placed above the words 'A king' and the page."}
+],
+"changes": [
+{"change": "barons force King John", "as": "missing", "sheet": 1, "note": "No one is drawn and nothing in the picture changes for this; only the written line."},
+{"change": "the charter is sealed", "as": "shown", "sheet": 2, "note": "A seal drops onto the foot of the page large and settles smaller at about 3.7 s, like a stamp pressing."},
+{"change": "one clause stands out (will outlive everything else)", "as": "shown", "sheet": 5, "note": "A yellow highlight fills in over a few lines of the page (9.9 to 10.2 s); the 'outlive' part is told only by the sticker text."},
+{"change": "zoom into the clause", "as": "shown", "sheet": 7, "note": "Camera pushes into the highlighted clause (12.7 to 14 s) before the text appears; not narrated as such."},
+{"change": "a king placed under the law", "as": "told", "sheet": 12, "note": "Only words are arranged: 'THE LAW' sticker appears above 'A king', which then greys; the king himself is never drawn or moved under anything."}
+]}

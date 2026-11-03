@@ -1,0 +1,69 @@
+program s1_fall heightAt=0 dropAt=0 landAt=0 ghosts=8 doc="A bowling ball and a tennis ball released from one height, falling in slow motion under the same acceleration, with strobe copies at equal times and a level line joining them."
+  const top = 330, floor = H - 40;
+  const balls = [
+    { id: "bowling", name: "bowling ball", x: W * 0.3, r: 120, fill: "blue" },
+    { id: "tennis", name: "tennis ball", x: W * 0.72, r: 44, fill: "highlight" }
+  ];
+  const fl = path("floor", { x: 0, y: 0, points: [20, floor, W - 20, floor], stroke: "ink", strokeWidth: 8 });
+  const hl = path("height", { x: 0, y: 0, points: [20, top, W - 20, top], stroke: "soft", strokeWidth: 5, drawn: 0 });
+  key(hl, "drawn", args.heightAt, 0);
+  key(hl, "drawn", args.heightAt + 18, 1, "smooth");
+  const dist = floor - top;
+  const n = Math.max(1, args.landAt - args.dropAt);
+  const pos = (t) => dist * t * t;
+  balls.forEach((b) => {
+    text(b.id + "_name", { x: b.x, y: 60, text: b.name, size: 46, color: "ink" });
+    for (let k = 1; k < args.ghosts; k++) {
+      const t = k / args.ghosts;
+      const f = args.dropAt + Math.round(t * n);
+      const gh = path(b.id + "_ghost" + k, { x: b.x, y: top - b.r + pos(t), points: circle(0, 0, b.r), closed: 1, fill: b.fill, opacity: 0 });
+      key(gh, "opacity", f, 0);
+      key(gh, "opacity", f + 2, 0.22, "smooth");
+    }
+    const p = path(b.id, { x: b.x, y: top - b.r, points: circle(0, 0, b.r), closed: 1, fill: b.fill, stroke: "ink", strokeWidth: 4 });
+    key(p, "y", args.dropAt, top - b.r);
+    anim(p, "y", args.dropAt, args.landAt, (t) => top - b.r + pos(t), 1);
+    key(p, "scaleY", args.landAt, 1);
+    key(p, "scaleY", args.landAt + 4, 0.88, "out");
+    key(p, "scaleY", args.landAt + 14, 1, "spring");
+    key(p, "scaleX", args.landAt, 1);
+    key(p, "scaleX", args.landAt + 4, 1.1, "out");
+    key(p, "scaleX", args.landAt + 14, 1, "spring");
+  });
+  const lv = path("level", { x: 0, y: top, points: [W * 0.3, 0, W * 0.72, 0], stroke: "accent", strokeWidth: 5, opacity: 0 });
+  key(lv, "opacity", args.dropAt, 0);
+  key(lv, "opacity", args.dropAt + 6, 1, "smooth");
+  anim(lv, "y", args.dropAt, args.landAt, (t) => top + pos(t), 1);
+  emit("bounce", args.landAt, {});
+end
+
+withhold none until=@19
+
+@0
+run s1_fall s1_drop heightAt=@10 dropAt=@19 landAt=@30 w=900 h=1350
+
+@11 keep
+tag s1_drop.height "same height" side=right role=label
+
+@15 keep
+drop tag.s1_drop.height
+
+@16 keep
+text s1_q "Which lands first?" size=big role=title before=s1_drop enter=rise
+
+@19 keep
+text s1_q "Watch: slow motion" size=normal role=note
+
+@21 keep
+text s1_q "They land together" size=big role=answer
+
+@22 keep
+text s1_q "Gravity speeds up every mass at the same rate" size=normal role=body
+
+@34 keep
+normal s1_q: s1_a1=Only s1_a2=air_resistance s1_a3=can_split_them
+light s1_a2
+
+@40 keep
+normal s1_q: s1_a4=For_these_two: s1_a2=air_resistance s1_a3=barely_matters
+mark underline s1_a3

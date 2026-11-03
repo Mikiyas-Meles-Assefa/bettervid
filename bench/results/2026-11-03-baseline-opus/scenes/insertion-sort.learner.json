@@ -1,0 +1,10 @@
+[
+  {"q": 1, "answer": "4, 1, 3, 2.", "from": "picture"},
+  {"q": 2, "answer": "The 1 was compared with the 4; the 4 is bigger, so the 1 slid in front of it (they swapped).", "from": "both"},
+  {"q": 3, "answer": "It stopped right after the 1 (in second place), because it passed the 4 (bigger) but the 1 is smaller, so it went no further.", "from": "both"},
+  {"q": 4, "answer": "1, 2, 3, 4.", "from": "both"},
+  {"q": 5, "answer": "The 3's insertion (about 12 to 17 s, with a pause and two separate steps: passing the 4, then stopping at the 1). The 2's was fastest, done in about two seconds.", "from": "picture"},
+  {"q": 6, "answer": "1, 4, 3, 2.", "from": "picture"},
+  {"q": 7, "answer": "1, 3, 4, 2.", "from": "picture"},
+  {"q": 8, "answer": "2 (the row was 1, 3, 4, 2).", "from": "picture"}
+]

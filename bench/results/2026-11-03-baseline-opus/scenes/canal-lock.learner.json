@@ -1,0 +1,9 @@
+[
+  {"q": 1, "answer": "Nothing but water.", "from": "both"},
+  {"q": 2, "answer": "The gates close behind it (the lower gate between the lower canal and the chamber shuts).", "from": "both"},
+  {"q": 3, "answer": "A sluice in the upper gate.", "from": "both"},
+  {"q": 4, "answer": "When the water level in the chamber matches the upper canal's level.", "from": "both"},
+  {"q": 5, "answer": "Left to right: from the lower canal, into the chamber, then on into the upper canal.", "from": "picture"},
+  {"q": 6, "answer": "On the right.", "from": "picture"},
+  {"q": 7, "answer": "A dashed line across the top of the chamber, level with the upper canal's water surface. (By then the water already looked almost at that line, so the climb was small.)", "from": "picture"}
+]

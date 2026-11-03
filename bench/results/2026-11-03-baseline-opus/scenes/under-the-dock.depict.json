@@ -1,0 +1,16 @@
+{"things": [
+{"thing": "the lake (flat as glass)", "as": "symbol", "sheet": 1, "note": "A flat dark rectangle with faint horizontal banding stands for the water; its stillness reads only by convention, no reflection or surface sheen."},
+{"thing": "Mara", "as": "symbol", "sheet": 2, "note": "A pictogram figure (round head, block body, bent legs), seated; a generic person, not anyone in particular."},
+{"thing": "the dock (and its end)", "as": "itself", "sheet": 3, "note": "Silhouette of a plank deck on piles over the water; the figure sits at its right-hand end."},
+{"thing": "feet over the water", "as": "itself", "sheet": 3, "note": "The figure's lower legs hang over the edge of the dock above the water line."},
+{"thing": "the rope", "as": "itself", "sheet": 5, "note": "A thin pale cord looping slack from the post down to the water, later a taut line into the depths."},
+{"thing": "the post", "as": "itself", "sheet": 5, "note": "An upright piling sticking up above the deck, with the rope tied to it."},
+{"thing": "something below", "as": "absent", "sheet": 7, "note": "Nothing is drawn under the water; the rope just fades into the dark. Only faint ripple rings near the surface hint at it."}
+],
+"changes": [
+{"change": "Mara sits down at the end of the dock", "as": "shown", "sheet": 2, "note": "The figure fades in already seated at about 2.9 s; it appears rather than sits, but the posture is drawn."},
+{"change": "the rope goes tight", "as": "shown", "sheet": 6, "note": "At about 10.2 s the slack loop snaps to a straight taut line angled down into the water; it comes just after 'went tight' is said at the end of sheet 5."},
+{"change": "something below takes hold of the rope", "as": "shown", "sheet": 6, "note": "The rope is pulled down and away under the surface and faint ripple rings appear, so the pull is visible, though the thing pulling is never drawn."},
+{"change": "she doesn't move", "as": "shown", "sheet": 9, "note": "The figure holds the same pose throughout; stillness is the narrated state and the picture holds still."},
+{"change": "whatever is holding on doesn't move either", "as": "shown", "sheet": 10, "note": "The taut rope stays fixed at the same angle through the end; the holder itself is unseen."}
+]}

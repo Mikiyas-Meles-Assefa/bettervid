@@ -1,0 +1,122 @@
+program s1_lab fast0=0 fast1=0 a1=0 a2=0 a3=0 a4=0 last=0 tshow=0 hold0=0 hold1=0 read=0 doc="A burette over a conical flask: fast drops with pink that fades on swirl, slow single drops, a faint pink that stays, a 30 s timer and the burette reading."
+  const PINK = "accent";
+  const cx = W * 0.5;
+  const tubeTop = H * 0.04, L = H * 0.5, tubeBot = tubeTop + L, tw = W * 0.09;
+  const tipY = tubeBot + 150;
+  const finalV = 22.4;
+  for (let v = 0; v <= 50; v++) {
+    const y = tubeTop + L * v / 50;
+    const major = v % 5 === 0;
+    path("tick" + v, { x: cx, y: 0, points: [tw / 2, y, tw / 2 - (major ? tw * 0.55 : tw * 0.3), y], stroke: "ink", strokeWidth: major ? 4 : 2, opacity: 0.7 });
+    if (v % 10 === 0) text("num" + v, { x: cx + tw / 2 + 24, y: y, text: String(v), size: 36, color: "ink", anchor: "start", opacity: 0.75 });
+  }
+  path("bliq", { x: cx, y: tubeBot, points: rect(-tw / 2 + 5, -L, tw - 10, L), closed: 1, fill: "blue", opacity: 0.3 });
+  path("tube", { x: cx, y: 0, points: [-tw / 2, tubeTop - 20, -tw / 2, tubeBot, tw / 2, tubeBot, tw / 2, tubeTop - 20], closed: 0, stroke: "ink", strokeWidth: 6 });
+  path("tip", { x: cx, y: 0, points: [-tw / 2, tubeBot, -7, tipY, 7, tipY, tw / 2, tubeBot], closed: 0, stroke: "ink", strokeWidth: 5 });
+  path("cock", { x: cx, y: 0, points: rect(-tw * 1.1, tubeBot + 30, tw * 2.2, 28), closed: 1, fill: "ink" });
+  const s = (v) => 1 - v / 50;
+  key("bliq", "scaleY", T0, s(0));
+  key("bliq", "scaleY", args.fast0, s(0));
+  key("bliq", "scaleY", args.fast1, s(20));
+  key("bliq", "scaleY", args.a4 + 10, s(22.1));
+  key("bliq", "scaleY", args.last + 10, s(finalV));
+  const markY = tubeTop + L * finalV / 50;
+  path("mark", { x: cx, y: 0, points: [-tw * 1.0, markY, tw * 1.0, markY], stroke: "accent", strokeWidth: 7, opacity: 0 });
+  key("mark", "opacity", T0, 0);
+  key("mark", "opacity", args.read, 0);
+  key("mark", "opacity", args.read + 8, 1, "smooth");
+
+  const baseY = H * 0.97, fh = H * 0.3, bw = W * 0.3, nw = W * 0.065, nh = fh * 0.25;
+  group("flask", { x: cx, y: baseY });
+  const lh = (fh - nh) * 0.42;
+  const hw = bw - (bw - nw) * (lh / (fh - nh));
+  const liq = [-bw + 8, -3, bw - 8, -3, hw - 5, -lh, -hw + 5, -lh];
+  path("acid", { parent: "flask", x: 0, y: 0, points: liq, closed: 1, fill: "blue", opacity: 0.16 });
+  path("pinkall", { parent: "flask", x: 0, y: 0, points: liq, closed: 1, fill: PINK, opacity: 0 });
+  path("glass", { parent: "flask", x: 0, y: 0, points: [-nw, -fh, -nw, -fh + nh, -bw, 0, bw, 0, nw, -fh + nh, nw, -fh], closed: 0, stroke: "ink", strokeWidth: 6 });
+  const surfY = baseY - lh;
+  const fall = 10;
+  let n = 0;
+  function drop(t, linger, peak) {
+    const i = n++;
+    const d = path("drop" + i, { x: cx, y: tipY, points: circle(0, 0, 11), closed: 1, fill: "blue", opacity: 0 });
+    key(d, "opacity", T0, 0);
+    key(d, "opacity", t - 1, 0);
+    key(d, "opacity", t, 0.9);
+    key(d, "y", t, tipY);
+    key(d, "y", t + fall, surfY, "in");
+    key(d, "opacity", t + fall, 0.9);
+    key(d, "opacity", t + fall + 1, 0);
+    const f = path("flash" + i, { parent: "flask", x: 0, y: -lh + 6, points: circle(0, 0, hw * 0.55), closed: 1, fill: PINK, opacity: 0, scaleX: 0.3, scaleY: 0.12 });
+    const land = t + fall;
+    key(f, "opacity", T0, 0);
+    key(f, "opacity", land, 0);
+    key(f, "opacity", land + 3, peak, "out");
+    key(f, "opacity", land + 3 + linger, 0, "smooth");
+    key(f, "scaleX", land, 0.3);
+    key(f, "scaleX", land + 3 + linger, 1.3, "out");
+    key(f, "scaleY", land, 0.12);
+    key(f, "scaleY", land + 3 + linger, 0.32, "out");
+  }
+  for (let t = args.fast0 + 4; t < args.fast1 - 14; t += 8) drop(t, 16, 0.85);
+  drop(args.a1, 45, 0.85);
+  drop(args.a2, 55, 0.8);
+  drop(args.a3, 65, 0.8);
+  drop(args.a4, 80, 0.8);
+  drop(args.last, 30, 0.7);
+  key("pinkall", "opacity", T0, 0);
+  key("pinkall", "opacity", args.last + fall, 0);
+  key("pinkall", "opacity", args.last + fall + 24, 0.34, "smooth");
+
+  key("flask", "rotate", T0, 0);
+  key("flask", "rotate", args.fast0, 0);
+  anim("flask", "rotate", args.fast0, args.a4 + 20, (t, fr) => 3 * Math.sin((fr - args.fast0) / 5) * (1 - t));
+  key("flask", "rotate", args.a4 + 21, 0);
+
+  const tx = W * 0.8, ty = H * 0.4, r = W * 0.1;
+  path("tring", { x: tx, y: ty, points: circle(0, 0, r), closed: 1, stroke: "rubbed", strokeWidth: 10, opacity: 0 });
+  path("tarc", { x: tx, y: ty, points: arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + TAU, 72), closed: 0, stroke: "deep", strokeWidth: 12, opacity: 0, drawn: 0 });
+  text("tnum", { x: tx, y: ty, text: "0 s", size: 58, color: "ink", weight: 700, opacity: 0 });
+  for (const id of ["tring", "tarc", "tnum"]) {
+    key(id, "opacity", T0, 0);
+    key(id, "opacity", args.tshow, 0);
+    key(id, "opacity", args.tshow + 10, 1, "smooth");
+  }
+  key("tarc", "drawn", T0, 0);
+  key("tarc", "drawn", args.hold0, 0);
+  key("tarc", "drawn", args.hold1, 1, "linear");
+  for (let f = args.hold0; f <= args.hold1; f += 2) {
+    key("tnum", "text", f, Math.round(30 * (f - args.hold0) / (args.hold1 - args.hold0)) + " s", "step");
+  }
+  key("tnum", "text", args.hold1, "30 s", "step");
+end
+
+@0
+text s1_head "Titration: when to stop" role=title
+run s1_lab s1_rig w=900 h=1500 fast0=@15 fast1=@31 a1=@33 a2=@38 a3=@40 a4=@42 last=@46 tshow=@49 hold0=@51+13 hold1=@51+73 read=@53
+@5 keep
+tag s1_rig.tube "NaOH (base)" side=left id=s1_tbase role=label
+@8 keep
+tag s1_rig.acid "acid" side=right id=s1_tacid role=label
+@12 keep
+tag s1_rig.acid "acid + phenolphthalein" side=right id=s1_tacid role=label
+@15 keep
+drop s1_tbase
+drop s1_tacid
+text s1_head "Early: add it quickly" role=heading
+@27 keep
+tag s1_rig.acid "swirl: pink fades" side=right id=s1_tfade role=note
+@32 keep
+drop s1_tfade
+text s1_head "Pink lingers: slow down" role=heading
+@40 keep
+text s1_head "Drop by drop" role=heading
+@43 keep
+text s1_head "Stop at a faint pink" role=heading
+@49 keep
+tag s1_rig.tring "must last 30 s" side=top id=s1_ttimer role=label
+@52 keep
+drop s1_ttimer
+text s1_head "Then read the volume" role=heading
+@53 keep
+tag s1_rig.mark "22.40 mL" side=left id=s1_tread role=answer

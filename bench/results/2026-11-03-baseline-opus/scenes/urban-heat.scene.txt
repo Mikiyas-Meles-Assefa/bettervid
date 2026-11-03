@@ -1,0 +1,51 @@
+program s1_ends asphaltAt=0 asphaltVal=0 canopyAt=0 canopyVal=0 gapAt=0 gapVal=0 doc="The two ends of the figure redrawn to scale: asphalt 52 and tree canopy 29 degrees, then the 23 degree gap between their tops marked in orange."
+  const base = H - 90, scale = (H - 220) / 55;
+  const bw = 140, ax = W * 0.25, cx = W * 0.75;
+  path("axis", { x: 0, y: 0, points: [30, base, W - 20, base], stroke: "ink", strokeWidth: 5 });
+  const bars = [
+    { id: "asphalt", name: "asphalt", v: 52, x: ax, at: args.asphaltAt, val: args.asphaltVal, fill: "slate" },
+    { id: "canopy", name: "tree canopy", v: 29, x: cx, at: args.canopyAt, val: args.canopyVal, fill: "teal" }
+  ];
+  bars.forEach((b) => {
+    const h = b.v * scale;
+    const p = path(b.id, { x: b.x, y: base, points: rect(-bw / 2, -h, bw, h), closed: 1, fill: b.fill, scaleY: 0.001 });
+    key(p, "scaleY", b.at, 0.001);
+    key(p, "scaleY", b.at + 22, 1, "out");
+    const nm = text(b.id + "_name", { x: b.x, y: base + 48, text: b.name, size: 42, color: "ink", opacity: 0 });
+    key(nm, "opacity", b.at, 0);
+    key(nm, "opacity", b.at + 10, 1, "smooth");
+    const v = text(b.id + "_val", { x: b.x, y: base - h - 40, text: b.v + " °C", size: 58, weight: 700, color: "ink", opacity: 0 });
+    key(v, "opacity", b.val, 0);
+    key(v, "opacity", b.val + 8, 1, "smooth");
+  });
+  const yA = base - 52 * scale, yC = base - 29 * scale;
+  const band = path("gap", { x: 0, y: 0, points: rect(ax + bw / 2, yA, cx - ax - bw, yC - yA), closed: 1, fill: "orangeDeep", opacity: 0 });
+  key(band, "opacity", args.gapAt, 0);
+  key(band, "opacity", args.gapAt + 12, 0.3, "smooth");
+  const lvl = path("level", { x: 0, y: 0, points: [ax + bw / 2, yA, cx + bw / 2, yA], stroke: "orangeDeep", strokeWidth: 6, drawn: 0 });
+  key(lvl, "drawn", args.gapAt, 0);
+  key(lvl, "drawn", args.gapAt + 14, 1, "smooth");
+  const ar = path("gaparrow", { x: 0, y: 0, points: [ax + bw / 2 + 24, yA + 8, ax + bw / 2 + 24, yC], stroke: "orangeDeep", strokeWidth: 8, drawn: 0 });
+  key(ar, "drawn", args.gapAt + 6, 0);
+  key(ar, "drawn", args.gapAt + 20, 1, "smooth");
+  const gv = text("gap_val", { x: (ax + cx) / 2 + 18, y: (yA + yC) / 2, text: "23 °C", size: 52, weight: 700, color: "orangeDeep", opacity: 0 });
+  key(gv, "opacity", args.gapVal, 0);
+  key(gv, "opacity", args.gapVal + 8, 1, "smooth");
+end
+
+@0
+image s1_slide asset=slide14 w=1280 h=720
+
+@14 move=24 ease=smooth
+row s1_row gap=60 align=center
+  image s1_slide asset=slide14 w=1280 h=720
+  stack s1_side gap=20
+    text s1_hd "ground surface, July afternoon" size=small role=note
+    run s1_ends s1_chart asphaltAt=@14 asphaltVal=@16 canopyAt=@18 canopyVal=@25 gapAt=@29 gapVal=@31 w=700 h=760
+
+@37 keep
+text s1_mid "grass and bare soil sit in between" size=normal role=label after=s1_row
+light s1_slide
+
+@44 keep
+text s1_mid "Shade, not just green, does the cooling" size=big role=answer

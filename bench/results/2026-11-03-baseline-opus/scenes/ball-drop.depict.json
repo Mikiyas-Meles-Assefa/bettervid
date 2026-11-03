@@ -1,0 +1,16 @@
+{"things": [
+{"thing": "bowling ball", "as": "symbol", "sheet": 1, "note": "A plain light-blue disc labelled 'bowling ball'; no finger holes, no gloss or dark ball colour, known only by its label and larger size."},
+{"thing": "tennis ball", "as": "symbol", "sheet": 1, "note": "A plain small pink disc labelled 'tennis ball'; no seam, fuzz or yellow-green colour."},
+{"thing": "same height (drop line)", "as": "itself", "sheet": 3, "note": "Both balls rest their bottoms on one shared chalk start line, tagged 'same height'; the ground is a second chalk line below."},
+{"thing": "ground", "as": "symbol", "sheet": 1, "note": "A plain chalk line stands for the floor."},
+{"thing": "gravity", "as": "word", "sheet": 7, "note": "Only the heading 'Gravity speeds up every mass at the same rate'; the force itself is not drawn (no arrows), its effect is shown in the fall."},
+{"thing": "mass", "as": "symbol", "sheet": 8, "note": "Difference in mass is carried only by disc size; no weights or numbers."},
+{"thing": "air resistance", "as": "word", "sheet": 9, "note": "Only the highlighted words 'air resistance' in the heading; no air, drag arrows or streamlines drawn."}
+],
+"changes": [
+{"change": "both balls are dropped at the same moment", "as": "shown", "sheet": 6, "note": "Both start falling together at about 11.4 s, but this comes after the narration says 'same moment' (sheet 3) and even after 'They land together' (10.6 s); during sheets 2 to 5 the balls sit still."},
+{"change": "they land together", "as": "shown", "sheet": 8, "note": "Both reach the ground line in the same frame at about 15.2 s, well after it is narrated in sheet 6."},
+{"change": "gravity speeds them up at the same rate", "as": "shown", "sheet": 7, "note": "Ghost trails show spacing between positions growing as they fall, equal for both balls, so the acceleration is visible."},
+{"change": "air resistance could split them", "as": "missing", "sheet": 9, "note": "Nothing in the picture changes; no case where one ball lags is shown, only the heading text."},
+{"change": "for these two it barely matters", "as": "told", "sheet": 11, "note": "Only the heading is rewritten to 'For these two: air resistance barely matters'; picture is the same frozen landing."}
+]}

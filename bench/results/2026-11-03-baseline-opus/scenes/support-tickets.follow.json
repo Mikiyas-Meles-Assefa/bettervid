@@ -1,0 +1,11 @@
+[
+{"sheet":1,"looking":"big 'Q3 SUPPORT TICKETS' title, then a yellow box counting up","waiting":"the final ticket count","confusing":""},
+{"sheet":2,"looking":"840 in the yellow box, then a new 'Login' row starting","waiting":"how many were login problems","confusing":""},
+{"sheet":3,"looking":"orange Login bar with 412 and an 'almost half' tag","waiting":"the next category","confusing":"the bar is short and sits in the left third of the screen, so it does not look like almost half of anything"},
+{"sheet":4,"looking":"grey Billing bar growing under Login, 268","waiting":"the remaining categories","confusing":""},
+{"sheet":5,"looking":"Shipping and Other bars, then a yellow 'Shipping + other = ?' box","waiting":"the answer to the question","confusing":"Shipping and Other bars have no numbers yet"},
+{"sheet":6,"looking":"the 'Shipping + other = ?' box sitting there","waiting":"the number 160","confusing":"the narration says 'Just 160' but the box still shows '?' through this sheet"},
+{"sheet":7,"looking":"160 answer, then a big grid of dots filling orange under 'Fix login'","waiting":"what the dots mean and what 'half the' leads to","confusing":"jump from bars to a dot grid with no label for what one dot is"},
+{"sheet":8,"looking":"orange dots turning dark navy with 'half the queue goes away'","waiting":"the dots to disappear","confusing":"the narration says the queue goes away but the dots just change color and stay; the line marked 'HALF: 420' is a stepped line that is hard to read"},
+{"sheet":9,"looking":"the same dot grid held still with 'half the queue goes away'","waiting":"nothing","confusing":"a long still hold at the end with no new information"}
+]

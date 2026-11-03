@@ -1,0 +1,93 @@
+program s1_charter sealAt=0 clauseAt=0 doc="A long parchment charter of unreadable ruled lines in many clauses, sealed with wax at the bottom; one clause partway down is singled out with a glow band."
+  const pad = 70, lh = 30;
+  path("sheet", { x: 0, y: 0, points: [8, 10, W * 0.5, 0, W - 6, 14, W, H * 0.5, W - 10, H - 4, W * 0.5, H, 4, H - 12, 0, H * 0.5], closed: 1, fill: "cream", stroke: "kraft", strokeWidth: 5 });
+  path("heading", { x: 0, y: 0, points: rect(pad + 60, 60, W - 2 * pad - 120, 22), closed: 1, fill: "sepia", opacity: 0.7 });
+  const target = 3;
+  let y = 130, clauseNo = 0;
+  const cl = group("clause", {});
+  let band = null;
+  while (y < H - 300) {
+    const nLines = 3 + Math.floor(random() * 4);
+    const isTarget = clauseNo === target;
+    if (isTarget) {
+      band = path("band", { x: 0, y: 0, points: rect(pad - 24, y - 12, W - 2 * pad + 48, nLines * lh + 8), closed: 1, fill: "highlight", opacity: 0 });
+      key(band, "opacity", args.clauseAt, 0);
+      key(band, "opacity", args.clauseAt + 15, 0.55, "smooth");
+    }
+    for (let i = 0; i < nLines && y < H - 300; i++) {
+      const w = (i === nLines - 1 ? 0.35 + random() * 0.4 : 0.92 + random() * 0.08) * (W - 2 * pad);
+      const props = { x: 0, y: 0, points: rect(pad, y, w, 9), closed: 1, fill: "sepia", opacity: 0.45 };
+      if (isTarget) props.parent = cl;
+      path("ln" + clauseNo + "_" + i, props);
+      y += lh;
+    }
+    y += lh * 0.7;
+    clauseNo++;
+  }
+  const sx = W / 2, sy = H - 150;
+  path("cord1", { x: 0, y: 0, points: [sx - 30, H - 260, sx - 50, sy], stroke: "warm", strokeWidth: 8 });
+  path("cord2", { x: 0, y: 0, points: [sx + 30, H - 260, sx + 50, sy], stroke: "warm", strokeWidth: 8 });
+  const seal = group("seal", { x: sx, y: sy });
+  path("wax", { parent: seal, x: 0, y: 0, points: polygon(0, 0, 95, 14, 0), closed: 1, smooth: 1, fill: "warm", stroke: "sepia", strokeWidth: 4 });
+  path("stamp", { parent: seal, x: 0, y: 0, points: circle(0, 0, 58), closed: 1, stroke: "sepia", strokeWidth: 5 });
+  key(seal, "opacity", T0, 0);
+  key(seal, "opacity", args.sealAt, 0);
+  key(seal, "opacity", args.sealAt + 4, 1);
+  key(seal, "scaleX", args.sealAt, 1.8);
+  key(seal, "scaleY", args.sealAt, 1.8);
+  key(seal, "scaleX", args.sealAt + 8, 1.12, "in");
+  key(seal, "scaleY", args.sealAt + 8, 0.86, "in");
+  key(seal, "scaleX", args.sealAt + 20, 1, "spring");
+  key(seal, "scaleY", args.sealAt + 20, 1, "spring");
+  emit("stamp", args.sealAt + 8, {});
+end
+
+withhold s1_cl1,s1_cl2,s1_cl3 until=@29
+
+@0
+text s1_date "June 1215" size=huge role=title
+run s1_charter s1_doc sealAt=@8 clauseAt=@23 w=800 h=1300
+
+@2 keep
+text s1_who "Rebel barons force King John to seal a charter" size=normal role=body after=s1_date
+
+@12 keep
+tag s1_doc "Runnymede" side=right role=label
+
+@13 move=20 ease=smooth
+run s1_charter s1_doc sealAt=@8 clauseAt=@23 w=800 h=1300
+text s1_most "Most of it: feudal fees and forests" size=normal role=muted
+
+@22 keep
+text s1_most "But one clause will outlive everything else" size=normal role=key
+
+@28+11 keep
+camera s1_doc.band frames=45 ease=smooth
+
+@29 move=20 ease=smooth
+run s1_charter s1_doc sealAt=@8 clauseAt=@23 w=800 h=500
+text s1_cl1 "No free man shall be imprisoned" size=big role=body
+
+@35 keep
+text s1_cl2 "except by the lawful judgment of his peers" size=big role=body
+
+@43 keep
+text s1_cl3 "or the law of the land." size=big role=key
+
+@45 keep
+mark highlight s1_cl3
+
+@49 move=20 ease=smooth
+space s1_slot h=200
+text s1_king "A king" size=huge role=body
+run s1_charter s1_doc sealAt=@8 clauseAt=@23 w=600 h=700
+
+@51 keep
+tag s1_doc "in writing" side=right role=label
+
+@54 keep
+text s1_lawt "THE LAW" size=huge role=key before=s1_king enter=slam
+drop s1_slot
+
+@55 keep
+text s1_king "A king" size=huge role=muted

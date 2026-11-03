@@ -1,0 +1,25 @@
+{"things": [
+{"thing": "sodium hydroxide (NaOH)", "as": "itself", "sheet": 2, "note": "Shown as pale liquid filling the drawn burette tube, plus a word label 'NaOH (base)'; the liquid itself is visible as fill in a graduated tube."},
+{"thing": "burette", "as": "itself", "sheet": 1, "note": "Chalk-drawn graduated tube with 0 to 50 marks, stopcock and tip; recognisable without a label."},
+{"thing": "acid (in flask)", "as": "itself", "sheet": 2, "note": "Liquid layer in a chalk-drawn conical (Erlenmeyer) flask, labelled 'acid'; the flask and its liquid are recognisable."},
+{"thing": "conical flask", "as": "itself", "sheet": 1, "note": "Chalk Erlenmeyer flask outline with liquid inside, never named in narration but carries the acid."},
+{"thing": "phenolphthalein", "as": "word", "sheet": 3, "note": "Only the label changes to 'acid + phenolphthalein'; no indicator drops are drawn being added to the flask."},
+{"thing": "drops", "as": "symbol", "sheet": 4, "note": "Small grey dots falling from the burette tip into the flask; a dot stands in for a drop."},
+{"thing": "pink colour", "as": "symbol", "sheet": 5, "note": "The flash where drops land is drawn as a yellow/gold ellipse, not pink; final solution is an olive/khaki tint, not faint pink. Only the on-screen words say 'pink'."},
+{"thing": "thirty seconds", "as": "itself", "sheet": 11, "note": "A circular timer counts 0 s to 30 s with 'must last 30 s' beside it."},
+{"thing": "volume reading", "as": "itself", "sheet": 13, "note": "Burette liquid level sits near the 20 mark with a gold line and '22.40 mL' read off the graduations."}
+],
+"changes": [
+{"change": "sodium hydroxide drips from the burette into the acid", "as": "shown", "sheet": 4, "note": "Dots fall from the tip into the flask from about 6.9 s on; the burette level visibly drops from 0 to about 20 over the video. Not shown during sheets 1 to 3 when it is first narrated."},
+{"change": "a few drops of phenolphthalein are added", "as": "told", "sheet": 3, "note": "Only the label rewrites from 'acid' to 'acid + phenolphthalein'; no drops added, liquid unchanged."},
+{"change": "adding quickly at first", "as": "shown", "sheet": 5, "note": "Repeated drops fall in quick succession while the burette level falls; heading 'Early: add it quickly' also tells it."},
+{"change": "pink flashes where the drop lands", "as": "shown", "sheet": 5, "note": "A coloured patch appears in the liquid where drops land, but it is yellow/gold, not pink; the colour named is not the colour drawn."},
+{"change": "pink fades as you swirl", "as": "shown", "sheet": 7, "note": "The gold patch fades away (12.5 to 13 s); no swirl motion of the flask is drawn, only label 'swirl: pink fades'."},
+{"change": "swirling the flask", "as": "told", "sheet": 6, "note": "Flask never moves or swirls; only the label 'swirl: pink fades' says it."},
+{"change": "pink starts to linger", "as": "shown", "sheet": 8, "note": "The gold patch grows and stays longer before fading (14.2 to 15.5 s), still yellow not pink; heading 'Pink lingers: slow down' tells it."},
+{"change": "slow down, drop by drop", "as": "shown", "sheet": 9, "note": "Single drops fall with gaps between them; heading 'Drop by drop' also tells it. Pace difference from the quick phase is slight."},
+{"change": "solution turns a faint pink that lasts", "as": "shown", "sheet": 10, "note": "Whole liquid recolours to a uniform olive/khaki tint at about 19.7 to 20 s and stays; the hue is not pink."},
+{"change": "stop adding", "as": "shown", "sheet": 11, "note": "Drops stop falling and the burette level holds still while the timer runs."},
+{"change": "colour lasts thirty seconds", "as": "shown", "sheet": 12, "note": "Timer ring counts 0 to 30 s while the tint stays; time is compressed (30 s in about 2 s)."},
+{"change": "read the volume", "as": "shown", "sheet": 13, "note": "A gold line marks the meniscus on the burette and '22.40 mL' appears beside it."}
+]}

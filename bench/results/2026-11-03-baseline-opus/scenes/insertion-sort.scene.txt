@@ -1,0 +1,38 @@
+@0
+text s1_t "Insertion sort" size=big role=title
+sort demo1 data=[4,1,3,2] algo=insertion show=boxes
+
+@4 keep
+mark brace demo1.item.1 "sorted" id=s1_br1 role=pointer
+
+@15 keep
+drop s1_br1
+mark pointer demo1.item.2 side=bottom id=s1_p1
+
+@18 keep
+do steps demo1 from=1 to=1 pace=slow until=@27
+
+@27+12 keep
+drop s1_p1
+mark brace demo1.item.2,demo1.item.1 "sorted" id=s1_br2 role=pointer
+
+@28 keep
+drop s1_br2
+mark pointer demo1.item.3 side=bottom id=s1_p3
+
+@32 keep
+do steps demo1 from=2 to=3 pace=normal at=@32,@36
+
+@40 keep
+drop s1_p3
+mark pointer demo1.item.4 side=bottom id=s1_p4
+
+@41 keep
+do steps demo1 from=4 to=6 pace=fast until=@48
+
+@49 keep
+drop s1_p4
+tag demo1 "sorted" side=bottom role=answer
+
+@50 keep
+text s1_t "Each card is compared only with cards already sorted" size=normal role=answer

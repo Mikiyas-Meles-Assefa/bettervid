@@ -1,0 +1,16 @@
+{"sheets": [
+{"sheet": 1, "watching": true, "noticed": "A green bar chart, 'Surface temperature by land cover', five bars 52 down to 29. Looks like a lecture slide."},
+{"sheet": 2, "watching": true, "noticed": "Same slide, nothing moving. Small text I'm not going to read. Only the captions change."},
+{"sheet": 3, "watching": true, "noticed": "Still the same slide for almost six seconds, I'm about to tune out; at the very end the slide shrinks and a new bar slides in."},
+{"sheet": 4, "watching": true, "noticed": "Slide moves to the left and a separate big 'asphalt 52 °C' bar appears on the right, then a 'tree canopy' bar grows. Two charts at once, a bit busy."},
+{"sheet": 5, "watching": true, "noticed": "Asphalt vs tree canopy, the canopy bar is shorter but has no number yet."},
+{"sheet": 6, "watching": true, "noticed": "'29 °C' pops on the canopy bar. Okay, big difference."},
+{"sheet": 7, "watching": true, "noticed": "An orange bracket shows the gap, '23 °C', but it's jammed right on top of the '29 °C' label so it's hard to read."},
+{"sheet": 8, "watching": true, "noticed": "'a few steps apart'. That's the point, I get it. Picture stops changing."},
+{"sheet": 9, "watching": false, "noticed": "Silence and the same frozen picture, then 'Grass and bare soil sit in between' in caps. I already got the point, so I looked away."},
+{"sheet": 10, "watching": false, "noticed": "not watching"},
+{"sheet": 11, "watching": false, "noticed": "not watching"},
+{"sheet": 12, "watching": false, "noticed": "not watching"}
+],
+"swiped_at": 9,
+"remembers": "On a hot July day asphalt got to 52 degrees while the ground under trees was only 29, a 23 degree difference just a few steps apart."}
