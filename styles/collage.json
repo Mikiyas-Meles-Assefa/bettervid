@@ -57,6 +57,26 @@
     }
   },
   "design": {
+    "moves": {
+      "leans": [
+        {
+          "move": "cut",
+          "why": "a collage is pieces cut and pasted: things popping in and swapping at once suits its handmade, punchy feel"
+        },
+        {
+          "move": "drop",
+          "why": "a cut-out that is slapped down onto the page and lands reads as being pasted on"
+        },
+        {
+          "move": "wiggle",
+          "why": "paper cut-outs that tremble slightly feel handheld, like stop-motion"
+        },
+        {
+          "move": "hop",
+          "why": "cut-outs that jump between places read as stop-motion characters"
+        }
+      ]
+    },
     "colors": {
       "strip": "#1b1916",
       "cream": "#f7f2e6",

@@ -277,3 +277,44 @@ test("a burette's scale spans its graduated length, and a value's level is where
   assert.match(d.read!({ ...d.state, level: lv })!, /^24\.3/);
   assert.ok(d.minorLevel! > 0 && d.minorLevel! < 0.05);
 });
+
+// Points where a thing meets others in a scene: the depicter's names, its kind's anchors, its box's sides.
+const board: PropSpec = {
+  kind: "outline",
+  label: "shelf",
+  size: { w: 100, h: 50, unit: "cm" },
+  params: { outline: [[0, 0.2], [1, 0.2], [1, 1], [0, 1]] },
+  points: { "far end": [0.95, 0.2], top: [0.5, 0.2], clock: [0.3, 0.2] },
+  colors: { body: "#8a6a4a" },
+  colorSources: { body: "known: wood" },
+  why: "a test",
+};
+
+test("points: the depicter's points in local units, then the kind's anchors, then the box's sides", async () => {
+  const { pointOf } = await import("./points.ts");
+  const d = depictionFrom(board, theme, { id: "s", look });
+  const { w, h } = d.box;
+  const near = (p: [number, number] | undefined, q: [number, number]) => assert.ok(p && Math.hypot(p[0] - q[0], p[1] - q[1]) < 1e-6, `${JSON.stringify(p)} is not ${JSON.stringify(q)}`);
+  near(pointOf(d, "far end"), [0.45 * w, -0.8 * h]);
+  near(pointOf(d, "the far-end"), [0.45 * w, -0.8 * h]);
+  near(pointOf(d, "end"), [0.45 * w, -0.8 * h]); // the one point whose name holds the word
+  near(pointOf(d, "top"), [0, -0.8 * h]); // a named top wins over the box's top
+  near(pointOf(d, "bottom"), [0, 0]);
+  near(pointOf(d, "top left"), [-w / 2, -h]);
+  near(pointOf(d, "center"), [0, -h / 2]);
+  assert.equal(pointOf(d, "handle"), undefined);
+  // A kind's own anchor is a point too: a vessel's surface.
+  const flask = depictionFrom(SAMPLES.find((s) => s.name === "tumbler of water")!.spec as PropSpec, theme, { id: "f", look });
+  near(pointOf(flask, "surface"), flask.anchor("surface")!);
+});
+
+test("points: the check reads them, and the depicter is asked for them only when the plan places the thing", () => {
+  assert.deepEqual(checkSpec(board), []);
+  const bad = checkSpec({ ...board, points: { end: [3, 0.2] } });
+  assert.ok(bad.some((p) => p.path === "points.end"), JSON.stringify(bad));
+  const alone = depicterTask({ id: "depict.shelf", name: "shelf", desc: "a shelf", acts: [] });
+  const placed = depicterTask({ id: "depict.shelf", name: "shelf", desc: "a shelf", acts: [], relations: ["clock on shelf \"far end\""] });
+  assert.ok(!/points/.test(alone.request) && !("points" in ((alone.schema as { properties: object }).properties)));
+  assert.ok(/clock on shelf "far end"/.test(placed.request) && /"points"/.test(placed.request));
+  assert.ok("points" in ((placed.schema as { properties: object }).properties));
+});

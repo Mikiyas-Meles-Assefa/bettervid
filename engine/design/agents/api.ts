@@ -3,7 +3,7 @@
 // loop (engine/design/search) calls them through the Reasoner. In production the Reasoner is Spark; in development a
 // Claude subagent answering files. Changes here need the lead's review.
 import type { Theme } from "../../core/types.ts";
-import type { AgentTask, Candidate, Design, Goal, IntentPlan, MomentDesign, PartCard, Reading, Requirement, Viewing, Word } from "../types.ts";
+import type { AgentTask, Candidate, Design, Goal, IntentPlan, MomentDesign, MoveChoice, PartCard, Reading, Requirement, Viewing, Word } from "../types.ts";
 
 /** What the director knows about the video: everything a top director would ask before deciding anything. */
 export type DirectorInput = {
@@ -30,7 +30,7 @@ export type DirectorAnswer = {
   viewing: Viewing;
   tempo: { value: number; why: string };
   /** Per plan moment (by index): importance 0..1 and what the viewer should know, feel and wait for after it. */
-  moments: { moment: number; importance: number; know: string; feel?: string; waiting?: string; focus?: string }[];
+  moments: { moment: number; importance: number; know: string; feel?: string; waiting?: string; focus?: string; /** Moves of the motion vocabulary for this moment's things (the designer may change them). */ moves?: MoveChoice[]; /** Plan names the moment's words still refer to (by name or as "it", "these two"), kept on screen while they are on it. */ refers?: string[] }[];
   demos: { moment: number; act: number; speed: "real" | "slow" | "fast" | number; replay?: { speed: "real" | "slow" | number }; why: string }[];
   goals: Goal[]; // video goals
   overrides: { key: string; value: unknown; why: string }[];
@@ -82,6 +82,10 @@ export type DesignerAnswer = {
   reasons?: Partial<Record<keyof SearchSpace, string>>;
   /** The moment's focus when the designer decides it differently from the director. */
   focus?: { value: "one" | "two" | "none" | "hidden" | "all"; why: string };
+  /** The full list of moves for this moment's things (the motion vocabulary); absent keeps the current ones. */
+  moves?: MoveChoice[];
+  /** Plan names the moment's words still refer to; absent keeps the current ones. */
+  refers?: { ids: string[]; why: string };
   /** After a round: keep one candidate, or revise the space. */
   pick?: string;
   done: boolean;

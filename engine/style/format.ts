@@ -169,6 +169,8 @@ design.elements: panel { radius 0 to 0.5, edge (color or none), edgeWidth, shado
 design.picture:  how every picture is treated so archival photos and generated pictures look like one piece:
                  saturation 0 to 1.6, contrast 0.8 to 1.3, brightness 0.8 to 1.2, tint (a color name), tintAmount 0 to 0.5,
                  border (color or none), borderWidth 0 to 40 px, shadow 0 to 1, rotate 0 to 4 degrees.
+design.moves:    optional. leans: [{ move, why }], moves of the motion vocabulary this style leans toward (spring,
+                 squash, cut, fade ...), each with its reason. Suggestions shown to the agents, never a limit.
 
 Example render block, "pencil on grey paper, unhurried":
 { "line": { "pen": "ink", "pressure": 0.3, "grain": 0.4, "passes": 2 }, "fill": { "kind": "hatch" }, "surface": { "kind": "paper" }, "motion": { "feel": "calm" } }`;

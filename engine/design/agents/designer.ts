@@ -3,7 +3,9 @@
 // trying), overrides of the style for this moment (key@N), and proposals. After a search round it sees the candidates'
 // goal scores, readings and contact sheet, and picks one or revises the space. The prompt (prompts/designer.md) gives
 // knowledge, never recipes; the answer is checked strictly and every value it sets is Decided from "designer".
+import { moveChoiceProblems, movesText } from "../abilities/moves.ts";
 import { readingsText } from "../instruments/index.ts";
+import { leansOf } from "../suggest.ts";
 import type { AgentTask, Candidate, DecisionRecord, Design, Focus, Goal, MomentDesign } from "../types.ts";
 import type { DesignerAnswer, DesignerInput, SearchSpace } from "./api.ts";
 import {
@@ -17,10 +19,12 @@ import {
   isNum,
   momentLine,
   momentWords,
+  MOVE_SCHEMA,
   overrideProblem,
   planNames,
   prompt,
   PROPOSAL_KINDS,
+  relationsText,
   SPACE_FIELDS,
   styleFor,
   styleText,
@@ -45,6 +49,8 @@ export const DESIGNER_SCHEMA = {
       type: "array",
       items: { type: "object", required: ["kind", "ids", "why"], properties: { kind: { type: "string", enum: [...PROPOSAL_KINDS] }, ids: { type: "array", items: { type: "string" } }, args: { type: "object" }, why: { type: "string" } } },
     },
+    moves: { type: "array", items: MOVE_SCHEMA },
+    refers: { type: "object", required: ["ids", "why"], properties: { ids: { type: "array", items: { type: "string" } }, why: { type: "string" } } },
     pick: { type: "string" },
     done: { type: "boolean" },
     why: { type: "string" },
@@ -68,6 +74,9 @@ function momentDesignText(md: MomentDesign): string {
   });
   lines.unshift(`- focus = ${show(md.focus.value)} (${md.focus.from}${md.focus.why ? `: ${md.focus.why}` : ""})`);
   lines.push(md.proposals.length ? `Current proposals:\n${md.proposals.map((p) => `- ${show(p.value)} (${p.from}: ${p.why ?? ""})`).join("\n")}` : "Current proposals: none.");
+  const mv = md.moves?.value ?? [];
+  lines.push(mv.length ? `Current moves:\n${mv.map((c) => `- ${show(c)} (${md.moves!.from}${c.why ? `: ${c.why}` : ""})`).join("\n")}` : "Current moves: none (what stays keeps its place and size; what arrives fades in; what leaves fades out).");
+  if (md.refers?.value.length) lines.push(`Things the words still refer to (kept on screen while on it): ${md.refers.value.join(", ")} (${md.refers.from}${md.refers.why ? `: ${md.refers.why}` : ""})`);
   return lines.join("\n");
 }
 
@@ -133,6 +142,7 @@ export function designerTask(input: DesignerInput, repair?: { previous: unknown;
     "",
     "## The plan's things",
     ...things,
+    ...(plan.relations?.length ? ["", ...relationsText(plan)] : []),
     "",
     `## This moment: m${k} of m0 to m${n - 1}`,
     `Words (${w.from.toFixed(1)} to ${w.to.toFixed(1)} s): "${w.text}"`,
@@ -160,6 +170,10 @@ export function designerTask(input: DesignerInput, repair?: { previous: unknown;
     "",
     "## The style's suggestions (override with key@" + k + ")",
     styleText(styleFor(input.styleValues, plan, input.cards, md.proposals.map((p) => p.value.kind))),
+    "",
+    "## Moves (how things change into this moment, arrive, leave, and accents while they are there)",
+    "Every move below can be chosen for any thing of this moment; the style's leanings are marked and are only suggestions. A thing that stays and that no move names keeps its place and size; to lay the moment out again, name a move for the things that stay (ids [] means every thing it can apply to).",
+    movesText(leansOf(input.styleValues)),
   ];
   const images: string[] = [];
   if (input.round) {
@@ -238,6 +252,11 @@ export function checkDesigner(input: DesignerInput, a: DesignerAnswer): string[]
     if (p.kind === "level" && !isNum(p.args?.value)) out.push(`${at}: a level needs args.value, a number on the chart's scale`);
     if (!p.why?.trim()) out.push(`${at}: why is needed`);
   });
+  out.push(...moveChoiceProblems(a?.moves, names));
+  if (a?.refers !== undefined) {
+    if (!Array.isArray(a.refers.ids) || !a.refers.why?.trim()) out.push("refers: { ids, why }: the plan names the words still refer to, and why");
+    else for (const id of a.refers.ids) if (!names.has(id)) out.push(`refers: "${id}" is not a name in the plan or the material`);
+  }
   const ids = (input.round?.candidates ?? []).map((c) => c.id);
   if (!input.round) {
     if (a?.pick !== undefined) out.push("pick: no search round has run yet; give no pick");
@@ -288,6 +307,14 @@ export function applyDesigner(design: Design, k: number, a: DesignerAnswer, pick
       rec("focus", a.focus.value, a.focus.why);
     }
     md.proposals = a.proposals.map((p) => dec({ kind: p.kind, ids: [...p.ids], ...(p.args ? { args: p.args } : {}) }, "designer", p.why));
+    if (a.moves) {
+      md.moves = dec(a.moves.map((c) => ({ move: c.move, ids: [...c.ids], ...(c.as ? { as: c.as } : {}), ...(c.args ? { args: c.args } : {}), ...(c.why ? { why: c.why } : {}) })), "designer", a.moves.map((c) => c.why).filter(Boolean).join("; ") || a.why);
+      rec("moves", a.moves.map((c) => `${c.move} ${c.ids.join(" ") || "(all)"}`).join("; ") || "none", a.moves.map((c) => c.why).join("; ") || a.why);
+    }
+    if (a.refers) {
+      md.refers = dec([...a.refers.ids], "designer", a.refers.why);
+      rec("refers", a.refers.ids.join(", ") || "none", a.refers.why);
+    }
     rec("proposals", a.proposals.map((p) => `${p.kind} ${p.ids.join(" ")}`).join("; ") || "none", a.proposals.map((p) => p.why).join("; ") || a.why);
     return md;
   });

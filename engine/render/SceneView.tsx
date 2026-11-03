@@ -6,7 +6,7 @@ import { evaluate, parseGradient } from "../core/evaluate.ts";
 import type { Props, Resolved, Scene, Theme, Value } from "../core/types.ts";
 import { blendOf, bounds, filterOf, gradientGeometry, IDENTITY, inverse, line, list, matrixOf, n, safeId, themed, times, tintMatrix, transformOf, type Box, type Matrix } from "./effects.ts";
 import { ShaderLayer } from "./ShaderLayer.tsx";
-import { StyleDefs, StyledPath, StyledText, Surface } from "../style/draw.tsx";
+import { dryMask, StyleDefs, StyledPath, StyledText, Surface } from "../style/draw.tsx";
 import { roleProps } from "../core/roles.ts";
 import { paintText } from "../style/paint.ts";
 
@@ -93,7 +93,7 @@ function pathBody(r: Resolved, ctx: Ctx, id: string, defs: React.ReactNode[]) {
     return (
       <>
         {t.glow.map((g, i) => <path key={i} d={d} fill="none" stroke={t.color} strokeWidth={g.width} strokeLinejoin="round" opacity={g.opacity} />)}
-        <path d={d} fill={t.color} fillOpacity={n(a.fillOpacity, 1)} filter={t.dry ? "url(#sg-dry-text)" : undefined} />
+        <path d={d} fill={t.color} fillOpacity={n(a.fillOpacity, 1)} mask={t.dry ? dryMask("sg-dry-text") : undefined} />
       </>
     );
   }

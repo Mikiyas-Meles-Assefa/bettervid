@@ -63,6 +63,10 @@ export function checkSpec(spec: PropSpec, needs: { verbs?: string[] } = {}, them
     if (!(w > 0) || !(h > 0)) out.push({ path: "size", problem: "width and height must be above zero" });
     else if (Math.max(w / h, h / w) > 400) out.push({ path: "size", problem: `a ${w} by ${h} thing is too thin to draw; check the units` });
   }
+  for (const [name, p] of Object.entries(spec.points ?? {})) {
+    if (!Array.isArray(p) || p.length !== 2 || !p.every((v) => Number.isFinite(v))) out.push({ path: `points.${name}`, problem: "a point is [x, y], two numbers" });
+    else if (p.some((v) => v < -0.25 || v > 1.25)) out.push({ path: `points.${name}`, problem: `[${p.join(", ")}] is far outside the box: points are 0 to 1 of the box (x from the left, y from the top)` });
+  }
   for (const [name, c] of Object.entries(spec.colors ?? {})) if (!isHex(c)) out.push({ path: `colors.${name}`, problem: `"${c}" is not #rrggbb or #rrggbbaa` });
   for (const name of Object.keys(spec.colors ?? {})) if (!spec.colorSources?.[name]) out.push({ path: `colorSources.${name}`, problem: `say where the color "${name}" comes from (a quote from the material, or known: ...)` });
   // Kind specific: a profile that rises, layers in order, scales with a span.

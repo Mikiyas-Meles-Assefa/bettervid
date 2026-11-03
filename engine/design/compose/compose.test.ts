@@ -64,8 +64,10 @@ object blue "a small blue ball"
   keep red
 `);
 const view = (width: number, height: number, uiZones: Viewing["uiZones"] = []) => viewingFrom({ width, height, fps: 30, screen: "a test screen", frameWidthMm: 300, distanceMm: 600, watch: "on purpose", uiZones, why: "a test" });
+/** The style's proposals as a designer who kept them all (a style's proposal alone is a suggestion, never drawn). */
+const kept = (d: Design) => (d.moments.forEach((m) => (m.proposals = m.proposals.map((p) => (p.from === "style" ? { ...p, from: "designer" as const } : p)))), d);
 const run = (v: Viewing, edit?: (d: Design) => void, plan = PLAN, cards: PartCard[] = [], props = PROPS) => {
-  const d = suggestDesign(plan, v, theme, cards, words, props);
+  const d = kept(suggestDesign(plan, v, theme, cards, words, props));
   edit?.(d);
   return { d, out: compose(plan, d, { theme, words, frames, cards, props }) };
 };
@@ -419,4 +421,33 @@ test("a share said over a chart stands at that share of the total, and a pointer
   assert.ok(ptr, "the pointer is drawn");
   const pts = s.get(ptr!)!.props.points as number[];
   assert.ok(pts[2]! > bx0 + (bx1 - bx0) * 0.9, `the pointer ends at the bar's value end (${pts[2]}), not its middle`);
+});
+
+test("the first moment shows its subject from its first words, even when it is too short to stand alone", () => {
+  // @0 lasts 0.4 s, under any dwell, so it is merged into @1: its words must still be said over a picture, not an empty board.
+  const plan = parseIntent(`object jug "a glass jug of water"
+object bowl "a glass bowl"
+
+@0
+  show jug
+  keep bowl
+@1
+  show bowl
+  keep jug
+  jug pours into bowl slow
+@10
+  show bowl
+`);
+  const { out } = run(view(1080, 1920), undefined, plan);
+  assert.ok(out.notes.some((n) => /@0 lasts only .* merged into @1/.test(n)), "the short first moment is merged");
+  const opacityAt = (f: number, id: string) => {
+    const flat = new Map<string, Resolved>();
+    const walk = (rs: Resolved[]) => rs.forEach((r) => (flat.set(r.id, r), walk(r.children)));
+    walk(evaluate(out.scene, f));
+    return Number(flat.get(id)?.props.opacity ?? 0);
+  };
+  const first = Math.round(words[0]!.start * 30);
+  const second = Math.round(words[1]!.start * 30);
+  assert.ok(opacityAt(first + 1, "t.jug") > 0, "the subject starts to appear as its first word starts");
+  assert.ok(opacityAt(second, "t.jug") > 0.5, "and is plainly there by the next word");
 });

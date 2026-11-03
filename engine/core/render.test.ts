@@ -355,7 +355,7 @@ test("a typeset symbol takes the style's type treatment: the dry grain and the g
   const chalk = themeFrom("chalkboard");
   const neon = themeFrom("neon");
   const glyph = (t: Theme) => draw([{ id: "g", kind: "path", props: { glyph: 1, points: shape, closed: 1, fill: t.colors.accent! } }], 0, t);
-  assert.match(glyph(chalk), /filter="url\(#sg-dry-text\)"/);
+  assert.match(glyph(chalk), /mask="url\(#sg-dry-text\)"/);
   // Neon words glow, so its symbols carry glow strokes around the fill too.
   assert.ok((glyph(neon).match(/<path/g) ?? []).length > 1);
   // With no style, a symbol is the plain fill it always was.
@@ -366,4 +366,33 @@ test("a part added later with under= is drawn beneath the one it names, so a car
   const scene = compile({ steps: [{ at: 0, enter: "none", add: [{ id: "w", kind: "text", props: { text: "hi" } }, { id: "other", kind: "text", props: { text: "x" } }] }, { at: 5, enter: "none", add: [{ id: "w.back", kind: "path", under: "w", props: { points: shape, closed: 1, fill: "ink" } }] }] }, ctx);
   const order = scene.nodes.map((n) => n.id);
   assert.ok(order.indexOf("w.back") < order.indexOf("w"), order.join(","));
+});
+
+test("a drawn object keeps its hand-drawn look for its whole life under every style: only its intended changes animate", async () => {
+  const { styleNames, themeFrom } = await import("../render/theme.ts");
+  const D = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotate: 0, skew: 0, opacity: 1, drawn: 1 };
+  // A tube with a scale of short ticks, a faint filled body and a level inside, built the way a depicted object is:
+  // within one moment it moves, grows, brightens from dimmed, turns a little, and its level falls.
+  const nodes: Scene["nodes"] = [
+    { id: "obj", kind: "group", props: { ...D, x: 300, y: 400, scaleX: 0.67, scaleY: 0.67 } },
+    { id: "obj.glass", kind: "path", parent: "obj", props: { ...D, opacity: 0.06, points: shape, closed: 1, fill: "#f1eee3", stroke: "none" } },
+    { id: "obj.level", kind: "path", parent: "obj", props: { ...D, y: 40, points: box(10, 10, 80, 50), closed: 1, fill: "#88aacc", stroke: "none" } },
+    { id: "obj.outline", kind: "path", parent: "obj", props: { ...D, points: [0, 0, 0, 100, 100, 100, 100, 0], stroke: "#f1eee3", strokeWidth: 9, fill: "none" } },
+    ...Array.from({ length: 8 }, (_, i) => ({ id: `obj.tick.${i}`, kind: "path" as const, parent: "obj", props: { ...D, opacity: 0.85, points: [96, 10 + i * 12, 80, 10 + i * 12], stroke: "#f1eee3", strokeWidth: 2.7, fill: "none" } })),
+  ];
+  const ramp = (target: string, prop: string, a: number, b: number) => ({ target, prop, keys: [{ at: 0, value: a }, { at: 20, value: b, ease: "smooth" as const }] });
+  const scene: Scene = { fps: 30, width: 1000, height: 1000, frames: 30, background: "#26332e", events: [], nodes, tracks: [ramp("obj", "opacity", 0.62, 1), ramp("obj", "x", 300, 340), ramp("obj", "scaleX", 0.67, 0.7), ramp("obj", "scaleY", 0.67, 0.7), ramp("obj", "rotate", 0, 3), ramp("obj.level", "y", 40, 55)] };
+  const parts = (html: string) => [...html.matchAll(/<(path|text)\b[^>]*>/g)].map((m) => m[0].replace(/ (transform|opacity)="[^"]*"/g, ""));
+  for (const name of styleNames()) {
+    const t = themeFrom(name);
+    const frames = [0, 7, 13, 20, 29].map((f) => renderToStaticMarkup(React.createElement(SceneView, { scene, theme: t, frame: f })));
+    // The same strokes, specks and fills on every frame: only the transforms and fades the tracks ask for differ.
+    for (const html of frames.slice(1)) assert.deepEqual(parts(html), parts(frames[0]!), `${name}: the object's drawing changed within the moment`);
+    // No stroke carries its own turbulence filter, whose grain browsers resolve differently as a parent fades or turns.
+    for (const html of frames) assert.ok(!/<(path|text)\b[^>]*filter="url\(#sg-dry/.test(html), `${name}: a stroke is textured by a filter`);
+    if (t.style!.line.grain > 0) {
+      assert.match(frames[0]!, /<path\b[^>]*mask="url\(#sg-dry\)"/, `${name}: its dry strokes are masked by the tooth`);
+      assert.match(frames[0]!, /<pattern id="sg-dry-tile"[^>]*><image /, `${name}: the tooth is a tile of pixels`);
+    }
+  }
 });

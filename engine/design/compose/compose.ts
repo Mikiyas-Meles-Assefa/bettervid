@@ -13,12 +13,12 @@ import { argValue, expandKitItem, type KitExpansion } from "../../language/build
 import { estimate, TEXT_SIZE } from "../../language/layout.ts";
 import { fontMeasure } from "../../language/measure.ts";
 import { parse as parseScene, type Item as SceneItem } from "../../language/syntax.ts";
-import { depictionFrom, sizeCm, suggestLook, type Depiction, type PropSpec } from "../depict/index.ts";
+import { depictionFrom, pointOf, sizeCm, suggestLook, type Depiction, type PropSpec } from "../depict/index.ts";
 import * as A from "../abilities/index.ts";
 import type { Cls, St, Triple } from "../abilities/types.ts";
 import { computedOf, idLine, idsOf } from "../intent/parse.ts";
 import { suggestMoment } from "../suggest.ts";
-import type { Act, Box, CameraPlan, DecisionRecord, Design, From, IntentPlan, Moment, MomentDesign, PartCard, Viewing, Word } from "../types.ts";
+import type { Act, Box, CameraPlan, DecisionRecord, Design, From, IntentPlan, Moment, MomentDesign, MoveChoice, MoveUse, PartCard, Relation, RelationKind, Viewing, Word } from "../types.ts";
 import { classify, depictAll, type ActKind, type Classified } from "./acts.ts";
 import { anchorRect, overlap, pack, rh, rw, sideWidths, splitHalves, usableRect, type Rect } from "./pack.ts";
 import { Values } from "./values.ts";
@@ -40,7 +40,17 @@ export type ComposeCtx = {
 /** Something the composition cannot do until an agent repairs it: who should (the depicter, the author) and what. */
 export type BuildProblem = { thing: string; who: "depicter" | "author"; task?: string; problem: string };
 
-export type Composition = { doc: SceneDoc; scene: Scene; ids: Record<string, string[]>; notes: string[]; decisions: DecisionRecord[]; problems: BuildProblem[]; boxes: { moment: number; boxes: Record<string, [number, number, number, number]> }[] };
+export type Composition = {
+  doc: SceneDoc;
+  scene: Scene;
+  ids: Record<string, string[]>;
+  notes: string[];
+  decisions: DecisionRecord[];
+  problems: BuildProblem[];
+  boxes: { moment: number; boxes: Record<string, [number, number, number, number]> }[];
+  /** The frame each plan moment starts on as composed (a moment merged into another starts with it). */
+  onsets: number[];
+};
 
 /**
  * The viewing the composer keeps clear: the platform's UI zones, and the captions' box only while the captions show (a
@@ -52,6 +62,9 @@ export function keptClear(v: Viewing): Viewing {
   if (cap.show && cap.box && !zones.some((z) => z.box.join() === cap.box!.join())) zones.push({ box: cap.box as Box, what: "captions" });
   return { ...v, uiZones: zones };
 }
+
+/** Relations that place a thing on another (on, over, in, attached to, at): the other stays while it is shown. */
+const HELD_BY = new Set<RelationKind>(["on", "over", "in", "to", "at"]);
 
 type Def = { id: string; text: string; many?: { n: number; unit: string }; obj?: Depiction; spec?: PropSpec; missing?: boolean; desc?: string };
 type FM = { m: Moment; i: number; md: MomentDesign; onset: number; carry: string[]; becomes: Moment["becomes"]; wrong: string[]; acts: Act[]; merged: number[] };
@@ -322,7 +335,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   const fms: FM[] = [];
   for (const { m, i } of sortedM) {
     const md = mdOf(i);
-    const nominal = Math.max(1, Math.round(wordStart(m.word) * FPS) - Math.round(md.lead.value * FPS));
+    let nominal = Math.max(1, Math.round(wordStart(m.word) * FPS) - Math.round(md.lead.value * FPS));
     const fm: FM = { m, i, md, onset: nominal, carry: [], becomes: m.becomes, wrong: m.wrong, acts: m.acts, merged: [] };
     for (;;) {
       const prev = fms.at(-1);
@@ -345,6 +358,13 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       fm.acts = [...prev.acts, ...fm.acts];
       fm.merged = [...prev.merged, prev.i, ...fm.merged];
       fms.pop();
+      // The merged moment takes over the time of what it absorbed: the absorbed words are said over its picture (their
+      // subject is in it as support), not over an empty board or the moment before. A payoff keeps its own start while
+      // a moment before it can hold the frame, so it is not given away early.
+      if (!(fm.m.reveal || fm.m.ask) || !fms.length) {
+        nominal = Math.min(nominal, prev.onset);
+        fm.onset = nominal;
+      }
     }
     fms.push(fm);
   }
@@ -356,6 +376,14 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   // 3. Each moment: who is on screen and in what role.
   // Apparatus: a source with what it pours or drips into, and things that fall together. A vessel fed by several sources
   // keeps only its first (primary) source as context; another source comes on screen when the plan names it.
+  // Where things are: the author's relations between objects, staged as one scene (abilities/scene.ts). A relation that
+  // names something not drawn as itself is the author's to repair (checkIntent says so); here it is left out.
+  const rels: Relation[] = [];
+  for (const r of plan.relations ?? []) {
+    const [a, b] = [sid(r.a)!, sid(r.b)!];
+    if (isObj(a) && isObj(b) && a !== b) rels.push({ ...r, a, b });
+    else notes.push(`${r.a} ${r.words} ${r.b}: ${!isObj(a) ? a : b} is not a drawn object, so the line places nothing`);
+  }
   const apparatus: { ids: string[]; flow: boolean }[] = [];
   const primarySource = new Map<string, string>();
   for (const f of fms)
@@ -365,6 +393,18 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       if (g.length > 1 && g.every(isObj) && !apparatus.some((x) => x.flow === flow && g.every((y) => x.ids.includes(y)))) apparatus.push({ ids: g, flow });
       if (flow && g.every(isObj) && !primarySource.has(g[1]!)) primarySource.set(g[1]!, g[0]!);
     }
+  // The words a composed moment is said over (its own and those of the moments merged into it), and whether they name a
+  // thing: its plan name or the name it is drawn as, as whole words.
+  const momentText = (k: number) => {
+    const f = fms[k]!;
+    const from = Math.min(f.m.word, ...f.merged.map((j) => plan.moments[j]!.word));
+    const to = fms[k + 1]?.m.word ?? words.length;
+    return ` ${words.slice(Math.max(0, from), to).map((x) => x.text).join(" ").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ")} `;
+  };
+  const namedIn = (said: string, id: string): string | undefined => {
+    const names = [id, defs.get(id)?.obj?.label].filter((x): x is string => !!x).map((x) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()).filter(Boolean);
+    return names.find((n) => said.includes(` ${n} `) || said.includes(` ${n}s `));
+  };
   const sticky = new Set<string>();
   const plans: Plan[] = [];
   const rank = new Map<string, number>();
@@ -390,7 +430,9 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       reg(raw, false);
       if (!has(id)) slots.push({ id, cls, wrong: sticky.has(id), reveal: m.reveal === raw, ...extra });
     };
-    const props = md.proposals.map((p) => p.value);
+    // Only what an agent or the author asks for is drawn: the style's proposals are suggestions offered to the designer.
+    const props = md.proposals.filter((p) => p.from !== "style").map((p) => p.value);
+    for (const p of md.proposals) if (p.from === "style") decide("proposal", f.i, `suggested, not drawn: ${p.value.kind} ${p.value.ids.join(" ")}`, "style", `${p.why ?? ""}; drawn once the director or the designer keeps it`);
     const q = m.ask;
     const phProp = q ? props.find((p) => p.kind === "placeholder") : undefined;
     const phFor = phProp ? sid(canon(phProp.ids[0], tag(m))) : undefined;
@@ -428,6 +470,20 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     for (const x of f.carry) add(x, "support");
     for (const x of m.from.map((fr) => fr.b)) add(x, "support");
     for (const x of m.keep) add(x, "support");
+    // What the words still refer to stays while it is on screen: a thing drawn in the moment before that this moment's
+    // words name (by its plan name or what it is drawn as), or that the director or the designer says they still refer
+    // to (as "it", "these two"). Nothing comes back that had left: only what is on screen is kept.
+    if (k > 0) {
+      const said = momentText(k);
+      const refers = new Set((md.refers?.value ?? []).map((x) => sid(x)!));
+      for (const s of plans[k - 1]!.slots) {
+        if (s.cls === "question" || s.id === "ph" || has(s.id) || idsOf(m).some((x) => sid(x) === s.id)) continue;
+        const named = isObj(s.id) || pics.has(s.id) || computed.has(s.id) ? namedIn(said, s.id) : undefined;
+        if (!refers.has(s.id) && !named) continue;
+        add(s.id, "support");
+        decide("continuity", f.i, `${s.id} stays`, refers.has(s.id) ? md.refers!.from : "author", refers.has(s.id) ? `the words still refer to it (${md.refers!.why ?? md.refers!.from})` : `the words still name it ("${named}")`);
+      }
+    }
     // A moment merged into this one may have pinned or played a computed thing: it stays on screen for its steps.
     for (const j of f.merged) for (const x of pinsOf(j).computed) add(x, "support");
     if (m.show && sid(m.show) !== subj) add(m.show, "support");
@@ -455,6 +511,17 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       // A source brings what it feeds; a vessel brings only its primary source; things that fall together come together.
       const pull = !flow ? (g.some(here) ? g : []) : here(g[0]!) ? [g[1]!] : here(g[1]!) && primarySource.get(g[1]!) === g[0] ? [g[0]!] : [];
       for (const x of pull) if (!here(x)) (add(x, "support"), decide("continuity", f.i, `${x} stays as context`, "style", `it belongs to one apparatus with ${g.filter((y) => y !== x).join(", ")}`));
+    }
+    // A scene holds together: what a thing rests on, hangs from or stands in stays on screen while it is shown, so
+    // nothing floats where its support should be.
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const r of rels)
+        if (HELD_BY.has(r.kind) && here(r.a) && !here(r.b)) {
+          add(r.b, "support");
+          decide("continuity", f.i, `${r.b} stays as context`, "author", `${r.a} ${r.words} ${r.b}: what it is placed on stays with it`);
+          grew = true;
+        }
     }
     if (pair) for (const x of pair) add(x, pairIsSubject ? "subject" : "support");
     if (subj) {
@@ -509,6 +576,64 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         }
       }
     });
+  }
+  // Scenes: things the author relates, solved once at one real scale (abilities/scene.ts), so they keep their places
+  // across the moments they share. A source that pours or drips into a thing of a scene joins it, its outlet held over the
+  // mouth. Things that fall together keep their own composition (room to fall).
+  type SceneG = { ids: string[]; things: A.SceneThing[]; layout: A.SceneLayout };
+  const scenes: SceneG[] = [];
+  const sceneOf = new Map<string, number>();
+  const told = new Set<string>();
+  {
+    const falling = new Set(fallGroups.flat());
+    const srels: A.SceneRel[] = [];
+    for (const r of rels) {
+      if (falling.has(r.a) || falling.has(r.b)) {
+        notes.push(`${r.a} ${r.words} ${r.b}: ${falling.has(r.a) ? r.a : r.b} falls, so it keeps the fall's own composition and the line places nothing`);
+        continue;
+      }
+      srels.push({ a: r.a, b: r.b, kind: r.kind, words: r.words, ...(r.at ? { at: r.at } : {}), ...(r.gapCm !== undefined ? { gapCm: r.gapCm } : {}) });
+    }
+    const related = new Set(srels.flatMap((r) => [r.a, r.b]));
+    for (const [src, dst] of flows)
+      if ((related.has(src) || related.has(dst)) && !falling.has(src) && !falling.has(dst)) {
+        srels.push({ a: src, b: dst, kind: "over", words: "pours into", aPoints: ["outlet", "mouth"], bPoints: ["mouth", "surface"], gapShare: V.n("apparatus.gapShare") });
+        decide("staging", undefined, `${src} over ${dst}, in the scene`, "style", `${src} pours or drips into ${dst}, which the author places in a scene: its outlet is held over the mouth at the scene's one scale`);
+      }
+    // Connected things are one scene.
+    const root = new Map<string, string>();
+    const find = (x: string): string => {
+      let y = x;
+      while (root.has(y) && root.get(y) !== y) y = root.get(y)!;
+      return y;
+    };
+    for (const r of srels) if (find(r.a) !== find(r.b)) root.set(find(r.a), find(r.b));
+    const parts = new Map<string, string[]>();
+    for (const r of srels)
+      for (const x of [r.a, r.b]) {
+        const list = parts.get(find(x)) ?? parts.set(find(x), []).get(find(x))!;
+        if (!list.includes(x)) list.push(x);
+      }
+    for (const ids of parts.values()) {
+      const things: A.SceneThing[] = ids.map((id) => {
+        const d = defs.get(id)!.obj!;
+        const real = defs.get(id)!.spec ? sizeCm(defs.get(id)!.spec!) : undefined;
+        return { id, w: d.box.w, h: d.box.h, ...(real ? { realCm: real } : {}), point: (n: string) => pointOf(d, n) };
+      });
+      const mine = srels.filter((r) => ids.includes(r.a));
+      const layout = A.solveScene(things, mine, { gap: V.n("scene.gap") });
+      const n = scenes.push({ ids, things, layout }) - 1;
+      ids.forEach((x) => sceneOf.set(x, n));
+      for (const c of layout.checks) {
+        const why = c.by ? `${c.rel.a}'s ${c.by.a} on ${c.rel.b}'s ${c.by.b}` : c.rel.kind;
+        decide("staging", undefined, `${c.rel.a} ${c.rel.words ?? c.rel.kind} ${c.rel.b}: ${c.held ? "held" : `${Math.round(c.offCm)} cm off`}`, c.rel.aPoints ? "style" : "author", why, { offCm: Math.round(c.offCm) });
+        // A place the author names on a thing that has no point by that name is the depicter's to give.
+        if (c.rel.at && !pointOf(defs.get(c.rel.b)!.obj!, c.rel.at)) problems.push({ thing: c.rel.b, who: "depicter", task: `depict.${c.rel.b}`, problem: `the plan puts ${c.rel.a} at "${c.rel.at}" of ${c.rel.b}: name that place in points, [x, y] as 0 to 1 of the box` });
+      }
+      for (const id of layout.unsized) problems.push({ thing: id, who: "depicter", task: `depict.${id}`, problem: `it stands in one scene with ${ids.filter((x) => x !== id).join(", ")}: give its real size, so the scene keeps their true proportion` });
+      for (const x of layout.notes) notes.push(`scene ${ids.join(", ")}: ${x}`);
+      decide("staging", undefined, `${ids.join(", ")} as one scene, back to front ${layout.z.join(", ")}${layout.grounds.length ? `; ${layout.grounds.join(", ")} under the rest` : ""}`, "author", "the author says where these things are relative to each other: they are staged together at one real scale");
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -568,15 +693,59 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   const chartLook = (k?: number): A.ChartLook => ({ small: chartSmall(k), min: MIN_FS, valueFs: Math.max(MIN_FS, chartSmall(k) * V.n("chart.valueScale", k)), headBig: Math.max(MIN_FS, V.px("chart.headBig", k) * typeScaleOf(k)), headShare: V.n("chart.headShare", k), rowLine: V.n("chart.rowLine", k), gap: V.px("chart.gap", k), barFrac: V.n("chart.barFrac", k), photoBarFrac: V.n("chart.photoBarFrac", k), dimBars: V.n("chart.dimBars", k), dimText: V.n("chart.dimText", k), labelOpacity: V.n("chart.labelOpacity", k), levelPad: V.px("chart.levelPad", k), em, emLabel });
 
   // ---------------------------------------------------------------------------------------------------------------
+  // 4b. Moves: what the director or the designer chose for each moment's things (abilities/moves.ts). Nothing moves on
+  // its own: a thing that stays and that no move names keeps its place and size.
+  const movesAt = (k: number): MoveChoice[] => fms[k]!.md.moves?.value ?? [];
+  const useOf = (c: MoveChoice, use: MoveUse) => {
+    const d = A.moveDef(c.move);
+    if (!d || !d.uses.includes(use)) return false;
+    return c.as ? c.as === use : use !== "accent" || d.uses.every((u) => u === "accent");
+  };
+  /** The move chosen at moment k for the plan's thing `id` (its composed id), used as `use`; the last choice wins. */
+  const moveFor = (k: number, id: string, use: MoveUse): MoveChoice | undefined => [...movesAt(k)].reverse().find((c) => useOf(c, use) && (!c.ids.length || c.ids.some((x) => sid(x) === id)));
+  const asks = (k: number, id: string) => {
+    const c = moveFor(k, id, "change");
+    // A move that is also an accent (a hop) asks for a new place only when it is named as a change.
+    return !!c && c.move !== "stay" && (c.as === "change" || !A.moveDef(c.move)!.uses.includes("accent"));
+  };
+  // The stage keeps one composition through each stretch of moments that share things on it: it is composed once for
+  // everything the stretch ever shows there, so a thing keeps its place and size while others come and go, and room is
+  // kept for what comes later. A moment where a move asks a thing on the stage to change starts a new stretch: the
+  // stage is composed again for it, and its things go to their new places by their moves.
+  const stageType = (id: string) => ["obj", "pic", "kit"].includes(ents.get(id)?.type ?? "");
+  const stageNow = plans.map((p) => p.slots.map((x) => x.id).filter(stageType));
+  const stretchStart: number[] = [];
+  const stageUnion: string[][] = [];
+  {
+    const steady = V.get<boolean>("stage.steady");
+    let start = 0;
+    for (let k = 0; k < K; k++) {
+      const prevIds = k ? stageNow[k - 1]! : [];
+      const shares = stageNow[k]!.some((x) => prevIds.includes(x));
+      const asked = stageNow[k]!.filter((x) => prevIds.includes(x) && asks(k, x));
+      if (k === 0 || !steady || !shares || asked.length) {
+        start = k;
+        if (k && shares && asked.length) decide("stage", fms[k]!.i, `the stage is composed again for this moment`, fms[k]!.md.moves!.from, `a move asks ${asked.join(", ")} to change: ${asked.map((x) => moveFor(k, x, "change")!.move).join(", ")}`);
+      }
+      stretchStart.push(start);
+    }
+    for (let k = 0; k < K; k++) {
+      const all: string[] = [];
+      for (let j = stretchStart[k]!; j < K && stretchStart[j] === stretchStart[k]; j++) for (const x of stageNow[j]!) if (!all.includes(x)) all.push(x);
+      stageUnion.push(all);
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
   // 5. Layout: per moment, the anchor where the design asks, the rest packed around it by the arrangement.
   const blank = () => A.blankSt(C.subject);
-  type LaidOut = { items: Map<string, Item>; order: string[]; stageKey?: string; stageRect?: Rect; boxes: Record<string, [number, number, number, number]>; over: number };
+  type LaidOut = { items: Map<string, Item>; order: string[]; stageKey?: string; stageRect?: Rect; boxes: Record<string, [number, number, number, number]>; over: number; /** What stayed could not keep its place: the plan's new things needed the room. */ released?: boolean };
   const textBlock = (keyId: string, entId: string, e: A.TextEnt, ver: number, fs: number, st: Partial<St>, rnk: number, subject: boolean): Block => {
     const b = A.textBox(e, ver, fs, LH);
     return { key: keyId, rank: rnk, w: b.w, h: b.h, items: [{ id: entId, dx: 0, dy: b.h / 2, w: b.w, h: b.h, st: { ...st, fs, s: fs / 100 } }], decor: [], subject, stage: false };
   };
 
-  function layoutMoment(k: number, fixedStage: Rect | undefined, tell: boolean): LaidOut {
+  function layoutMoment(k: number, fixedStage: Rect | undefined, tell: boolean, prev?: LaidOut): LaidOut {
     const plan = plans[k]!;
     const f = fms[k]!;
     const md = f.md;
@@ -607,7 +776,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       if (fit < MIN_FS - 0.5) squeezed++;
       return Math.max(fs, Math.min(MIN_FS, fit));
     };
-    const objCls = (id: string): Partial<St> => ({ cls: slotOf.get(id)!.cls, op: slotOf.get(id)!.cls === "subject" ? subjOp : !plan.subject || !slotOf.has(plan.subject) || level ? 1 : supOp, reveal: slotOf.get(id)!.reveal });
+    const objCls = (id: string): Partial<St> => (!slotOf.has(id) ? { cls: "support", op: 0, reveal: false } : { cls: slotOf.get(id)!.cls, op: slotOf.get(id)!.cls === "subject" ? subjOp : !plan.subject || !slotOf.has(plan.subject) || level ? 1 : supOp, reveal: slotOf.get(id)!.reveal });
     // Countable marks on screen together share one mark size.
     const manyExtent = (s: Slot, maxW: number, cs: number, paired: boolean) => Math.min(maxW, (paired ? V.px("many.paired", f.i) : V.px("many.support", f.i)) * cs);
     let markCap = Infinity;
@@ -713,25 +882,39 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       }
       return { key: `arrow.${ar.a}.${ar.b}`, rank: Math.min(Ab.rank, Bb.rank), w, h: Ab.h + GA + Bb.h, items, decor, subject: Ab.subject || Bb.subject, stage: false };
     };
-    // The stage: what persists (objects and the user's material), composed in a box.
-    const objIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "obj";
-    const picIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "pic";
-    const kitIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "kit";
+    // The stage: what persists (objects and the user's material), composed in a box, for everything its stretch shows.
+    const union = new Set(stageUnion[k]!);
+    const objIn = (id: string) => union.has(id) && ents.get(id)?.type === "obj";
+    const picIn = (id: string) => union.has(id) && ents.get(id)?.type === "pic";
+    const kitIn = (id: string) => union.has(id) && ents.get(id)?.type === "kit";
+    const shown = (id: string) => slotOf.has(id);
     // A comparison that holds a drawn or computed thing is composed on the stage: the stage things side by side on one
     // baseline (at one real scale when their sizes are known), and a partner made of words beside the stage.
     const onStage = (id: string) => objIn(id) || picIn(id) || kitIn(id);
     const stagePair = plan.pair?.some(onStage) ? plan.pair : undefined;
     const wordPair = stagePair ? undefined : plan.pair;
-    const pairSet = stagePair?.every((x) => objIn(x) || kitIn(x)) ? new Set(stagePair) : undefined;
+    // Two things on the stage compared in any moment of the stretch stand together for the whole stretch.
+    let pairSet = stagePair?.every((x) => objIn(x) || kitIn(x)) ? new Set(stagePair) : undefined;
+    for (let j = stretchStart[k]!; !pairSet && j < K && stretchStart[j] === stretchStart[k]; j++) {
+      const pp = plans[j]!.pair;
+      if (pp && pp.every((x) => objIn(x) || kitIn(x))) pairSet = new Set(pp);
+    }
     const stageParts = (): string[][] => {
       const used = new Set<string>();
       const groups: string[][] = [];
       // One apparatus per vessel. Of the sources on screen that feed it, the one that pours or drips in this moment has
       // its outlet over the mouth (else the primary source); any other stands beside the vessel, clear of the working
       // parts, so two sources never share the mouth.
+      // A scene first: what the author relates stands together, each thing where its relations put it.
+      scenes.forEach((sc, n) => {
+        const mem = sc.ids.filter((x) => objIn(x) && !used.has(x));
+        if (!mem.length) return;
+        groups.push([`scene:${n}`, ...mem]);
+        mem.forEach((x) => used.add(x));
+      });
       const feeds = new Map<string, string[]>();
       for (const [src, dst] of flows) (feeds.get(dst) ?? feeds.set(dst, []).get(dst)!).push(src);
-      const grouped = new Set([...flows.keys(), ...flows.values(), ...fallGroups.flat()]);
+      const grouped = new Set([...flows.keys(), ...flows.values(), ...fallGroups.flat(), ...sceneOf.keys()]);
       for (const [dst, srcs] of feeds) {
         if (!objIn(dst) || used.has(dst)) continue;
         const here = srcs.filter((x) => objIn(x) && !used.has(x) && x !== dst);
@@ -742,7 +925,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         if (aside.length && tell) decide("composition", f.i, `${src} over ${dst}; ${aside.join(", ")} beside ${dst}`, "style", acting.includes(src) ? `${src} pours or drips into ${dst} now: its outlet takes the mouth` : `${src} is ${dst}'s primary source`);
         // Compared things stand together, not as satellites of an apparatus they are not part of.
         const keepPair = pairSet && !pairSet.has(src) && !pairSet.has(dst);
-        const sats = [...aside, ...plan.slots.filter((sl) => objIn(sl.id) && !grouped.has(sl.id) && !used.has(sl.id) && !(keepPair && pairSet.has(sl.id))).map((sl) => sl.id)];
+        const sats = [...aside, ...[...union].filter((id) => objIn(id) && !grouped.has(id) && !used.has(id) && !(keepPair && pairSet!.has(id)))];
         groups.push(["flow", src, dst, ...sats]);
         [src, dst, ...sats].forEach((x) => used.add(x));
       }
@@ -752,12 +935,13 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         groups.push(["fall", ...mem]);
         mem.forEach((x) => used.add(x));
       }
-      for (const s of plan.slots) if ((objIn(s.id) || picIn(s.id) || kitIn(s.id)) && !used.has(s.id)) groups.push([objIn(s.id) ? "obj" : kitIn(s.id) ? "kit" : "pic", s.id]);
+      for (const id of union) if ((objIn(id) || picIn(id) || kitIn(id)) && !used.has(id)) groups.push([objIn(id) ? "obj" : kitIn(id) ? "kit" : "pic", id]);
       // Two compared things that stand alone become one comparison, where the first of them stood.
       if (pairSet) {
         const [a, b] = [...pairSet];
-        const ga = groups.findIndex((g) => g.length === 2 && g[1] === a && g[0] !== "pic");
-        const gb = groups.findIndex((g) => g.length === 2 && g[1] === b && g[0] !== "pic");
+        const alone = (g: string[], x: string) => g.length === 2 && g[1] === x && g[0] !== "pic" && !g[0]!.startsWith("scene:");
+        const ga = groups.findIndex((g) => alone(g, a!));
+        const gb = groups.findIndex((g) => alone(g, b!));
         if (ga >= 0 && gb >= 0) {
           groups.splice(Math.max(ga, gb), 1);
           groups.splice(Math.min(ga, gb), 1, ["pair", a!, b!]);
@@ -782,9 +966,34 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         const dec: Dec[] = [];
         let w = 0;
         let h = 0;
-        if (kind === "flow") {
+        if (kind!.startsWith("scene:")) {
+          // The whole scene is fitted to the cell, so it keeps one size and place whichever of its things are shown.
+          const sc = scenes[Number(kind!.slice(6))]!;
+          // The moment's subject, when it is a thing of the scene, is what the window may close in on.
+          // The stretch keeps one framing: its first moment's subject; a closer shot on another is a change a move asks for.
+          const subj0 = plans[stretchStart[k]!]!.subject;
+          const focus = subj0 && sc.ids.includes(subj0) ? { id: subj0, share: V.n("scene.subjectShare", fms[stretchStart[k]!]!.i) } : undefined;
+          const fit = A.fitScene(sc.layout, sc.things, cell, { bleed: V.get<boolean>("scene.bleed", f.i), margin: V.n("scene.margin", f.i), ...(focus ? { focus } : {}) }, new Set(ids));
+          // What runs past the window is cut to it, so it never runs under the words around the stage.
+          const win: [number, number, number, number] | undefined = fit.spills ? [-fit.w / 2, 0, fit.w / 2, fit.h] : undefined;
+          for (const mm of fit.members) out.push({ id: mm.id, dx: mm.dx, dy: mm.dy - mm.h / 2, w: mm.w, h: mm.h, st: { ...objCls(mm.id), s: mm.scale, ...(win ? { win } : {}) } });
+          (w = fit.w), (h = fit.h);
+          const from = (key: string): From => (V.over.has(key) || V.over.has(`${key}@${f.i}`) ? "designer" : "style");
+          // Told once per moment, however many sizes the search for room tries.
+          const say = (choice: string, key: string) => {
+            if (!tell || told.has(`${f.i}|${key}`)) return;
+            told.add(`${f.i}|${key}`);
+            decide("staging", f.i, choice, from(key), V.style[key]!.why);
+          };
+          if (fit.bleeds.length && !fit.closer) say(`${fit.bleeds.join(", ")} runs past the scene's sides`, "scene.bleed");
+          if (fit.closer) say(`the scene's window closes in on ${focus!.id}; the rest runs past it`, "scene.subjectShare");
+        } else if (kind === "flow") {
           const [src, dst, ...sats] = ids;
-          const ap = A.apparatus({ id: src!, shape: shapeOf(src!) }, { id: dst!, shape: shapeOf(dst!) }, sats.map((id) => ({ id, shape: shapeOf(id) })), cell, { sourceShare: V.n("apparatus.sourceShare", f.i), gapShare: V.n("apparatus.gapShare", f.i), sourceWidth: V.n("apparatus.sourceWidth", f.i), vesselWidth: V.n("apparatus.vesselWidth", f.i), satelliteShare: V.n("apparatus.satelliteShare", f.i), satelliteGap: V.px("apparatus.satelliteGap", f.i) });
+          const apParams = { sourceShare: V.n("apparatus.sourceShare", f.i), gapShare: V.n("apparatus.gapShare", f.i), sourceWidth: V.n("apparatus.sourceWidth", f.i), vesselWidth: V.n("apparatus.vesselWidth", f.i), satelliteShare: V.n("apparatus.satelliteShare", f.i), satelliteGap: V.px("apparatus.satelliteGap", f.i) };
+          // Another source of the same vessel steps aside at the size it has over the mouth, so it keeps its size
+          // while the one that acts now takes the mouth.
+          const isSource = (id: string) => flows.get(id) === dst;
+          const ap = A.apparatus({ id: src!, shape: shapeOf(src!) }, { id: dst!, shape: shapeOf(dst!) }, sats.map((id) => ({ id, shape: shapeOf(id), ...(isSource(id) ? { scale: A.apparatus({ id, shape: shapeOf(id) }, { id: dst!, shape: shapeOf(dst!) }, [], cell, apParams).members[0]!.scale } : {}) })), cell, apParams);
           for (const mm of ap.members) out.push({ id: mm.id, dx: mm.dx, dy: mm.dy - mm.h / 2, w: mm.w, h: mm.h, st: { ...objCls(mm.id), s: mm.scale } });
           (w = ap.w), (h = ap.h);
         } else if (kind === "fall") {
@@ -817,7 +1026,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
           out.push({ id: ids[0]!, dx: 0, dy: (b.h * sc) / 2, w: b.w * sc, h: b.h * sc, st: { ...objCls(ids[0]!), s: sc } });
           (w = b.w * sc), (h = b.h * sc);
         } else {
-          const s = slotOf.get(ids[0]!)!;
+          const s = slotOf.get(ids[0]!) ?? { id: ids[0]!, cls: "support" as Cls, wrong: false, reveal: false };
           const p = pics.get(s.id)!;
           if (isChart(p)) {
             const lit = plan.partPair?.pic === s.id ? plan.partPair.parts : s.part ? [s.part] : [];
@@ -855,12 +1064,12 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       for (const c of cellsOut) {
         const sx = along === "x" ? off + c.w / 2 : 0;
         const sy = along === "x" ? (H0 - c.h) / 2 : off;
-        for (const it of c.items) items.push({ ...it, dx: it.dx + sx, dy: it.dy + sy });
+        for (const it of c.items) items.push({ ...it, dx: it.dx + sx, dy: it.dy + sy, ...(it.st.win ? { st: { ...it.st, win: [it.st.win[0] + sx, it.st.win[1] + sy, it.st.win[2] + sx, it.st.win[3] + sy] } } : {}) });
         for (const d of c.decor) decor.push({ ...d, dx: d.dx + sx, dy: d.dy + sy });
         off += along === "x" ? c.w : c.h;
       }
       const subject = items.some((it) => slotOf.get(it.id)?.cls === "subject");
-      return { key: "stage", rank: Math.min(...items.map((it) => rank.get(it.id) ?? 0)), w: W0, h: H0, items, decor, subject, stage: true };
+      return { key: "stage", rank: Math.min(...items.filter((it) => shown(it.id)).map((it) => rank.get(it.id) ?? 0)), w: W0, h: H0, items, decor, subject, stage: true };
     };
 
     const groups = stageParts();
@@ -971,7 +1180,140 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const items = new Map<string, Item>();
     const order: string[] = [];
     const boxes: LaidOut["boxes"] = {};
+    const blockIds = new Map<string, string[]>();
+    const rectOfItem = (it: Item): Rect => (it.type === "obj" ? { x0: it.st.x - it.st.w / 2, y0: it.st.y - it.st.h, x1: it.st.x + it.st.w / 2, y1: it.st.y } : { x0: it.st.x - it.st.w / 2, y0: it.st.y - it.st.h / 2, x1: it.st.x + it.st.w / 2, y1: it.st.y + it.st.h / 2 });
+    const unionOf = (ids: string[]): Rect | undefined => {
+      const rs = ids.map((id) => items.get(id)).filter((it): it is Item => !!it && it.st.w > 0 && it.st.h > 0).map(rectOfItem);
+      return rs.length ? { x0: Math.min(...rs.map((r) => r.x0)), y0: Math.min(...rs.map((r) => r.y0)), x1: Math.max(...rs.map((r) => r.x1)), y1: Math.max(...rs.map((r) => r.y1)) } : undefined;
+    };
+    /**
+     * Steadiness: words and marks that stay from the moment before keep their place and size, unless a move asks them
+     * to change (then they take this moment's own place, and go there by that move); only their emphasis follows their
+     * role now. What is new takes the free room around what stays, the nearest to where this moment's own layout puts
+     * it. The stage keeps its place by its own composition (one per stretch).
+     */
+    const holdFrom = (p: LaidOut, anchor: Block, others: Block[], rects: Map<string, Rect>, gap: number): boolean => {
+      // What this moment's own layout is, kept to come back to when what is new cannot find room around what stays.
+      const snap = new Map([...items].map(([id, it]) => [id, { ...it.st }]));
+      const boxSnap = { ...boxes };
+      const rectSnap = new Map(rects);
+      const held = new Map<string, [number, number]>();
+      const giveUp = (what: string) => {
+        for (const [id, st] of snap) items.get(id)!.st = st;
+        for (const kk of Object.keys(boxes)) delete boxes[kk];
+        Object.assign(boxes, boxSnap);
+        rects.clear();
+        for (const [kk, r] of rectSnap) rects.set(kk, r);
+        if (tell) decide("steadiness", f.i, `${[...held.keys()].map((x) => x.replace(/^[tpk]\./, "")).join(", ")} make room`, "author", `${what} while they keep their places, so the plan's new things need the room: they go to this moment's own layout, gliding unless a move says how`);
+        return false;
+      };
+      for (const [id, it] of items) {
+        const p0 = p.items.get(id);
+        if (!p0 || !["text", "many", "ph"].includes(it.type) || p0.type !== it.type) continue;
+        const name = id.startsWith("t.") ? id.slice(2) : undefined;
+        if (name && asks(k, name)) continue;
+        const d: [number, number] = [p0.st.x - it.st.x, p0.st.y - it.st.y];
+        for (const fld of ["x", "y", "s", "fs", "w", "h", "dotsY", "labY"] as const) (it.st as Record<string, unknown>)[fld] = p0.st[fld];
+        // A new version of the words keeps the size of the old: its box is the new words at that size.
+        const e = ents.get(id.replace(/^t\./, ""))?.text;
+        if (e && it.st.ver !== p0.st.ver) {
+          Object.assign(it.st, A.textBox(e, it.st.ver, it.st.fs, LH));
+          // Words the plan makes longer may only be as large as fits.
+          if (it.st.w > rw(U)) {
+            const sc = rw(U) / it.st.w;
+            (it.st.fs *= sc), (it.st.s *= sc);
+            Object.assign(it.st, A.textBox(e, it.st.ver, it.st.fs, LH));
+          }
+          it.st.x = Math.min(Math.max(it.st.x, U.x0 + it.st.w / 2), U.x1 - it.st.w / 2);
+        }
+        held.set(id, d);
+      }
+      if (!held.size) return true;
+      // Marks that belong to words (a strike, a column, an arrow and its label) go with them.
+      const ownerOf = (id: string) => (/^(strike|vbar)\./.test(id) ? key(id.slice(id.indexOf(".") + 1)) : /^(arrow|lab)\./.test(id) ? key(id.split(".")[1]!) : undefined);
+      for (const [id, it] of items) {
+        const o = ownerOf(id);
+        const d = o ? held.get(o) : undefined;
+        if (!d || held.has(id)) continue;
+        it.st.x += d[0];
+        it.st.y += d[1];
+        if (it.type === "strike") {
+          const oi = items.get(o!)!;
+          const e = ents.get(o!.replace(/^t\./, ""))?.text;
+          if (e) (it.st.y = oi.st.y - ((e.lines[oi.st.ver]!.length - 1) / 2) * LH * oi.st.fs), (it.st.len = em(e.lines[oi.st.ver]![0]!) * oi.st.fs + V.px("strike.pad", f.i));
+        }
+      }
+      const fixed: Rect[] = [];
+      const movable: Block[] = [];
+      for (const b of [anchor, ...others]) {
+        const ids = blockIds.get(b.key) ?? [];
+        const r = b.stage ? rects.get(b.key) : unionOf(ids);
+        if (b.stage || ids.some((id) => held.has(id))) {
+          if (r) fixed.push(r);
+          if (!b.stage && r) (rects.set(b.key, r), (boxes[b.key] = [r.x0 / W, r.y0 / H, r.x1 / W, r.y1 / H]));
+        } else movable.push(b);
+      }
+      if (stageRect && !anchor.stage) fixed.push(stageRect);
+      // Words that stay where the stage now needs to be (a stage that arrives in this moment) cannot keep their place.
+      const stageRs = [anchor, ...others].filter((b) => b.stage).map((b) => rects.get(b.key)).filter((r): r is Rect => !!r);
+      const heldRs = [anchor, ...others].filter((b) => !b.stage && (blockIds.get(b.key) ?? []).some((id) => held.has(id))).map((b) => rects.get(b.key)).filter((r): r is Rect => !!r);
+      if (heldRs.some((r) => stageRs.some((q) => overlap(r, q) > 0.5))) return giveUp("the stage finds no room");
+      const placedNow: string[] = [];
+      const step = Math.max(6, gap / 2);
+      for (const b of movable) {
+        const ids = blockIds.get(b.key) ?? [];
+        let r = rects.get(b.key) ?? unionOf(ids);
+        if (!r) continue;
+        const clear = (c: Rect) => !fixed.some((o) => overlap(c, o) > 0.5);
+        if (clear(r)) {
+          fixed.push(r);
+          continue;
+        }
+        // The nearest free room, at this size, then a little smaller (words only), down to the support floor.
+        const words = ids.every((id) => ["text", "many", "ph", "strike"].includes(items.get(id)?.type ?? ""));
+        let spot: Rect | undefined;
+        let scale = 1;
+        for (const sc of words ? [1, 0.9, 0.8, 0.7].filter((x) => x >= V.n("support.floor", f.i) - 1e-6) : [1]) {
+          const w0 = rw(r) * sc;
+          const h0 = rh(r) * sc;
+          let best: { c: Rect; d: number } | undefined;
+          for (let y = U.y0; y + h0 <= U.y1 + 0.5; y += step)
+            for (let x = U.x0; x + w0 <= U.x1 + 0.5; x += step) {
+              const c = { x0: x, y0: y, x1: x + w0, y1: y + h0 };
+              if (!clear(c)) continue;
+              const dd = Math.hypot(x + w0 / 2 - (r.x0 + r.x1) / 2, y + h0 / 2 - (r.y0 + r.y1) / 2);
+              if (!best || dd < best.d) best = { c, d: dd };
+            }
+          if (best) {
+            spot = best.c;
+            scale = sc;
+            break;
+          }
+        }
+        if (!spot) return giveUp(`${b.key.replace(/^pair\.|^arrow\./, "")} finds no free room`);
+        const [cx0, cy0] = [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2];
+        const [cx1, cy1] = [(spot.x0 + spot.x1) / 2, (spot.y0 + spot.y1) / 2];
+        for (const id of ids) {
+          const st = items.get(id)!.st;
+          if (scale !== 1) {
+            for (const fld of ["s", "fs", "w", "h", "len", "dotsY", "labY"] as const) st[fld] *= scale;
+            st.x = cx0 + (st.x - cx0) * scale;
+            st.y = cy0 + (st.y - cy0) * scale;
+          }
+          st.x += cx1 - cx0;
+          st.y += cy1 - cy0;
+        }
+        r = spot;
+        rects.set(b.key, r);
+        boxes[b.key] = [r.x0 / W, r.y0 / H, r.x1 / W, r.y1 / H];
+        fixed.push(r);
+        placedNow.push(`${b.key}${scale < 1 ? ` at ${Math.round(scale * 100)}%` : ""}`);
+      }
+      if (tell) decide("steadiness", f.i, `${[...held.keys()].map((x) => x.replace(/^[tpk]\./, "")).join(", ")} keep their place and size${placedNow.length ? `; ${placedNow.join(", ")} take${placedNow.length === 1 ? "s" : ""} the free room beside them` : ""}`, md.moves?.from ?? "style", "they stay from the moment before and no move asks them to change");
+      return true;
+    };
     let stageRect: Rect | undefined;
+    let released = false;
     if (chosen) {
       if (tell) {
         if (!(ARR as readonly string[]).includes(arrangement)) notes.push(`${tag(f.m)} arrangement "${arrangement}" is not one the packer knows: packed as a stack`);
@@ -981,21 +1323,33 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       const place = (b: Block, r: Rect) => {
         boxes[b.key] = [r.x0 / W, r.y0 / H, r.x1 / W, r.y1 / H];
         const cx = (r.x0 + r.x1) / 2;
+        const mine: string[] = [];
+        blockIds.set(b.key, mine);
         for (const p of b.items) {
+          // The stage keeps room for what its stretch shows later: what is not on screen now is not drawn.
+          if (b.stage && !shown(p.id)) continue;
           const e = ents.get(p.id)!;
           const type: ItemType = e.type === "many" ? "many" : e.type === "ph" ? "ph" : e.type === "pic" ? "pic" : e.type === "obj" ? "obj" : e.type === "kit" ? "kit" : "text";
           // Objects are placed by their base.
           const st: St = { ...blank(), ...p.st, x: cx + p.dx, y: r.y0 + p.dy + (type === "obj" ? p.h / 2 : 0), w: p.w, h: p.h } as St;
+          // A scene cut to its window (widened below, once every block is placed).
+          if (p.st.win) {
+            const [a0, b0, a1, b1] = p.st.win;
+            st.clip = [cx + a0, r.y0 + b0, cx + a1, r.y0 + b1];
+            delete st.win;
+          }
           const id = p.id === "ph" ? "ph" : p.id.startsWith("q.") || p.id.startsWith("lab.") ? p.id : key(p.id);
           items.set(id, { id, type, st, born: slotOf.get(p.id)?.born ? key(sid(slotOf.get(p.id)!.born!)!) : undefined });
           order.push(id);
+          mine.push(id);
           if (st.wrong && e.text) {
             const nl = e.text.lines[st.ver]!.length;
             const firstW = em(e.text.lines[st.ver]![0]!) * st.fs;
             items.set(`strike.${p.id}`, { id: `strike.${p.id}`, type: "strike", st: { ...blank(), x: st.x, y: st.y - ((nl - 1) / 2) * LH * st.fs, len: firstW + V.px("strike.pad", f.i), color: C.wrong, op: 1 } });
+            mine.push(`strike.${p.id}`);
           }
         }
-        for (const d of b.decor) items.set(d.id, { id: d.id, type: d.type, st: { ...blank(), x: cx + d.dx, y: r.y0 + d.dy, len: d.len, color: d.color, op: d.op ?? 1, w: d.w ?? 0, h: d.type === "floor" ? V.px("mark.width") * 0.6 : V.px("compare.barThick") } });
+        for (const d of b.decor) if (!b.stage || d.type !== "floor" || d.id.split(".").slice(1).some((x) => shown(x))) (items.set(d.id, { id: d.id, type: d.type, st: { ...blank(), x: cx + d.dx, y: r.y0 + d.dy, len: d.len, color: d.color, op: d.op ?? 1, w: d.w ?? 0, h: d.type === "floor" ? V.px("mark.width") * 0.6 : V.px("compare.barThick") } }), mine.push(d.id));
       };
       const a = chosen.packed.anchor;
       const ar: Rect = { x0: (a.x0 + a.x1) / 2 - chosen.anchor.w / 2, y0: a.y0, x1: (a.x0 + a.x1) / 2 + chosen.anchor.w / 2, y1: a.y0 + chosen.anchor.h };
@@ -1008,6 +1362,29 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         stageRect = { x0: cx - chosen.box.w / 2, y0: cy - bh / 2, x1: cx + chosen.box.w / 2, y1: cy + bh / 2 };
       }
       for (const b of chosen.others) place(b, chosen.packed.rects.get(b.key)!);
+      const rects = new Map<string, Rect>([[chosen.anchor.key, ar], ...chosen.others.map((b) => [b.key, chosen!.packed.rects.get(b.key)!] as [string, Rect])]);
+      if (prev && !holdFrom(prev, chosen.anchor, chosen.others, rects, chosen.gap)) released = true;
+      // A scene that runs past its window shows on to the nearest other thing, kept-clear zone or the frame's edge on
+      // each side, as a frame crops a scene: it is cut only where something else needs the room.
+      const cut = [...items.values()].filter((it) => it.st.clip);
+      if (cut.length) {
+        const mine = new Set(cut.map((it) => it.id));
+        const blocks: Rect[] = [...chosen.others.map((b) => rects.get(b.key)!), ...[...items.values()].filter((it) => !mine.has(it.id) && it.st.w > 0 && it.st.h > 0 && ["obj", "pic", "kit", "text", "many"].includes(it.type)).map((it) => (it.type === "obj" ? { x0: it.st.x - it.st.w / 2, y0: it.st.y - it.st.h, x1: it.st.x + it.st.w / 2, y1: it.st.y } : { x0: it.st.x - it.st.w / 2, y0: it.st.y - it.st.h / 2, x1: it.st.x + it.st.w / 2, y1: it.st.y + it.st.h / 2 }))];
+        // Kept-clear zones above or below (captions, a progress bar) cut it there; a zone beside it (buttons over the
+        // frame's side) does not, since a backdrop runs on under them.
+        const zones: Rect[] = keptClear(viewing).uiZones.map((z) => ({ x0: z.box[0] * W, y0: z.box[1] * H, x1: z.box[2] * W, y1: z.box[3] * H }));
+        const g = chosen.gap / 2;
+        for (const it of cut) {
+          let [x0, y0, x1, y1] = it.st.clip!;
+          const across = (o: Rect) => o.x1 > x0 && o.x0 < x1;
+          y0 = Math.max(0, ...[...blocks, ...zones].filter((o) => across(o) && o.y1 <= y0 + 0.5).map((o) => o.y1 + g));
+          y1 = Math.min(H, ...[...blocks, ...zones].filter((o) => across(o) && o.y0 >= y1 - 0.5).map((o) => o.y0 - g));
+          const along = (o: Rect) => o.y1 > y0 && o.y0 < y1;
+          x0 = Math.max(0, ...blocks.filter((o) => along(o) && o.x1 <= x0 + 0.5).map((o) => o.x1 + g));
+          x1 = Math.min(W, ...blocks.filter((o) => along(o) && o.x0 >= x1 - 0.5).map((o) => o.x0 - g));
+          it.st.clip = [x0, y0, x1, y1];
+        }
+      }
     }
     // Pointers from words to a part of the material, levels on a chart, through the placed state.
     const L = chartLook(f.i);
@@ -1044,7 +1421,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       if (tell) decide("proposal", f.i, `pointer from ${pa.t} to ${pa.pic}.${pa.part}`, "style", "words shown while one part is held");
     });
     for (const [, it] of items) if (it.born && !items.has(it.born)) it.born = undefined;
-    return { items, order, stageKey: groups.length ? [...stageIds].sort().join(" ") : undefined, stageRect, boxes, over: chosen?.packed.over ?? 0 };
+    return { items, order, stageKey: groups.length ? [...stageIds].sort().join(" ") : undefined, stageRect, boxes, over: chosen?.packed.over ?? 0, released };
   }
   const ARR = ["stack", "row", "around", "split", "inset"] as const;
   function shrinkAxes(arrangement: string, f: number): [number, number] {
@@ -1060,9 +1437,9 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     for (let k = 0; k < K; ) {
       const sk = laid[k]!.stageKey;
       let e = k + 1;
-      // A stretch goes on while each moment shares something on the stage with the one before it.
-      const shares = (a?: string, b?: string) => !!a && !!b && a.split(" ").some((x) => b.split(" ").includes(x));
-      while (sk && e < K && shares(laid[e - 1]!.stageKey, laid[e]!.stageKey)) e++;
+      // A stretch goes on while each moment shares something on the stage with the one before it and no move asks the
+      // stage to be composed again.
+      while (sk && e < K && stretchStart[e] === stretchStart[k]) e++;
       if (sk && e - k > 1) {
         // Each moment's own stage box is a candidate; the one the whole stretch fits around best is kept.
         // The stretch keeps the smallest size any of its moments needed, at the place where the whole stretch fits best
@@ -1101,7 +1478,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   }
   anchorMem.clear();
   laid = [];
-  for (let k = 0; k < K; k++) laid.push(layoutMoment(k, steadyStage[k], true));
+  for (let k = 0; k < K; k++) laid.push(layoutMoment(k, steadyStage[k], true, laid[k - 1]));
   // Check: nothing placed overlaps anything else (a property the packer keeps; reported if it is broken).
   laid.forEach((l, k) => {
     const rs = Object.entries(l.boxes);
@@ -1145,7 +1522,14 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       w.node(n.id, n.kind as "group" | "path" | "text" | "image", props, n.parent);
     }
   }
-  for (const [id, e] of ents) {
+  // A scene's things are drawn back to front (what rests on a thing after it), in the slots its things already hold.
+  const drawOrder = [...ents];
+  for (const sc of scenes) {
+    const at = drawOrder.flatMap(([id], i) => (sc.ids.includes(id) ? [i] : []));
+    const byDepth = at.map((i) => drawOrder[i]!).sort((x, y) => sc.layout.z.indexOf(x[0]) - sc.layout.z.indexOf(y[0]));
+    at.forEach((i, j) => (drawOrder[i] = byDepth[j]!));
+  }
+  for (const [id, e] of drawOrder) {
     if (e.type === "pic" || e.type === "kit") continue;
     const nid = id === "ph" ? "ph" : id.startsWith("q.") || id.startsWith("lab.") ? id : key(id);
     if (!used.has(nid)) continue;
@@ -1191,7 +1575,17 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const { id, st } = it;
     if (it.type === "text" || it.type === "ph") return A.textTargets(id, ent(id)!.text!, st);
     if (it.type === "many") return A.manyTargets(id, st);
-    if (it.type === "obj") return [[id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.s], [id, "scaleY", st.s], [id, "opacity", st.op]];
+    if (it.type === "obj") {
+      const out: Triple[] = [[id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.s], [id, "scaleY", st.s], [id, "opacity", st.op]];
+      // A thing of a scene is cut to the scene's window in its own units (all of the frame when nothing runs past).
+      if (sceneOf.has(id.slice(2))) {
+        const [x0, y0, x1, y1] = st.clip ?? [-W, -H, 2 * W, 2 * H];
+        const lx = (x: number) => (x - st.x) / st.s;
+        const ly = (y: number) => (y - st.y) / st.s;
+        out.push([id, "clip", [lx(x0), ly(y0), lx(x1), ly(y0), lx(x1), ly(y1), lx(x0), ly(y1)]]);
+      }
+      return out;
+    }
     if (it.type === "kit") {
       // The group is placed so the center of the kit's box lands on the item's center.
       const b = computed.get(id.slice(2))!.box;
@@ -1422,15 +1816,32 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     const avail = lead - STAG * entering.length;
     const scale = enOff0 === 0 ? 1 : avail >= enOff0 ? 1 : Math.max(0, avail) / enOff0;
     const mvOff = Math.round(mvOff0 * scale);
-    const enOff = exits.length ? Math.max(Math.round(enOff0 * scale), Math.round(dEx * 0.9)) : Math.round(enOff0 * scale);
+    // What leaves has gone before anything new arrives, so the moment before's words are never drawn over this one's.
+    const enOff = exits.length ? Math.max(Math.round(enOff0 * scale), dEx) : Math.round(enOff0 * scale);
     let subjAt = t0 + enOff + STAG * entering.length;
     const [, dipF] = V.arr("motion.placeholderDip", i);
     if (phDip) subjAt = Math.max(subjAt, t0 + Math.round(dipF! * FPS));
     const actAt = subjAt;
     const subjDur = lastId && prev.has(lastId) ? durMove(pxOf(lastId), k) : base;
-    // Exits: fade and slight shrink, accelerating.
+    // The moves chosen for this moment (abilities/moves.ts), by the scene id they act on.
+    const nameOf = (id: string) => (/^[tpk]\./.test(id) ? id.slice(2) : undefined);
+    const mctx = (frames: number): A.CarryCtx => ({ fps: FPS, width: W, height: H, frames });
+    const settled = new Map<string, number>();
+    const told = (id: string, c: MoveChoice, use: MoveUse) => decide("motion", i, `${nameOf(id) ?? id} ${use === "accent" ? "plays" : use === "change" ? "changes by" : use === "enter" ? "arrives by" : "leaves by"} ${c.move}${c.args && Object.keys(c.args).length ? ` ${JSON.stringify(c.args)}` : ""}`, md.moves?.from ?? "designer", c.why ?? md.moves?.why ?? "chosen for this moment");
+    const sizeOf = (it: Item) => Math.max(it.st.w, it.st.h, 1);
+    // Exits: fade and slight shrink, accelerating, unless a move says how a thing leaves.
     for (const id of exits) {
       const it = prev.get(id)!;
+      const nm = nameOf(id);
+      const ex = nm ? moveFor(k, nm, "exit") : undefined;
+      if (ex && ex.move !== "fade") {
+        const r = A.carryExit(w, id, ex, t0, sizeOf(it), mctx(dEx));
+        if (r.note) notes.push(`${tag(f.m)} ${r.note}`);
+        if (r.frames) {
+          told(id, ex, "exit");
+          continue;
+        }
+      }
       if (id === "ph" && phDip) {
         const [shrink] = V.arr("motion.placeholderDip", i);
         A.placeholderDip(w, id, it.st, t0, { shrink: shrink!, frames: Math.round(dipF! * FPS) });
@@ -1456,13 +1867,28 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         const [sa, sf] = V.arr("becomes.settle", i);
         A.becomes(w, id, e, prev.get(id)!.st.ver, it.st.ver, { at, prepAt: t0 - 1, lift: V.n("becomes.lift", i) * 100, outFrames: V.f("becomes.out", i), inFrames: V.f("becomes.in", i), inDelay: 3, accent: C.key, settleColor: it.st.color, settleAfter: Math.round(sa! * FPS), settleFrames: Math.round(sf! * FPS), lineHeight: LH, pulse: { at: at + 9, size: ps!, frames: Math.round(pf! * FPS) } });
       }
-      for (const [n, p, v] of target(it, k)) {
-        if (n.includes(".v") && (p === "opacity" || p === "color") && verChanged(id)) continue;
-        if (n.endsWith(".lab") && p === "text") {
-          if (prev.get(id)!.st.label !== it.st.label) w.put(n, p, v, at + Math.round(frames / 2), 1, "step");
-          continue;
+      const tg = target(it, k).filter(([n, p]) => !(n.includes(".v") && (p === "opacity" || p === "color") && verChanged(id)));
+      for (const [n, p, v] of tg) if (n.endsWith(".lab") && p === "text" && prev.get(id)!.st.label !== it.st.label) w.put(n, p, v, at + Math.round(frames / 2), 1, "step");
+      const plain = tg.filter(([n, p]) => !(n.endsWith(".lab") && p === "text"));
+      // A move chosen for it says how it goes to its new state; a change the plan forces (an act, a new role) and that no
+      // move names glides there.
+      const nm = nameOf(id);
+      const ch = nm ? moveFor(k, nm, "change") : undefined;
+      const goes = plain.some(([n, p, v]) => n === id && ["x", "y", "scaleX", "scaleY", "points"].includes(p) && w.would(n, p, v));
+      if (ch && ch.move !== "stay" && (goes || ch.move === "cut" || ch.move === "fade")) {
+        const r = A.carryChange(w, id, plain, ch, at, mctx(frames));
+        if (r.note) notes.push(`${tag(f.m)} ${r.note}`);
+        for (const [n, p, v] of plain) w.put(n, p, v, at, r.note ? frames : Math.max(1, r.frames), "smooth");
+        settled.set(id, at + r.frames);
+        told(id, ch, "change");
+      } else {
+        for (const [n, p, v] of plain) w.put(n, p, v, at, frames, "smooth");
+        if (ch?.move === "hop") {
+          // A hop with nowhere new to go is a hop in place.
+          A.carryAccent(w, id, ch, at, onsets[k + 1] ?? FRAMES, mctx(frames));
+          told(id, ch, "accent");
         }
-        w.put(n, p, v, at, frames, "smooth");
+        if (goes) settled.set(id, at + frames);
       }
       if (it.type === "many") {
         const a = prev.get(id)!.st.n;
@@ -1474,9 +1900,22 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
         }
       }
     }
-    // Entrances: decelerate, staggered; the carrier of the moment arrives last.
+    // Entrances: decelerate, staggered; the carrier of the moment arrives last. A move chosen for a thing says how it
+    // arrives instead (drop, spring, cut, travel or arc in from an edge).
     const enterOne = (id: string, at: number) => {
       const it = cur.get(id)!;
+      const nm = nameOf(id);
+      const en = nm && ["text", "ph", "obj", "kit", "pic"].includes(it.type) && !(it.type === "pic" && isChart(pics.get(id.slice(2)))) && !it.born ? moveFor(k, nm, "enter") : undefined;
+      if (en && en.move !== "fade") {
+        const r = A.carryEnter(w, id, target(it, k), en, at, t0 - 1, sizeOf(it), mctx(Math.max(10, base)));
+        if (r.note) notes.push(`${tag(f.m)} ${r.note}`);
+        if (r.frames) {
+          settled.set(id, at + r.frames);
+          told(id, en, "enter");
+          return;
+        }
+      }
+      settled.set(id, at + Math.max(10, base));
       if (it.type === "pic" && isChart(pics.get(id.slice(2)))) {
         const pic = pics.get(id.slice(2)) as A.Chart;
         const seen = chartSeen.get(id) ?? new Set();
@@ -1555,6 +1994,8 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
     entering.forEach((id, j) => enterOne(id, t0 + enOff + STAG * j));
     // When a moment demonstrates and reveals words, the words wait for the landing they describe.
     const landed = scheduleActs(k, actAt, cur);
+    // A thing that falls or acts settles into the moment when its demonstration lands.
+    if (landed > actAt) for (const a of f.acts) for (const x of a.ids) settled.set(key(sid(x)!), Math.max(settled.get(key(sid(x)!)) ?? 0, landed));
     let subjEnter = subjAt;
     if (landed > actAt && revealId && cur.get(revealId)?.type === "text" && V.get<boolean>("demo.wordsWait", i)) {
       subjEnter = landed + 4;
@@ -1599,6 +2040,22 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       if (did !== "hold") decide("camera", i, did, camFrom, md.camera.why ?? "");
     }
     if (becomesNow.length) decide("motion", i, `${becomesNow.map((x) => ent(x)!.id).join(", ")} changes in place`, "author", "old words lift and fade, new words rise, then a pulse");
+    // Accents chosen for this moment's things, each as the thing settles into the moment (or as the moment's carrier
+    // lands, for a thing that was already at rest); a move that lasts (wiggle, orbit) holds until the next moment.
+    for (const c of movesAt(k)) {
+      if (!useOf(c, "accent")) continue;
+      const ids = c.ids.length ? c.ids.map((x) => key(sid(x)!)) : [...cur.keys()].filter((x) => nameOf(x));
+      for (const id of ids) {
+        if (!cur.has(id)) {
+          notes.push(`${tag(f.m)} ${c.move} ${nameOf(id) ?? id}: it is not on screen in this moment, nothing plays`);
+          continue;
+        }
+        const around = typeof c.args?.around === "string" ? key(sid(c.args.around)!) : undefined;
+        const r = A.carryAccent(w, id, c, Math.max(settled.get(id) ?? subjEnter + base, t0), onsets[k + 1] ?? FRAMES, mctx(base), around && cur.has(around) ? around : undefined);
+        if (r.note) notes.push(`${tag(f.m)} ${r.note}`);
+        else told(id, c, "accent");
+      }
+    }
     // Pinned sets: applied last in the moment, at its onset, so they win.
     for (const s of pinsOf(i).sets) {
       const targets = kr(s.id) && w.has(`k.${s.id}`) ? [`k.${s.id}`] : w.has(s.id) ? [s.id] : w.has(key(s.id)) ? [key(s.id)] : [];
@@ -1697,5 +2154,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   });
   if (w.has("ph")) addId("?", "ph");
   for (const [name, list] of Object.entries(ids)) if (!list.length) delete ids[name];
-  return { doc, scene, ids, notes, decisions, problems, boxes: laid.map((l, k) => ({ moment: fms[k]!.i, boxes: l.boxes })) };
+  const onsetOf: number[] = plan.moments.map(() => 0);
+  fms.forEach((f, k) => [f.i, ...f.merged].forEach((j) => (onsetOf[j] = onsets[k]!)));
+  return { doc, scene, ids, notes, decisions, problems, boxes: laid.map((l, k) => ({ moment: fms[k]!.i, boxes: l.boxes })), onsets: onsetOf };
 }

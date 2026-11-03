@@ -54,6 +54,26 @@
     }
   },
   "design": {
+    "moves": {
+      "leans": [
+        {
+          "move": "spring",
+          "why": "marker drawings on a board read as hand-made and alive: things that settle with a little overshoot feel drawn by a person, not slid by software"
+        },
+        {
+          "move": "squash",
+          "why": "squash and stretch is the board animator's own grammar: a landing or a beat that flattens and rebounds gives a drawn thing weight"
+        },
+        {
+          "move": "hop",
+          "why": "a drawn thing that jumps with a crouch and a landing reads as a character on the board, which suits playful explanations"
+        },
+        {
+          "move": "drop",
+          "why": "dropping a new drawing in so it lands with a bounce feels like it was just placed on the board"
+        }
+      ]
+    },
     "colors": {
       "red": "#d0352b",
       "green": "#1d7f45",

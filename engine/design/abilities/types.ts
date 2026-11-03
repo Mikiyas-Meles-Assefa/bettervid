@@ -33,6 +33,10 @@ export type St = {
   pts: number[];
   lit?: string[]; // chart parts lit
   levels?: { part: string; v: number; tag: string }[];
+  /** A scene's window that a thing of it is cut to when the scene runs past its box: [x0, y0, x1, y1], frame pixels. */
+  clip?: number[];
+  /** The same window while a composition is built: x from the composition's center, y from its top. */
+  win?: [number, number, number, number];
 };
 
 export const blankSt = (color: string): St => ({ x: 0, y: 0, s: 1, op: 1, color, w: 0, h: 0, cls: "support", ver: 0, n: 0, wrong: false, reveal: false, fs: 0, dotsY: 0, labY: 0, label: "", len: 0, z: 1, ox: 0, oy: 0, pts: [] });

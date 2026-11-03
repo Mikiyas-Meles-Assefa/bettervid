@@ -43,6 +43,11 @@ export type Design = {
   surfaces: Record<string, SurfaceRule>;
   elements: Elements;
   picture: Picture;
+  /**
+   * Moves this style leans toward (a whiteboard's springy, squashy marker world, a calm ink's gentle glides), each with
+   * its reason. Suggestions shown to the agents beside the whole motion vocabulary, never a limit on it.
+   */
+  moves: { leans: { move: string; why: string }[] };
 };
 
 export const TEXT_ROLES: Role[] = ROLES.filter((r) => r !== "panel" && r !== "pointer");
@@ -162,7 +167,7 @@ function only(where: string, raw: Raw, keys: string[]) {
   for (const k of Object.keys(raw)) if (!keys.includes(k)) throw new Error(`style ${where}.${k}: unknown setting. Known: ${keys.join(", ")}`);
 }
 
-export const DESIGN_KEYS = ["colors", "scale", "roles", "surfaces", "elements", "picture"];
+export const DESIGN_KEYS = ["colors", "scale", "roles", "surfaces", "elements", "picture", "moves"];
 
 // Reads `design` from a style file and refuses it unless every role is complete and every allowed pairing reads.
 export function resolveDesign(file: { palette?: Palette; design?: Raw }, style: StyleSpec): Design {
@@ -289,7 +294,16 @@ export function resolveDesign(file: { palette?: Palette; design?: Raw }, style: 
     const b = e("backdrop", ["blur", "brightness", "saturation", "contrast", "tint", "tintAmount"]);
     elements.backdrop = { blur: range("design.elements.backdrop.blur", b.blur, 0, 80), brightness: range("design.elements.backdrop.brightness", b.brightness, 0.2, 1.2), saturation: range("design.elements.backdrop.saturation", b.saturation, 0, 1.6), contrast: range("design.elements.backdrop.contrast", b.contrast, 0.6, 1.4), tint: color("design.elements.backdrop.tint", b.tint), tintAmount: range("design.elements.backdrop.tintAmount", b.tintAmount, 0, 0.8) };
   }
-  const design: Design = { colors: extra, scale, roles, surfaces, elements, picture };
+  // Leanings are words for the agents: each names a move and says why this style leans toward it.
+  const mv: Raw = raw.moves ?? { leans: [] };
+  only("design.moves", mv, ["leans"]);
+  if (!Array.isArray(mv.leans)) throw new Error("style design.moves.leans: a list of { move, why }");
+  const leans = (mv.leans as Raw[]).map((l, i) => {
+    only(`design.moves.leans[${i}]`, l, ["move", "why"]);
+    if (typeof l.move !== "string" || !l.move.trim() || typeof l.why !== "string" || !l.why.trim()) throw new Error(`style design.moves.leans[${i}]: a move's name and why this style leans toward it`);
+    return { move: l.move.trim(), why: l.why.trim() };
+  });
+  const design: Design = { colors: extra, scale, roles, surfaces, elements, picture, moves: { leans } };
 
   // The table rule and the highlight are marks on the page; a highlight drawn behind words is a surface for them.
   const page = surfaceSamples("paper", style, colors);
