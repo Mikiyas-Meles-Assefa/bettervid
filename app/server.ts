@@ -260,6 +260,7 @@ function summary(p: Project) {
   return {
     id: p.id,
     createdAt: p.createdAt,
+    madeAt: (p.stages as Record<string, { at: string } | undefined>).mux?.at ?? p.stages.render?.at ?? p.createdAt,
     prompt: p.input.prompt,
     style: style?.label ?? p.input.style,
     styleName: p.input.style,
@@ -268,7 +269,7 @@ function summary(p: Project) {
     takeaway: p.script?.takeaway,
     plan: p.plan,
     stages: Object.keys(p.stages),
-    steps: withNext(steps, !live, !!p.input.files?.length),
+    steps: withNext(steps, !live && !queued, !!p.input.files?.length),
     material: materialSummary(p),
     stage: job?.stage ?? (queued ? "queued" : p.render ? "done" : Object.keys(p.stages).length ? "stopped" : "new"),
     running: live,
@@ -294,7 +295,7 @@ function summary(p: Project) {
 function projects() {
   if (!existsSync(ROOT)) return [];
   return readdirSync(ROOT, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && existsSync(join(ROOT, d.name, "project.json")))
+    .filter((d) => (d.isDirectory() || d.isSymbolicLink()) && existsSync(join(ROOT, d.name, "project.json")))
     .flatMap((d) => {
       try {
         return [summary(load(d.name))];

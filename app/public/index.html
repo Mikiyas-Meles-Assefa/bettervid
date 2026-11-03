@@ -324,6 +324,33 @@
     dl.pairs dd { margin-bottom: 8px; }
   }
 
+  /* Gallery */
+  .page-head { padding: clamp(30px, 5vw, 54px) 0 8px; display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; }
+  .page-head p { color: var(--soft); margin: 10px 0 0; max-width: 60ch; }
+  .filters { margin: 20px 0 26px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 30px 20px; }
+  .card p.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .inline-list { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 8px; padding: 0; list-style: none; }
+
+  /* Batch */
+  .batch { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start; padding-top: 8px; }
+  .batch textarea { width: 100%; min-height: 220px; padding: 14px 16px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; font-family: var(--serif); font-size: 17px; line-height: 1.6; resize: vertical; }
+  .batch textarea:focus { outline: none; border-color: var(--soft); }
+  .counter { font-size: 14px; color: var(--soft); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .line-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: clamp(16px, 2.4vw, 24px); position: sticky; top: 84px; }
+  .line-panel h2 { font-size: 24px; }
+  .line-state { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0 16px; font-size: 14.5px; color: var(--soft); }
+  .queue { list-style: none; margin: 0; padding: 0; counter-reset: q; }
+  .queue li { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: start; padding: 11px 0; border-top: 1px solid var(--line); counter-increment: q; }
+  .queue li::before { content: counter(q); font-variant-numeric: tabular-nums; color: var(--faint); font-weight: 650; padding-top: 2px; }
+  .queue li.now::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 7px; animation: pulse 1.2s infinite; }
+  .queue a { font-weight: 600; text-decoration: none; }
+  .queue a:hover { text-decoration: underline; }
+  .queue small { display: block; color: var(--faint); font-size: 13px; }
+  .queue button { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; color: var(--soft); cursor: pointer; font-size: 13.5px; }
+  .queue button:hover { color: var(--ink); border-color: var(--soft); }
+  @media (max-width: 860px) { .batch { grid-template-columns: 1fr; } .line-panel { position: static; } .grid { grid-template-columns: repeat(2, 1fr); gap: 24px 14px; } }
+
   .empty { padding: 60px 0; }
   .empty p { color: var(--soft); }
 
@@ -344,6 +371,8 @@
   <a class="brand" href="#/" aria-label="bettervid, home"><i aria-hidden="true"></i>bettervid</a>
   <nav class="main" aria-label="Main">
     <a href="#/" data-nav="home">Make</a>
+    <a href="#/gallery" data-nav="gallery">Gallery</a>
+    <a href="#/batch" data-nav="batch">Batch</a>
   </nav>
   <button class="theme" type="button" aria-label="Switch between light and dark" title="Light or dark"></button>
 </div></header>
@@ -363,6 +392,7 @@ const IDEAS = ["a 1970s science textbook", "sticky notes on a fridge", "museum p
 const STILL = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const app = document.getElementById("app");
 const viewer = document.getElementById("viewer");
+const mount = (...kids) => app.replaceChildren(...kids.flat().filter((k) => k !== null && k !== undefined && k !== false && k !== ""));
 let timer;
 const chosen = { style: localGet("style") || "collage", length: "auto" };
 
@@ -558,7 +588,7 @@ function attachments(area) {
   return { state, view, err };
 }
 
-function card(v, extra) {
+function card(v, ...extra) {
   const frame = el("span", { class: "frame" },
     v.thumb ? el("img", { src: v.thumb, alt: "", loading: "lazy", decoding: "async", onerror: (e) => e.target.replaceWith(el("video", { src: `/videos/${v.id}.mp4#t=3`, preload: "metadata", muted: true, playsinline: true, tabindex: "-1", "aria-hidden": "true" })) }) : null,
     v.seconds ? el("span", { class: "len" }, clock(v.seconds)) : null,
@@ -592,7 +622,7 @@ async function home() {
     el("div", { class: "go" }, go, el("p", { class: "note" }, opts.busy ? "A video is being made right now. Yours will wait in line and start when it is done." : "A one minute video takes about a quarter of an hour. You can leave and come back; it will be in the gallery.")),
     err);
   const done = videos.filter((v) => v.video);
-  app.replaceChildren(
+  mount(
     el("section", { class: "hero" },
       el("div", {},
         el("h1", {}, "Turn a sentence or your own files into a finished video."),
@@ -836,7 +866,7 @@ function paintStudio(v, tab) {
   const head = el("div", { class: "head" },
     el("div", { class: "eyebrow" }, status, el("span", {}, [v.style, day(v.createdAt), v.files ? `${v.files} ${v.files === 1 ? "file" : "files"}` : ""].filter(Boolean).join(" · "))),
     el("h1", {}, v.title), v.prompt && v.prompt !== v.title ? el("p", { class: "asked" }, v.prompt) : null, v.takeaway ? el("p", { class: "takeaway" }, v.takeaway) : null);
-  const body = el("div", { class: "body" }, head, tablist, panel);
+  const body = el("div", { class: "body" }, head, tabs.length > 1 ? tablist : null, panel);
   if (same && app.querySelector(".studio")) {
     const old = app.querySelector(".studio");
     const oldSide = old.querySelector(".side");
@@ -903,8 +933,106 @@ function editCaptions(v, button) {
   boxes[0]?.focus();
 }
 
-// Pages: #/ (make), #/p/<id>[/<tab>] (studio). Older links (#<id>) still open the studio.
-const views = { home };
+// ---------- Gallery: every finished video, newest first ----------
+async function gallery() {
+  const [videos, show] = await Promise.all([api("/api/videos"), api("/api/showcase").catch(() => [])]);
+  const picked = new Set(show.map((v) => v.id));
+  const done = videos.filter((v) => v.video).sort((a, b) => b.madeAt.localeCompare(a.madeAt));
+  const busy = videos.filter((v) => v.running || v.queued).sort((a, b) => (a.running ? -1 : b.running ? 1 : a.queued - b.queued));
+  const styles = [...new Set(done.map((v) => v.style))];
+  // The same request made more than once (while the engine was being improved) shows as one card: the take picked for
+  // the showcase if there is one, else the newest. Nothing is hidden: the count says how many, one switch shows them all.
+  const takes = new Map();
+  for (const v of done) { const k = `${v.prompt.trim().toLowerCase()}|${v.style}`; takes.set(k, [...(takes.get(k) ?? []), v]); }
+  for (const t of takes.values()) t.sort((a, b) => picked.has(b.id) - picked.has(a.id));
+  let only = "all";
+  let every = false;
+  const grid = el("div", { class: "grid" });
+  const paint = () => {
+    const list = every ? done : [...takes.values()].map((t) => t[0]);
+    grid.replaceChildren(...list.filter((v) => only === "all" || v.style === only).map((v) => {
+      const n = takes.get(`${v.prompt.trim().toLowerCase()}|${v.style}`).length;
+      return card(v, el("p", { class: "clamp", title: v.prompt }, v.prompt), el("small", {}, [day(v.madeAt), !every && n > 1 ? `1 of ${n} takes` : ""].filter(Boolean).join(" · ")));
+    }));
+  };
+  const filters = el("div", { class: "pills filters" },
+    el("div", { class: "pills", role: "radiogroup", "aria-label": "Show style" }, ["all", ...styles].map((s) =>
+      el("label", {}, el("input", { type: "radio", name: "only", value: s, checked: s === "all", onchange: () => { only = s; paint(); } }), el("span", {}, s === "all" ? "All styles" : s)))),
+    takes.size < done.length ? el("label", {}, el("input", { type: "checkbox", onchange: (e) => { every = e.target.checked; paint(); } }), el("span", {}, `Every take (${done.length})`)) : null);
+  paint();
+  mount(
+    el("div", { class: "page-head" }, el("div", {}, el("h1", {}, "Gallery"), el("p", {}, `${takes.size} videos made here, newest first. Open one to watch it and see how it was made: the plan, the script, the direction, the scenes and every source.`))),
+    busy.length ? el("div", { class: "block" }, el("h3", {}, "In progress"), el("ul", { class: "inline-list" }, busy.map((v) => el("li", {}, el("a", { href: `#/p/${v.id}` }, v.title), " ", el("span", { class: v.running ? "tag live" : "tag" }, v.running ? "making now" : `waiting, ${v.queued}`))))) : null,
+    styles.length > 1 || takes.size < done.length ? filters : null,
+    done.length ? grid : el("section", { class: "empty" }, el("p", {}, "Nothing finished yet."), el("a", { class: "btn", href: "#/" }, "Make the first one")));
+}
+
+// ---------- Batch: several videos at once, made one after another ----------
+async function batch() {
+  const [opts, first] = await Promise.all([api("/api/options"), api("/api/queue")]);
+  const box = el("textarea", { id: "batch-prompts", "aria-describedby": "batch-count", placeholder: "One video per line, for example:\nWhy do onions make you cry? Under a minute.\nOur Q3 numbers for the sales team, upbeat, two minutes.\nHow a bill becomes law in Kenya, for a civics class." });
+  const count = el("div", { class: "counter", id: "batch-count", "aria-live": "polite" });
+  const go = el("button", { class: "btn", type: "submit" }, "Add to the line");
+  const err = el("div", { class: "error", role: "alert" });
+  const said = el("p", { class: "note", role: "status" });
+  const voice = narrator(opts.personas);
+  const lines = () => box.value.split("\n").map((s) => s.trim()).filter(Boolean);
+  const recount = () => {
+    const n = lines().length;
+    count.textContent = n ? `${n} ${n === 1 ? "video" : "videos"}, each made on its own, one after another` : "Nothing yet";
+    go.textContent = n ? `Add ${n} to the line` : "Add to the line";
+  };
+  box.addEventListener("input", recount);
+  recount();
+  const panel = el("aside", { class: "line-panel", "aria-labelledby": "line-title" });
+  const paintLine = (q) => {
+    const state = q.dry ? "Test mode: requests are kept as records, nothing is made." : q.paused ? `Paused. ${q.why ?? ""}` : q.running ? "Making one now." : q.items.length ? "Starting the next one." : "Nothing waiting.";
+    const items = q.items;
+    panel.replaceChildren(...[
+      el("h2", { id: "line-title" }, "The line"),
+      el("div", { class: "line-state" }, el("span", { class: q.dry || q.paused ? "tag" : "tag live" }, q.dry ? "test mode" : q.paused ? "paused" : "running"), el("span", {}, state)),
+      el("p", { class: "note" }, `One video is made at a time. $${q.spent.toFixed(2)} of the $${q.budget} budget is spent; the line pauses before it would go past it.`),
+      q.controls && !q.dry ? el("div", { class: "tools", style: "margin:4px 0 14px" }, el("button", { class: "btn quiet", type: "button", onclick: async () => { try { await post("/api/queue", { paused: !q.paused }); refresh(); } catch (e) { err.textContent = e.message; } } }, q.paused ? "Resume the line" : "Pause the line")) : null,
+      q.running || items.length ? el("ol", { class: "queue" },
+        q.running ? el("li", { class: "now" }, el("div", {}, el("a", { href: `#/p/${q.running}` }, "Being made now"), el("small", {}, "Open it to watch the stages")), el("span", {})) : null,
+        items.map((v) => el("li", {},
+          el("div", {}, el("a", { href: `#/p/${v.id}` }, v.prompt), el("small", {}, [v.style, day(v.createdAt), v.files ? `${v.files} files` : ""].filter(Boolean).join(" · "))),
+          q.controls ? el("button", { type: "button", "aria-label": `Take "${v.prompt}" out of the line`, onclick: async () => { try { await api(`/api/queue/${v.id}`, { method: "DELETE" }); refresh(); } catch (e) { err.textContent = e.message; } } }, "Remove") : el("span", {}))))
+        : el("p", { class: "note" }, "Add videos on the left and they wait here.")].filter(Boolean));
+  };
+  const refresh = async () => {
+    clearTimeout(timer);
+    try { paintLine(await api("/api/queue")); } catch {}
+    if (location.hash.startsWith("#/batch")) timer = setTimeout(refresh, 2500);
+  };
+  const form = el("form", { onsubmit: async (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    said.textContent = "";
+    if (!lines().length) { err.textContent = "Write at least one video, one per line."; box.focus(); return; }
+    go.disabled = true;
+    try {
+      const r = await post("/api/batch", { prompts: lines(), style: chosen.style, persona: voice.select.value, length: chosen.length });
+      said.textContent = `${r.ids.length} added to the line.${r.refused ? ` ${r.refused}` : ""}`;
+      box.value = "";
+      recount();
+      refresh();
+    } catch (e) { err.textContent = e.message; }
+    go.disabled = false;
+  } },
+    el("label", { class: "label", for: "batch-prompts", style: "display:block;font-weight:650;font-size:14.5px;margin-bottom:9px" }, "Videos"), box, count,
+    picker(opts.styles, { maker: false }), el("div", { class: "options" }, lengths("batch-length"), voice.view),
+    el("p", { class: "note", style: "margin-top:16px" }, "Style, length and narrator apply to every video in this batch. Each line can still say more, like a tone, an audience or a length."),
+    el("div", { class: "go" }, go, said), err);
+  paintLine(first);
+  mount(
+    el("div", { class: "page-head" }, el("div", {}, el("h1", {}, "Batch"), el("p", {}, "Make several videos at once: a course, a series, the same idea for different audiences. Each one gets its own plan, research, script and review."))),
+    el("div", { class: "batch" }, form, panel));
+  timer = setTimeout(refresh, 2500);
+}
+
+// Pages: #/ (make), #/gallery, #/batch, #/p/<id>[/<tab>] (studio). Older links (#<id>) still open the studio.
+const views = { home, gallery, batch };
 function route() {
   clearTimeout(timer);
   replaying = undefined;
