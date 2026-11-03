@@ -124,7 +124,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   const held = expandHolds(written, holdMoments(opts.holds, ctx));
   const source = held.source;
   const { doc, problems } = parse(source, kitNames);
-  problems.unshift(...held.problems);
+  problems.unshift(...held.problems, ...unlabeledTotals(doc));
   const stats = { states: doc.states.length, parts: 0, programs: 0, programMs: 0 };
   const notes: string[] = [];
   if (problems.length) return { problems, stats };
@@ -1945,6 +1945,39 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }
+}
+
+// A table's last row that adds up the columns above it, with nothing that says so, reads as one more row of data. Each
+// such row must say what it is (a word in the row, such as a first cell naming it).
+function unlabeledTotals(doc: Doc): Problem[] {
+  const out: Problem[] = [];
+  const told = new Set<string>();
+  const cells = (i: Item): string[] | undefined =>
+    i.kind === "atoms" && (i.parts ?? []).every((x) => x.type === "text") ? i.parts!.map((x) => (x.type === "text" ? x.atom.text : ""))
+    : i.kind === "row" && i.children.every((c) => c.kind === "text") ? i.children.map((c) => c.text ?? "")
+    : undefined;
+  const num = (t: string) => {
+    const v = Number(t.trim().replace("−", "-"));
+    return t.trim() !== "" && Number.isFinite(v) ? v : undefined;
+  };
+  const walk = (items: Item[]) => items.forEach((g) => {
+    if (g.kind === "grid" && !told.has(g.id)) {
+      const rows = g.children.map(cells);
+      const last = rows.at(-1);
+      const body = rows.slice(0, -1).filter((r): r is string[] => !!r && r.length === last?.length && r.every((t) => num(t) !== undefined));
+      if (last && body.length >= 2 && last.every((t) => num(t) !== undefined)) {
+        const sums = last.map((_, c) => body.reduce((sum, r) => sum + num(r[c]!)!, 0));
+        if (last.every((t, c) => Math.abs(num(t)! - sums[c]!) < 1e-9)) {
+          told.add(g.id);
+          const line = g.children.at(-1)!;
+          out.push({ line: line.line, message: `The last row of ${g.id} (${last.join(", ")}) adds up the columns above it, but nothing in it says so, so it reads as one more row of data. Say what it is in the row itself: give the table a first column of row names (the header names it, this row says sum or total), or put the row's name as its first cell.` });
+        }
+      }
+    }
+    walk(g.children);
+  });
+  doc.states.forEach((st) => walk(st.items));
+  return out;
 }
 
 // Words pinned to the glass while the camera follows work: each top-level part that holds them is moved and scaled

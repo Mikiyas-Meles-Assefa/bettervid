@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { evaluate } from "../core/evaluate.ts";
 import type { CompileContext, Resolved, Scene } from "../core/types.ts";
 import { KITS } from "../kits/index.ts";
+import { mathKit } from "../kits/math.ts";
 import { sortPart } from "../kits/sort.ts";
 import { truthSteps } from "../kits/steps.ts";
 import { build, formatProblems, type BuildOptions } from "./build.ts";
@@ -135,6 +136,23 @@ test("steps played twice are refused on their own line, and one id cannot take t
 test("words a state puts up must be in view under the scene's camera", async () => {
   const err = await bad(`@0\nsort s data=[5,2,8,1,9,3,7,4] algo=merge show=boxes\ntext cap "a caption below the work" role=caption\n@4 keep\ncamera s.item.1 zoom=2.5\ntext cap "the caption now says something new" role=caption\n`);
   assert.match(err, /the caption now says something new/);
+});
+
+test("a table's row of column sums must say what it is", async () => {
+  const table = (last: string) => `@0\ngrid g cols=3\n  small head: h1=Data h2=Dev h3=Sq\n  normal r1: a1=1 b1=-2 c1=4\n  normal r2: a2=2 b2=-1 c2=1\n  ${last}\n`;
+  assert.match(await bad(table("normal tot: t1=3 t2=-3 t3=5")), /last row of g \(3, -3, 5\) adds up the columns above it/);
+  await ok(table("normal r3: a3=4 b3=1 c3=1"));
+  await ok(`@0\ngrid g cols=4\n  small head: h0=Row h1=Data h2=Dev h3=Sq\n  normal r1: n1=a a1=1 b1=-2 c1=4\n  normal r2: n2=b a2=2 b2=-1 c2=1\n  normal tot: n3=sum t1=3 t2=-3 t3=5\n`);
+});
+
+test("a formula that changes in place is laid out by the form it shows, at its type size", async () => {
+  const s = await ok(`@0\nmath m latex="\\sqrt{4}"\n@10 keep\nmath m latex="\\sqrt{4}=2"\n`, { ...opts, ctx: { ...ctx, kits: [...KITS, mathKit] } });
+  const tree = evaluate(s, 300);
+  const m = find(tree, "m")!;
+  const xs = m.children.map((c) => Number(m.props.x) + Number(c.props.x) * Number(m.props.scaleX));
+  const shown = (f: number) => find(evaluate(s, f), "m")!.children.filter((c) => Number(c.props.opacity ?? 1) > 0.5).length;
+  assert.ok(shown(300) > shown(60), `the new form shows more symbols: ${shown(60)} then ${shown(300)}`);
+  assert.ok(Math.min(...xs) > 0 && Math.max(...xs) < 1080, `inside the frame: ${xs.map(Math.round)}`);
 });
 
 test("a text that grows a second line shows it, also when an earlier text had one", async () => {
