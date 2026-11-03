@@ -102,17 +102,27 @@ function boardFor(kind: string, id: string, spec: string, ctx: CompileContext): 
 // Turns a maker into a kind. The input rides on the root group, so playing later finds the very same story.
 export function truthKind(kind: string, make: Maker, allowed: string[]): NonNullable<Kit["kinds"]>[string] {
   makers.set(kind, make);
-  const ok = new Set([...allowed, "w", "h"]);
+  const ok = new Set([...allowed, "w", "h", "done"]);
   return (n, ctx) => {
     const data = { ...(n.data ?? {}) };
-    for (const key of Object.keys(data)) if (!ok.has(key)) throw new Error(`${kind} has no setting "${key}". It takes: ${allowed.join(", ")}`);
+    for (const key of Object.keys(data)) if (!ok.has(key)) throw new Error(`${kind} has no setting "${key}". It takes: ${allowed.join(", ")}, and done`);
+    // `done=K`: the thing first shows how it stands once steps 1 to K are done, as when a demonstration goes on from an
+    // earlier stretch. Its steps then play on from K + 1.
+    const after = data.done === undefined ? 0 : Number(data.done);
     delete data.w;
     delete data.h;
+    delete data.done;
     const spec = JSON.stringify(data);
     const board = boardFor(kind, n.id, spec, ctx);
+    if (!Number.isInteger(after) || after < 0 || after > board.steps.length) throw new Error(`done= is how many of its ${board.steps.length} steps are already done, a whole number from 0 to ${board.steps.length}, not ${n.data?.done}`);
     const [root, ...rest] = board.parts;
     if (!root || root.id !== n.id || root.kind !== "group") throw new Error(`${kind} must start with its own group`);
-    return [{ ...root, parent: n.parent, props: { ...n.props, ...root.props, truth: kind, spec, played: 0 } }, ...rest];
+    const done = after ? board.steps[after - 1]!.after : new Map<string, Value>();
+    const at = (part: NodeSpec): NodeSpec => {
+      const own = [...done].filter(([key]) => key.startsWith(`${part.id}\u0000`));
+      return own.length ? { ...part, props: { ...part.props, ...Object.fromEntries(own.map(([key, v]) => [key.split("\u0000")[1]!, v])) } } : part;
+    };
+    return [{ ...root, parent: n.parent, props: { ...n.props, ...root.props, truth: kind, spec, played: after } }, ...rest.map(at)];
   };
 }
 
@@ -187,7 +197,7 @@ export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
   const to = int(args.to, "to") ?? n;
   if (from < 1 || to > n || from > to) throw new Error(`${target} has steps 1 to ${n}, so from=${from} to=${to} does not fit. Its steps: ${stepList(steps)}`);
   // Playing steps that already played would show the same work twice; a scene that wants more goes on from where it was.
-  const done = Number(tools.value(target, "played", start) ?? 0);
+  const done = Number(tools.value(target, "played", start) ?? props.played ?? 0);
   if (from <= done) throw new Error(`${target} already played steps 1 to ${done} before this moment, so this play must start at from=${done + 1}${done < n ? "" : ", but there are no steps left"}. Its steps: ${stepList(steps)}`);
   const count = to - from + 1;
   const paceName = args.pace === undefined ? undefined : String(args.pace);
@@ -262,7 +272,7 @@ export const playSteps: Behavior = ({ target, start, args, ctx, tools }) => {
 };
 
 // The one behavior every truth kit adds, with the one line that teaches it.
-export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. `pace=slow|normal|fast` sets how long each step takes and how long its moves last; with `until=` or `at=` it is the least time a step may have, and a stretch too short for its steps at that pace is an error that says how many fit. A demonstration in phases is one `do steps` per phase: `do steps s from=1 to=2 pace=slow until=@h1`, then `do steps s from=3 to=9 pace=fast until=@40`. To show the same process again (a replay, or the same input run beside it), make a second thing with `replay=ID`, which takes the first one's input, and play its steps. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. In the main column it grows into the room the words leave on its own; `w=` and `h=` give it a different shape of box to start from";
+export const STEPS_DOC = "`do steps ID at=@12,@15,@20` plays the steps of a truth thing (matrix, det, cramer, matvec, sort, trace, dijkstra), one spoken moment per step. Or `until=@40` to spread them evenly, or `each=FRAMES`. `from=K to=K` (counted from 1) plays only those steps, so several states can each play the next few; a step never plays twice. `done=K` on the thing itself shows it as it stands once steps 1 to K are done, for a stretch that takes a demonstration over part way through; its plays then start at from=K+1. `pace=slow|normal|fast` sets how long each step takes and how long its moves last; with `until=` or `at=` it is the least time a step may have, and a stretch too short for its steps at that pace is an error that says how many fit. A demonstration in phases is one `do steps` per phase: `do steps s from=1 to=2 pace=slow until=@h1`, then `do steps s from=3 to=9 pace=fast until=@40`. To show the same process again (a replay, or the same input run beside it), make a second thing with `replay=ID`, which takes the first one's input, and play its steps. Every number, result and path it shows is computed: point at its parts (light, tag, mark) rather than writing results yourself. In the main column it grows into the room the words leave on its own; `w=` and `h=` give it a different shape of box to start from";
 
 // ---------- Layout helpers shared by the kits ----------
 
