@@ -1587,7 +1587,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
         // Back on the board: it moves while unseen, then appears.
         for (const [k, v] of Object.entries(props)) if (!same(was.props[k], v) && k !== "opacity") (preset[id] ??= {})[k] = v;
         for (const [k, v] of Object.entries(was.props)) if (props[k] === undefined && typeof v === "number" && k !== "opacity" && k !== "drawn" && AT_REST[k] !== undefined && v !== AT_REST[k]) (preset[id] ??= {})[k] = AT_REST[k]!;
-        if (!part.parent) (comeBack[id] ??= {}).opacity = typeof props.opacity === "number" ? props.opacity : 1;
+        // A part that left on its own (a text's second line, gone while its text was one line) comes back on its own too;
+        // one that left with its parent comes back with it.
+        if (!part.parent || !returning.has(part.parent)) (comeBack[id] ??= {}).opacity = typeof props.opacity === "number" ? props.opacity : 1;
         returning.add(id);
         was.props = props;
         was.alive = true;
@@ -1761,7 +1763,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   // thing's values, both stop reading, so it is refused with the step it happens at.
   for (const f of follows) {
     const made = expansions.get(f.target);
-    if (!f.tags.length || !made || typeof f.root.truth !== "string" || typeof f.root.spec !== "string") continue;
+    if (!made || typeof f.root.truth !== "string" || typeof f.root.spec !== "string") continue;
     let board: ReturnType<typeof storyOf>;
     try {
       board = storyOf(f.root.truth, f.target, f.root.spec, kitCtx);
@@ -1771,6 +1773,21 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     const plan = stepSchedule(f.args, f.at, board.steps.length, ctx);
     const k = Number(f.root.scaleX ?? 1);
     const inScene = (b: Area): Box => ({ x: Number(f.root.x ?? 0) + b.x * k, y: Number(f.root.y ?? 0) + b.y * k, w: b.w * k, h: b.h * k });
+    // Under a camera the scene set itself, the values its steps move must stay whole in view: a value the steps carry
+    // to the edge of a close view is cut there. (The camera that follows keeps them whole on its own.)
+    if (f.still) {
+      for (let j = 0; j < plan.times.length; j++) {
+        const step = plan.from + j;
+        const shot = shots.filter((x) => x.at <= plan.times[j]!).at(-1);
+        if (!shot || shot.view.zoom <= 1.0001) continue;
+        const values: Seen[] = wordsAfter(board, made.nodes, step).map((w) => ({ id: w.id, box: inScene(w.box), line: f.line, what: "text", text: w.text, laid: false }));
+        const cut = cutFrom(shot.view, values);
+        if (!cut.length) continue;
+        report(shot.line, `With the camera on line ${shot.line} (zoom ${shot.view.zoom.toFixed(2)}), step ${step} of ${f.target} (${board.steps[step - 1]!.say}) carries ${cut.map((w) => `"${w.text}"`).slice(0, 3).join(", ")} to the edge of the view, where ${cut.length > 1 ? "they are" : "it is"} cut. Frame what the steps move: a lower zoom, the whole of ${f.target}, or no camera line, so the camera follows the work itself.`);
+        break;
+      }
+    }
+    if (!f.tags.length) continue;
     for (const { c, box } of f.tags) {
       if (c.do !== "tag" || !box) continue;
       const start = partAt(board, made.nodes, c.target, plan.from - 1);

@@ -137,6 +137,17 @@ test("words a state puts up must be in view under the scene's camera", async () 
   assert.match(err, /the caption now says something new/);
 });
 
+test("a text that grows a second line shows it, also when an earlier text had one", async () => {
+  const long = "a sentence long enough to need a second line on a phone screen at this size";
+  const s = await ok(`@0\ntext t "${long}" size=big\n@4 keep\ntext t "short" size=big\n@8 keep\ntext t "${long} too" size=big\n`);
+  assert.ok(Number(at(s, 8 * 15 + 30, "t.l2")?.opacity) > 0.9, "the second line is back");
+});
+
+test("values a step carries out of a close view the scene set are refused", async () => {
+  const err = await bad(`@0\nsort s data=[5,1,7,3,6,2,8,4] algo=merge order=levels show=boxes done=7\n@4 keep\ncamera s zoom=1.4\ndo steps s from=8 to=10 pace=slow until=@30\n`);
+  assert.match(err, /step \d+ of s .* to the edge of the view/);
+});
+
 test("a tag riding a moving part onto the values is refused", async () => {
   const err = await bad(`@0\nsort s data=[5,1,7,3,6,2,8,4] algo=merge show=boxes form=row\n@4 keep\ndo steps s from=1 to=3 until=@8\n@10 keep\ntag s.finger.a "finger" side=left\ndo steps s from=4 to=7 until=@30\n`);
   assert.match(err, /"finger" is tagged on s\.finger\.a, which moves .* onto the value/);
