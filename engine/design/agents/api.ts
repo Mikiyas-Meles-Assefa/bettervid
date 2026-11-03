@@ -3,7 +3,7 @@
 // loop (engine/design/search) calls them through the Reasoner. In production the Reasoner is Spark; in development a
 // Claude subagent answering files. Changes here need the lead's review.
 import type { Theme } from "../../core/types.ts";
-import type { AgentTask, Candidate, Design, Goal, IntentPlan, PartCard, Reading, Requirement, Viewing, Word } from "../types.ts";
+import type { AgentTask, Candidate, Design, Goal, IntentPlan, MomentDesign, PartCard, Reading, Requirement, Viewing, Word } from "../types.ts";
 
 /** What the director knows about the video: everything a top director would ask before deciding anything. */
 export type DirectorInput = {
@@ -54,6 +54,11 @@ export type DesignerInput = {
   round?: { candidates: Candidate[]; sheet?: string; readings: Reading[] };
   /** The instruments it can set goals on, with their value names and settings (from the registry's describe). */
   instruments: { name: string; describe: string; suggested: Record<string, unknown> }[];
+  /** Silences in the narration (timing goals name them as hold.<id>), and requirements stated across files. */
+  holds?: { id: string; afterWord: number; seconds: number; purpose?: string }[];
+  requirements?: Requirement[];
+  /** The user's request in plain text, as the director had it. */
+  brief?: string;
 };
 
 /** The space a search explores for one moment: per MomentDesign field, the values worth trying. */
@@ -64,6 +69,10 @@ export type DesignerAnswer = {
   space: SearchSpace;
   overrides: { key: string; value: unknown; why: string }[]; // style keys, written key@N for this moment
   proposals: { kind: string; ids: string[]; args?: Record<string, unknown>; why: string }[];
+  /** Why each field of the space holds the values it does (a field with one value is set, Decided with this why). */
+  reasons?: Partial<Record<keyof SearchSpace, string>>;
+  /** The moment's focus when the designer decides it differently from the director. */
+  focus?: { value: "one" | "two" | "none" | "hidden" | "all"; why: string };
   /** After a round: keep one candidate, or revise the space. */
   pick?: string;
   done: boolean;
@@ -76,6 +85,12 @@ export type ViewerInput = {
   transcript: string;
   seats: { who: string; why: string }[];
   goals: Goal[];
+  /** Style keys a fix may name besides the search's fields (styleValues' keys); the style's full list when absent. */
+  styleKeys?: string[];
+  /** How many moments the video has, so a fix may name key@N; any N is refused when absent. */
+  moments?: number;
+  /** Each finalist's current values (by candidate id), so a fix can say what a field becomes. */
+  designs?: Record<string, MomentDesign>;
 };
 
 export type ViewerAnswer = {
@@ -89,6 +104,7 @@ export type Agents = {
   directorTask(input: DirectorInput): AgentTask;
   applyDirector(design: Design, answer: DirectorAnswer): Design;
   designerTask(input: DesignerInput): AgentTask;
-  applyDesigner(design: Design, moment: number, answer: DesignerAnswer): Design;
+  /** `picked` is the round's candidate the answer picks, when it picks one: its MomentDesign becomes the moment's. */
+  applyDesigner(design: Design, moment: number, answer: DesignerAnswer, picked?: Candidate): Design;
   viewerTask(input: ViewerInput): AgentTask;
 };
