@@ -4,9 +4,10 @@ import { themeFrom } from "../../render/theme.ts";
 import type { DesignerAnswer, ViewerAnswer } from "../agents/api.ts";
 import { parseIntent } from "../intent/parse.ts";
 import { suggestDesign, viewingFrom } from "../suggest.ts";
-import type { AgentTask, Answer, Goal, Reasoner } from "../types.ts";
+import type { AgentTask, Answer, Goal, Reading, Reasoner } from "../types.ts";
 import { composeCached, evaluate, layoutReading, newCache, windowOf } from "./evaluate.ts";
 import { budgetFor, cameraPlans, generate, onScreen, rng, sampleSpace, viewOf } from "./generate.ts";
+import { checkDesigner, designerTask } from "../agents/designer.ts";
 import { runSearch } from "./run.ts";
 import { missOf, scoreCandidate } from "./score.ts";
 import { sheetFrames } from "./sheet.ts";
@@ -149,7 +150,7 @@ test("the loop asks the designer, searches, takes the designer's pick and record
 
 test("an unanswered task stops the run as pending; the call budget leaves the least important moments as they are", async () => {
   const d = base();
-  d.budget = { candidatesPerMoment: 3, rounds: 1, calls: 2 };
+  d.budget = { candidatesPerMoment: 3, rounds: 1, calls: 4 };
   d.moments.forEach((m, i) => (m.importance.value = [0.2, 0.9, 0.5, 0.1][i]!));
   const done = (t: AgentTask): DesignerAnswer => ({ goals: [goal(Number(t.id.match(/\.m(\d+)\./)![1]), {})], space: {}, overrides: [], proposals: [], done: true, why: "" });
   const pend = await runSearch({ plan, design: d, director: keepDirector(d, "t"), cards: [], words, holds: [], theme, frames, agents: standInAgents(), reasoner: memory(() => undefined), dir: "/tmp/unused" });
@@ -188,4 +189,60 @@ test("the viewer panel's pick and fixes are measured and kept", async () => {
 test("sheet frames spread over the window and end on its last frame", () => {
   assert.deepEqual(sheetFrames([0, 90], 3), [15, 45, 89]);
   assert.deepEqual(sheetFrames([10, 11], 3), [10]);
+});
+
+test("a goal whose measure does not apply in a window is neither met nor missed there", () => {
+  const hold = goal(0, { id: "wait", instrument: "timing", value: "hold.h1.related", want: { min: 0.8 } });
+  const other = goal(0, { id: "big", weight: 1 });
+  const readings: Reading[] = [
+    { instrument: "timing", values: {}, notes: [], outside: ["hold.h1.related"] },
+    { instrument: "layout", values: { "area.anchor": 0.25 }, notes: [] },
+  ];
+  const s = scoreCandidate([hold, other], readings);
+  assert.deepEqual(s.scores[0], { goal: "wait", miss: 0, applies: false });
+  assert.equal(s.total, 0.5, "only the goal that applies counts");
+  assert.deepEqual(s.unmeasured, []);
+  // A value the instrument does not report and does not say is outside is still a full miss.
+  assert.equal(scoreCandidate([goal(0, { instrument: "timing", value: "hold.h9.related" })], [{ instrument: "timing", values: {}, notes: [] }]).total, 1);
+});
+
+test("a candidate that composes to the same video as one listed gives its slot to the next option", () => {
+  const d = base();
+  const c = composeCached(plan, d, ctx());
+  const all = generate(1, { subjectScale: [0.5, 0.7, 0.9] }, 4, { plan, design: d, words, theme, boxes: c.boxes }, { generators: false });
+  assert.equal(all.candidates.length, 4);
+  // Sizes under 0.8 compose alike (as a size the stage keeps steady would): they are measured once.
+  const key = (md: { subjectScale: { value: number } }) => (md.subjectScale.value < 0.8 ? "small" : `size ${md.subjectScale.value}`);
+  const once = generate(1, { subjectScale: [0.5, 0.7, 0.9] }, 4, { plan, design: d, words, theme, boxes: c.boxes }, { generators: false, distinct: key as never });
+  const sizes = once.candidates.map((x) => x.design.subjectScale.value);
+  assert.equal(sizes.filter((v) => v < 0.8).length, 1, `${sizes}`);
+  assert.ok(once.notes.some((n) => /composes to the same video as/.test(n)), once.notes.join("; "));
+});
+
+test("every moment the search reaches ends with the designer's look at its final round, and a tie is the designer's", async () => {
+  const d = base();
+  d.budget = { candidatesPerMoment: 3, rounds: 1, calls: 8 };
+  d.moments.forEach((m, i) => (m.importance.value = [0.2, 0.9, 0.5, 0.1][i]!));
+  const seen: string[] = [];
+  // A designer that never picks unless told this is its last look; equal goals so the candidates tie.
+  const reasoner = memory((t) => {
+    const k = Number(t.id.match(/\.m(\d+)/)![1]);
+    const g = [goal(k, { want: { min: 0 }, says: "the subject shows", why: "a test" })];
+    if (!/This is your last look/.test(t.request)) return { goals: g, space: { subjectScale: [0.5, 0.9] }, reasons: { subjectScale: "two sizes" }, overrides: [], proposals: [], done: false, why: "search" } satisfies DesignerAnswer;
+    seen.push(t.request);
+    const ids = [...t.request.matchAll(/### Candidate (\S+)/g)].map((x) => x[1]!);
+    return { goals: g, space: {}, overrides: [], proposals: [], pick: ids.at(-1)!, done: true, why: "the sheet shows it best" } satisfies DesignerAnswer;
+  });
+  const r = await runSearch({ plan, design: d, director: keepDirector(d, "t"), cards: [], words, holds: [], theme, frames, agents: { ...standInAgents(), designerTask, checkDesigner }, reasoner, dir: "/tmp/unused" });
+  assert.equal(r.status, "done");
+  const done = r.moments.filter((m) => m.status === "done");
+  assert.equal(done.length, 4, r.report);
+  assert.ok(done.every((m) => m.pick?.by === "designer"), r.report);
+  assert.ok(r.calls <= 8);
+  assert.ok(seen.every((q) => /tie at the lowest miss/.test(q)), "the designer is told the goals cannot choose");
+  // A budget that cannot pay for a search and a look for every moment leaves the least important untried, and says so.
+  d.budget = { candidatesPerMoment: 3, rounds: 1, calls: 5 };
+  const few = await runSearch({ plan, design: d, director: keepDirector(d, "t"), cards: [], words, holds: [], theme, frames, agents: { ...standInAgents(), designerTask, checkDesigner }, reasoner, dir: "/tmp/unused" });
+  assert.deepEqual(few.moments.filter((m) => m.status === "done").map((m) => m.moment).sort(), [1, 2]);
+  assert.ok(few.moments.filter((m) => m.status === "skipped").every((m) => /most important moments only/.test(m.why)));
 });

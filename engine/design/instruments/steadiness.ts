@@ -4,7 +4,7 @@
 // of its size is a jump. Reported with sizes; whether a jump is wanted (a thing that travels on purpose) is the
 // agent's reading.
 import type { Instrument, MeasureInput, Reading, Viewing } from "../types.ts";
-import { framesOf, label, round, sampled, windowOf } from "./sample.ts";
+import { framesOf, label, round, sampled, windowOf, type Rect, type Thing } from "./sample.ts";
 
 export type SteadinessSettings = {
   perSecond: number;
@@ -14,6 +14,9 @@ export type SteadinessSettings = {
   camera: boolean; // count jumps made by the camera (everything moves together) as jumps
   why?: string;
 };
+
+/** A thing's box with the camera (and any frame around things) at rest: the union of its items' rest boxes. */
+const restOf = (t: Thing): Rect => t.items.reduce((b, i) => ({ x0: Math.min(b.x0, i.rest.x0), y0: Math.min(b.y0, i.rest.y0), x1: Math.max(b.x1, i.rest.x1), y1: Math.max(b.y1, i.rest.y1) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
 
 export const steadiness: Instrument<SteadinessSettings> = {
   name: "steadiness",
@@ -33,7 +36,11 @@ export const steadiness: Instrument<SteadinessSettings> = {
       for (const t of s.things(f, set.backdrop)) {
         const u = s.unitIndex.get(t.unit);
         if (u === undefined || s.act[u]![f]) continue;
-        const now = { f, cx: (t.box.x0 + t.box.x1) / 2, cy: (t.box.y0 + t.box.y1) / 2, size: Math.sqrt(t.area) };
+        // With camera moves left out, a thing is read where it would be with the camera at rest: a close-in that
+        // holds (a reading, a push) moves everything on the frame, and none of it moved on the stage.
+        const b = set.camera ? t.box : restOf(t);
+        const size = set.camera ? Math.sqrt(t.area) : Math.sqrt(Math.max(0, b.x1 - b.x0) * Math.max(0, b.y1 - b.y0));
+        const now = { f, cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, size };
         const before = last.get(u);
         // Still on screen since the last rest?
         let stayed = !!before;

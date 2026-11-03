@@ -166,3 +166,54 @@ test("every instrument suggests settings with a reason, and all of them run fast
   assert.match(lines, /^load: .*streams 1/m);
   for (const r of readings) for (const v of Object.values(r.values)) assert.ok(Number.isFinite(v), `${r.instrument} has a value that is not a number`);
 });
+
+test("timing: a silence is read only in the window that holds it; shown is what is tied to it on screen", () => {
+  const words = [{ text: "Guess", start: 0.2 }, { text: "now", start: 0.6 }, { text: "then", start: 4.6 }];
+  const scene = compile({ steps: [
+    { at: 0, enter: "none", add: [shape("bars", 540, 900, 150), text("q", 540, 300, "how many?", 60)] },
+    { at: 60, remove: ["q"], move: { frames: 3 } },
+  ] }, ctxOf(1080, 1920, 180, words));
+  const holds = [{ id: "h1", from: 1, to: 3, names: ["bars", "q"] }];
+  const ids = { bars: ["bars"], q: ["q"] };
+  const at = (window: [number, number]) => {
+    const input: MeasureInput = { scene, words, viewing: phone(), ids, holds, window };
+    return instruments.timing!.measure(input, settingsFor("timing", input));
+  };
+  // In the window that holds the silence: little changes (only the question leaving) while it shows for half of it.
+  const inside = at([0, 120]);
+  assert.ok(inside.values["hold.h1.related"]! <= 0.1, `related ${inside.values["hold.h1.related"]}`);
+  assert.ok(inside.values["hold.h1.still"]! >= 0.9);
+  assert.ok(Math.abs(inside.values["hold.h1.shown"]! - 0.5) < 0.1, `shown ${inside.values["hold.h1.shown"]}`);
+  assert.ok(inside.notes.some((n) => /bars, q/.test(n)), "the notes name what is tied to the silence");
+  // In a window without it: no value, and the reading says the silence's values do not apply there.
+  const outside = at([120, 180]);
+  assert.equal(outside.values["hold.h1.related"], undefined);
+  assert.ok(outside.outside?.includes("hold.h1.related") && outside.outside.includes("holdRelated"));
+});
+
+test("steadiness: a close-in that holds moves nothing on the stage when camera moves are left out", () => {
+  const scene = compile({ steps: [
+    { at: 0, enter: "none", add: [shape("a", 300, 700, 80), shape("b", 780, 1200, 80)], set: { camera: { zoom: 1, panX: 540, panY: 960 } } },
+    { at: 30, set: { camera: { zoom: 2.4, panX: 300, panY: 700 } }, move: { frames: 20 } },
+  ] }, ctxOf(1080, 1920, 120));
+  const input: MeasureInput = { scene, words: [], viewing: phone() };
+  const off = instruments.steadiness!.measure(input, settingsFor("steadiness", input));
+  assert.equal(off.values.jumps, 0, off.notes.join("; "));
+  // Counting the camera, the same close-in is a jump of everything it moved.
+  const on = instruments.steadiness!.measure(input, settingsFor("steadiness", input, { camera: true }));
+  assert.ok(on.values.jumps! >= 1, `jumps with the camera ${on.values.jumps}`);
+});
+
+test("load: a stream is the same stream whatever part of it a window starts on", () => {
+  // Five look-alike drops 0.5 s apart: one stream. A window that starts on its last two drops still sees that stream.
+  const scene = compile(pouring(5, 15), ctxOf(1080, 1920, 200));
+  const read = (window: [number, number]) => {
+    const input: MeasureInput = { scene, words: [], viewing: phone(), window };
+    return instruments.load!.measure(input, settingsFor("load", input));
+  };
+  const whole = read([0, 200]);
+  const late = read([88, 200]);
+  assert.equal(whole.values.streams, 1);
+  assert.equal(late.values.streams, 1, late.notes.join("; "));
+  assert.ok(late.values.peakNew! <= 1, `the stream's late drops are not new things: peakNew ${late.values.peakNew}`);
+});

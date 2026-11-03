@@ -31,7 +31,7 @@ import { designRunner, type DesignInputs } from "../lib/design-run.ts";
 import { checkPlan, INTENT_GUIDE, intentRepair, intentSystem, materialText, stripFence } from "../lib/intent-author.ts";
 import { metaReasoner } from "../lib/reasoner-meta.ts";
 import { readProject, type MaterialFile } from "../../engine/design/material/index.ts";
-import { viewingFrom } from "../../engine/design/suggest.ts";
+import { suggestViewing, viewingFrom } from "../../engine/design/suggest.ts";
 import type { PartCard, Reasoner, Viewing } from "../../engine/design/types.ts";
 import { basename } from "node:path";
 
@@ -1159,18 +1159,22 @@ export async function readMaterialOnce(p: Project, files: MaterialFile[], reason
   return (p.material = { cards: r.cards, requirements: r.requirements, problems: r.problems, key });
 }
 
-// How the video is watched, as far as the project says: the frame, a phone feed, and the captions the timeline burns in
-// (video/Video.tsx: a band from 1640 to 1810 px of a 1920 px frame). The director confirms or replaces it.
+// How the video is watched, as far as the project says: the frame, the screen and distance the user's request and plan
+// imply (suggest.ts suggestViewing: lengths the words give, else a typical screen of the kind they name, else the
+// frame's shape), and the captions the timeline burns in (video/Video.tsx: a band from 1640 to 1810 px of a 1920 px
+// frame). Each number has its reason; the director confirms or replaces it.
 export function projectViewing(p: Project): Viewing {
   const [width, height] = p.input.frame ?? [WIDTH, HEIGHT];
+  const request = [p.input.prompt, p.plan?.intent, ...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])].filter(Boolean).join(". ");
+  const sized = suggestViewing({ request }, width, height);
   return viewingFrom({
     width, height, fps: FPS,
-    screen: height > width ? "phone in a feed" : "screen watched on purpose",
-    frameWidthMm: height > width ? 65 : 300,
-    distanceMm: height > width ? 300 : 600,
-    watch: height > width ? "glancing in a feed" : "watching on purpose",
+    screen: sized.screen,
+    frameWidthMm: sized.frameWidthMm,
+    distanceMm: sized.distanceMm,
+    watch: height > width ? "glancing in a feed (not stated)" : "watching on purpose (not stated)",
     captions: { show: true, box: [0, 1640 / 1920, 1, 1810 / 1920], why: "the timeline burns the narration in as captions" },
-    why: "the project's frame, with the timeline's captions",
+    why: `from the user's request and the project's frame: ${sized.why}`,
   });
 }
 

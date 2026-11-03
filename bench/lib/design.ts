@@ -16,7 +16,7 @@ import { parseIntent } from "../../engine/design/intent/parse.ts";
 import { fileReasoner } from "../../engine/design/reasoner.ts";
 import { runDesign, type DesignInputs } from "../../engine/design/search/design.ts";
 import { remotionStills } from "../../engine/design/search/sheet.ts";
-import { viewingFrom } from "../../engine/design/suggest.ts";
+import { suggestViewing, viewingFrom } from "../../engine/design/suggest.ts";
 import type { Project } from "../../schemas/project.ts";
 import { frameOf, loadCase, MATERIAL } from "./case.ts";
 import { WORK, folderOf } from "./paths.ts";
@@ -78,17 +78,19 @@ export function caseInputs(run: string, id: string): { inputs: DesignInputs; dir
     `Where it is watched: ${ctx.screen}, ${ctx.frame} frame, seen from ${ctx.distance}, ${ctx.attention} (${ctx.why})`,
     `Style: ${c.style}`,
   ].join("\n");
-  // The viewing as far as the case says it, in its own words; the sizes in millimetres are the director's to set.
+  // The viewing as the case says it: its screen, distance and attention, and the sizes in millimetres suggested from
+  // them (suggest.ts suggestViewing), each with its reason; the director confirms or replaces them.
+  const sized = suggestViewing({ screen: ctx.screen, distance: ctx.distance, watch: ctx.attention, frame: ctx.frame, why: ctx.why, request: c.request }, width, height);
   const viewing = viewingFrom({
     width,
     height,
     fps: FPS,
-    screen: ctx.screen,
-    frameWidthMm: 65,
-    distanceMm: 300,
-    watch: ctx.attention,
+    screen: sized.screen,
+    frameWidthMm: sized.frameWidthMm,
+    distanceMm: sized.distanceMm,
+    watch: sized.watch,
     captions: { show: true, box: [0, 1640 / 1920, 1, 1810 / 1920], why: "the bench burns the narration in as captions in this band" },
-    why: `the case's own words (${ctx.screen}, seen from ${ctx.distance}); the frame's physical width and the distance are not stated, so these millimetres are placeholders for the director to replace`,
+    why: `the case's own words (${ctx.screen}, seen from ${ctx.distance}; ${ctx.why}): ${sized.why}`,
   });
   const inputs: DesignInputs = { plan: parseIntent(readFileSync(file, "utf8")), words, holds, frames: Math.ceil(p.narration!.seconds * FPS), cards: k.cards, requirements: k.requirements, assets, brief, direction: directionOf(p) || undefined, theme: themeFrom(c.style), styleName: c.style, viewing };
   return { inputs, dir: join(folder, "design") };

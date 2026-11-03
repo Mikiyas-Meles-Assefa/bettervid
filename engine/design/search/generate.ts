@@ -330,19 +330,35 @@ export function timingOptions(k: number, ctx: GenContext): { set: Partial<Record
  * Every candidate for moment k within `n`: the current design first, then the designer's space and the engine's
  * generators taking turns (so both are tried), each distinct.
  */
-export function generate(k: number, space: SearchSpace | undefined, n: number, ctx: GenContext, o: { seed?: string; generators?: boolean; base?: MomentDesign } = {}): { candidates: Generated[]; notes: string[] } {
+/**
+ * `distinct`: a key of what a design composes to (the search passes the composed scene's hash with the moment's window),
+ * so a candidate that would compose to the same video as one already listed (a field the composer holds, such as a size
+ * the stage keeps steady) gives its slot to the next option instead of being measured twice.
+ */
+export function generate(k: number, space: SearchSpace | undefined, n: number, ctx: GenContext, o: { seed?: string; generators?: boolean; base?: MomentDesign; distinct?: (d: MomentDesign) => string } = {}): { candidates: Generated[]; notes: string[] } {
   const md = o.base ?? ctx.design.moments.find((x) => x.moment === k);
   if (!md) throw new Error(`no MomentDesign for moment ${k}`);
   const notes: string[] = [];
   const seed = o.seed ?? `m${k}`;
   const cands: Generated[] = [{ id: `${seed}.c0`, label: "current", source: "current", design: md, why: "the design as it stands" }];
   const seen = new Set([fieldsKey(md)]);
+  const same = new Map<string, string>(o.distinct ? [[o.distinct(md), `${seed}.c0 (current)`]] : []);
+  const twins: string[] = [];
   const push = (set: Partial<Record<Field, unknown>>, label: string, source: Source, why: string) => {
     if (cands.length >= n) return false;
     const d = withFields(md, set, why);
     const key = fieldsKey(d);
     if (seen.has(key)) return true;
     seen.add(key);
+    if (o.distinct) {
+      const dk = o.distinct(d);
+      const twin = same.get(dk);
+      if (twin) {
+        twins.push(`${label} composes to the same video as ${twin}`);
+        return true;
+      }
+      same.set(dk, `${seed}.c${cands.length} (${label})`);
+    }
     cands.push({ id: `${seed}.c${cands.length}`, label, source, design: d, why });
     return true;
   };
@@ -360,6 +376,7 @@ export function generate(k: number, space: SearchSpace | undefined, n: number, c
     if (i < sp.sets.length) (push(sp.sets[i]!, label(sp.sets[i]!), "space", "from the designer's search space"), i++);
     if (cands.length < n && j < genOrder.length) (push(genOrder[j]!.set, genOrder[j]!.label, genOrder[j]!.source, genOrder[j]!.why), j++);
   }
+  if (twins.length) notes.push(`not measured twice: ${twins.join("; ")}`);
   if (i < sp.sets.length || j < genOrder.length) notes.push(`budget ${n}: ${sp.sets.length - i} space samples and ${genOrder.length - j} generated options left untried`);
   return { candidates: cands, notes };
 }

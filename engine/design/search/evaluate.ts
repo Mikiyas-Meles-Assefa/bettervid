@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { compose, type ComposeCtx, type Composition } from "../compose/compose.ts";
 import { instruments, settingsFor } from "../instruments/index.ts";
 import type { CameraPlan, Candidate, Design, Goal, IntentPlan, MeasureInput, MomentDesign, Reading, Viewing, Word } from "../types.ts";
+import { idsOf } from "../intent/parse.ts";
 import type { Generated, Source } from "./generate.ts";
 import { scoreGoal } from "./score.ts";
 
@@ -55,13 +56,19 @@ export function windowOf(plan: IntentPlan, design: Design, words: Word[], k: num
   return [a, b];
 }
 
-/** Holds as the instruments read them (seconds), from the director's holds and the words. */
-export function holdsFrom(holds: { id: string; afterWord: number; seconds: number }[], words: Word[]): { id: string; from: number; to: number }[] {
+/**
+ * Holds as the instruments read them (seconds), from the director's holds and the words. With the plan, each hold is
+ * tied to the names of the moment it falls in (the latest moment whose word is at or before the hold's word): its
+ * subject, what it keeps and acts on, and its question (ask@<word>), so timing reads what the silence is for.
+ */
+export function holdsFrom(holds: { id: string; afterWord: number; seconds: number }[], words: Word[], plan?: IntentPlan): { id: string; from: number; to: number; names?: string[] }[] {
   return holds.map((h) => {
     const w = words[Math.min(h.afterWord, words.length - 1)];
     const next = words[h.afterWord + 1];
     const from = w?.end ?? (next ? next.start - h.seconds : (w?.start ?? 0));
-    return { id: h.id, from, to: from + h.seconds };
+    const m = plan ? [...plan.moments].filter((x) => x.word <= h.afterWord).sort((a, b) => b.word - a.word)[0] : undefined;
+    const names = m ? [...new Set([...idsOf(m), ...(m.ask ? [`ask@${m.word}`] : [])])] : [];
+    return { id: h.id, from, to: from + h.seconds, ...(names.length ? { names } : {}) };
   });
 }
 
@@ -153,10 +160,15 @@ export function measureGoals(c: Composition, plan: IntentPlan, k: number | undef
   let s = 0;
   goals.forEach((g) => {
     const sc = scores.find((x) => x.goal === g.id)!;
+    if (sc.applies === false) return;
     w += Math.max(0, g.weight);
     s += Math.max(0, g.weight) * sc.miss;
   });
-  for (const g of goals) if (scores.find((x) => x.goal === g.id)?.value === undefined) notes.push(`goal ${g.id}: no reading "${g.value}" from ${g.instrument}`);
+  for (const g of goals) {
+    const sc = scores.find((x) => x.goal === g.id);
+    if (sc?.applies === false) notes.push(`goal ${g.id}: ${g.instrument} ${g.value} does not apply in this window; not counted here`);
+    else if (sc?.value === undefined) notes.push(`goal ${g.id}: no reading "${g.value}" from ${g.instrument}`);
+  }
   return { readings, scores, total: w > 0 ? s / w : 0, notes };
 }
 
@@ -212,7 +224,7 @@ export function candidateText(c: Evaluated, goals: Goal[]): string {
   const lines = [`${c.id} (${c.label}; ${c.source}): total miss ${c.total.toFixed(3)}`];
   for (const s of c.scores) {
     const g = goals.find((x) => x.id === s.goal);
-    lines.push(`  ${s.goal}: ${g ? `${g.instrument} ${g.value}` : ""} = ${s.value ?? "not measured"} (miss ${s.miss.toFixed(2)})`);
+    lines.push(s.applies === false ? `  ${s.goal}: ${g ? `${g.instrument} ${g.value}` : ""} does not apply here` : `  ${s.goal}: ${g ? `${g.instrument} ${g.value}` : ""} = ${s.value ?? "not measured"} (miss ${s.miss.toFixed(2)})`);
   }
   const fields = (["subjectScale", "subjectAt", "arrangement", "supportOpacity", "typeScale", "lead", "dwell", "camera"] as const).map((f) => `${f} ${JSON.stringify(c.design[f].value)}`);
   lines.push(`  design: ${fields.join("; ")}`);

@@ -22,6 +22,8 @@ export type DirectorInput = {
   viewing?: Viewing;
   /** The design the engine would start from (style suggestions), so the director overrides only what it means to. */
   start: Design;
+  /** The plan names the start's composition draws as things of their own: a goal on another name is refused. */
+  drawn?: string[];
 };
 
 export type DirectorAnswer = {
@@ -50,8 +52,15 @@ export type DesignerInput = {
   words: Word[];
   /** The style's suggestions with reasons (suggest.ts styleValues), keys the designer may override. */
   styleValues: Record<string, { value: unknown; why: string }>;
-  /** After a search round: the best candidates' readings and goal scores, and their contact sheet. */
-  round?: { candidates: Candidate[]; sheet?: string; readings: Reading[] };
+  /**
+   * After a search round: the best candidates' readings and goal scores, and their contact sheet. `final`: the moment's
+   * rounds or calls are spent, so this look ends its search and the designer picks one of these candidates.
+   */
+  round?: { candidates: Candidate[]; sheet?: string; readings: Reading[]; final?: boolean };
+  /** This moment's share of the search as the search allotted it; from the design's budget when absent. */
+  share?: { candidates: number; rounds: number; calls: number };
+  /** The plan names the composition draws as things of their own: what an instrument can measure by name. */
+  drawn?: string[];
   /** The instruments it can set goals on, with their value names and settings (from the registry's describe). */
   instruments: { name: string; describe: string; suggested: Record<string, unknown> }[];
   /** Silences in the narration (timing goals name them as hold.<id>), and requirements stated across files. */

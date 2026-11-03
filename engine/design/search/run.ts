@@ -12,7 +12,9 @@
 //      lowest miss, is kept)
 //   5. budgets bound it: the director's budget is shared by importance (agents/director.ts allocate): candidates a
 //      round, rounds and model calls per moment, so the moments that carry the video get the most and the least
-//      important may keep their design untried
+//      important may keep their design untried (said in the report). A moment's last call is always the designer's look
+//      at its final round, where it picks: no moment the search reaches ends without a designer's choice, and a tie at
+//      the lowest miss is the designer's to break, never the order candidates were made in
 // Every pick is a DecisionRecord with the goals it answered and the readings that showed it.
 //
 // Moments are searched side by side: each one starts from the same design (the director's), so one moment's tasks never
@@ -23,7 +25,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { Theme } from "../../core/types.ts";
 import type { Agents, DesignerAnswer, DesignerInput, DirectorAnswer, ViewerAnswer, ViewerInput } from "../agents/api.ts";
-import { allocate } from "../agents/director.ts";
+import { allocate, CALLS_PER_MOMENT } from "../agents/director.ts";
 import type { PropSpec } from "../depict/spec.ts";
 import { instruments } from "../instruments/index.ts";
 import { styleValues } from "../suggest.ts";
@@ -159,13 +161,14 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
   const fps = start0.viewing.fps;
   const cache = input.cache ?? newCache();
   const repairs = input.repairs ?? 3;
-  const holds = holdsFrom(input.holds, words);
+  const holds = holdsFrom(input.holds, words, plan);
   const ectx: EvalContext = { plan, compose: { theme: input.theme, words, frames: input.frames, cards: input.cards, assets: input.assets, props: input.props }, holds: holds as MeasureInput["holds"], cache };
   const instrumentList = [LAYOUT, ...Object.values(instruments).map((i) => ({ name: i.name, describe: i.describe, suggested: i.suggest(start0.viewing) as Record<string, unknown> }))];
   const S = styleValues(input.theme, start0.viewing);
   // The budget is shared by the moments being searched (all of them, or the ones asked for).
   const searched = start0.moments.filter((m) => !input.only || input.only.includes(m.moment));
-  const shares = new Map(allocate({ ...start0, moments: searched }).map((a) => [a.moment, a]));
+  const plain = new Set(searched.filter((m) => plan.moments[m.moment]?.plain).map((m) => m.moment));
+  const shares = new Map(allocate({ ...start0, moments: searched }, plain).map((a) => [a.moment, a]));
   // A task id is asked once per run: a later task that would repeat one (a round whose best did not change) gets a
   // number, so its answer never replaces the earlier task's.
   const used = new Set<string>();
@@ -189,15 +192,15 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
     .sort((a, b) => b.imp - a.imp || a.k - b.k);
 
   for (const { k, imp } of order) {
-    const share = shares.get(k) ?? { candidates: start0.budget.candidatesPerMoment, rounds: start0.budget.rounds, calls: 1 };
+    const share = shares.get(k) ?? { candidates: start0.budget.candidatesPerMoment, rounds: start0.budget.rounds, calls: CALLS_PER_MOMENT };
     const out: MomentOutcome = { moment: k, status: "skipped", importance: imp, budget: share.candidates * share.rounds, rounds: [], asked: 0, repairs: [], why: "" };
     outcomes.push(out);
     if (plan.moments[k]!.plain) {
       out.why = "the author refused the agents' proposals for this moment (plain)";
       continue;
     }
-    if (share.calls < 1) {
-      out.why = `the video's ${start0.budget.calls} model calls are spent on more important moments`;
+    if (share.calls < CALLS_PER_MOMENT) {
+      out.why = `the video's ${start0.budget.calls} model calls cover a search and the designer's look (${CALLS_PER_MOMENT} calls each) for the ${[...shares.values()].filter((x) => x.calls >= CALLS_PER_MOMENT).length} most important moments only; this one keeps its design untried`;
       continue;
     }
     const L: Local = { design: start0, overrides: [] };
@@ -257,12 +260,16 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
       }
     }
 
-    for (let r = 1; r <= share.rounds && !L.pick; r++) {
-      if (left < 1) {
-        out.why ||= "the moment's share of the model calls ran out";
+    // The names the composition draws as things of their own: what the instruments can measure by name.
+    const drawn = Object.keys(composeCached(plan, L.design, ectx).ids);
+    for (let r = 1; !L.pick; r++) {
+      // The last look: the rounds are spent, or one call is left. The designer picks among what it sees.
+      const final = !!prev && (r > share.rounds || left <= 1);
+      if (!prev && (r > share.rounds || left < CALLS_PER_MOMENT)) {
+        out.why ||= r > 1 ? "no round was measured (the designer's answers named no goals), and the moment's calls or rounds ran out" : "the moment's share of the model calls cannot pay for a search and a look";
         break;
       }
-      const dInput: DesignerInput = { plan, moment: k, design: L.design, director: input.director, cards: input.cards, words, styleValues: S, instruments: instrumentList, holds: input.holds, requirements: input.requirements, brief: input.brief, ...(prev ? { round: { candidates: prev.candidates, sheet: prev.sheet, readings: prev.readings } } : {}) };
+      const dInput: DesignerInput = { plan, moment: k, design: L.design, director: input.director, cards: input.cards, words, styleValues: S, instruments: instrumentList, holds: input.holds, requirements: input.requirements, brief: input.brief, share: { candidates: share.candidates, rounds: share.rounds, calls: share.calls }, drawn, ...(prev ? { round: { candidates: prev.candidates, sheet: prev.sheet, readings: prev.readings, ...(final ? { final } : {}) } } : {}) };
       const ans = await ask<DesignerAnswer>((rep) => agents.designerTask(dInput, rep), agents.checkDesigner && ((a) => agents.checkDesigner!(dInput, a)), "designer");
       if (!ans) break;
       const picked = ans.pick && prev ? seen.get(ans.pick) : undefined;
@@ -276,6 +283,7 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
         }
         out.rounds.push({ round: r, candidates: 0, best: "", total: NaN, ms: 0, perCandidate: 0, notes: [`the designer picked "${ans.pick}", which is not a candidate of this moment; searching again`] });
       }
+      if (final) break;
       const goals = goalsFor(L.design, k);
       if (!goals.length) {
         out.rounds.push({ round: r, candidates: 0, best: "", total: NaN, ms: 0, perCandidate: 0, notes: ["no goals for this moment: nothing to compare candidates against"] });
@@ -286,7 +294,12 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
       const cur = L.design.moments.find((m) => m.moment === k)!;
       const base = best ? carry(best.design, cur, ans) : cur;
       const boxes = composeCached(plan, withMoment(L.design, base), ectx).boxes;
-      const gen = generate(k, ans.space, perRound, { plan, design: L.design, words, theme: input.theme, boxes }, { seed: `m${k}.${tag}${r}`, base });
+      // A candidate that composes to the same video as one already listed gives its slot to the next option.
+      const distinct = (md: MomentDesign) => {
+        const d = withMoment(L.design, md);
+        return createHash("sha1").update(JSON.stringify([composeCached(plan, d, ectx).scene, windowOf(plan, d, words, k, input.frames)])).digest("hex");
+      };
+      const gen = generate(k, ans.space, perRound, { plan, design: L.design, words, theme: input.theme, boxes }, { seed: `m${k}.${tag}${r}`, base, distinct });
       const ev = evaluate(L.design, k, gen.candidates, goals, ectx);
       for (const c of ev.ranked) seen.set(c.id, c);
       // The best of every round, re-measured with the goals as they stand now (a revision may have changed them).
@@ -297,9 +310,9 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
       let sheet = await sheetOf(`${tag}${r}`, finalists, L.design);
       let readings: Reading[] = [];
       // The viewer panel sits once, on the first sheet, when the moment's calls leave room for it and for the designer's
-      // next look (when there is one): its reports go to the designer with the round.
-      const more = !ans.done && r < share.rounds;
-      if (input.viewers && sheet && !viewed && left >= 1 + (more ? 1 : 0)) {
+      // look that always follows: its reports go to the designer with the round.
+      const more = !ans.done;
+      if (input.viewers && sheet && !viewed && left >= 2) {
         viewed = true;
         const window = windowOf(plan, withMoment(L.design, best.design), words, k, input.frames);
         const vInput: ViewerInput = { sheets: finalists.map((c) => ({ candidate: c.id, image: sheet! })), transcript: transcriptOf(words, window, fps), seats: input.director.seats, goals, styleKeys: Object.keys(S), moments: plan.moments.length, designs: Object.fromEntries(finalists.map((c) => [c.id, c.design])) };

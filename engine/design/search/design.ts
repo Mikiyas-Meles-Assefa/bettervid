@@ -19,6 +19,7 @@ import { join } from "node:path";
 import type { Scene, Theme } from "../../core/types.ts";
 import type { DirectorAnswer, DirectorInput } from "../agents/api.ts";
 import { agents as realAgents, applyCorrections, checkDesigner, checkDirector, checkViewer } from "../agents/index.ts";
+import { CALLS_PER_MOMENT } from "../agents/director.ts";
 import { compose, type ComposeCtx, type Composition } from "../compose/compose.ts";
 import { depict, depicterTask, type DepictRequest } from "../depict/depicter.ts";
 import { checkSpec } from "../depict/depict.ts";
@@ -138,7 +139,17 @@ export async function runDesign(dir: string, inputs: DesignInputs, reasoner: Rea
   const objects = plan.things.filter((t) => t.kind === "object" && !inputs.props?.[t.id]);
   for (const t of objects) await depictOne(plan, t.id);
   const start = suggestDesign(plan, inputs.viewing, theme, cards, said, inputs.props ?? {});
-  const dInput: DirectorInput = { plan, words: said, holds: inputs.holds, cards, requirements: inputs.requirements, brief: inputs.brief, direction: inputs.direction, theme, styleName: inputs.styleName, viewing: inputs.viewing, start };
+  // What the start composes to names what the instruments can read; known once every object is depicted (the director's
+  // goals are checked against it then, and a goal on a name that is not drawn goes back as a repair).
+  let drawn: string[] | undefined;
+  if (!waiting.length) {
+    try {
+      drawn = Object.keys(compose(plan, suggestDesign(plan, inputs.viewing, theme, cards, said, props), { theme, words: said, frames: inputs.frames, cards, assets: inputs.assets, props }).ids);
+    } catch {
+      drawn = undefined;
+    }
+  }
+  const dInput: DirectorInput = { plan, words: said, holds: inputs.holds, cards, requirements: inputs.requirements, brief: inputs.brief, direction: inputs.direction, theme, styleName: inputs.styleName, viewing: inputs.viewing, start, ...(drawn ? { drawn } : {}) };
   const d = await settle<DirectorAnswer>(reasoner, (r) => agents.directorTask(dInput, r), agents.checkDirector && ((a) => agents.checkDirector!(dInput, a)), repairs);
   if (d.status === "failed") throw new Error(`the director's answer (${d.id}) still had ${d.problems.length} problems after ${repairs} repairs: ${d.problems.slice(0, 4).join("; ")}`);
   if (d.status === "pending") waiting.push(d.file);
@@ -183,24 +194,25 @@ export async function runDesign(dir: string, inputs: DesignInputs, reasoner: Rea
   design = sr.design;
 
   // The whole video, composed with the chosen design and measured against the director's video goals.
-  const holds = holdsFrom(inputs.holds, said);
+  const holds = holdsFrom(inputs.holds, said, P);
   const videoGoals = () => design.goals.filter((g) => g.scope === "video");
   const measureWhole = (c: Composition) => (videoGoals().length ? measureGoals(c, P, undefined, videoGoals(), { words: said, viewing: design.viewing, holds }) : undefined);
   let c = compose(P, design, ctx);
   let whole = measureWhole(c);
   let rev: SearchResult | undefined;
   const left = design.budget.calls - sr.calls;
-  if (whole && whole.total > 0 && opts.revise !== false && left >= 1) {
-    // The moments where the video goals miss most on their own windows, the most important first, one call each.
+  if (whole && whole.total > 0 && opts.revise !== false && left >= CALLS_PER_MOMENT) {
+    // The moments where the video goals miss most on their own windows, the most important first: each gets a revision
+    // and the designer's look at it (CALLS_PER_MOMENT calls), so no revised moment ends without the designer's pick.
     const per = design.moments
       .filter((m) => !P.moments[m.moment]!.plain)
       .map((m) => ({ k: m.moment, imp: m.importance.value, miss: measureGoals(c, P, m.moment, videoGoals(), { words: said, viewing: design.viewing, holds, window: windowOf(P, design, said, m.moment, inputs.frames) }).total }))
       .filter((x) => x.miss > 0)
       .sort((a, b) => b.imp * b.miss - a.imp * a.miss || a.k - b.k)
-      .slice(0, left);
+      .slice(0, Math.floor(left / CALLS_PER_MOMENT));
     if (per.length) {
       const readings: Reading[] = [{ instrument: "whole video", values: Object.fromEntries(whole.scores.filter((s) => s.value !== undefined).map((s) => [s.goal, s.value!])), notes: [`the video goals measured over the whole video miss ${whole.total.toFixed(3)} in all: ${whole.scores.map((s) => `${s.goal} miss ${s.miss.toFixed(2)}`).join(", ")}`, `this moment's window misses them by ${per.map((x) => `m${x.k} ${x.miss.toFixed(3)}`).join(", ")}`] }];
-      rev = await runSearch({ ...searchInput, design: { ...design, budget: { ...design.budget, rounds: 1, calls: per.length } }, only: per.map((x) => x.k), revise: { moments: per.map((x) => x.k), readings } });
+      rev = await runSearch({ ...searchInput, design: { ...design, budget: { ...design.budget, rounds: 1, calls: per.length * CALLS_PER_MOMENT } }, only: per.map((x) => x.k), revise: { moments: per.map((x) => x.k), readings } });
       report.push("", `whole-video revision of ${per.map((x) => `m${x.k}`).join(", ")}:`, rev.report);
       if (rev.status === "pending") {
         waiting.push(...rev.pending);
@@ -215,7 +227,7 @@ export async function runDesign(dir: string, inputs: DesignInputs, reasoner: Rea
   }
   if (whole) {
     design = { ...design, decisions: [...design.decisions, { area: "video goals", choice: `measured over the whole video: total miss ${whole.total.toFixed(3)}`, goals: whole.scores.map((s) => s.goal), readings: Object.fromEntries(whole.scores.filter((s) => s.value !== undefined).map((s) => [s.goal, s.value!])), from: "search", why: whole.scores.map((s) => `${s.goal} miss ${s.miss.toFixed(2)}`).join(", ") }] };
-    notes.push(`video goals over the whole video: total miss ${whole.total.toFixed(3)} (${whole.scores.map((s) => `${s.goal} ${s.value === undefined ? "not measured" : Number(s.value.toFixed(3))}, miss ${s.miss.toFixed(2)}`).join("; ")})`, ...whole.notes);
+    notes.push(`video goals over the whole video: total miss ${whole.total.toFixed(3)} (${whole.scores.map((s) => (s.applies === false ? `${s.goal} does not apply` : `${s.goal} ${s.value === undefined ? "not measured" : Number(s.value.toFixed(3))}, miss ${s.miss.toFixed(2)}`)).join("; ")})`, ...whole.notes);
   }
   for (const p of c.problems) notes.push(`${p.thing}: ${p.problem} (for the ${p.who})`);
   const allNotes = [...corrected.notes, ...notes, ...c.notes];

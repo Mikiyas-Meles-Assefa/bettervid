@@ -151,8 +151,33 @@ export function settingNames(describe: string): string[] {
   return namesIn(describe, "Settings");
 }
 
+/**
+ * Where a part of the material the composition does not draw on its own sits among the parts it does draw: the drawn
+ * parts of the same card that hold it, and those that share its row or column (by the parts' boxes on the material).
+ */
+export function undrawnText(name: string, cards: PartCard[], drawn: Set<string>): string {
+  const card = cards.find((c) => name.startsWith(`${c.name}.`));
+  const box = card?.parts[name.slice(card.name.length + 1)]?.box;
+  const mine = [...drawn].filter((d) => card && d.startsWith(`${card.name}.`));
+  if (!card || !box) return mine.length ? `drawn parts of the same material: ${mine.join(", ")}` : "";
+  const span = (a0: number, a1: number, b0: number, b1: number) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0)) / Math.max(1e-9, a1 - a0);
+  const holds: string[] = [];
+  const row: string[] = [];
+  const column: string[] = [];
+  for (const d of mine) {
+    const b = card.parts[d.slice(card.name.length + 1)]?.box;
+    if (!b) continue;
+    const [x, y] = [span(box[0], box[2], b[0], b[2]), span(box[1], box[3], b[1], b[3])];
+    if (x >= 0.9 && y >= 0.9) holds.push(d);
+    else if (y >= 0.5) row.push(d);
+    else if (x >= 0.5) column.push(d);
+  }
+  const out = [holds.length ? `drawn within ${holds.join(", ")}` : "", row.length ? `drawn in its row: ${row.join(", ")}` : "", column.length ? `in its column: ${column.join(", ")}` : ""].filter(Boolean);
+  return out.length ? out.join("; ") : mine.length ? `drawn parts of ${card.name}: ${mine.join(", ")}` : `nothing of ${card.name} is drawn as its own thing`;
+}
+
 /** Problems with a value name for an instrument: unknown names, and placeholders that name nothing in the plan. */
-export function valueProblem(describe: string, value: string, names: Set<string>, holds: Set<string>): string | undefined {
+export function valueProblem(describe: string, value: string, names: Set<string>, holds: Set<string>, drawn?: { names: Set<string>; cards: PartCard[] }): string | undefined {
   const pats = valueNames(describe);
   // A value the description names in full (area.anchor) is known before any pattern with a placeholder (area.<name>).
   if (pats.includes(value)) return undefined;
@@ -171,6 +196,12 @@ export function valueProblem(describe: string, value: string, names: Set<string>
     if (!tail.every((s, i) => s === vs[vs.length - tail.length + i])) continue;
     const said = vs.slice(ph, vs.length - tail.length).join(".");
     const isHold = /id/.test(segs[ph]!);
+    // A name of the plan or the material that the composition does not draw as a thing of its own has nothing for an
+    // instrument to read: the goal could never be met, so the agent is told what is drawn instead.
+    if (!isHold && names.has(said) && drawn && !drawn.names.has(said)) {
+      const where = undrawnText(said, drawn.cards, drawn.names);
+      return `"${value}": ${said} is not drawn as a thing of its own in this composition, so no instrument can measure it by name${where ? ` (${where})` : ""}; name what is drawn`;
+    }
     if (isHold ? holds.has(said) : names.has(said)) return undefined;
     return `"${value}": ${said} is not ${isHold ? `a silence id (${[...holds].join(", ") || "there are none"})` : "a name in the plan or the material"}`;
   }
@@ -204,7 +235,7 @@ export const GOAL_SCHEMA = {
   },
 } as const;
 
-export type GoalCtx = { viewing: Viewing; names: Set<string>; holds: Set<string>; requirements: Set<string>; scope: "video" | "moment"; moment?: number };
+export type GoalCtx = { viewing: Viewing; names: Set<string>; holds: Set<string>; requirements: Set<string>; scope: "video" | "moment"; moment?: number; /** The names the composition draws, and the material: a goal on a name not drawn is refused with what is. */ drawn?: { names: Set<string>; cards: PartCard[] } };
 
 export function checkGoals(goals: Goal[], ctx: GoalCtx, at: string): string[] {
   const out: string[] = [];
@@ -220,7 +251,7 @@ export function checkGoals(goals: Goal[], ctx: GoalCtx, at: string): string[] {
     // The search's own reading of the composer's boxes counts as an instrument too (search/evaluate.ts LAYOUT).
     const inst = instruments[g.instrument] ?? (g.instrument === LAYOUT.name ? { describe: LAYOUT.describe, suggest: () => LAYOUT.suggested } : undefined);
     if (!inst) return void out.push(`${p}: no instrument "${g.instrument}" (there are ${[LAYOUT.name, ...Object.keys(instruments)].join(", ")})`);
-    const vp = typeof g.value === "string" ? valueProblem(inst.describe, g.value, ctx.names, ctx.holds) : `value should be a value name`;
+    const vp = typeof g.value === "string" ? valueProblem(inst.describe, g.value, ctx.names, ctx.holds, ctx.drawn) : `value should be a value name`;
     if (vp) out.push(`${p}: ${vp}`);
     const want = g.want ?? {};
     if (![want.min, want.max, want.near].some(isNum)) out.push(`${p}: want needs min, max or near`);
