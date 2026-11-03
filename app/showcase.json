@@ -1,0 +1,10 @@
+{
+  "videos": [
+    { "id": "how-did-the-wright-brothers-get-the-firs-d6a311", "why": "Archive photographs with their credits, and the wind tunnel numbers drawn as a table." },
+    { "id": "stats-w2", "why": "A worked exam example on a chalkboard, one step at a time, with typeset math." },
+    { "id": "merge-w2", "why": "The sort is computed by code, not drawn from memory, and shown level by level." },
+    { "id": "taytu-s-role-in-adwa-b9b65a", "why": "History told from sourced claims, mixing archive pictures with Muse Image illustrations, all credited." },
+    { "id": "why-does-the-moon-always-show-us-the-sam-238f89", "why": "Under a minute, drawn as a whiteboard sketch." },
+    { "id": "how-does-a-vaccine-train-your-immune-sys-acddcc", "why": "Under a minute, flat illustration, with a quoted source on screen." }
+  ]
+}
