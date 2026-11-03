@@ -116,7 +116,9 @@ async function met(q: string, n: number): Promise<Candidate[]> {
 // Smithsonian Open Access. Without SI_API_KEY it uses api.data.gov's shared DEMO_KEY, which needs no sign-up but allows
 // few calls an hour, so judges can run it without credentials. Only media marked CC0 is kept.
 // Once the key is over its limit (429), the source rests for a while instead of failing on every search.
+// The rest is announced once, not once per search in flight: a batch of searches all meets the same limit together.
 let siRestUntil = 0;
+let siRestSaid = 0;
 async function smithsonian(q: string, n: number): Promise<Candidate[]> {
   if (Date.now() < siRestUntil) return [];
   const key = process.env.SI_API_KEY || "DEMO_KEY";
@@ -126,7 +128,11 @@ async function smithsonian(q: string, n: number): Promise<Candidate[]> {
   } catch (e: any) {
     if (/^429/.test(e.message)) {
       siRestUntil = Date.now() + 10 * 60_000;
-      throw new Error(`over the hourly limit${key === "DEMO_KEY" ? " of the shared DEMO_KEY (set SI_API_KEY, free from api.data.gov)" : ""}; resting for 10 minutes`);
+      if (siRestSaid !== siRestUntil - (siRestUntil % 60_000)) {
+        siRestSaid = siRestUntil - (siRestUntil % 60_000);
+        console.error(`  smithsonian: over the hourly limit${key === "DEMO_KEY" ? " of the shared DEMO_KEY; set SI_API_KEY in .env (free, instant, at api.data.gov/signup) to search it every time" : ""}; the other archives carry on, Smithsonian rests for 10 minutes`);
+      }
+      return [];
     }
     throw e;
   }
