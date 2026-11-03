@@ -110,10 +110,10 @@ test("a design run waits on its waves, resumes from answers, and writes the corr
     // The corrected words are what the video says.
     assert.ok(JSON.stringify(done.scene).includes("twelve metres"));
     assert.ok(!JSON.stringify(done.scene).includes("ten metres"));
-    // Both moments were searched and their picks kept, each with its decision: the moment that carries the video had
-    // the rounds for the designer to pick; the other had one round, whose lowest miss the search kept.
+    // Both moments were searched and their picks kept, each with its decision: every moment's last call is the
+    // designer's look at its final round, so the designer picks on both, the one with a single round too.
     assert.ok(done.decisions.some((d) => d.area === "search" && d.moment === 1 && d.from === "designer"));
-    assert.ok(done.decisions.some((d) => d.area === "search" && d.moment === 0 && d.from === "search"));
+    assert.ok(done.decisions.some((d) => d.area === "search" && d.moment === 0 && d.from === "designer"));
     assert.deepEqual(done.design.goals.filter((g) => g.scope === "moment").map((g) => g.moment).sort(), [0, 1]);
   } finally {
     rmSync(dir, { recursive: true, force: true });

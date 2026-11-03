@@ -56,6 +56,12 @@ export const DIRECTOR_SCHEMA = {
   },
 } as const;
 
+/** What the budget's calls buy, so the director can set them for every moment it wants searched. */
+export function budgetText(plan: IntentPlan): string {
+  const n = plan.moments.filter((m) => !m.plain).length;
+  return `Calls are shared by importance. A moment the search reaches costs at least ${CALLS_PER_MOMENT} calls: the designer writes its goals and space, and its last call is always its look at the final round, where it picks. Each further round costs one more call, and the viewer panel one more. This plan has ${n} moment${n === 1 ? "" : "s"} to search, so ${n * CALLS_PER_MOMENT} calls reach every one of them once; with fewer, the least important keep their design untried.`;
+}
+
 /** The director's system prompt: its role and the library of research it consults. */
 export const directorSystem = () => `${prompt("director")}\n\n${prompt("library")}`;
 
@@ -79,7 +85,7 @@ export function directorTask(input: DirectorInput, repair?: { previous: unknown;
     "## Where the engine would start (suggestions, replace anything)",
     `Viewing: ${viewingText(viewing)}`,
     `Style: ${input.styleName}. Tempo ${start.tempo.value} (${start.tempo.why}).`,
-    `Budget: ${JSON.stringify(start.budget)}.`,
+    `Budget: ${JSON.stringify(start.budget)}. ${budgetText(input.plan)}`,
     demos.length ? `Demonstrations as suggested:\n${demos.join("\n")}` : "No demonstrations suggested.",
     "",
     "## Instruments (goals name one instrument and one of its values)",
@@ -161,7 +167,7 @@ export function checkDirector(input: DirectorInput, a: DirectorAnswer): string[]
   const names = planNames(plan, input.cards);
   const holds = new Set(input.holds.map((h) => h.id));
   const reqs = new Set([...input.requirements, ...input.cards.flatMap((c) => c.requirements)].map((r) => r.id));
-  out.push(...checkGoals(a?.goals ?? [], { viewing, names, holds, requirements: reqs, scope: "video" }, "goals"));
+  out.push(...checkGoals(a?.goals ?? [], { viewing, names, holds, requirements: reqs, scope: "video", ...(input.drawn ? { drawn: { names: new Set(input.drawn), cards: input.cards } } : {}) }, "goals"));
   const S = styleValues(input.theme, viewing);
   (a?.overrides ?? []).forEach((o, i) => {
     const p = overrideProblem(o.key, o.value, S, n);
@@ -252,20 +258,46 @@ function split(total: number, share: number[], floor: number): number[] {
   return out;
 }
 
+/** Model calls a searched moment needs at least: the designer writes its goals and space, then looks at the candidates and picks. */
+export const CALLS_PER_MOMENT = 2;
+
 /**
  * The search effort per moment: the video's budget split by the director's importance, so the moments that carry the
  * video get more candidates, rounds and calls. Candidates and calls sum exactly to the budget (candidatesPerMoment
- * times the moments, and calls); each moment gets at least one of each while the budget allows. Rounds are a ceiling
- * per moment: the most important moment may use all of them, the others in proportion.
+ * times the moments, and calls). Every moment that gets calls gets at least CALLS_PER_MOMENT, so its last round is
+ * always looked at by the designer; when the calls cannot cover every moment, the most important ones get them and the
+ * rest get none (the search says so for each). Rounds are a ceiling per moment: the most important moment may use all
+ * of them, the others in proportion. `skip`: moments that are not searched (marked plain), which take no share.
  */
-export function allocate(design: Design): { moment: number; candidates: number; rounds: number; calls: number }[] {
+export function allocate(design: Design, skip: ReadonlySet<number> = new Set()): { moment: number; candidates: number; rounds: number; calls: number }[] {
   const n = design.moments.length;
   if (!n) return [];
-  const imp = design.moments.map((m) => Math.max(0, m.importance.value));
-  const sum = imp.reduce((s, x) => s + x, 0);
-  const share = imp.map((x) => (sum > 0 ? x / sum : 1 / n));
-  const top = Math.max(...share);
-  const cand = split(design.budget.candidatesPerMoment * n, share, 1);
-  const calls = split(design.budget.calls, share, 1);
-  return design.moments.map((m, i) => ({ moment: m.moment, candidates: cand[i]!, rounds: Math.max(1, Math.round((design.budget.rounds * share[i]!) / top)), calls: calls[i]! }));
+  const imp = design.moments.map((m) => (skip.has(m.moment) ? 0 : Math.max(0, m.importance.value)));
+  const live = design.moments.map((m) => !skip.has(m.moment));
+  const shareOf = (on: boolean[]) => {
+    const sum = imp.reduce((s, x, i) => s + (on[i] ? x : 0), 0);
+    const count = on.filter(Boolean).length;
+    return imp.map((x, i) => (!on[i] ? 0 : sum > 0 ? x / sum : 1 / Math.max(1, count)));
+  };
+  // Which moments the calls reach: all when they cover CALLS_PER_MOMENT each, else the most important first.
+  const reach = Math.floor(design.budget.calls / CALLS_PER_MOMENT);
+  const order = design.moments.map((m, i) => ({ i, imp: imp[i]! })).filter((x) => live[x.i]).sort((a, b) => b.imp - a.imp || a.i - b.i);
+  const called = design.moments.map(() => false);
+  for (const x of order.slice(0, reach)) called[x.i] = true;
+  const share = shareOf(live);
+  const callShare = shareOf(called);
+  const top = Math.max(...share, 1e-9);
+  const cand = splitOver(design.budget.candidatesPerMoment * n, share, live, 1);
+  const calls = splitOver(design.budget.calls, callShare, called, CALLS_PER_MOMENT);
+  return design.moments.map((m, i) => ({ moment: m.moment, candidates: cand[i]!, rounds: live[i] ? Math.max(1, Math.round((design.budget.rounds * share[i]!) / top)) : 0, calls: calls[i]! }));
+}
+
+/** `split` over the moments marked `on` only; the others get 0. */
+function splitOver(total: number, share: number[], on: boolean[], floor: number): number[] {
+  const idx = on.map((x, i) => (x ? i : -1)).filter((i) => i >= 0);
+  const out = share.map(() => 0);
+  if (!idx.length) return out;
+  const part = split(total, idx.map((i) => share[i]!), floor);
+  idx.forEach((i, j) => (out[i] = part[j]!));
+  return out;
 }

@@ -34,6 +34,101 @@ export function viewingFrom(d: ViewingDesc): Viewing {
   return { width: d.width, height: d.height, fps: d.fps, screen: d.screen, frameWidthMm: d.frameWidthMm, distanceMm: d.distanceMm, watch: d.watch, uiZones: zones, captions, why: d.why };
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// The viewing's physical size, suggested from what the request and its context say: the screen the video plays on, how
+// far away it is seen from, and so how wide the frame is in millimetres. Lengths the words give (3 m away, a 1.2 m wide
+// screen, a 55 inch TV) are used as given; otherwise the screen's kind gives a typical size and distance, said as such.
+// A suggestion with its reason: the director confirms or replaces it.
+
+/** Typical screens: the size of the screen in millimetres (its own width and height, as it usually stands) and a usual distance. */
+const SCREENS: { kind: string; words: RegExp; w: number; h: number; mm: number; turns?: boolean; about: string }[] = [
+  { kind: "phone", words: /\b(phones?|smartphones?|mobile|tiktok|reels|instagram|snapchat|shorts)\b/i, w: 70, h: 150, mm: 300, turns: true, about: "a phone's screen is about 70 by 150 mm, held at about 30 cm" },
+  { kind: "tablet", words: /\b(tablets?|ipads?)\b/i, w: 245, h: 170, mm: 400, turns: true, about: "a tablet's screen is about 245 by 170 mm, held at about 40 cm" },
+  { kind: "laptop", words: /\b(laptops?|macbooks?)\b/i, w: 310, h: 195, mm: 550, about: "a laptop's screen is about 310 by 195 mm, seen from about 55 cm" },
+  { kind: "monitor", words: /\b(monitors?|desktop|computer screens?|pc)\b/i, w: 530, h: 300, mm: 650, about: "a desktop monitor is about 530 by 300 mm, seen from about 65 cm" },
+  { kind: "TV", words: /\b(tvs?|televisions?|living rooms?)\b/i, w: 1210, h: 680, mm: 2700, about: "a living room TV is about 1.2 by 0.7 m, seen from about 2.7 m" },
+  { kind: "meeting room screen", words: /\b(meeting rooms?|conference rooms?|boardrooms?|all-hands|wall screens?)\b/i, w: 1500, h: 845, mm: 4000, about: "a meeting room screen is about 1.5 by 0.85 m, seen from about 4 m" },
+  { kind: "classroom screen", words: /\b(classrooms?|class|projectors?|projected|whiteboards?|smartboards?)\b/i, w: 2000, h: 1125, mm: 5000, about: "a classroom's projected screen is about 2 by 1.1 m, seen from about 5 m (the middle of the room)" },
+  { kind: "hall screen", words: /\b(lecture halls?|auditoriums?|halls?|cinemas?|theaters?|theatres?|stage screens?)\b/i, w: 6000, h: 3375, mm: 12000, about: "a hall's screen is about 6 by 3.4 m, seen from about 12 m" },
+];
+
+/** Distances said in words, without a number: a usual distance for each. */
+const DISTANCES: { words: RegExp; mm: number; about: string }[] = [
+  { words: /arm'?s length|in (?:the|my|your) hand|handheld/i, mm: 300, about: "seen at arm's length, about 30 cm" },
+  { words: /\bat (?:a|the|my|their) desk\b|\bdesk\b/i, mm: 600, about: "seen at a desk, about 60 cm" },
+  { words: /lecture hall|auditorium|\bhall\b/i, mm: 12000, about: "seen from across a hall, about 12 m" },
+  { words: /classroom/i, mm: 5000, about: "seen from across a classroom, about 5 m from the middle of the room" },
+  { words: /meeting room|conference room|boardroom/i, mm: 4000, about: "seen from across a meeting room, about 4 m" },
+  { words: /living room|sofa|couch/i, mm: 2700, about: "seen from across a living room, about 2.7 m" },
+  { words: /across (?:a|the) room/i, mm: 3000, about: "seen from across a room, about 3 m" },
+];
+
+const TO_MM: Record<string, number> = { mm: 1, cm: 10, m: 1000, ft: 304.8, in: 25.4 };
+const unitOf = (u: string) => (/^mm|^millim/i.test(u) ? "mm" : /^cm|^centim/i.test(u) ? "cm" : /^(ft|feet|foot)/i.test(u) ? "ft" : /^(in|inch|")/i.test(u) ? "in" : "m");
+
+/** Lengths written in the words: distances, widths (followed by "wide" or "across") and screen diagonals (inches). */
+export function lengthsIn(text: string): { distance: number[]; width: number[]; diagonal: number[] } {
+  const out = { distance: [] as number[], width: [] as number[], diagonal: [] as number[] };
+  const re = /(\d+(?:[.,]\d+)?)\s*-?\s*(millimet(?:er|re)s?|mm|centimet(?:er|re)s?|cm|met(?:er|re)s?|m|feet|foot|ft|inch(?:es)?|")(?![a-z])/gi;
+  for (const x of text.matchAll(re)) {
+    const v = Number(x[1]!.replace(",", ".")) * TO_MM[unitOf(x[2]!)]!;
+    const after = text.slice(x.index! + x[0].length, x.index! + x[0].length + 14);
+    if (unitOf(x[2]!) === "in") out.diagonal.push(v);
+    else if (/^\s*(wide|across|in width|width)/i.test(after)) out.width.push(v);
+    else out.distance.push(v);
+  }
+  return out;
+}
+
+export type ViewingContext = { screen?: string; distance?: string; watch?: string; frame?: string; why?: string; request?: string };
+const mmText = (mm: number) => (mm >= 1000 ? `${(mm / 1000).toFixed(mm % 1000 ? 1 : 0)} m` : `${Math.round(mm)} mm`);
+
+/**
+ * The viewing's size suggested from its context and the request: the screen, the distance, and the frame's width on
+ * that screen (the frame fits the screen; a phone or a tablet turns to suit the frame). Every number comes with where
+ * it came from, the words' own lengths first.
+ */
+export function suggestViewing(ctx: ViewingContext, width: number, height: number): { screen: string; frameWidthMm: number; distanceMm: number; watch: string; why: string } {
+  const said = [ctx.screen, ctx.distance, ctx.why, ctx.request].filter(Boolean).join(". ");
+  const kind = SCREENS.find((s) => ctx.screen && s.words.test(ctx.screen)) ?? SCREENS.find((s) => s.words.test(said));
+  // Lengths are read where the viewing is described; the request only when nothing else describes it (a length in a
+  // request may be about the topic: a 2 m wave).
+  const lens = lengthsIn(ctx.screen || ctx.distance ? [ctx.screen, ctx.distance].filter(Boolean).join(". ") : (ctx.request ?? ""));
+  const tall = height > width;
+  const why: string[] = [];
+  // The screen's size.
+  let [sw, sh] = kind ? [kind.w, kind.h] : tall ? [70, 150] : [310, 195];
+  const aspect = sh / sw;
+  if (lens.width.length) {
+    sw = lens.width[0]!;
+    sh = sw * aspect;
+    why.push(`a screen ${mmText(sw)} wide, as the words say`);
+  } else if (lens.diagonal.length) {
+    const d = lens.diagonal[0]!;
+    sw = d / Math.hypot(1, aspect);
+    sh = sw * aspect;
+    why.push(`a ${Math.round(d / 25.4)} inch screen as the words say: about ${mmText(sw)} wide`);
+  } else why.push(kind ? kind.about : `no screen is named; ${tall ? "a tall frame is most often watched on a phone (about 70 by 150 mm)" : "a wide frame watched on purpose is most often on a laptop (about 310 by 195 mm)"}`);
+  if (kind?.turns && (tall ? sw > sh : sh > sw)) [sw, sh] = [sh, sw];
+  // The distance.
+  const near = DISTANCES.find((d) => ctx.distance && d.words.test(ctx.distance));
+  let distanceMm: number;
+  if (lens.distance.length) {
+    distanceMm = lens.distance[0]!;
+    why.push(`seen from ${mmText(distanceMm)}, as the words say`);
+  } else if (near) {
+    distanceMm = near.mm;
+    why.push(near.about);
+  } else {
+    distanceMm = kind?.mm ?? (tall ? 300 : 550);
+    why.push(kind ? "at that screen's usual distance" : `no distance is given; ${tall ? "a phone at arm's length, about 30 cm" : "a laptop at about 55 cm"}`);
+  }
+  // The frame on the screen: as wide as the screen, or as tall, whichever it meets first.
+  const frameWidthMm = Math.round(Math.min(sw, (sh * width) / height));
+  why.push(`a ${width}x${height} frame on a ${mmText(sw)} by ${mmText(sh)} screen is ${frameWidthMm} mm wide${frameWidthMm < sw - 1 ? " (it fills the screen's height)" : ""}`);
+  return { screen: ctx.screen || kind?.kind || (tall ? "phone (not stated)" : "laptop (not stated)"), frameWidthMm, distanceMm: Math.round(distanceMm), watch: ctx.watch || "not stated", why: why.join("; ") };
+}
+
 /** A band along one edge of the frame, as a UI zone: `share` of the frame's height (top, bottom) or width (left, right). */
 export function edgeBand(edge: "top" | "bottom" | "left" | "right", share: number, what: string): { box: Box; what: string } {
   const s = Math.max(0, Math.min(1, share));
@@ -317,7 +412,11 @@ export function proposalsOf(plan: IntentPlan, k: number, cards: PartCard[]): Dec
     const cd = card(c)!;
     const data = cd.data!;
     const held = named.filter((x) => x.startsWith(`${cd.name}.`)).map((x) => x.split(".")[1]!);
+    // The values of the parts on screen: a quantity said that is the difference of two of them (and none of them
+    // itself) is a gap between bars, not a place on the chart's scale, so it is never drawn as a level.
+    const shownValues = [...new Set(held.flatMap((part) => barValues(cd, part)))];
     for (const q of quantities) {
+      if (isDifference(q.n!.v, shownValues)) continue;
       let best: { part: string; d: number } | undefined;
       for (const part of held) {
         const vs = barValues(cd, part);
@@ -335,6 +434,17 @@ export function proposalsOf(plan: IntentPlan, k: number, cards: PartCard[]): Dec
     void data;
   }
   return out;
+}
+
+/** Half a unit of the last digit a number is written with: how close two values must be to be the same number. */
+const precisionOf = (v: number) => 0.5 * 10 ** -((String(v).split(".")[1] ?? "").length);
+
+/** Whether `v` is the difference between two of `values` and is not one of them: a gap, not a level. */
+export function isDifference(v: number, values: number[]): boolean {
+  const tol = precisionOf(v);
+  if (values.some((x) => Math.abs(x - v) <= tol)) return false;
+  for (let i = 0; i < values.length; i++) for (let j = i + 1; j < values.length; j++) if (Math.abs(Math.abs(values[i]! - values[j]!) - v) <= tol) return true;
+  return false;
 }
 
 function barValues(c: PartCard, part: string): number[] {

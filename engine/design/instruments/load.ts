@@ -94,6 +94,23 @@ export function streams(s: Sampled, set: StreamSettings, range: [number, number]
   return [...groups].map(([r, ids]) => ({ ids, ...settled.get(r)! }));
 }
 
+const WHOLE = new WeakMap<Sampled, Map<string, Stream[]>>();
+
+/**
+ * The streams of the whole scene, cached. A window never decides on its own what a stream is: where it starts (a
+ * moment's lead moves it) would cut a stream's earlier arrivals off, so the same blooms would read as one stream in one
+ * candidate and as separate things in another.
+ */
+export function sceneStreams(s: Sampled, set: StreamSettings): Stream[] {
+  const key = `${set.gap}|${set.min}|${set.move}|${set.near}|${set.sameWay}`;
+  const memo = WHOLE.get(s) ?? (WHOLE.set(s, new Map()), WHOLE.get(s)!);
+  const hit = memo.get(key);
+  if (hit) return hit;
+  const out = streams(s, set);
+  memo.set(key, out);
+  return out;
+}
+
 const GROUPS = new WeakMap<Sampled, Map<string, { rep: Int32Array; members: number[][] }>>();
 
 /** Per unit, the stream it belongs to: `rep[u]` is the stream's first unit (itself when alone). Whole scene, cached. */
@@ -103,7 +120,7 @@ export function streamGroups(s: Sampled, set: StreamSettings): { rep: Int32Array
   const hit = memo.get(key);
   if (hit) return hit;
   const rep = Int32Array.from(s.units.map((_, i) => i));
-  for (const st of streams(s, set)) {
+  for (const st of sceneStreams(s, set)) {
     const us = st.ids.map((id) => s.unitIndex.get(id)!).sort((a, b) => a - b);
     for (const u of us) rep[u] = us[0]!;
   }
@@ -235,7 +252,13 @@ export const load: Instrument<LoadSettings> = {
   measure(input: MeasureInput, set: LoadSettings): Reading {
     const s = sampled(input.scene);
     const range = windowOf(input);
-    const found = streams(s, set, range);
+    // Streams of the whole scene that show in the window: a stream is the same stream whatever the window cuts off.
+    const shows = (st: Stream) => st.ids.some((id) => {
+      const v = s.vis[s.unitIndex.get(id)!]!;
+      for (let f = range[0]; f < range[1]; f++) if (v[f]) return true;
+      return false;
+    });
+    const found = sceneStreams(s, set).filter(shows);
     const rows = s.units.map((id, u) => ({ id, visible: s.vis[u]!, active: s.act[u]! }));
     const c = countLoad(rows, s.fps, s.frames, found.map((x) => x.ids), { gap: Math.round(set.gap * s.fps), span: Math.round(set.span * s.fps), sameFate: set.sameFate }, range);
     const notes: string[] = [];

@@ -24,10 +24,11 @@ import {
   SPACE_FIELDS,
   styleFor,
   styleText,
+  undrawnText,
   viewingText,
   type SpaceField,
 } from "./common.ts";
-import { allocate } from "./director.ts";
+import { allocate, CALLS_PER_MOMENT } from "./director.ts";
 
 const LIST = { type: "array", minItems: 1 } as const;
 
@@ -53,8 +54,8 @@ export const DESIGNER_SCHEMA = {
 export const designerSystem = () => `${prompt("designer")}\n\n${prompt("library")}`;
 
 /** This moment's share of the search: candidates a round and rounds, from the director's importance and budget. */
-export function shareOf(design: Design, k: number): { candidates: number; rounds: number; calls: number; combinations: number } {
-  const a = allocate(design).find((x) => x.moment === k) ?? { candidates: design.budget.candidatesPerMoment, rounds: design.budget.rounds, calls: 1 };
+export function shareOf(design: Design, k: number, given?: DesignerInput["share"]): { candidates: number; rounds: number; calls: number; combinations: number } {
+  const a = given ?? allocate(design).find((x) => x.moment === k) ?? { candidates: design.budget.candidatesPerMoment, rounds: design.budget.rounds, calls: CALLS_PER_MOMENT };
   return { candidates: a.candidates, rounds: a.rounds, calls: a.calls, combinations: a.candidates * a.rounds };
 }
 
@@ -70,12 +71,23 @@ function momentDesignText(md: MomentDesign): string {
   return lines.join("\n");
 }
 
+/** Candidates that share the lowest total miss: the numbers cannot choose between them. */
+export function tiedBest(cs: Pick<Candidate, "id" | "total">[]): string[] {
+  if (cs.length < 2) return [];
+  const low = Math.min(...cs.map((c) => c.total));
+  const tied = cs.filter((c) => Math.abs(c.total - low) <= 1e-6).map((c) => c.id);
+  return tied.length > 1 ? tied : [];
+}
+
 function roundText(r: NonNullable<DesignerInput["round"]>, goals: Goal[]): string {
   const lines: string[] = [];
+  if (r.final) lines.push("This is your last look at this moment: its share of the rounds or calls is spent. Pick one of these candidates (done true); there is no further round.", "");
+  const tied = tiedBest(r.candidates);
+  if (tied.length) lines.push(`${tied.join(", ")} tie at the lowest miss (${r.candidates.find((c) => c.id === tied[0])!.total.toFixed(3)}): the goals cannot choose between them, so choose by the sheet and what the moment is for${r.final ? "" : ", or search again with goals that tell them apart"}.`, "");
   for (const c of r.candidates) {
     const fields = SPACE_FIELDS.map((f) => `${f} ${show(c.design[f].value)}`).join(", ");
     lines.push(`### Candidate ${c.id} (total miss ${c.total.toFixed(2)})`, `values: ${fields}`);
-    lines.push(`goal scores: ${c.scores.map((s) => `${s.goal} ${s.value !== undefined ? `value ${Number(s.value.toFixed(3))}, ` : ""}miss ${s.miss.toFixed(2)}`).join("; ") || "none"}`);
+    lines.push(`goal scores: ${c.scores.map((s) => (s.applies === false ? `${s.goal} does not apply here` : `${s.goal} ${s.value !== undefined ? `value ${Number(s.value.toFixed(3))}, ` : "not measured, "}miss ${s.miss.toFixed(2)}`)).join("; ") || "none"}`);
     if (c.readings.length) lines.push("readings:", readingsText(c.readings, { notes: 2 }));
     if (c.sheet) lines.push(`contact sheet: ${c.sheet}`);
   }
@@ -83,6 +95,17 @@ function roundText(r: NonNullable<DesignerInput["round"]>, goals: Goal[]): strin
   if (r.sheet) lines.push("", `The round's contact sheet: ${r.sheet}`);
   lines.push("", `Goals the scores are against: ${goals.map((g) => `${g.id} (${g.says})`).join("; ") || "none"}`);
   return lines.join("\n");
+}
+
+/** What the composition draws as things of its own, and the plan's names it does not (no instrument can read those). */
+function drawnLines(input: DesignerInput): string[] {
+  if (!input.drawn) return [];
+  const drawn = new Set(input.drawn);
+  const missing = [...planNames(input.plan, input.cards)].filter((n) => !drawn.has(n) && input.cards.some((c) => n.startsWith(`${c.name}.`)));
+  return [
+    `Names the composition draws as things of their own (what a value's <name> can be): ${input.drawn.join(", ") || "none"}.`,
+    ...(missing.length ? [`Parts of the material it does not draw on their own, so no instrument reads them by name: ${missing.map((n) => { const w = undrawnText(n, input.cards, drawn); return w ? `${n} (${w})` : n; }).join("; ")}.`] : []),
+  ];
 }
 
 /** The designer's task for one moment; on a repair round it carries the previous answer and its problems. */
@@ -95,7 +118,7 @@ export function designerTask(input: DesignerInput, repair?: { previous: unknown;
   const said = dir.moments.find((x) => x.moment === k);
   const demos = dir.demos.filter((d) => d.moment === k);
   const holds = (input.holds ?? []).filter((h) => h.afterWord >= m.word && h.afterWord < (plan.moments[k + 1]?.word ?? input.words.length));
-  const share = shareOf(design, k);
+  const share = shareOf(design, k, input.share);
   const near = (j: number) => (plan.moments[j] ? `m${j}: "${momentWords(plan, j, input.words).text}" | ${momentLine(plan, j) || "nothing named"}` : undefined);
   const videoGoals = design.goals.filter((g) => g.scope === "video");
   const things = plan.things.map((t) => `- ${t.id} (${t.kind}): ${t.kind === "object" ? t.desc : t.kind === "many" ? `${t.many?.n} ${t.many?.unit}` : t.kind === "material" ? t.material?.name : `"${t.text}"`}`);
@@ -129,10 +152,11 @@ export function designerTask(input: DesignerInput, repair?: { previous: unknown;
     momentDesignText(md),
     "",
     "## This moment's share of the search",
-    `${share.candidates} candidates a round for up to ${share.rounds} rounds: the space may hold at most ${share.combinations} combinations.`,
+    `${share.candidates} candidates a round for up to ${share.rounds} round${share.rounds === 1 ? "" : "s"}: the space may hold at most ${share.combinations} combinations. ${share.calls} model calls: one for this answer, one for each later look, and the last always goes to your look at the final round, where you pick.`,
     "",
     "## Instruments (goals name one instrument and one of its values)",
     instrumentsText(input.instruments),
+    ...drawnLines(input),
     "",
     "## The style's suggestions (override with key@" + k + ")",
     styleText(styleFor(input.styleValues, plan, input.cards, md.proposals.map((p) => p.value.kind))),
@@ -161,7 +185,7 @@ export function checkDesigner(input: DesignerInput, a: DesignerAnswer): string[]
   const names = planNames(plan, input.cards);
   const holds = new Set((input.holds ?? []).map((h) => h.id));
   const reqs = new Set([...(input.requirements ?? []), ...input.cards.flatMap((c) => c.requirements)].map((r) => r.id));
-  out.push(...checkGoals(a?.goals ?? [], { viewing: design.viewing, names, holds, requirements: reqs, scope: "moment", moment: k }, "goals"));
+  out.push(...checkGoals(a?.goals ?? [], { viewing: design.viewing, names, holds, requirements: reqs, scope: "moment", moment: k, ...(input.drawn ? { drawn: { names: new Set(input.drawn), cards: input.cards } } : {}) }, "goals"));
   // A video goal already holds over this moment; one repeated here is counted twice by the search.
   (a?.goals ?? []).forEach((g, i) => {
     const v = design.goals.find((x) => x.scope === "video" && (x.id === g?.id || (x.instrument === g?.instrument && x.value === g?.value)));
@@ -187,7 +211,7 @@ export function checkDesigner(input: DesignerInput, a: DesignerAnswer): string[]
     if (!a.reasons?.[f as SpaceField]?.trim()) out.push(`reasons.${f}: why these values (each field in the space needs one)`);
   }
   for (const f of Object.keys(a?.reasons ?? {})) if (!(f in space)) out.push(`reasons.${f}: the space has no ${f}; give reasons only for fields in the space`);
-  const share = shareOf(design, k);
+  const share = shareOf(design, k, input.share);
   if (combos > share.combinations) out.push(`space: ${combos} combinations, but this moment's share of the search is at most ${share.combinations}; keep the values most worth trying`);
   if (a?.focus !== undefined && (!(FOCI as readonly string[]).includes(a.focus?.value) || !a.focus?.why?.trim())) out.push(`focus: value one of ${FOCI.join(", ")}, with a why`);
   (a?.overrides ?? []).forEach((o, i) => {
@@ -222,7 +246,8 @@ export function checkDesigner(input: DesignerInput, a: DesignerAnswer): string[]
     if (a?.pick !== undefined && !ids.includes(a.pick)) out.push(`pick: "${a.pick}" is not a candidate (${ids.join(", ")})`);
     if (a?.done && a.pick === undefined) out.push("done: true needs a pick");
     if (!a?.done && a?.pick !== undefined) out.push("pick: a pick ends the search; set done true, or give no pick and a revised space");
-    if (!a?.done && !Object.keys(space).length) out.push("space: to search again, give a revised space");
+    if (input.round.final && a?.pick === undefined) out.push(`pick: this is the last look at m${k} (its rounds or calls are spent); pick one of ${ids.join(", ")} and set done true`);
+    else if (!a?.done && !Object.keys(space).length) out.push("space: to search again, give a revised space");
   }
   if (!a?.why?.trim()) out.push("why: a sentence on this moment's design is needed");
   return out;

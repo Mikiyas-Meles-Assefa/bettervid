@@ -7,10 +7,11 @@ import { parseIntent } from "../intent/parse.ts";
 import { instruments } from "../instruments/index.ts";
 import { validate } from "../reasoner.ts";
 import { styleValues, suggestDesign, viewingFrom } from "../suggest.ts";
-import type { Candidate, Viewing } from "../types.ts";
+import type { Candidate, PartCard, Viewing } from "../types.ts";
 import type { DesignerAnswer, DesignerInput, DirectorAnswer, DirectorInput, ViewerAnswer, ViewerInput } from "./api.ts";
-import { valueNames } from "./common.ts";
-import { agents, allocate, applyCorrections, checkDesigner, checkDirector, checkViewer, PROMPTS, prompt, seatsOf, instrumentInfo } from "./index.ts";
+import { checkGoals, planNames, valueNames } from "./common.ts";
+import { tiedBest } from "./designer.ts";
+import { agents, allocate, applyCorrections, checkDesigner, checkDirector, checkViewer, designerTask, directorTask, PROMPTS, prompt, seatsOf, instrumentInfo } from "./index.ts";
 
 // A small plan on a topic unlike the bench's: a kettle that boils, a question, a reveal.
 const SRC = `feel calm
@@ -215,4 +216,62 @@ test("the viewer panel: standing seats plus the director's, every seat on every 
   bad.fixes.push({ candidate: "b", field: "typeScale", value: "larger", why: "x" }, { candidate: "b", field: "motion.move", value: 1, why: "x" }, { candidate: "b", field: "type.support@5", value: 0.1, why: "x" }, { candidate: "b", field: "glow", value: 1, why: "x" });
   const p = checkViewer(vInput, bad).join("\n");
   for (const bit of ["not a seat name", "missing", "pick", "typeScale \"larger\"", "list of 3", "moment 5", "glow"]) assert.ok(p.includes(bit), `reports ${bit}:\n${p}`);
+});
+
+test("every moment that gets calls gets a search and a look; a short budget reaches the most important first", () => {
+  const d = agents.applyDirector(start, goodDirector());
+  for (const calls of [6, 7, 12]) {
+    const a = allocate({ ...d, budget: { ...d.budget, calls } });
+    assert.equal(a.reduce((s, x) => s + x.calls, 0), calls);
+    assert.ok(a.every((x) => x.calls >= 2), `${calls}: ${JSON.stringify(a)}`);
+  }
+  // Four calls for three moments: the two most important get two each, the least none (never one it cannot judge).
+  const short = allocate({ ...d, budget: { ...d.budget, calls: 4 } });
+  assert.deepEqual(short.map((x) => x.calls), [2, 2, 0]);
+  // A plain moment is not searched, so it takes no share.
+  const plainSkipped = allocate({ ...d, budget: { ...d.budget, calls: 6 } }, new Set([2]));
+  assert.equal(plainSkipped[2]!.calls, 0);
+  assert.equal(plainSkipped[2]!.candidates, 0);
+  assert.equal(plainSkipped.reduce((s, x) => s + x.calls, 0), 6);
+  // The director is told what calls buy, for this plan.
+  assert.match(directorTask(dirInput).request, /2 calls: the designer writes its goals and space, and its last call is always its look/);
+  assert.match(directorTask(dirInput).request, /2 moments to search, so 4 calls reach every one/);
+});
+
+test("on the last look the designer must pick, and a tie at the lowest miss is said plainly", () => {
+  const cand = (id: string, total: number): Candidate => ({ id, moment: 1, design: design.moments[1]!, readings: [], scores: [], total });
+  const round = { candidates: [cand("m1.r2.c0", 0.07), cand("m1.r2.c1", 0.07), cand("m1.r2.c2", 0.3)], readings: [], final: true };
+  const input = desInput(1, round);
+  const task = designerTask(input);
+  assert.match(task.request, /This is your last look/);
+  assert.match(task.request, /m1\.r2\.c0, m1\.r2\.c1 tie at the lowest miss/);
+  const noPick = { ...goodDesigner(), space: {}, reasons: {} };
+  assert.ok(checkDesigner(input, noPick).some((p) => /last look at m1/.test(p)));
+  assert.deepEqual(checkDesigner(input, { ...noPick, pick: "m1.r2.c1", done: true }), []);
+  assert.deepEqual(tiedBest(round.candidates), ["m1.r2.c0", "m1.r2.c1"]);
+  assert.deepEqual(tiedBest([cand("a", 0.1), cand("b", 0.2)]), []);
+});
+
+test("a goal on a part of the material the composition does not draw is refused, with what is drawn there", () => {
+  const card: PartCard = {
+    name: "slide",
+    file: "slide.png",
+    kind: "slide",
+    about: "a slide with a bar chart",
+    parts: { chart: { box: [0, 0.2, 1, 0.9], about: "the chart" }, "label-a": { box: [0, 0.3, 0.2, 0.35], about: "a label" }, "bar-a": { box: [0.25, 0.28, 0.9, 0.37], about: "a bar" } },
+    requirements: [],
+    checked: { ok: true, notes: [] },
+  };
+  const names = planNames(plan, [card]);
+  const ctx = { viewing, names, holds: new Set<string>(), requirements: new Set<string>(), scope: "moment" as const, moment: 1, drawn: { names: new Set(["kettle", "temp", "q", "slide", "slide.chart", "slide.bar-a"]), cards: [card] } };
+  const g = (value: string) => ({ id: value, scope: "moment" as const, moment: 1, says: "x", instrument: "salience", value, want: { min: 0.3 }, weight: 1, why: "y" });
+  assert.deepEqual(checkGoals([g("share.slide.bar-a")], ctx, "goals"), []);
+  const p = checkGoals([g("share.slide.label-a")], ctx, "goals");
+  assert.equal(p.length, 1);
+  assert.match(p[0]!, /not drawn as a thing of its own/);
+  assert.match(p[0]!, /within slide\.chart/);
+  assert.match(p[0]!, /slide\.bar-a/, "the drawn part in its row is named");
+  // The designer's task lists what is drawn and what is not.
+  const t = designerTask({ ...desInput(1), cards: [card], drawn: [...ctx.drawn.names] });
+  assert.match(t.request, /Parts of the material it does not draw on their own.*slide\.label-a/);
 });

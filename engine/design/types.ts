@@ -88,8 +88,8 @@ export type MeasureInput = {
   window?: [number, number];
   /** Plan names to scene ids (what "flask" is on screen), so goals can name things in the plan's words. */
   ids?: Record<string, string[]>;
-  /** Silences in the narration, by id. */
-  holds?: { id: string; from: number; to: number }[];
+  /** Silences in the narration, by id; `names`: the plan names tied to it (what the moment it falls in names). */
+  holds?: { id: string; from: number; to: number; names?: string[] }[];
   /** Per plan name, the words (indices into `words`) of the moments the plan anchors on it: its cue when the narration never says its name. */
   cues?: Record<string, number[]>;
 };
@@ -102,6 +102,11 @@ export type Reading = {
   notes: string[];
   /** Optional per-frame series for a sheet or a plot. */
   series?: { frame: number; values: Record<string, number> }[];
+  /**
+   * Values this instrument reports where their measure applies, and that do not apply in this window (a silence
+   * elsewhere in the video). A goal on one of them is not scored here: it is neither met nor missed.
+   */
+  outside?: string[];
 };
 
 export interface Instrument<S extends Record<string, unknown> = Record<string, unknown>> {
@@ -131,7 +136,7 @@ export type Goal = {
 };
 
 /** How far a reading is from a goal: 0 met, 1 far. */
-export type GoalScore = { goal: string; value?: number; miss: number };
+export type GoalScore = { goal: string; value?: number; miss: number; /** false: the goal's measure does not apply in this window; it does not count. */ applies?: false };
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Decisions: everything a composition needs, each value with where it came from. The composer is a pure function of

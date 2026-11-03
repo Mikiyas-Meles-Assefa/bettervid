@@ -4,7 +4,8 @@
 //   min or max    the distance past the bound over the bound's own size (a goal "at least 0.3" missed by 0.1 is a third off)
 //   near          the distance from the target over half the band (when min and max are given) or the target's size
 // A reading the goal names that no instrument reported is a full miss, with the reason in the notes: a goal that
-// cannot be measured is not met.
+// cannot be measured is not met. A value the instrument says does not apply in this window (Reading.outside: a silence
+// in another moment) is not scored at all: the goal holds where its measure applies, and counts nowhere else.
 import type { Goal, GoalScore, Reading } from "../types.ts";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -29,8 +30,12 @@ export function valueFor(goal: Pick<Goal, "instrument" | "value">, readings: Rea
   return undefined;
 }
 
+/** Whether a reading says the goal's value does not apply in its window. */
+export const outsideOf = (goal: Pick<Goal, "instrument" | "value">, readings: Reading[]) => readings.some((r) => r.instrument === goal.instrument && !(goal.value in r.values) && (r.outside ?? []).includes(goal.value));
+
 export function scoreGoal(goal: Goal, readings: Reading[]): GoalScore {
   const value = valueFor(goal, readings);
+  if (value === undefined && outsideOf(goal, readings)) return { goal: goal.id, miss: 0, applies: false };
   if (value === undefined) return { goal: goal.id, miss: 1 };
   return { goal: goal.id, value, miss: missOf(value, goal.want) };
 }
@@ -44,11 +49,11 @@ export function scoreCandidate(goals: Goal[], readings: Reading[]): { scores: Go
   let w = 0;
   let sum = 0;
   goals.forEach((g, i) => {
-    const gw = Math.max(0, g.weight);
+    const gw = scores[i]!.applies === false ? 0 : Math.max(0, g.weight);
     w += gw;
     sum += gw * scores[i]!.miss;
   });
-  const unmeasured = goals.filter((_, i) => scores[i]!.value === undefined).map((g) => `${g.id}: no ${g.instrument} reading "${g.value}"`);
+  const unmeasured = goals.filter((_, i) => scores[i]!.value === undefined && scores[i]!.applies !== false).map((g) => `${g.id}: no ${g.instrument} reading "${g.value}"`);
   return { scores, total: w > 0 ? sum / w : 0, unmeasured };
 }
 
@@ -58,6 +63,7 @@ export function scoresText(goals: Goal[], scores: GoalScore[]): string {
     .map((g) => {
       const s = scores.find((x) => x.goal === g.id);
       const want = [g.want.min !== undefined ? `>= ${g.want.min}` : "", g.want.max !== undefined ? `<= ${g.want.max}` : "", g.want.near !== undefined ? `near ${g.want.near}` : ""].filter(Boolean).join(", ");
+      if (s?.applies === false) return `${g.id} (${g.instrument} ${g.value} ${want}, weight ${g.weight}): does not apply here`;
       return `${g.id} (${g.instrument} ${g.value} ${want}, weight ${g.weight}): ${s?.value === undefined ? "not measured" : s.value} -> miss ${(s?.miss ?? 1).toFixed(2)}`;
     })
     .join("\n");

@@ -4,7 +4,10 @@
 //   sound but should not trail it far (temporal contiguity, Mayer; Ginns 2006). The agent decides the lead it wants.
 // - dwell: how long each piece of words stays on screen against the time it takes to read.
 // - holds: in each silence, the share of frames where something tied to the hold changes, something else changes, or
-//   nothing does. A camera move is not a thing changing: it is reported on its own (the camera share).
+//   nothing does, and the share where everything tied to it is on screen (a question and what it asks about, waiting).
+//   A camera move is not a thing changing: it is reported on its own (the camera share). What is tied to a hold: the
+//   ids map's entry for the hold's id when there is one, else the names of the moment the silence falls in. A silence
+//   outside the window is not read there: its values are listed as outside, so a goal on it counts only where it is.
 // The word that names a thing is found from the thing itself: its plan name's parts, and the words it shows that no
 // other thing shows. No lexicon. When the narration never says it, the word the plan anchors the thing's moment on
 // (input.cues) is its cue, and the notes say so.
@@ -25,7 +28,7 @@ const keysOf = (text: string) => text.replace(/([a-z])([A-Z])/g, "$1 $2").split(
 export const timing: Instrument<TimingSettings> = {
   name: "timing",
   describe:
-    "Timing against the voice. Values: lag.<name> (s from its cue word to its nearest arrival or change, negative before; cue: a word of its name or of words only it shows, else its moment's word), meanLag, maxLag (s), matched, cued (timed on a moment's word), already (named while shown, unchanged), missing (named, not shown), lateShare; dwellShort (texts shown under their reading time), minDwellRatio; hold.<id>.related, hold.<id>.unrelated, hold.<id>.still, hold.<id>.camera (shares of a silence's frames; camera moves apart), holdRelated, holdUnrelated, holdStill, holdCamera (means). Settings: search (s), late (s), readRate (words a second), settle (s).",
+    "Timing against the voice. Values: lag.<name> (s from its cue word, its name or its moment's word, to its nearest change; negative before), meanLag, maxLag (s), matched, cued, already, missing (named while shown unchanged, or not shown), lateShare; dwellShort (texts shown under reading time), minDwellRatio; hold.<id>.related, hold.<id>.unrelated, hold.<id>.still, hold.<id>.shown, hold.<id>.camera (shares of a silence's frames: its things change, others change, none change, all its things on screen, camera moves), holdRelated, holdUnrelated, holdStill, holdShown, holdCamera (means; a silence counts in its own window). Settings: search (s), late (s), readRate (words a second), settle (s).",
   suggest: (v: Viewing) => {
     const glance = /glanc|feed|scroll|passing/i.test(v.watch);
     return { search: 3, late: 1, readRate: glance ? 2.5 : 3.5, settle: 0.3, why: `suggested for ${v.watch}: gaze reaches a named thing 0.2 to 0.4 s after its word, so a second late is clearly behind; on-screen words read at about ${glance ? "2.5 words a second while listening in passing" : "3.5 words a second while listening"}` };
@@ -116,10 +119,21 @@ export const timing: Instrument<TimingSettings> = {
     const unrel: number[] = [];
     const still: number[] = [];
     const cam: number[] = [];
+    const shown: number[] = [];
+    const outside: string[] = [];
+    const per = ["related", "unrelated", "still", "shown", "camera"];
     for (const h of input.holds ?? []) {
       const [a, b] = [Math.max(range[0], Math.round(h.from * fps)), Math.min(range[1], Math.round(h.to * fps))];
-      if (b <= a) continue;
-      const related = new Set(unitsOf(s, input.ids?.[h.id] ?? all));
+      if (b <= a) {
+        outside.push(...per.map((p) => `hold.${h.id}.${p}`));
+        continue;
+      }
+      const tied = input.ids?.[h.id] ? [h.id] : (h.names ?? []).filter((n) => input.ids?.[n]);
+      const tiedIds = input.ids?.[h.id] ?? tied.flatMap((n) => input.ids?.[n] ?? []);
+      const related = new Set(unitsOf(s, tiedIds.length ? tiedIds : all));
+      // Per tied name, its units: "shown" needs each of them on screen.
+      const each = tied.map((n) => unitsOf(s, input.ids?.[n] ?? [])).filter((us) => us.length);
+      let on = 0;
       let r = 0;
       let o = 0;
       let z = 0;
@@ -136,19 +150,27 @@ export const timing: Instrument<TimingSettings> = {
         r += +mine;
         o += +other;
         z += +(!mine && !other);
+        if (each.length && each.every((us) => us.some((u) => s.vis[u]![f]))) on++;
       }
       const n = b - a;
       values[`hold.${h.id}.related`] = round(r / n, 2);
       values[`hold.${h.id}.unrelated`] = round(o / n, 2);
       values[`hold.${h.id}.still`] = round(z / n, 2);
       values[`hold.${h.id}.camera`] = round(c / n, 2);
+      if (each.length) {
+        values[`hold.${h.id}.shown`] = round(on / n, 2);
+        shown.push(on / n);
+      } else outside.push(`hold.${h.id}.shown`);
       cam.push(c / n);
       rel.push(r / n);
       unrel.push(o / n);
       still.push(z / n);
-      notes.push(`hold ${h.id} (${(n / fps).toFixed(1)} s): related change ${Math.round((r / n) * 100)}% of frames, unrelated ${Math.round((o / n) * 100)}%, still ${Math.round((z / n) * 100)}%; the camera moves ${Math.round((c / n) * 100)}% of frames (not counted as a change of things)${input.ids?.[h.id] ? "" : " (related: every named thing, as the ids map names nothing for this hold)"}`);
+      notes.push(`hold ${h.id} (${(n / fps).toFixed(1)} s): related change ${Math.round((r / n) * 100)}% of frames, unrelated ${Math.round((o / n) * 100)}%, still ${Math.round((z / n) * 100)}%; the camera moves ${Math.round((c / n) * 100)}% of frames (not counted as a change of things); ${each.length ? `everything tied to it (${tied.join(", ")}) on screen ${Math.round((on / n) * 100)}% of frames` : "nothing is tied to it by name (related: every named thing)"}`);
     }
     if (rel.length) Object.assign(values, { holdRelated: round(mean(rel), 2), holdUnrelated: round(mean(unrel), 2), holdStill: round(mean(still), 2), holdCamera: round(mean(cam), 2) });
-    return { instrument: "timing", values, notes };
+    if (shown.length) values.holdShown = round(mean(shown), 2);
+    else if (input.holds?.length) outside.push("holdShown");
+    if (!rel.length && input.holds?.length) outside.push("holdRelated", "holdUnrelated", "holdStill", "holdCamera");
+    return { instrument: "timing", values, notes, ...(outside.length ? { outside } : {}) };
   },
 };
