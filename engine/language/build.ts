@@ -124,7 +124,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   const held = expandHolds(written, holdMoments(opts.holds, ctx));
   const source = held.source;
   const { doc, problems } = parse(source, kitNames);
-  problems.unshift(...held.problems, ...unlabeledTotals(doc));
+  problems.unshift(...held.problems, ...unlabeledTotals(doc), ...stackedColumns(doc));
   const stats = { states: doc.states.length, parts: 0, programs: 0, programMs: 0 };
   const notes: string[] = [];
   if (problems.length) return { problems, stats };
@@ -531,7 +531,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   const seenAt: { at: number; list: Seen[] }[] = [];
   const heldAt: NonNullable<Scene["held"]> = [];
   // For the camera that follows computed work: every `do steps` play, and the words and tags on screen in each state.
-  const follows: { at: number; target: string; args: Record<string, Value>; still: boolean; root: Props; line: number; tags: { c: Command; box?: Box }[] }[] = [];
+  // `framed`: the scene's own camera line in the same state, aimed at the thing itself; the follow may take its place.
+  const follows: { at: number; target: string; args: Record<string, Value>; still: boolean; root: Props; line: number; tags: { c: Command; box?: Box }[]; framed?: (typeof shots)[number] }[] = [];
   const stateWords: { at: number; words: Seen[]; tags: Set<string> }[] = [];
 
   for (let index = 0; index < doc.states.length; index++) {
@@ -1707,8 +1708,13 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     if (play.length || arrivals.length) acts.play = [...arrivals, ...play];
     if (emit.length) acts.emit = emit;
     if (acts.play || acts.emit) steps.push(acts);
-    // A scene that moves the camera itself, or keeps it moved, keeps it: the camera only follows from rest.
-    for (const p of play) if (p.behavior === "steps" && typeof parts.get(p.target)?.props.truth === "string") follows.push({ at: enterAt, target: p.target, args: p.args ?? {}, still: !!cam || view !== REST, root: parts.get(p.target)!.props, line: s.line, tags: attached.filter((c) => c.do === "tag" && c.target.startsWith(`${p.target}.`)).map((c) => ({ c, box: wordsById.get(attachedId(c))?.box })) });
+    // A scene that moves the camera itself, or keeps it moved, keeps it: the camera only follows from rest. A camera line
+    // aimed at the computed thing itself asks to look at its work, which is what the follow does better, step by step.
+    const followFrom = (target: string) => {
+      const aimed = !!cam?.target && (cam.target === target || cam.target.startsWith(`${target}.`));
+      return aimed ? { still: false, framed: shots.find((x) => x.line === cam!.line) } : { still: !!cam || view !== REST };
+    };
+    for (const p of play) if (p.behavior === "steps" && typeof parts.get(p.target)?.props.truth === "string") follows.push({ at: enterAt, target: p.target, args: p.args ?? {}, ...followFrom(p.target), root: parts.get(p.target)!.props, line: s.line, tags: attached.filter((c) => c.do === "tag" && c.target.startsWith(`${p.target}.`)).map((c) => ({ c, box: wordsById.get(attachedId(c))?.box })) });
     // Tags, and words that arrive in this state (a question put during a hold), must stay in view whatever it follows.
     stateWords.push({ at, words: keyWords, tags: new Set([...drawnWords.map((w) => w.id), ...newWords]) });
     if (laterPlay.length) steps.push({ at: enterAt, play: laterPlay });
@@ -1838,7 +1844,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     if (!plan.times.length) continue;
     const toScene = (a: Area): Box => ({ x: Number(f.root.x ?? 0) + a.x * k, y: Number(f.root.y ?? 0) + a.y * k, w: a.w * k, h: a.h * k });
     const areas = stepAreas(board, made.nodes, plan.from, plan.to).map((a) => (a ? toScene(a) : undefined));
-    const stop = Math.min(...sceneShots.filter((t) => t > f.at), Infinity);
+    const stop = Math.min(...shots.filter((x) => x !== f.framed && x.at > f.at && sceneShots.includes(x.at)).map((x) => x.at), Infinity);
     const end = plan.times.at(-1)! + plan.longest;
     const most = Math.min(3, target / font);
     const views: { at: number; view: View; until: number }[] = [];
@@ -1862,6 +1868,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       views.push({ at: Math.max(f.at, at - lead), view: v ?? REST, until });
     });
     if (!views.some((v) => v.view !== REST)) continue;
+    // The follow takes the place of the camera line that framed the thing.
+    if (f.framed && shots.includes(f.framed)) shots.splice(shots.indexOf(f.framed), 1);
     for (const v of views) {
       if (v.at >= stop) break;
       const last = autoShots.at(-1);
@@ -1994,6 +2002,27 @@ function valuesOff(scene: Scene, frame: number, target: string, ctx: CompileCont
     }
   };
   walk(evaluate(scene, frame), 0, 0, 1, 1);
+  return out;
+}
+
+// Columns of values written as stacks side by side: each stack spaces its own lines, so the rows of a table drift
+// apart (a taller entry in one column pushes its later rows down). A table is a grid, whose rows always line up.
+function stackedColumns(doc: Doc): Problem[] {
+  const out: Problem[] = [];
+  const told = new Set<string>();
+  const simple = (i: Item) => i.kind === "text" || i.kind === "atoms" || i.kind === "math";
+  const walk = (items: Item[]) => items.forEach((r) => {
+    const cols = r.children;
+    if (r.kind === "row" && !told.has(r.id) && cols.length >= 2 && cols.every((c) => c.kind === "stack" && c.children.length >= 3 && c.children.every(simple))) {
+      const counts = cols.map((c) => c.children.length);
+      if (Math.max(...counts) - Math.min(...counts) <= 1) {
+        told.add(r.id);
+        out.push({ line: r.line, message: `${r.id} sets ${cols.length} columns (${cols.map((c) => c.id).join(", ")}) as stacks side by side, so their rows cannot line up: each column spaces its own lines. Write the table as \`grid ${r.id} cols=${cols.length}\` with one line per row (a header line first), so every value sits in its column and on its row.` });
+      }
+    }
+    walk(r.children);
+  });
+  doc.states.forEach((st) => walk(st.items));
   return out;
 }
 
@@ -2166,7 +2195,7 @@ function withheldEarly(scene: Scene, doc: Doc, momentOf: (t: Time, line: number)
 // Words attached to numbers that say they are in order must be true while they are on screen. The numbers are read
 // from the built scene where the words are, so a computed thing and a hand-made row are held to the same truth.
 const CLAIM = /\b(sorted|in order|ascending|increasing|descending|decreasing)\b/i;
-const DENIED = /\b(not|never|no|isn't|aren't|unless|until|before)\b[^.;:,]{0,16}\b(sorted|in order|ascending|increasing|descending|decreasing)\b/i;
+const DENIED = /\b(not|never|no|nothing|nor|without|isn't|aren't|unless|until|before|yet to)\b[^.;:,]{0,16}\b(sorted|in order|ascending|increasing|descending|decreasing)\b|\bout of order\b|\bunsorted\b/i;
 const NUMERIC = /^[−-]?\d+(?:[.,]\d+)?$/;
 function falseOrder(scene: Scene, doc: Doc, momentOf: (t: Time, line: number) => number, ctx: CompileContext): Problem[] {
   const out: Problem[] = [];
@@ -2199,6 +2228,40 @@ function falseOrder(scene: Scene, doc: Doc, momentOf: (t: Time, line: number) =>
       if (!wrong) continue;
       told.add(c.line);
       out.push({ line: c.line, message: `"${c.text}" says ${targets.join(", ")} ${targets.length > 1 ? "are" : "is"} ${word}, but as this state ends it shows ${wrong.map((x) => x.t).join(", ")}, which is not. Words on screen must be true while they are there: attach them once the order is really there (after the step that makes it so), say what is true now, or let a kit's own steps show the order.` });
+    }
+    // A short label laid out on its own that says something is in order is read as being about the numbers nearest it:
+    // the closest row of numbers on screen, above or below, must then be in that order.
+    const texts: { id: string; line: number; text: string }[] = [];
+    const collect = (items: Item[]) => items.forEach((i) => {
+      // A short label (a sentence carries its own qualifiers, such as "one alone is sorted").
+      if (i.kind === "text" && i.text && i.text.trim().split(/\s+/).length <= 4) texts.push({ id: i.id, line: i.line, text: i.text });
+      collect(i.children);
+    });
+    collect(s.items);
+    for (const t of texts) {
+      if (told.has(t.line)) continue;
+      const claim = CLAIM.exec(t.text);
+      if (!claim || DENIED.test(t.text)) continue;
+      const seen = shownAt(scene, end);
+      const lines = [...seen].filter(([id, n]) => within(id, t.id) && n.text !== undefined);
+      if (!lines.length) continue;
+      const at = { x: lines.reduce((a, [, n]) => a + n.x, 0) / lines.length, y: lines.reduce((a, [, n]) => a + n.y, 0) / lines.length };
+      const numbers = [...seen].filter(([id, n]) => !within(id, t.id) && n.text !== undefined && NUMERIC.test(n.text.trim()));
+      if (numbers.length < 2) continue;
+      const band = Math.max(20, ...numbers.map(([, n]) => (n.size ?? 40) * 0.8));
+      const rows = new Map<number, { x: number; y: number; v: number; t: string }[]>();
+      for (const [, n] of numbers) {
+        const key = Math.round(n.y / band);
+        (rows.get(key) ?? rows.set(key, []).get(key)!).push({ x: n.x, y: n.y, v: Number(n.text!.trim().replace("−", "-").replace(",", ".")), t: n.text!.trim() });
+      }
+      const near = [...rows.values()].filter((r) => r.length >= 2).map((r) => ({ r: r.sort((a, b) => a.x - b.x), d: Math.abs(r[0]!.y - at.y) })).sort((a, b) => a.d - b.d)[0];
+      if (!near || near.d > ctx.height * 0.3) continue;
+      const word = claim[1]!.toLowerCase();
+      const v = near.r.map((x) => x.v);
+      const down = ["descending", "decreasing"].includes(word) || /\b(descending|decreasing|largest first|biggest first)\b/i.test(t.text);
+      if (v.every((x, i) => i === 0 || (down ? x <= v[i - 1]! : x >= v[i - 1]!))) continue;
+      told.add(t.line);
+      out.push({ line: t.line, message: `"${t.text}" says something is ${word}, and the numbers nearest it, ${near.r.map((x) => x.t).join(", ")}, are not, so the viewer reads it as a false claim about them. Words on screen must be true of what they sit beside: put them where the order really is (beside the piece that is ${word}), show them once it is, or say what is true of these numbers.` });
     }
   });
   return out;

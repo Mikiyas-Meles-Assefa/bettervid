@@ -162,8 +162,32 @@ test("a text that grows a second line shows it, also when an earlier text had on
 });
 
 test("values a step carries out of a close view the scene set are refused", async () => {
-  const err = await bad(`@0\nsort s data=[5,1,7,3,6,2,8,4] algo=merge order=levels show=boxes done=7\n@4 keep\ncamera s zoom=1.4\ndo steps s from=8 to=10 pace=slow until=@30\n`);
+  const err = await bad(`@0\nsort s data=[5,1,7,3,6,2,8,4] algo=merge order=levels show=boxes done=7\ncamera s zoom=1.4\n@4 keep\ndo steps s from=8 to=10 pace=slow until=@30\n`);
   assert.match(err, /s's step \d+ carries .* (to the edge of the view|out of the view that frames it)/);
+});
+
+test("a camera line aimed at computed work in the state that plays it hands over to the camera that follows the work", async () => {
+  const r = await build(`@0\nsort s data=[12,7,3,15,6,4,11,2,9,1,8,14,5,10,13,16] algo=merge order=levels show=boxes done=15\n@4 keep\ncamera s zoom=1.2\ndo steps s from=16 to=21 pace=slow until=@30\n`, opts);
+  assert.deepEqual(r.problems, [], formatProblems(r.problems));
+  const zooms = r.doc!.steps.filter((x) => x.set?.camera).map((x) => Number((x.set!.camera as { zoom: number }).zoom));
+  assert.ok(zooms.some((z) => z > 1.5), `the follow moves in: ${zooms}`);
+  assert.ok(!zooms.includes(1.2), "the scene's own line gave way to it");
+});
+
+test("a short label that says numbers are in order must sit by numbers that are", async () => {
+  assert.match(await bad(`@0\ntext lab "ALREADY SORTED" role=label\nrow r\n  box a "5"\n  box b "1"\n  box c "7"\n`), /"ALREADY SORTED" says something is sorted, and the numbers nearest it, 5, 1, 7, are not/);
+  await ok(`@0\ntext lab "Sorted" role=label\nrow r\n  box a "1"\n  box b "5"\n  box c "7"\n`);
+  await ok(`@0\ntext lab "One alone is already sorted." role=label\nrow r\n  box a "5"\n  box b "1"\n`);
+});
+
+test("columns set as stacks side by side are refused, since their rows cannot line up", async () => {
+  const col = (id: string, a: string[]) => `  stack ${id}\n${a.map((v, i) => `    text ${id}${i} "${v}"`).join("\n")}`;
+  assert.match(await bad(`@0\nrow t\n${col("x", ["1", "2", "3"])}\n${col("y", ["4", "5", "6"])}\n`), /sets 2 columns \(x, y\) as stacks side by side/);
+});
+
+test("words that carry a moment are refused when a crowded state shrinks them past reading", async () => {
+  const wide = Array.from({ length: 4 }, (_, i) => `  text w${i} "a long line of words number ${i} here" size=big`).join("\n");
+  assert.match(await bad(`@0\nrow r\n${wide}\n`), /comes out only \d+ pixels tall, because this state is shrunk to fit/);
 });
 
 test("a tag riding a moving part onto the values is refused", async () => {

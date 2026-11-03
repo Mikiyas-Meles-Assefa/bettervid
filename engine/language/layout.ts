@@ -46,6 +46,8 @@ export const estimate: Measure = (text, size, font) => (font === "mono" ? Math.m
 export const TEXT_SIZE: Record<string, number> = { huge: 136, big: 96, normal: 70, small: 50, note: 40 };
 const CODE_SIZE = 40;
 const MAX_SCALE = 1.6;
+// Roles whose words carry a moment, so they keep a readable share of their size however full the state.
+const CARRIERS = new Set(["title", "heading", "key", "answer"]);
 const MIN_SCALE = 0.4;
 
 const n = (v: string | undefined, d: number) => (v === undefined || !Number.isFinite(Number(v)) ? d : Number(v));
@@ -516,12 +518,27 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
     box = sizeOf(root, s);
   }
 
-  const seen = (size: number, line: number) => {
+  // The words that carry a moment (its title, a step's name, what to look at now, the result) must read at arm's
+  // length on a phone, and words the scene asked to be big must not come out small: a state that only fits by shrinking
+  // them is refused, so small text cannot happen by leaving the size to the layout.
+  const told = new Set<string>();
+  const seen = (size: number, line: number, item?: Item, content = "") => {
     if (size < out.smallest) out.smallest = size;
-    if (size < env.minText - 0.5) out.problems.push({ line, message: `Text here comes out only ${Math.round(size)} pixels tall; the smallest readable is ${Math.round(env.minText)}. This state holds too much to fit at a readable size: put less on screen at once, use shorter lines, or use a bigger size for this text.` });
+    if (size < env.minText - 0.5) {
+      out.problems.push({ line, message: `Text here comes out only ${Math.round(size)} pixels tall; the smallest readable is ${Math.round(env.minText)}. This state holds too much to fit at a readable size: put less on screen at once, use shorter lines, or use a bigger size for this text.` });
+      return;
+    }
+    if (!item || told.has(item.id)) return;
+    const role = wordRole(item);
+    const carrier = role && CARRIERS.has(role) ? (wordLook(item)?.size ?? 0) * short * 0.6 : 0;
+    const asked = item.attrs.size !== undefined && (TEXT_SIZE[item.attrs.size] ?? 0) >= TEXT_SIZE.big! ? TEXT_SIZE[item.attrs.size]! * 0.55 : 0;
+    const floor = Math.max(carrier, asked);
+    if (size >= floor - 0.5) return;
+    told.add(item.id);
+    out.problems.push({ line, message: `"${content.slice(0, 40)}"${role ? ` (${role})` : ""} comes out only ${Math.round(size)} pixels tall, because this state is shrunk to fit; ${carrier >= asked ? `a ${role} carries the moment and needs` : "it was asked to be big and needs"} at least ${Math.round(floor)} to read at arm's length on a phone. Put fewer things side by side (a stack instead of a row), shorten the lines, or give the rest of the state its own moment.` });
   };
   const text = (id: string, item: Item, content: string, x: number, y: number, size: number, extra: Props = {}, parent?: string, origin = { x: 0, y: 0 }, back?: string) => {
-    seen(size, item.line);
+    seen(size, item.line, item, content);
     const props: Props = { x: round(x), y: round(y), text: content, size: round(size), color: "ink", weight: 400, ...extra };
     out.parts.push({ id, kind: "text", line: item.line, ...(parent ? { parent } : {}), props });
     const w = measure(content, size, typeof props.font === "string" && /mono|menlo|courier/i.test(props.font) ? "mono" : props.font === theme.fonts.title ? "title" : undefined);
