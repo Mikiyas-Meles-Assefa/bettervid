@@ -40,7 +40,9 @@ export type Settings = {
   };
   look: { hidden: string[] }; // events whose look is meant to stay hidden or still (eye skips them)
   lag: { before: number; after: number; late: number; full: number; half: number }; // seconds
-  load: { newLine: number; pullLine: number }; // new things within two seconds, independent pulls within one
+  // New things within two seconds, independent pulls within one; `stream`: what joins look-alike arrivals into one
+  // stream (engine/design/instruments/load.ts StreamSettings).
+  load: { newLine: number; pullLine: number; stream: { gap: number; min: number; move: number; near: number; sameWay: number } };
   pace: { varied: number }; // spread of change rates that counts as varied when the plan mixes long and short
   holds: {
     work: number; // share of a hold's frames working on its purpose that earns full marks
@@ -57,7 +59,7 @@ export const DEFAULTS: Settings = {
   read: { small: 0.035, comfortable: 0.07, contrastLow: 1.5, contrastOk: 4.5, glance: 140, page: 360, pictureLow: 0.5, pictureFull: 0.95, pictureWeight: 40, subject: 0.3, filledLow: 0.12, filledFull: 0.45, band: 0.2, bandSpan: 0.35, layoutFloor: 0.5, weights: { density: 0.3, subject: 0.35, space: 0.35 }, broken: 0.4 },
   look: { hidden: [] },
   lag: { before: 0.5, after: 1, late: 3, full: 1, half: 2 },
-  load: { newLine: 6, pullLine: 3 },
+  load: { newLine: 6, pullLine: 3, stream: { gap: 0.6, min: 3, move: 0.03, near: 0.08, sameWay: 0.8 } },
   pace: { varied: 0.4 },
   holds: { work: 0.5, distracted: 0.5, still: [] },
   depict: { symbol: 0.5, watchWeight: 0.6 },
