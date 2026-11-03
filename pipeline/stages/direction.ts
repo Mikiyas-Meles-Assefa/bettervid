@@ -5,7 +5,7 @@
 // own and moves every word number to the final script, the words the voice will time. A plan that breaks a rule goes
 // back to the model with its problems until it holds; there is no lesser plan to fall back on.
 import type { CompileContext } from "../../engine/core/types.ts";
-import { truthSteps } from "../../engine/kits/steps.ts";
+import { truthDrawn, truthSteps } from "../../engine/kits/steps.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { ArtLook, Beat, DemoPhase, DirectionEvent, DirectionPlan, Hold, HoldPurpose, Project, Script } from "../../schemas/project.ts";
 import { abilities, truthKindNames } from "../lib/abilities.ts";
@@ -140,9 +140,11 @@ const truthKey = (d: RawDemo) => `${d.truth.kind.trim()} ${d.truth.data.replace(
 const hasDemo = (e: RawEvent) => !!e.demo.what.trim() || e.demo.phases.length > 0;
 const hasTruth = (e: RawEvent) => hasDemo(e) && !!e.demo.truth.kind.trim();
 
-// The real steps of every truth thing the plan names, by its kind and data. A thing the kit refuses comes back as a problem.
-export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): { steps: Map<string, string[]>; problems: string[] } {
+// The real steps of every truth thing the plan names, by its kind and data, and how the kit draws it on this frame
+// (which way its moves go), so the planner can match the picture to the words. A thing the kit refuses comes back as a problem.
+export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): { steps: Map<string, string[]>; drawn: Map<string, string>; problems: string[] } {
   const steps = new Map<string, string[]>();
+  const drawn = new Map<string, string>();
   const problems: string[] = [];
   for (const e of raw.events.filter(hasTruth)) {
     const key = truthKey(e.demo);
@@ -168,11 +170,13 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
       const make = ctx.kits?.find((k) => k.kinds?.[kind])?.kinds?.[kind];
       make?.({ id: "demo", kind, props: {}, data: data as Record<string, unknown> }, ctx);
       steps.set(key, truthSteps(kind, "demo", data as Record<string, unknown>, ctx));
+      const how = truthDrawn(kind, "demo", data as Record<string, unknown>, ctx);
+      if (how) drawn.set(key, how);
     } catch (err) {
       problems.push(`event ${e.id}: the ${kind} kit refuses this data: ${(err as Error).message}`);
     }
   }
-  return { steps, problems };
+  return { steps, drawn, problems };
 }
 
 // Every rule a plan must keep, in the numbering the model wrote (the script before cues). Empty when it holds.
@@ -430,7 +434,7 @@ export async function direction(p: Project, force = false) {
     for (let round = 1; ; round++) {
       const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: "high" });
       const raw = r.value;
-      const { steps, problems: refused } = demoSteps(raw, ctx, kinds);
+      const { steps, drawn, problems: refused } = demoSteps(raw, ctx, kinds);
       const found = [...refused, ...problems(raw, words, steps), ...unspoken(raw, words, steps)];
       const unseen = [...steps.entries()].filter(([k]) => !shown.has(k));
       charge(p, "direction", r.usd, `round ${round}: ${raw.events.length} events, ${raw.cues.length} cues, ${found.length} problems${unseen.length ? `, ${unseen.length} step lists to show` : ""}`);
@@ -456,7 +460,8 @@ export async function direction(p: Project, force = false) {
           ? "The engine computed the real steps of your demonstrations. Check every phase against them: the steps a phase plays " +
             "must be the ones its words and holds are about, the slow first instance must cover the whole first instance, and a " +
             "hold meant to show a step must come where that step plays. Change phases, holds or cues to fit; never the script. " +
-            `Return the whole plan.\n${[...steps.entries()].map(([k, s]) => `${k}:\n${s.map((x, i) => `  ${i + 1} ${x}`).join("\n")}`).join("\n")}`
+            "Under each thing is how the engine draws it on this frame and which way its moves go. Where the script's words say a direction (down, up, left, right, into, out of), the picture must move that way: when it does not, set the kit's form in truth.data (its guide line names the forms), and every part of the scene then draws it the same. " +
+            `Return the whole plan.\n${[...steps.entries()].map(([k, s]) => `${k}:${drawn.has(k) ? `\n  ${drawn.get(k)}` : ""}\n${s.map((x, i) => `  ${i + 1} ${x}`).join("\n")}`).join("\n")}`
           : "");
     }
   }, force);

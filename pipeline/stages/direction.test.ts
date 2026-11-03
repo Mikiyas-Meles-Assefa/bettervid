@@ -205,3 +205,15 @@ test("demonstrations are checked against the steps the kit really computes", () 
   const unknown = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "teleport", data: "{}" }, phases: [] } })]);
   assert.match(demoSteps(unknown, ctx, kinds).problems[0]!, /does not have/);
 });
+
+test("the planner is told how a truth thing is drawn and which way its moves go, so it can set the form", () => {
+  const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: 1, theme: themeFrom("neon"), kits: SCENE_KITS };
+  const kinds = truthKindNames();
+  const phase = { from: 1, to: 1, pace: "slow" as const, at: { word: 7, hold: "", cue: "" }, until: none, replay: false, why: "" };
+  const sorting = (data: Record<string, unknown>) => plan([event("e1", 0, 5), event("e2", 6, 9, { demo: { what: "merging", truth: { kind: "sort", data: JSON.stringify(data) }, phases: [phase] } })]);
+  const auto = demoSteps(sorting({ algo: "merge", data: [5, 1, 7, 3], show: "boxes" }), ctx, kinds);
+  assert.deepEqual(auto.problems, []);
+  assert.match([...auto.drawn.values()][0]!, /^drawn as levels/);
+  const row = demoSteps(sorting({ algo: "merge", data: [5, 1, 7, 3], show: "boxes", form: "row" }), ctx, kinds);
+  assert.match([...row.drawn.values()][0]!, /form=row.*moves down out of the row/);
+});
