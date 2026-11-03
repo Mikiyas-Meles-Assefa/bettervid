@@ -11,7 +11,20 @@ import { SCENE_WORDS } from "../../language/syntax.ts";
 export type IntentProblem = { line: number; message: string };
 
 const quoted = (s: string) => /"([^"]*)"/.exec(s)?.[1];
-const ID = /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)?$/; // a name, or a material name and one of its parts
+// A name: letters (any script), digits, underscores and inner hyphens, as a reader agent names a part ("bar-asphalt");
+// a hyphen never starts or ends a name, so "a->b" still reads as an arrow. A material part is the card's name, a dot
+// and the part's name.
+const NAME = String.raw`[\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?`;
+const REF = `${NAME}(?:\\.${NAME})?`;
+const ID = new RegExp(`^${REF}$`, "u"); // a name, or a material name and one of its parts
+const PART = new RegExp(`^${NAME}\\.${NAME}$`, "u");
+const re = (src: string, flags = "") => new RegExp(src.replaceAll("NAME", NAME).replaceAll("REF", REF), `u${flags}`);
+const DECL = re(String.raw`^(NAME)\s*(.*)$`);
+const MANY = re(String.raw`^(NAME)\s+(\d+)\s*(.*)$`);
+const BECOMES = re(String.raw`^(REF)\s+becomes\s+(.*)$`, "i");
+const FROM = re(String.raw`^(REF)\s+from\s+(REF)\s*$`, "i");
+const ARROW = re(String.raw`^(REF)\s*->\s*(REF)\s*(.*)$`);
+const ARROW_START = re(String.raw`^REF\s*->`);
 const INTENT = new Set(["show", "keep", "compare", "ask", "reveal", "wrong", "stress", "pace", "plain"]);
 // Scene-language words that are also plain English verbs an author may write about an object ("A drops into B").
 const SCENE = new Set(SCENE_WORDS.filter((w) => w !== "drop"));
@@ -92,22 +105,22 @@ export function parseIntent(src: string): IntentPlan {
     if (key === "feel" && !cur) return void (feel = rest.split(/\s+/)[0]?.toLowerCase());
     if (key === "for" && !cur) return void (audience = rest.split(/\s+/)[0]?.toLowerCase());
     if (key === "thing") {
-      const m = /^(\w+)\s*(.*)$/.exec(rest);
+      const m = DECL.exec(rest);
       if (!m) return void notes.push(`line ${ln}: thing needs an id and a text, ignored`);
       return declare({ id: m[1]!, kind: "thing", text: quoted(m[2]!) ?? (m[2]!.trim() || m[1]!), line: ln });
     }
     if (key === "object") {
-      const m = /^(\w+)\s*(.*)$/.exec(rest);
+      const m = DECL.exec(rest);
       if (!m) return void notes.push(`line ${ln}: object needs an id and a description, ignored`);
       return declare({ id: m[1]!, kind: "object", desc: quoted(m[2]!) ?? (m[2]!.trim() || m[1]!), line: ln });
     }
     if (key === "many") {
-      const m = /^(\w+)\s+(\d+)\s*(.*)$/.exec(rest);
+      const m = MANY.exec(rest);
       if (!m) return void notes.push(`line ${ln}: many needs an id, a count and a unit, ignored`);
       return declare({ id: m[1]!, kind: "many", many: { n: Math.max(1, Number(m[2])), unit: quoted(m[3]!) ?? (m[3]!.trim() || m[1]!) }, line: ln });
     }
     if (!cur) return void notes.push(`line ${ln}: "${line}" comes before the first moment, kept out of the plan`);
-    if (SCENE.has(key) && !INTENT.has(key) && !/^[\w.]+\s*->/.test(line) && !/\s+(becomes|from)\s+/.test(line)) {
+    if (SCENE.has(key) && !INTENT.has(key) && !ARROW_START.test(line) && !/\s+(becomes|from)\s+/.test(line)) {
       // Today's scene language: pinned to this moment, with any lines indented under it.
       cur.pinned.push({ line: ln, text: line });
       pinIndent = indent;
@@ -142,15 +155,15 @@ export function parseIntent(src: string): IntentPlan {
     const act = (a: Omit<Act, "line">) => cur!.acts.push({ ...a, line: ln });
     const arg = (t: string | undefined) => (t === undefined ? undefined : quoted(t) ?? (t.trim() || undefined));
     let m: RegExpExecArray | null;
-    if ((m = /^([\w.]+)\s+becomes\s+(.*)$/i.exec(line)) && declared.get(m[1]!)?.kind !== "object") {
+    if ((m = BECOMES.exec(line)) && declared.get(m[1]!)?.kind !== "object") {
       const v = m[2]!.trim();
       if (/^\d+(\.\d+)?$/.test(v)) cur.becomes.push({ id: m[1]!, n: Number(v) });
       else cur.becomes.push({ id: m[1]!, text: quoted(v) ?? v });
-    } else if ((m = /^([\w.]+)\s+from\s+([\w.]+)\s*$/i.exec(line))) cur.from.push({ a: m[1]!, b: m[2]! });
-    else if ((m = /^([\w.]+)\s*->\s*([\w.]+)\s*(.*)$/.exec(line))) cur.arrows.push({ a: m[1]!, b: m[2]!, label: quoted(m[3]!) ?? "" });
+    } else if ((m = FROM.exec(line))) cur.from.push({ a: m[1]!, b: m[2]! });
+    else if ((m = ARROW.exec(line))) cur.arrows.push({ a: m[1]!, b: m[2]!, label: quoted(m[3]!) ?? "" });
     else {
       // What things do, in the author's own plain verbs: open. The depicter maps each verb onto what the thing can do.
-      const a = readAct(line, (t) => declared.has(t) || /^\w+\.\w+$/.test(t));
+      const a = readAct(line, (t) => declared.has(t) || PART.test(t));
       if (a) act(a);
       else notes.push(`line ${ln}: "${line}" names no thing it is about: kept out of the plan`);
     }

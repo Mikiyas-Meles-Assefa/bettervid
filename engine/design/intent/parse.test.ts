@@ -85,3 +85,30 @@ test("lenient: a second show becomes support, unknown lines before moments are n
   assert.deepEqual(p.moments[0]!.keep, ["b"]);
   assert.equal(p.notes.length, 2);
 });
+
+test("names may carry inner hyphens and any script's letters, as a reader agent names material parts", () => {
+  const plan = parseIntent(`object cross-section "a cut through a pipe"
+thing año "the year's total"
+many day-trips 3 "trip"
+@0
+  show slide14.bar-asphalt
+  keep cross-section año
+  cross-section fills into slide14.bar-asphalt
+@4
+  slide14.bar-asphalt -> año "highest"
+  day-trips becomes 5
+  año from slide14.bar-asphalt
+@6
+  show a->b
+`);
+  assert.deepEqual(plan.things.map((t) => t.id), ["cross-section", "año", "day-trips"]);
+  const [m0, m1, m2] = plan.moments;
+  assert.equal(m0!.show, "slide14.bar-asphalt");
+  assert.deepEqual(m0!.keep, ["cross-section", "año"]);
+  assert.deepEqual(m0!.acts.map((a) => [a.ids, a.verb, a.to]), [[["cross-section"], "fills into", "slide14.bar-asphalt"]]);
+  assert.deepEqual(m1!.arrows, [{ a: "slide14.bar-asphalt", b: "año", label: "highest" }]);
+  assert.deepEqual(m1!.becomes, [{ id: "day-trips", n: 5 }]);
+  assert.deepEqual(m1!.from, [{ a: "año", b: "slide14.bar-asphalt" }]);
+  assert.equal(m2!.show, undefined, "a->b is not one name: a hyphen never starts or ends a name");
+  assert.deepEqual(checkIntent(parseIntent(`thing x-y "z"\n@0\n  show x-y\n`), [{ text: "a", start: 0 }]), []);
+});
