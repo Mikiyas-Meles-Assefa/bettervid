@@ -6,8 +6,8 @@ import { hash, write } from "./util.ts";
 
 export const ROOT = process.env.PROJECTS_DIR ?? "projects";
 const LEDGER = join(ROOT, "spend.jsonl");
-// Total dev spend allowed across all runs (USD). The user set $5 on Oct 29 and raised it to $15, then $25, on Oct 30, and to $75 on Nov 2.
-const BUDGET = Number(process.env.BUDGET_USD ?? 75);
+// Total dev spend allowed across all runs (USD). The user set $5 on Oct 29 and raised it to $15, then $25, on Oct 30, and to $75 on Nov 2, and to $100 on Nov 3.
+const BUDGET = Number(process.env.BUDGET_USD ?? 100);
 
 export const dir = (p: Project) => join(ROOT, p.id);
 
