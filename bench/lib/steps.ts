@@ -28,6 +28,9 @@ async function built(run: string, id: string): Promise<{ p: Project; scene?: Sce
   const folder = folderOf(run, id);
   const p = projectOf(run, id);
   const file = join(folder, "scene.txt");
+  // A scene compiled by another composer (the design brain prototype) is scored as it is, with no language source.
+  const composed = join(folder, "composed.scene.json");
+  if (!existsSync(file) && existsSync(composed)) return { p, scene: json<Scene>(composed), source: "" };
   if (!existsSync(file)) return { p, source: "", why: "the author never finished" };
   const source = read(file);
   const r = await build(source, optionsOf(p));

@@ -1,456 +1,327 @@
 # The design brain (wave 4 proposal, Nov 3)
 
-Status: proposal for the user to approve. No engine code has changed. The prototype lives in `scripts/design-brain/` and its renders in `projects/design-brain/` (not committed).
+Status: proposal for the user to approve. No engine code has changed. The prototype lives in `scripts/design-brain/` and scored three wave 3 bench cases; its clips and sheets are in `projects/design-brain/bench-compare/` and its bench run in `bench/results/2026-11-03-design-brain/`.
 
 ## In one paragraph
 
-Today Spark places every thing by hand: it picks sizes, arrangements, entrances, light, dim, camera and timing in a 40 KB language. A weak author makes weak frames, and checks can only reject them. The design brain moves those decisions into the engine. The author says, moment by moment, what matters: the subject, what supports it, what is withheld, what changes, what is asked, what is the payoff, and the pace and feel. The engine then composes the frame and its motion the way a good motion designer would, with general algorithms (a type scale, a constraint and cost layout solver, identity-preserving transitions, a camera planner, timing rules from the attention and learning research), never with recipes per kind of video. Today's language stays as the override layer: anything an author writes explicitly wins, so a strong author loses nothing. The prototype shows that the typographic and timing half already works from a 3.4 KB guide; it also shows the hard half honestly: a weak author does not express relations (comparisons, counts, causes), so the engine must also infer what can be shown, not only lay out what it is told. Most videos will be made from people's own material (files, slides, screenshots, photos, charts, data, code), so that material is a first-class thing the engine understands into named parts and composes with (4.8). Every clip is judged by a demanding designer and by a distracted viewer glancing at a phone (4.9).
+Today a weak author (Spark, about Haiku level) writes low-level scene code for every frame, so the frames come out hand-placed by a weak author, and repair loops cannot create quality. The design brain moves design out of the author's hands, but not into fixed rules: nobody knows what hundreds of thousands of people will make, so there is no universal "good frame" to hardcode. A horror beat may hide its threat, an ambient piece may want no focal point, a meme may be cramped on purpose, and the output may be a phone, a TV or a slide. So the design brain has five layers. (1) **Abilities**: what the engine can do, with no opinions (place, size, layer, move, transform, crop, camera, depict a thing as itself with parts that change, redraw the user's material, time to the voice). (2) **Instruments**: measurements of any property of a rendered moment (salience, legibility at a given viewing size, change load, likely eye path, what is visible or hidden, timing against the voice), which report and never judge. (3) **Reasoning agents** that decide, per video and per moment, what good means here, from the intent, audience, material, requirements, platform and purpose. (4) **Search and look loops**: agents try options with the abilities, measure them against the goals they set, watch them as different viewers, and revise. (5) **Style values** as overridable suggestions. The author only says what matters; strong authors can still write every frame by hand.
 
-## 1. What is wrong now, and why checks cannot fix it
+## 1. What is wrong now
 
-From the wave 2 sheets (`projects/merge-w2/watch10/sheet.jpg`, `projects/stats-w2/watch7/sheet.jpg`) and the three Haiku baselines in this prototype:
+Evidence: the wave 2 sheets (`projects/merge-w2/watch10/sheet.jpg`, `projects/stats-w2/watch7/sheet.jpg`), the review of Nov 2 (`docs/reviews/2026-11-02-three-videos.md`), and the wave 3 bench baseline (`bench/results/2026-11-03-baseline/`: free measures 0.75, designer 3.9 of 10, none above 6, scroller kept 59%, learners 0.95 with the video against 0.81 with words only, so the picture adds little teaching).
 
-- **Small, high, sparse.** Most frames hold a few lines of body text at 3 to 6% of the width in the top third; the bottom half is empty. The build already notes "fills only 16% of the frame" on every Haiku baseline, and the Haiku author passed the check on the first round and left all of them.
-- **Text as narration.** Baselines put the spoken sentence on screen in pieces ("of its power as heat", "needed about a year", "to copy a single Bible"). The redundancy research says this costs learning (section 3).
-- **Everything competes.** Titles, headings, step labels, captions and kit labels share the frame at similar sizes, so there is no clear subject and no hierarchy.
-- **Motion does not lead the eye.** Things arrive on the word or after it, several at once; nothing is staged.
-- **Repair loops do not converge.** A check can say "empty" or "crowded", but the author who must fix it is the same author who made it, and a fix to one fault makes another.
+Symptoms (a list of symptoms, not the definition of the goal):
+- **Labels instead of things.** Titration is a box labelled NaOH over a box labelled "acid + phenolphthalein" with the word "pink" beside it: no liquid, no drop, no color change. The Magna Carta is a rectangle with a circle labelled "seal".
+- **Demonstrations that do not happen.** Balls that never drop, a counter stuck at 0.
+- **Content small in the top third**, the bottom half empty; text as narration in pieces.
+- **Holds that are dead air** where a scroller swipes.
+- **Everything competes**; motion does not lead the eye; answers arrive early.
+- **Repairs do not converge**: the author who must fix a frame is the author who made it.
+- A likely bug for the bench owner: `role=key` on equation lines draws the word "key".
 
-The common cause: composition is the author's job, and the author is the weakest link. Spark scores about 13% on ProgramBench against 65% for Opus; the scene language is closer to programming than to writing.
+The cause is structural: composition, depiction and direction are the author's job, and the author is the weakest link. Spark scores about 13% on ProgramBench against 65% for Opus; the scene language is closer to programming than to writing.
 
-## 2. The split: what the author says, what the engine decides
+## 2. The five layers
 
-| The author says (meaning) | The engine decides (form) |
-|---|---|
-| The things that exist, by meaning: words, values, counts, computed things (kits), programs, and the user's own material by name and named part (`chart.jump`) | How each is drawn: type role and size, a mark grid, a bar, the real picture or a redrawn one, its crop and zoom |
-| Per moment: the one subject (`show`) | Where it sits, how big, what lights it, what dims |
-| What supports it (`keep`) and what leaves (anything not named) | Arrangement, order, steady places, exits |
-| Relations: `compare`, `A -> B`, `A from B`, `A becomes X` | Side by side or stacked, magnitude on a shared scale, arrows, birth from a source, morph in place |
-| Direction: `ask`, `reveal`, `wrong`, `withhold`, holds | Placeholders, think time, anticipation, payoff motion, strike-through |
-| Weight and tempo: `stress`, `pace`, `feel`, `for` | Size step, camera push, durations, easing, how much dims, how much is labeled |
-| Nothing about position, size, color, easing or frames | Everything about position, size, color, easing and frames |
+### 2.1 Abilities (no opinions)
 
-The intent vocabulary is deliberately small (about a dozen words, `scripts/design-brain/intent-prompt.md`) and is about the viewer, not the screen. It holds for any use: a lesson, an ad, a history, a simulation all have a subject, support, change, a question and a payoff at each moment. Nothing in it names a kind of video.
+What the engine can do. An ability has parameters and no defaults that encode taste.
 
-## 3. What the research says the engine should do
+| Ability | What it does | Exists today |
+|---|---|---|
+| place, size, layer | put anything anywhere, at any size, in front of or behind | yes (core primitives, `layer`, `z`) |
+| move, transform | interpolate any property; morph shapes; transform text and math by matched parts | yes (`set`, `matchShapes`, math parts) |
+| crop, zoom inside | show part of a picture, animated, within its own frame | yes (image crop, prototype part zoom) |
+| camera | pan, zoom, hold, drift, cut | yes (camera lines, follow camera) |
+| depict | draw a thing as itself, with parts that carry state (a liquid with a level and color, a body that falls, a scale that can be read, a hand that turns) | prototype only (`depict.ts`) |
+| redraw material | turn a chart with data into live bars on its own scale, starting on the original's bars | prototype only |
+| compute | truth kits (sort, graph, math, steps, trace) that compute what is shown | yes (`engine/kits`) |
+| time | start, hold, stretch, wait for a word, a hold or another change | yes (word anchors, holds, withholds) |
+| sound cue | a sound tied to a change (a drop lands, a ball hits the floor) | wave 6 interface |
 
-Three research passes (sources at the end). Kept as knowledge the algorithms reason with, not as a menu.
+Depiction is one ability among these, not the center. Its tiers share one interface (a box, named parts, states):
+1. **Drawn props** built from vector parts in the style's own ink (the prototype's vessel, burette, ball, clock).
+2. **Generated sprites in the style**, cut into parts with SAM, with state as overlays (a tint on the liquid mask, a part that moves).
+3. **The user's own images** with parts found by vision and SAM.
+4. **Real pictures** found by the wave 5 picture hunter, with parts.
 
-**Attention.**
-- Motion onset captures attention; ongoing motion does not (Abrams and Christ 2003).
-  - So onsets are a budget: one onset for the subject per moment, and nothing else starts while it does.
-- Saliency predicts where eyes land, and in video, motion and flicker dominate for about a second after a cut (Itti and Koch; Carmi and Itti 2006; Smith and Mital 2013).
-  - So the subject must be the saliency peak of the frame, or the frame is wrong regardless of what the author meant.
-- Signaling helps learning by about d = 0.4 to 0.5 (Schneider et al. 2018; Alpizar et al. 2020), but only when the cue points at what the viewer needs next (de Koning et al. 2009).
-  - Dimming the rest to about 30 to 50% contrast works about as well as cueing the target (anti-cueing), and keeps context.
+A weak author writes "the flask turns faint pink" and gets it, whichever tier draws the flask.
 
-**Load.**
-- Visual working memory holds about 3 to 4 objects (Luck and Vogel 1997).
-  - So at most about four things new or changing in one view; build dense things up in steps.
-- Changes made during a cut, a camera move or another motion are missed (change blindness, Rensink et al. 1997).
-  - So nothing important changes while the camera moves.
-- Decoration that does not carry the idea costs learning (seductive details, Rey 2012; coherence).
+### 2.2 Instruments (measure and report, never judge)
 
-**Timing to the voice.**
-- Gaze reaches a named object about 200 to 400 ms after its word starts (Allopenna et al. 1998).
-  - So a visual cue should start 200 to 500 ms before the word, and hold at least 1 s after it.
-- A visual may lead its sound but should not trail it (Baggett 1984; Ginns 2006, contiguity d about 0.85).
-- Verbatim on-screen text plus the same narration hurts; short labels and key terms help (Adesope and Nesbit 2012; Yue, Bjork and Bjork 2013).
-  - So the engine never captions the voice inside the picture.
-- Reading budget: about 0.3 s a word plus 1 s, never under 1.5 s for a label, at 12 to 15 characters a second (Szarkowska and Gerber-Moron 2018).
+An instrument takes a rendered moment or clip and returns numbers and pictures. It has settings (for example a viewing size and distance for legibility, or a window for change load); an agent chooses the settings for this video. It never says "pass" or "fail".
 
-**Animation and pacing.**
-- Animation helps only when the change shown is the change in the concept, and slow and simple enough to perceive (Tversky, Morrison and Betrancourt 2002; Hoffler and Leutner 2007, d about 0.37).
-  - So motion must mean something; a still frame is the default.
-- Segmenting with system-placed pauses helps (Rey et al. 2019).
-- Event boundaries flush working memory (Zacks et al. 2010; Swallow et al. 2009).
-  - So mark idea boundaries visibly, with a settle hold and a change of layout, and keep the takeaway on screen at the boundary.
-- Prequestions help for exactly what is asked, by about g = 0.54, and do nothing for the rest (St. Hilaire et al. 2023).
-  - So predict-then-reveal must target the very next reveal, with 2 to 4 s to think.
-- Guidance that helps newcomers hurts experts (expertise reversal, Kalyuga et al. 2003).
-  - So `for new|familiar` is a dial on cueing, labeling, build speed and holds.
+| Instrument | Reports | Basis |
+|---|---|---|
+| salience map | where attention is likely to go in a frame and after a change, and the share each thing gets | analytic (size, contrast, onset, center) first; a learned model (UMSI) on keyframes later |
+| legibility | for each piece of text, its size and contrast at a chosen viewing size and distance | font metrics and the style's surfaces (`engine/style/design.ts` already checks contrast) |
+| change load | how many things start, move or change per window, and how many pull at once | scene sampling (`bench/lib/measure.ts`) |
+| eye path | the likely order the eye visits things over time, and which changes it may miss (during a camera move, during another change) | salience over time plus change blindness windows |
+| visible and hidden | what is on screen, covered, cut by the frame, or withheld at each moment | scene sampling (the bench's reveal and read measures) |
+| timing against the voice | for each named thing, when it appears or changes relative to its word; each hold's activity | word timings and scene sampling (bench lag and holds) |
+| fill and balance | occupied area, empty bands, visual weight left and right, steadiness of things that stay | layout boxes (the build's "fills only 16%" note) |
+| viewer panels | what a first-time learner, a follow viewer, a demanding designer and a distracted scroller see and remember | Claude subagents on sheets (the wave 3 bench) |
 
-**Craft** (Manim and 3Blue1Brown docs, Material 3 motion tokens, NN/g, Apple WWDC18 fluid interfaces, Willenskomer's UX in Motion, Kurzgesagt and Branch process material, TikTok and YouTube safe zones, Netflix timed-text guide).
-- **Identity is everything.** A concept that persists never cuts; it transforms in place (Manim `Transform`, `TransformMatchingTex`, Keynote Magic Move, shared-element transitions). A new thing is born from the thing in focus (cloning).
-- **Staging.** One idea per frame, read where the eye already is. Exits, then moves, then entrances (Heer and Robertson 2007, who also found that staged transitions help perception and that rescaling hurts it).
-- **Easing by role.** Moves within the screen use a standard curve. Things entering decelerate and things leaving accelerate, and exits are about 0.7 times as long as entrances. Duration grows with distance and area: about 250 to 400 ms for a pop, 0.4 to 0.7 s for an entrance, 0.8 to 1.5 s for a meaningful morph, 1 to 2.5 s for a camera move. Springs bounce only when the motion carries momentum.
-- **Hierarchy.** Use one dominant element at least 2 times larger than the rest, one accent color for "now", and two to three sizes per frame. Video type is larger than print: a minimum of about 44 to 48 px on a 1080 px wide frame, captions at 64 to 80, and a hero word or number at 160 to 320. Scale ratio 1.5 to 1.618.
-- **The vertical frame.** Center-stacked, single column. The subject's focal point sits near the upper third to the middle. Keep the bottom 25 to 35% and the right rail clear of anything critical, because of phone and platform UI. Comparisons stack or alternate.
-- **Camera.** A few intentional moves, each a static hold or one eased move, never continuous tracking (Gleicher and Liu, Re-Cinematography). Push into a part to change scale level (Kurzgesagt, Branch). Use parallax for depth.
+The bench measures are instruments too. They evaluate; the engine does not optimize toward them blindly. The prototype shows why: the load instrument counts each falling drop as a new thing, so a stream of drops scores as overload, while every viewer read it as one stream.
 
-**How generated layout works** (O'Donovan, Agarwala and Hertzmann 2014; DesignScape 2015; Cassowary; GRIDS (CHI 2020); Ngo et al.'s aesthetic measures; UMSI importance prediction; Lino and Christie's toric camera space; Galvane et al.'s continuity editing by dynamic programming).
-- Learned generators (LayoutGAN, LayoutDM, LayoutGPT and LayoutPrompter) are stochastic and slow. They misalign, and they know element categories but not argument or emphasis.
-- Industry tools (PowerPoint Designer, Canva Magic Design) retrieve and rank human templates.
-- What fits a deterministic engine that must be fast is a pipeline:
-  1. Roles become tokens on a scale.
-  2. Enumerate a few structural candidates.
-  3. Solve metrics with a linear constraint solver.
-  4. Score with an energy of design terms.
-  5. Plan the camera in coordinates where framing holds by construction.
-  6. Diff transitions by identity.
-  7. Verify the result.
+### 2.3 Reasoning agents (decide what good means here)
 
-## 4. How the engine decides
+Agents read the intent, the audience, the user's material and its requirements, the platform and the purpose, and write goals per video and per moment in plain terms, with the instrument settings that would show them met. Examples of goals an agent might write (not defaults):
+- "At 0.5 s the viewer of this phone feed should already see the two balls at one height; the question can wait."
+- "During the hold, the faint pink is the only thing that changes; the timer may tick."
+- "This horror beat keeps the threat below 10% of salience until the cut."
+- "This TV lecture keeps the whole derivation on screen; nothing leaves while it is referred to."
 
-Six stages run per section, in this order. Each is a pure function of the plan, the words and the style, so the same input gives the same video.
+Agents:
+- **Director** (per video): purpose, audience, platform, the arc, what the viewer should know and feel at each event, which demonstrations happen and how fast, what is withheld and why. Wave 2's direction plan is its first form.
+- **Designer** (per moment): what matters now and how strongly; which abilities to try; the goals and instrument settings for this moment; style suggestions to keep or override.
+- **Material reader** (per file, once): named parts, data, text, requirements found in the material (section 2.6).
+- **Viewer panel** (per candidate): a learner, a distracted scroller, a demanding designer, and viewers the director names for this audience (a chemistry teacher, a non-native speaker, someone watching on a TV), each reporting what they saw.
 
-### 4.1 Completing the intent: what can be shown
+Agents are Meta models in production (Muse Spark for the cheap high-volume calls, a stronger model where a decision carries the video); the prototype used Claude Haiku as the author and Claude Sonnet as viewers, at $0 Meta spend.
 
-The prototype's most important finding: the Haiku author used `show` and `keep` and almost nothing else. Across the three plans:
-- It wrote 0 `compare`, 0 `many`, 0 `->` and 0 `from`.
-- In the press piece, "a year for one Bible" against "sixty a year from one shop" is the whole idea. The author still wrote it as eleven word cards in a row.
-- When the relations were added by hand (`projects/design-brain/press/rich-sheet.jpg`), the frames finally carried the comparison.
+### 2.4 Search and look loops
 
-So the engine must propose relations and forms itself, from the plan's things and the words. This is cheap and general:
-- **Quantities.** Values with the same unit or kind (both books, both durations, both money) that are on screen together, or come one after the other, are compared on one shared scale. A quantity that changes is a `becomes`. A small count of countable things is a `many`.
-- **Order and cause.** Things named in an order the words mark as order or cause ("then", "so", "because", "turns into") are a chain or an arrow.
-- **Correction.** A thing the words contradict ("not ninety", "most people guess") is `wrong`.
-- **A question in the narration** followed by its answer is an `ask` and `reveal` pair, with think time requested from the voice as a hold, using wave 2's hold mechanism.
-- **Computed things.** A process a kit can compute is offered as that kit, and a thing that names a real object asks the pictures stage. This is wave 5's job, but the request starts here.
+Per moment, or per stretch of moments that share things:
+1. The designer agent proposes a few candidate arrangements and motions with the abilities (not one), or asks a cheap generator for them (a constraint solver for placements, a planner for camera paths, enumeration of transition orders).
+2. The engine renders each candidate as keyframes and short motion samples.
+3. Instruments measure each candidate with the agent's settings.
+4. The agent compares the measurements with its own goals, looks at the best candidates as the viewer panel, and keeps, mixes or revises.
+5. Budgets bound the loop (candidates per moment, rounds, model calls); the agent spends more where the director marked a moment as carrying the video.
 
-Each inferred relation is a proposal with a reason, written into the build notes. The author's explicit lines always win, and `plain` on a moment turns inference off.
+This is what makes repairs converge: the party that composes is the party with the abilities and the instruments, and it compares options instead of patching one.
 
-Where words alone are ambiguous, one narrow Spark call per section answers multiple-choice questions ("is X compared with Y here? yes/no"). Classification is a task a weak model does well, unlike placement. Meta stays the model doing the thinking; the engine does the arithmetic.
+### 2.5 Style values as suggestions
 
-### 4.2 Composition: a solver, not templates
+A style (`styles/*.json`, `engine/style/design.ts`) supplies data: a type scale and ratio, spacing units, colors and the surfaces they may sit on, motion feel, dim treatment, pointer and panel looks, picture treatment. These are suggestions the designer agent starts from and may override for a moment or a video (a meme that is cramped on purpose, a calm piece with slower motion). Overrides are written down with a reason.
 
-1. **Roles to tokens.**
-   - Each visible thing gets a role for the moment: subject, support, question, label, wrong or payoff.
-   - Roles map to steps on the style's type scale, which `engine/style/design.ts` already has (`scale.base`, `scale.ratio`).
-   - The subject is fitted: as large as the region allows, capped and floored by the style.
-   - Support is about two scale steps down.
-   - Emphasis (`stress`, a reveal) is one step up. "More important" is always a discrete step, so no frame gets an arbitrary size.
-2. **Candidates.** From the relations and the count of visible things, enumerate a small fixed set of structures (typically 2 to 6):
-   - a single column with the subject at the optical center;
-   - the subject with satellites above and below;
-   - a split for a comparison, side by side or stacked;
-   - a chain down the frame;
-   - a full-bleed picture with a caption band;
-   - a kit in its portrait form, as the existing `form=` does;
-   - a subject plus an inset of the whole.
+### 2.6 The user's material and its requirements
 
-   These are structures, not video types: any topic produces them from its relations.
-3. **Metrics by constraints.** Solve each candidate with Cassowary (kiwi.js, about 20 KB, incremental). Constraints come in three strengths:
-   - **Required:** safe area including the platform UI zone, no overlap within the branch, the readable floor.
-   - **Strong:** alignment to a 4 or 8 px grid, scale steps, and a shared scale for compared quantities.
-   - **Weak:** subject centering, preferred gaps.
+Most people bring their own material: files, docs, slides, screenshots, photos, charts, data, code. Their pieces are first class:
+- **Read once, into named parts**: a slide's title, total and bars; a photo's regions; a chart's data; a document's quotes and headings; code lines. The prototype's support-tickets slide was read by hand into parts and data (`scripts/design-brain/bench-setup.ts`); in the pipeline a reader agent does it (vision, SAM, the data file when present, a check of the reading against the source). This overlaps wave 5's agentic parsing and uses the same cards.
+- **Requirements**: one part of a project can say what matters in another. A syllabus marks a chart in the lecture slides as essential; a brand guide fixes colors and logo; a brief names must-say claims. The planner turns these into requirements of the video ("show this exact figure", "use these colors", "never say that"). The designer agent takes required pieces as given and composes around them; instruments check each requirement is met (the figure is on screen, legible at the chosen size, for long enough).
+- **Real or redrawn** is the agent's call per piece and purpose: evidence the viewer should recognise stays real; information that should come to life may be redrawn, starting exactly on the original (the prototype's slide shows as it is, then its bars are redrawn on top and move to their new places).
 
-   Required constraints that cannot all hold are reported as one plain problem, never silently squeezed.
-4. **Score.** An energy over the solved candidate:
-   - the subject's share of predicted saliency (area times contrast, plus onset);
-   - fill of the usable area, including room the stretch keeps for later things;
-   - balance and equilibrium (Ngo);
-   - steadiness: distance moved by things that stay, compared with the previous moment;
-   - reading order;
-   - the number of type sizes;
-   - the number of things that change in this moment, against the budget of about four.
+## 3. What the author says
 
-   Pick the lowest. Weights are fixed and hand-set first, then fitted from the bench (section 7), in the spirit of O'Donovan et al.'s inverse optimization.
-5. **Stretch steadiness.** The current `layout(items, env, cap, stretch)` union over a stretch is kept: it already makes things that stay keep their box. The solver becomes the place where that union is decided.
+The author states intent per moment; the agents and the engine do the rest. The vocabulary is small and about the viewer, not the screen (`scripts/design-brain/intent-prompt.md`, 5.3 KB against 40 KB for today's language guide):
+- **Things**: `thing` (words or a value), `many` (countable marks), `object` (a real thing to see, described in plain words), and the user's material by name and part (`slide.login`).
+- **Per moment** (`@N` on a spoken word): `show` (the one subject), `keep` (what stays as support), relations (`compare`, `A -> B`, `A from B`, `becomes`), direction (`ask`, `reveal`, `wrong`, `stress`, `pace`), and plain verbs for what objects do (`drips into`, `turns`, `flashes`, `swirls`, `falls`, `fills`, `reads`, `runs`, `moves to`).
+- **Top lines**: `feel`, `for new|familiar`.
+- Nothing about position, size, color, easing or frames.
 
-### 4.3 Motion and transitions: by identity
+Strong authors lose nothing: any line of today's language inside a moment wins for that thing in that moment, and the agents compose the rest around it (section 6).
 
-- **Diff by identity.** Every thing has an id that lives across moments. Each change between moments is classified as one of: stays, moves, changes size, changes content, born from a source, leaves, enters. This is FLIP: layout is computed per moment, and motion is the interpolation.
-- **Staging order.** Exits, then moves and resizes, then entrances (Heer and Robertson). The subject's own change is the last onset and lands on its word. Other entrances are staggered 3 to 5 frames apart, and the whole group is capped near 1.5 times a single entrance.
-- **Morph kinds**, chosen by what changed:
-  - text that changes keeps its matched parts and moves only what differs (atoms and math already have parts; `TransformMatchingTex` is the model);
-  - a number counts or rolls;
-  - shapes morph, using the existing `matchShapes`;
-  - a count adds or removes marks one by one;
-  - a thing born from another grows out of it;
-  - a wrong thing is struck through and steps back, and stays.
+## 4. How each area is decided (and by whom)
 
-  Unrelated things never morph into each other, because that implies a false relation.
-- **Durations and easings** come from distance, area and role, scaled by the style's `motion.feel` and the moment's `pace`. Within those bands, the style decides how motion feels: neon can be snappier and chalk calmer.
-- **Across sections.** A thing that is in the last frame of one section and the first of the next is matched by identity, giving a match cut or a morph. Wave 2's handed-over objects already carry ids.
+Every decision below is made by an agent against goals it wrote, informed by instruments, or by search over options. Where today's engine or the prototype uses a fixed value, it is listed in section 8 as a stand-in to be removed.
 
-### 4.4 Camera and depth
+### 4.1 Composition and use of the frame
+- **Decided by**: the designer agent, per moment, from candidates.
+- **Abilities**: place, size, layer, crop, the stage (things that persist keep their place while words take turns around them).
+- **Instruments**: fill and balance, salience share of what the agent named as subject, steadiness across moments, legibility at the platform's viewing size, platform UI zones (read from the target: a feed short has captions and buttons at the bottom and right; a TV or a lesson watched full screen has none).
+- **Search**: a constraint solver (Cassowary, kiwi.js) proposes metric layouts for a few structures the agent names; candidates are rendered and measured; the agent picks.
 
-- **Plan the whole section at once.** The camera is planned by dynamic programming over moments (Galvane et al.). Each moment chooses one of four camera states: rest, frame the subject, frame a part of it, or pull back to the whole. The cost adds:
-  - framing error, from the subject's box against its target fill;
-  - change cost, with no move during an important content change;
-  - rhythm, so moves do not come too close together.
-- **Moves.** Each move is a static hold or one eased move.
-- **Framing.** Targets are screen-space boxes, solved in closed form for pan and zoom (the toric-space lesson: pick coordinates in which the framing rule is exact).
-- **What exists today.** `follow.ts` (the camera follows computed work) becomes one case of this planner.
-- **Moves with meaning.** A push in to change scale level, or a pull back for a recap. `stress` gives a slow push. A long still moment gets a 1 to 2% drift.
-- **Depth.** Pictures and layered drawings get 2 to 3 depth layers with parallax during camera moves, using the existing `layer` and `z`.
+### 4.2 Type and hierarchy
+- **Decided by**: the designer agent; the style's scale is the starting suggestion.
+- **Instruments**: legibility at the chosen viewing size and distance, the number of sizes in a frame, reading time against how long the words stay.
+- **Agent reasoning**: whether words appear at all (the narration already says them; the redundancy research says verbatim text costs learning, but a muted feed viewer needs captions), and which words carry a moment.
 
-### 4.5 Timing to the voice
+### 4.3 Depicting things as themselves
+- **Decided by**: the material reader and the designer: which tier draws a thing, which parts and states it needs, real or redrawn.
+- **Abilities**: depict (four tiers), state changes timed to words.
+- **Instruments**: visible and hidden (is the changing part on screen and big enough to see change), legibility of the part (a meniscus at a phone's size), the follow viewer (what did they think the thing was).
 
-- **Cue lead.** A change starts about 0.3 s before its word (the 200 to 500 ms band).
-- **Minimum dwell.** At least 1.0 s per moment; 1.4 s for a reveal, an ask or a stress; scaled by pace and audience.
-- **Moments too close together.** The engine first lets the visual trail by up to 0.5 s. If that is not enough, it merges the short moment's subject into the next as support. It never lets the visual run more than 0.5 s behind its word.
-- **Read budget.** Labels must stay up for their reading time, or they are cut to key words, with a note.
-- **Onset budget.** At most one subject onset per 0.5 to 1 s.
-- **Holds.** Wave 2 holds are honored, and the engine checks that each has a job: a step plays, a question waits, or the takeaway settles.
+### 4.4 Motion and transitions
+- **Decided by**: the designer agent; transition orders and morph kinds are enumerated and measured.
+- **Abilities**: move, morph by identity, born from a source, strike through, count, crossfade a picture into its redrawing.
+- **Instruments**: change load per window, eye path (does the eye arrive where the next change happens), steadiness, motion that carries no change in the concept (flagged for the agent, not removed).
+- **Research the agent can consult**: staging exits before moves before entrances (Heer and Robertson 2007); identity-preserving transforms (Manim `Transform`, Keynote Magic Move); easing by role and duration by distance (Material 3 motion tokens, NN/g). These are knowledge, not rules.
 
-### 4.6 Direction as reasoning
+### 4.5 Camera
+- **Decided by**: the designer agent, per stretch, from candidate camera paths (a planner over moments, as in Galvane et al.'s continuity editing, with framing solved in closed form as in Lino and Christie's toric space).
+- **Instruments**: what the camera hides or cuts, changes that happen during a move (change blindness, Rensink et al. 1997), legibility after zoom.
+- The follow camera (`engine/language/follow.ts`) becomes one candidate generator.
 
-The engine knows the viewer's state as it goes. It tracks what has been shown, what is withheld, and which processes have already been demonstrated. From that it acts:
-- **Slow first.** The first play of a process is slow. A process played again is faster unless the author says otherwise. This is wave 2's `pace`, applied automatically from the history.
-- **Ask and reveal.** An ask creates a placeholder in the reveal's future place and freezes everything else. The reveal has anticipation, then the payoff, then a settle hold.
-- **Boundaries.** An idea boundary gets a settle hold and a visible change of layout, and the takeaway stays on screen at the boundary.
-- **Recaps.** A recap pulls back to the whole.
-- **Audience.** `for new` adds labels and slows builds; `for familiar` removes them.
+### 4.6 Timing to the voice
+- **Decided by**: the director for the video's tempo, the designer per moment.
+- **Instruments**: timing against the voice (each named thing's onset relative to its word), dwell (how long each thing stays against its reading or viewing time), holds (what changes during each silence).
+- **Research the agent can consult**: gaze reaches a named object about 200 to 400 ms after its word starts (Allopenna et al. 1998); visuals may lead their sound but should not trail it (Ginns 2006). The agent decides the lead for this audience and this moment.
 
-None of this is keyed to a kind of video. It is a model of attention and memory applied to whatever the plan contains.
+### 4.7 Direction as reasoning
+- **Decided by**: the director agent, with the designer.
+- **Abilities**: hold, withhold, ask with a placeholder, reveal with anticipation, demonstrate (a flow, a fall, a computed process) at a chosen speed, replay, recap by pulling back.
+- **Reasoning, not recipes**: the agent keeps a model of the viewer (what has been shown, what is withheld, which processes have been seen) and decides. Examples the prototype exposed: a demonstration is never cut short by the next moment; revealed words wait for the landing they describe; an apparatus stays whole while any of its parts is on screen. In the build these are things the director reasons about, not switches.
+- **Instruments**: the follow test (what is the viewer waiting for), the learner quiz, holds, reveal.
 
-### 4.7 Checking its own frames, and repairing them itself
+### 4.8 Eye guidance and load
+- **Decided by**: the designer, with goals that may be "one focal point", "two things compared", "no focal point", or "the threat stays hidden".
+- **Instruments**: salience share, eye path, change load, viewer panels.
 
-After the build, a cheap analytic saliency estimate on sampled frames (size times contrast times onset, plus a center bias) checks that the subject is the peak, and that no more than four things change in a window. When either fails, the engine repairs its own decision: it dims more, moves the camera, steps the subject up, or splits the moment. It never sends the problem back to the author. This is what makes loops converge: the party that made the frame is the party with the algorithm to fix it. A learned importance model (UMSI) can confirm this later, on keyframes only.
+### 4.9 Sound cues
+- An interface to wave 6: an ability to tie a sound to a change (a drop lands, a ball hits the floor, a bar fills). The designer agent proposes cues; the sound stage decides the sound.
 
-### 4.8 The user's own material is first-class
+### 4.10 Readability and design quality
+- Readability for a distracted phone viewer and quality for a demanding designer are viewer panels and instruments, used by agents to judge their own candidates, at settings the director chose for this audience and platform.
 
-Most videos will be made from what people bring: project files, documents, notes, slides, screenshots, photos, diagrams, charts, data, code. The video must beat what a human team would make from the same material. So material is not decoration placed by an author; it is a thing the design brain understands and composes with, as deeply as anything it draws itself.
+## 5. Research grounding (knowledge for agents, not rules)
 
-- **Understand material once, on arrival.** Each file becomes an addressable thing with named parts, using the existing pieces (the annotate stage's vision pass, SAM cutouts, real font measuring) and new readers:
-  - **Photos and pictures:** regions named by what they show (the vision pass boxes them).
-  - **Screenshots and slides:** text blocks and controls (OCR plus a vision pass), titles, bullets and figures.
-  - **Charts:** the chart type, axes, series and marks. When the data itself is present (a CSV, a spreadsheet, a table in a document) the numbers are read; otherwise the chart is digitized.
-  - **Code and documents:** the real text, lines and quotes addressable.
+Kept as a library the agents consult when they reason. Several effect sizes were confirmed only through secondary sources; they are directions, not numbers to quote externally.
 
-  The author then says `show chart.jump` or `keep screen.button`, never coordinates.
-- **Show it real, or redraw it.** Evidence stays as it is: a product screenshot, a photo, a signed document, a real chart someone will recognize. Information may be redrawn in the style: data becomes an engine chart whose bars can grow, morph and be compared on a shared scale; code is retypeset with addressable lines; a slide's bullets become things. The engine proposes, the author or user can lock either way, and the original stays one tap away for proof.
-- **Compose with it.**
-  - A picture that stays across moments is the stage: it keeps its box while its parts take turns as the subject.
-  - A small part is brought forward by zooming the picture's content inside its own frame (an animated crop, never past its edges).
-  - The rest is dimmed around a hole (anti-cue), and an outline draws on the part.
-  - Words go beside the picture, not on it; when there is no room they sit on a caption card on the side away from the subject.
-  - Crops choose by the parts that matter, not the center. This is the fix for review problem 8, where the subject was cropped out of the photo.
-- **Respect its quality.**
-  - A low-resolution screenshot is not zoomed past legibility.
-  - Text inside material that would land below the readable floor is zoomed or retyped.
-  - Material keeps its own colors unless the style's picture treatment is wanted.
-  - A user's brand (colors, fonts, logo in their files) can become a custom style through the existing style writer.
-- **Infer from it.** Material carries facts the words may not: the chart's numbers, the slide's order, the document's headings. Completion (4.1) uses them: the founder who says "it jumped" gets the jump measured from the data.
+**Attention**: motion onset captures attention, ongoing motion does not (Abrams and Christ 2003); saliency predicts where eyes land and in video motion dominates for about a second after a cut (Itti and Koch 2000; Carmi and Itti 2006; Smith and Mital 2013); signaling helps learning by about d = 0.4 to 0.5 when the cue points at what is needed next (Schneider et al. 2018; Alpizar et al. 2020; de Koning et al. 2009).
 
-The prototype's fourth moment (`signups`: a team update made from the founder's own exported chart) tests this end to end.
+**Load**: visual working memory holds about 3 to 4 objects (Luck and Vogel 1997); changes during a cut or a move are missed (Rensink, O'Regan and Clark 1997); decoration that does not carry the idea costs learning (Rey 2012).
 
-### 4.9 Two judges: a demanding designer and a distracted viewer
+**Timing to the voice**: Allopenna, Magnuson and Tanenhaus 1998; Baggett 1984; Ginns 2006 (contiguity, d about 0.85); verbatim on-screen text plus the same narration hurts, short labels help (Adesope and Nesbit 2012; Yue, Bjork and Bjork 2013); reading speed for timed text (Szarkowska and Gerber-Moron 2018).
 
-Every frame and every clip is judged twice, and the bench carries both.
+**Animation and pacing**: animation helps when the change shown is the change in the concept and is slow enough to perceive (Tversky, Morrison and Betrancourt 2002; Hoffler and Leutner 2007); segmenting helps (Rey et al. 2019); event boundaries flush working memory (Zacks et al. 2010; Swallow, Zacks and Abrams 2009); prequestions help for what is asked (St. Hilaire, Chan and Ahn 2023); guidance that helps newcomers hurts experts (Kalyuga et al. 2003).
 
-- **The demanding designer** asks whether a studio would ship it:
-  - one clear hierarchy;
-  - alignment to a grid;
-  - type on a scale, two or three sizes per frame;
-  - color used for meaning only;
-  - consistent spacing and rhythm;
-  - motion with purpose and staging;
-  - no orphans, widows, tangents or near-misses at edges;
-  - the material shown at its best.
+**Craft**: Manim CE docs (Transform, TransformMatchingTex, rate functions); Material Design 3 motion tokens; NN/g "Animation duration"; Apple WWDC18 "Designing Fluid Interfaces"; Willenskomer's UX in Motion; Kurzgesagt process material; TikTok creative best practices and platform safe zones; the Netflix timed text style guide.
 
-  This judge compares the clip with a human-made reference for the same material where one exists (wave 7 makes this blind).
-- **The distracted ordinary viewer** is on a phone with sound off, glancing up for about a second every few seconds, ready to scroll.
-  - At random one-second glimpses, the judge asks: does the glance land on the subject, and does the viewer get the point from that glance alone?
-  - Is the first second already meaningful?
-  - Would the viewer keep watching?
+**Generated layout and camera**: Cassowary (Badros, Borning and Stuckey 2001; kiwi.js); GRIDS (Dayama et al., CHI 2020); O'Donovan, Agarwala and Hertzmann 2014 and DesignScape (CHI 2015); Ngo, Teo and Byrne 2000 (aesthetic measures); Bylinskii et al. 2017 and Fosco et al. 2020 (UMSI importance); LayoutGAN, LayoutDM, LayoutGPT and LayoutPrompter (learned generators: stochastic, slow, unaware of argument and emphasis, useful as candidate generators at most); Christie, Olivier and Normand 2008; Lino and Christie 2015; Galvane et al. 2015; Gleicher and Liu 2008; Lee, Forlizzi and Hudson 2002 (kinetic typography engine); Heer and Robertson 2007; Paul Lewis's FLIP.
 
-  The design brain's rules serve this viewer most: one big subject, words that are short labels, a payoff that reads at a glance.
-
-## 5. How authors override (strong authors lose nothing)
+## 6. Overrides: strong authors lose nothing
 
 Precedence, from strongest:
-1. Any explicit line in today's language inside a moment (a `row`, a `camera`, a `set`, a `light`, `enter=`, `move=`, `w=`, `h=`, a size word). It wins for that thing in that moment, and the engine composes the rest around it.
-2. Explicit intent: `show`, `keep`, relations, `ask`, `reveal`, `pace`.
-3. Inferred intent (4.1), always written to the notes with its reason, and turned off with `plain`.
-4. The engine's own defaults from the style and the research.
+1. Any explicit line of today's language in a moment (a `row`, a `camera`, a `set`, `enter=`, a size). It is a pinned constraint; agents compose the rest around it and report conflicts.
+2. The author's intent lines.
+3. Agents' proposals (relations they infer, demonstrations they add), written to the notes with a reason, and refused with `plain`.
+4. Style suggestions.
 
-A whole scene can still be written in today's language. The two mix line by line, so the migration never forces a rewrite of what works (truth kits, `do steps`, holds, withholds, programs, pictures, marks).
+Users can override any decision from the platform (wave 8's chat-to-edit) in the same way.
 
-## 6. Fitting the existing engine (migration, not a rewrite)
+## 7. Migration from today's language
 
-Kept as they are:
-- **The core:** `compile`, `evaluate`, the four primitives, roles, styles and design tokens.
-- **The kits and truth engines.**
-- **The language's parser, build checks, withholds, holds and the follow camera.**
+Kept: the core (`compile`, `evaluate`, primitives, roles, styles), kits and truth engines, the parser, holds, withholds, the follow camera, the bench.
 
-The design brain is a new module, `engine/design/`. A moment plan becomes a list of language states (items, light, dim, camera, enter and move settings) with every decision explicit. Today's `build()` then compiles it, so every existing check and capability applies unchanged. Pieces of `layout.ts` (subject growth, stack spreading) move behind the solver one at a time, each measured on the bench.
+Steps:
+1. Moment blocks (`@N` with intent lines and object verbs) parse inside today's scene files. The scene step's prompt becomes the short intent guide plus the parts of the old guide that cover kits, pictures and programs.
+2. Abilities that exist only in the prototype (depict, redraw material, apparatus, falls, flows, readings) move into `engine/design/` as engine abilities with no defaults.
+3. Instruments are collected behind one interface (salience, legibility, load, eye path, visibility, timing, fill and balance), starting from `bench/lib/measure.ts`, the build's layout checks and the look step.
+4. The designer agent and its search loop replace the prototype's fixed composer, one area at a time (composition first, then motion, camera, timing).
+5. The old craft paragraphs in `prompts/engine-language.md` shrink as agents take those decisions.
 
-Order of migration:
-1. Moment blocks parse inside today's scene files (`@N` followed by intent lines). The scene step's prompt becomes the short intent guide plus the parts of the old guide that cover kits, pictures and programs.
-2. The composer fills in layout, type, motion and timing. The old layout path stays for scenes with no moment lines.
-3. Inference, camera planning and self-repair land.
-4. Once the bench shows the new path at least as good everywhere, the old craft paragraphs in `prompts/engine-language.md` shrink, because the engine does what they asked the author to do.
-
-Changes to `engine/core/types.ts` are expected to be none or small (perhaps a `Scene.decisions` list for the critic); any change goes to review as the contract requires.
-
-## 7. Workstreams, order, subagents, sizes, and how each is scored
-
-Wave 4 is size 100 on the roadmap and was estimated at about 30% done. The table splits it into ten workstreams. "Share" is each workstream's part of the wave, and "Done now" is its progress, counting the existing engine work and this prototype. The weighted total is about 26%: slightly under the roadmap's figure, because the user's material (J) widens the wave.
-
-| # | Workstream | Share | Done now | Subagents | Depends on |
-|---|---|---|---|---|---|
-| A | Intent language: parse moments inside scene files, the short author guide, override rules, notes | 8 | 40% (prototype parser and guide) | 1 Sonnet builder, 3 Haiku authors as testers | none |
-| B | Intent completion: inferring relations, forms, asks and wrong ideas from words and material; the narrow Spark classifier | 12 | 5% | 1 builder, 1 researcher for word cues across languages | A |
-| C | Composition solver: tokens, candidates, kiwi constraints, energy, stretch steadiness, shared scales | 18 | 25% (steady places and subject growth exist; the prototype solved columns) | 1 builder for the solver, 1 for the energy terms and fitting | A |
-| D | Type and hierarchy: roles to scale steps, fitting, reading budget, readable floor per style | 7 | 50% (`design.ts` roles and scale exist) | 1 builder with the style owner | C |
-| E | Motion and transitions: identity diff, staging, morph kinds, durations and eases by feel, cross-section matching | 13 | 35% (morphs, `keep`, entrances exist; the prototype has staging, born-from, becomes, strike) | 1 builder, 1 for text and math part matching | A, C |
-| F | Camera and depth: the DP planner, framing in closed form, parallax layers; `follow.ts` folded in | 8 | 30% (follow camera, camera lines) | 1 builder | C, E |
-| G | Timing and direction: cue lead, dwell and merge, onset budget, ask and reveal, slow first from history, boundaries, audience dial | 11 | 45% (wave 2 holds, pace, withhold; prototype dwell and merge) | 1 builder | A, E |
-| H | Self-check and repair: analytic saliency, change budget, glance test, the engine fixing its own decisions | 7 | 10% (the look step measures fill and overlap) | 1 builder | C, F, G |
-| I | Proof and tuning: bench runs per milestone, the designer and glance judges, Spark confirmation, fitting the energy weights | 6 | 0% | the lead, with the bench owner | all |
-| J | The user's material: readers for photos, screenshots, slides, charts, data, code and documents into named parts; real or redrawn; composing pictures as stages | 10 | 15% (annotate stage, SAM cutouts, image crops and marks exist; prototype parts and crop zoom) | 1 builder for the readers, 1 for chart and data redraw | A, C |
-
-Order:
-- A first, then C and E in parallel.
-- D with C. B in parallel with C, since it needs only A. J's readers in parallel from the start, since they need nothing; its composing follows C.
-- G after the first E, then F, then H, then I.
-
-Every merge to main is preceded by a bench run.
-
-Scoring on the wave 3 bench (clips of 15 to 40 s, Haiku as the author, the same clip set each time). The bench needs clips made from supplied material (screenshots, a chart with its data, slides, photos, code) alongside clips from words alone; this proposal asks the bench owner for them. Each workstream owns the measures it should move, and no change may make any other measure worse:
-
-| Measure (bench) | Moved mainly by | Target for the wave |
-|---|---|---|
-| Eye guidance: share of moments where the subject is the saliency peak | C, D, H | above 90% (estimate today: under 50%) |
-| Words-to-picture lag: from a word to the onset of its visual | G | the visual leads by 0.2 to 0.5 s; never trails by more than 0.5 s |
-| Pace: slow first and faster later; onsets per second; dwell | G, E | first plays at least 1.5 times slower than repeats; no moment under 1 s |
-| Load: things new or changing per 2 s window | C, E, G | at most 4 |
-| Holds: each hold has one job, and nothing else moves during it | G | all |
-| Fill and size: subject share of the usable area; smallest text | C, D | subject at least 25% of the usable area; no text below the floor |
-| Steadiness: things that stay and still moved or resized | C, E | only where the plan changes them |
-| Glance test: random 1 s glimpses, sound off; does the glance land on the subject and get the point | C, D, H | above 80% |
-| Designer review against a human-made reference from the same material | all, J | preferred or tied in most clips by wave 7 |
-| Material: share of moments built on the user's material where its subject part is legible and framed | J, C, F | all; no crop that loses the part |
-| First-time learner quiz | all | higher than today on the same clips (the main outcome) |
-| Author effort: build rounds; prompt size | A, B | first-round builds; prompt under 10 KB |
+Changes to `engine/core/types.ts`: likely none; perhaps a `Scene.decisions` list (each decision, its goal, its measurements) for review, which the contract requires to go to review.
 
 ## 8. The prototype
 
-**What was built.**
-- Three moments, none from the test topics:
-  - **interest:** a personal finance short, 24 s.
-  - **press:** a history short about who could own a book, 23 s.
-  - **charger:** a 17 s ad for a fictional charger.
-- Word times are invented, as in `engine/language/trial.ts`.
-- For each moment, two separate Claude Haiku authors wrote from scratch:
-  - one wrote today's scene language from the full 40 KB guide, with the real build check and up to 3 repair rounds;
-  - one wrote the intent plan from the 3.4 KB guide, with no check at all.
-- `scripts/design-brain/compose.ts` (about 900 lines, written by a Sonnet subagent against its own test plans, then run on the three) turns a plan into a scene from primitives and roles, compiled by the engine's own `compile()`.
-- Both versions are rendered in `flat`; press is also rendered in `neon`.
+### 8.1 What was built
 
-**Where to look** (all in `projects/design-brain/`):
-- `NAME/compare.jpg` (top: today's engine; bottom: composed; one still a second)
-- `NAME/compare.mp4` (side by side: today's engine on the left, composed on the right)
-- `press/composed-neon-frames/`
-- `press/rich-sheet.jpg` (the press plan with relations added by hand)
+- `scripts/design-brain/compose.ts`: a composer that turns an intent plan into a compiled scene from primitives and roles. It is a probe for abilities, not the proposed architecture: it decides with fixed rules where the design brain will decide with agents (section 8.4).
+- `scripts/design-brain/depict.ts`: drawn props with stateful parts (vessels with a liquid level and color, a burette with a scale that can be read, balls at their true relative sizes, a clock with a hand) and a card for anything unknown.
+- Abilities the prototype adds: object verbs (`drips into`, `turns`, `flashes`, `swirls`, `falls`, `fills`, `reads`, `runs`); apparatus (a source composed over the vessel it drips into); falling together with a trail and a level line; a reading taken off the drawn scale, which the drops really emptied; a chart with data redrawn on its own bars, in either orientation, with levels, values and the chart's own words; compared quantities as columns on one scale; a stage that stays put while words take turns.
+- `scripts/design-brain/bench-setup.ts`: turns a bench run into the composer's input, with the slide read by hand into parts and data.
+- `bench/lib/steps.ts`: the bench now scores a compiled scene from another composer (`composed.scene.json`) as it is.
+- Earlier probes (personal finance, a printing history short, a charger ad, a founder's signup chart) remain in `projects/design-brain/` with their notes.
 
-The authors' plans and scenes are copied into `scripts/design-brain/samples/`.
+### 8.2 The test
 
-**What it shows (honest judgment).**
-- **Better: size, hierarchy, focus.** Every composed frame has one subject at 2 to 4 times the size of today's text, centered where the eye lands, with support visibly quieter. Today's frames from the same author are small text at the top of an empty page (the build itself says "fills only 16%"). This holds in flat and neon unchanged.
-- **Better: timing.** Changes lead their words by 0.3 s. The engine resolved moments that came too close:
-  - 6 delays and 1 merge in the ad;
-  - it kept a reveal on screen for 1.4 s;
-  - it gave an ask a placeholder and 3.7 s of think time.
+Three bench cases chosen to exercise many areas at once:
+- **titration-lab** (from a lab handout, chalkboard): depiction, a demonstration fast then slow, a color change that flashes then persists, a timed hold, a reading.
+- **support-tickets** (the user's meeting slide, flat): the user's material as first-class, redraw versus real, a predict hold, a settle hold, the takeaway.
+- **ball-drop** (predict then reveal, chalkboard): a dare, a predict hold, a demonstration that must truly happen, a reason.
 
-  None of this was the author's job.
-- **Better: identity.** "$100" becomes "$110", then "$121", in the same place with a pulse. A wrong guess is struck and stays beside the answer. A count of marks is born out of the thing that produced it.
-- **Better: the author's burden.** The guide is about 12 times smaller (3.4 KB against 40 KB). Every plan was usable as written. All three baselines also built on the first round, but they left every "looks empty" note unfixed.
-- **Not good yet: it is kinetic type.** With only words to show, the composed video is one big word card after another. That beats today's frames, but it is not yet a great video. The lower half is still mostly empty, partly on purpose (the UI zone), partly because nothing visual exists to fill it.
-- **Not good yet: relations are weak.** In the hand-enriched plan:
-  - a lone count of 1 is drawn as one huge dot, while the 60 are small, so the two are not on a shared scale;
-  - the comparison of "1 book a year" against "60 books a year" is small text with a hairline bar;
-  - the arrow and its label are tiny.
+For each, a fresh Claude Haiku agent wrote the intent plan from the bench's own request (the same direction plan the baseline author got, with the language rules taken out), reading only the intent guide. The composer built it; the bench rendered, measured and watched it exactly as it did the baseline (Sonnet as designer, learner, follow viewer and grader; Haiku as scroller; the words-only answers reused, since the narration is the same). No repair rounds, no Meta calls.
 
-  These are exactly the solver terms in 4.2 that the prototype does not have: a shared scale for compared quantities, and relations sized as a subject.
-- **Not good yet: transitions overlap.** Old and new text overlap for a few frames when the subject changes ("printing press" under "1 scribe"). Proper staging needs exits to finish before the subject enters, or a true morph.
-- **Not good yet: authors write cards.** The weak author does not use the relational words, which is why 4.1 (completion) is a full workstream and not an afterthought.
+### 8.3 Results
 
-**Verdict.** The core idea holds: the same weak author, given intent words instead of layout words, gets frames that are clearly more readable and better directed. The engine's timing and composition carried the improvement, not the author. The prototype also shows where the real work is:
-- inferring what to show;
-- composing relations and pictures, not only words;
-- staging transitions cleanly.
+Where to look: `projects/design-brain/bench-compare/<case>.jpg` (top row today, bottom row the prototype, one frame a second) and `<case>.mp4` (side by side, today on the left). Full numbers in `bench/results/2026-11-03-design-brain/scores.md` against `bench/results/2026-11-03-baseline/scores.md`.
 
-The prototype was not run through the wave 3 bench, which is still being built, and no Spark run was made.
+| case | free (today, proto) | designer /10 | scroll kept | scroll remembers | confused | follow on look | quiz (video) |
+|---|---|---|---|---|---|---|---|
+| titration-lab | 0.88, 0.72 | 3, 5 | 0.54, 1.00 | 0.5, 1.0 | 1.00, 0.54 | 0.81, 0.85 | 1.00, 1.00 |
+| support-tickets | 0.74, 0.82 | 5, 4 | 0.89, 0.54 | 1.0, 1.0 | 0.44, 0.22 | 0.89, 1.00 | 1.00, 1.00 |
+| ball-drop | 0.61, 0.69 | 3, 3 | 0.33, 0.08 | 0.0, 1.0 | 1.00, 0.67 | 0.79, 0.83 | 0.88, 1.00 |
 
-## 9. Risks
+My judgment, as a demanding designer and as a distracted viewer:
+- **Titration is the clearest win, and it is depiction plus direction, not layout.** The burette drips into a flask of liquid; pink blooms where drops land and fades; the stream slows to single drops that hang at the tip and fall; the flask settles to a pale pink while a stopwatch runs; the camera closes in on the burette and the reading (18.32 mL, read off the scale the drops emptied) stands beside the meniscus. The scroller watched to the end and retold the procedure with the reading; the designer moved from 3 to 5. Its free score fell (0.88 to 0.72) mainly because the load instrument counts each drop as a new thing and the eye instrument sees the drops and the flask's bloom as competing; I read those as instrument settings to revisit, not as faults of the clip. Real faults the designer found: the opening question "When do you stop?" floats over a still apparatus for 6 s, the bloom drifts past the flask's edge once, the jump to the reading is abrupt, the stopwatch is small.
+- **Support-tickets is mixed.** The user's slide shows as it is, then its bars are redrawn on top and move into a taller chart; the total becomes the subject, then each bar lights in turn with its value; the follow viewer was on the plan's look every time and was confused less (0.44 to 0.22). But the designer scored it lower (5 to 4) and the scroller left at sheet 8: the original appears small in a large empty frame, the chart fills only the top half, "half the queue" is a pale label with an arrow rather than a shown half, and the end holds on a static chart. The baseline author ignored the slide and drew four boxes; that was simpler and looked cleaner.
+- **Ball-drop shows the limits of fixed rules.** The balls are drawn at their true relative sizes, hang at one height through the question, fall together with a dashed line joining their bottoms and faint marks where they passed, and the words "They land together" wait for the landing. Learners got every question and the scroller's retelling carried the point (0 to 1). But the scroller left after 2 s of two still balls, the designer saw the slow fall as "drifting" with no visible floor, and the balls sit high and left in an empty frame. A director agent would have reasoned that a 1 m drop takes under half a second, shown it at real speed and then replayed it slowly; my composer applied "slow when it is a reveal".
+- **Common to all three**: the frames are better directed than they are composed. Fixed sizes and positions left large empty areas; captions (the bench's own) dominate the bottom. Composition by search against agent goals (section 4.1) is the work this prototype does not do.
+- **The author's burden fell**: each Haiku plan was usable as written, in one pass, from a 5.3 KB guide. Haiku used objects and verbs readily (burette, flask, timer; two balls that fall) but also wrote things the language does not have (`withhold ... until=@19`), an ask with no reveal, and `turns "pink"` before `turns "faint pink"`, which a chemistry teacher would correct. Agents must check plans against the material (the handout says faint pink), not only render them.
 
-- **Inference proposes wrong relations.** Mitigations: it proposes only from explicit values, words and order; it writes its reason; the author's lines win; and a bench measure counts false relations (the quiz and the follow test catch a comparison the words did not make).
-- **Sameness.** One solver could make every video look alike. Mitigations: styles carry their own tokens for scale ratio, motion feel, dim treatment, panel and caption design; the candidate set includes picture-led and kit-led structures; `feel` changes rhythm and easing. Still, this needs the user's eye at each milestone.
-- **Fighting explicit authors.** Mixing explicit lines and composed things in one frame can collide. Overrides are pinned constraints in the solver, so the rest is solved around them; conflicts that remain are reported, not squeezed.
-- **Energy weights tuned to the bench clips.** Fit on half the clip set and test on the other half, and add new clips of new kinds as wave 5 lands.
-- **Scope creep into wave 5.** The design brain composes what exists; making pictures, maps and simulations is wave 5. The request for "a picture of X here" is the interface between them.
-- **Bigger prompts for Spark again.** Keep the author guide under 10 KB by moving craft into the engine, and test with Haiku before Spark.
+### 8.4 Ledger: every decision the prototype makes, and where it goes
 
-## 10. Open questions for the user
+Everything below is a fixed value or rule in the prototype. None of it is proposed as engine behavior. Each becomes a goal an agent writes, an instrument setting it chooses, or a style suggestion.
 
-1. **Inference on by default?** Should the engine propose relations (comparisons, counts, wrong ideas, asks) by default, with the author able to turn them off, or only when the author asks?
-2. **Kinetic type as a floor.** When a moment has nothing to show but words, is big kinetic type the right floor, or should the engine always ask the pictures stage for a visual first (cost and time per section)?
-3. **Who gets the intent guide.** Should Spark write intent only, or intent plus today's language for kits and pictures, in the first build? I suggest the mix, with the long guide kept only for kits, pictures and programs.
-4. **One Spark classifier call per section** for ambiguous relations: acceptable, or keep the engine fully deterministic and ask the author instead?
-5. **The bottom UI zone.** The prototype keeps the bottom 22% clear for captions and platform UI. Should that depend on the target (a feed short against a lesson watched full screen)?
-6. **Milestone review.** Which clips do you want to watch at each milestone, beyond the bench's automatic ones?
-7. **Real or redrawn by default.** When a user's chart comes with its data, or their slide with its text, should the engine redraw it in the style by default (animatable, every part addressable) and keep the original for proof, or show the original by default and redraw only when asked? I suggest: redraw information, keep evidence real, and always let the user lock either way.
-8. **Material readers.** Is a vision pass per uploaded file at upload time acceptable in cost? This is one Spark call per picture or slide; charts with data and code need none.
+| Prototype decision (fixed) | Template-like? | Moves to |
+|---|---|---|
+| Subject placed near 47% of the usable height; stage top at 13% | yes | composition search against the agent's balance, fill and salience goals |
+| Bottom 22% kept clear | yes | a platform property (UI zones) read from the target, measured by the visible instrument |
+| Apparatus heights 42% and 37% of the usable height; balls 40% of the width; chart 68% | yes | composition search; the designer picks scale from what must be seen (a meniscus, a bloom) at the viewing size |
+| One subject per moment, others dimmed to 0.72 or 0.22 | yes | the designer's goal per moment (one focus, two, none, hidden); dim treatment is a style suggestion |
+| Type sizes capped at 24% of the width, floor 4.5% of the width | yes | legibility instrument at the chosen viewing size; the style's scale as suggestion |
+| Change starts 0.3 s before its word; dwell 1.0 to 1.5 s; merge when closer | yes | timing instrument plus the director's tempo; the agent decides lead and dwell per audience |
+| Same-unit quantities compared on one scale automatically | yes | a proposal the designer may make when the intent supports it, with its reason |
+| Words that name a quantity on a chart become a level line | partly | an ability (draw a level on a redrawn chart); the designer decides when it helps |
+| A word shown while one chart part is held gets a pointer | yes | a proposal, checked with the eye path instrument |
+| A flow stops before a "turns"; slow flows drip every 0.7 s; fast streams at 2.6 mL/s | yes | the director's demonstration plan (how many drops, how fast, where it rests); physics and the material (the handout's volumes) as constraints |
+| A reveal with a fall waits for the landing; a demonstration is never cut short | partly | director reasoning; good examples for the agent, not rules |
+| A fall lasts 1.8 s when revealed | yes | the director decides real speed, slow motion, replay |
+| An apparatus stays whole while any part is on screen | partly | director reasoning (physical continuity), overridable |
+| Color words to colors; "faint" means paler | partly | the material reader and the style (the handout and the indicator define the color) |
+| A redrawn chart shows the original first for 0.7 to 2 s | yes | the designer's real-or-redrawn decision for this piece and purpose |
+| Think line under a question (turned off after the eye instrument flagged it) | yes | an ability the designer may use |
+| Stress pushes the camera to 1.05; long still moments drift to 1.02 | yes | camera candidates measured against hold activity and the agent's goal for the moment |
+| A burette's scale numbers appear only when it is read | partly | legibility instrument (numbers below the viewing size are hidden or enlarged by the agent) |
 
-## Sources
+## 9. Workstreams
 
-Craft and motion:
-- Manim CE docs: Animation defaults, Transform, TransformMatchingTex, rate functions, indication (docs.manim.community).
-- Material Design 3 motion tokens (github.com/material-components/material-components-android/blob/master/docs/theming/Motion.md).
-- NN/g, "Animation duration" (nngroup.com/articles/animation-duration).
-- Apple WWDC18, "Designing Fluid Interfaces" (developer.apple.com/videos/play/wwdc2018/803).
-- Willenskomer, "UX in Motion Manifesto" (uxmag.com).
-- Kurzgesagt process (kurzgesagt.org/youtube).
-- TikTok creative best practices (ads.tiktok.com/help/article/creative-best-practices).
-- Netflix English timed text style guide (partnerhelp.netflixstudios.com).
-- Reap safe zones (reap.video/blog/short-form-video-safe-zones).
-- Gallo, *The Presentation Secrets of Steve Jobs*.
-- Duarte on the One Big Idea.
+Wave 4 is size 100 on the roadmap. Share is each workstream's part of the wave (1 to 100, summing to 100); "now" is its progress counting existing engine work and this prototype. Weighted total: about 25%.
 
-Attention and learning:
-- Abrams and Christ 2003, *Psychological Science* (pubmed 12930472).
-- Itti and Koch 2000; Carmi and Itti 2006; Smith and Mital 2013.
-- Schneider, Beege, Nebel and Rey 2018, *Educational Research Review* 23.
-- Alpizar, Adesope and Wong 2020, *ETR&D* 68.
-- Richter, Scheiter and Eitel 2016.
-- de Koning et al. 2009.
-- Xie et al. 2021, *J. Computer Assisted Learning*.
-- Tversky, Morrison and Betrancourt 2002, *IJHCS* 57.
-- Hoffler and Leutner 2007, *Learning and Instruction* 17.
-- Berney and Betrancourt 2016.
-- Rey et al. 2019, *Educational Psychology Review* 31 (segmenting).
-- Leahy and Sweller 2011, 2016 (transient information).
-- Ginns 2006, *Learning and Instruction* 16.
-- Baggett 1984.
-- van Wassenhove, Grant and Poeppel 2007.
-- Schwartz and Savariaux 2014, *PLoS Comput Biol*.
-- Allopenna, Magnuson and Tanenhaus 1998; Huettig et al. 2011 (visual world paradigm).
-- Adesope and Nesbit 2012, *J. Educational Psychology* 104.
-- Yue, Bjork and Bjork 2013.
-- Szarkowska and Gerber-Moron 2018, *PLoS ONE* 13.
-- St. Hilaire, Chan and Ahn 2023, *Psychonomic Bulletin and Review*.
-- Brod 2021.
-- Kornell, Hays and Bjork 2009.
-- Zacks et al. 2010, *Frontiers in Human Neuroscience*.
-- Swallow, Zacks and Abrams 2009, *JEP: General* 138.
-- Kalyuga et al. 2003, *Educational Psychologist* 38.
-- Luck and Vogel 1997, *Nature* 390.
-- Rensink, O'Regan and Clark 1997.
-- Rey 2012, *Educational Research Review* 7 (seductive details).
-- Guo, Kim and Rubin 2014 (MOOC video engagement).
+| # | Workstream | Share | Now | Subagents | Depends on |
+|---|---|---|---|---|---|
+| A | Abilities: engine verbs with no opinions, moved out of the prototype into `engine/design/` (stage, apparatus, flows, falls, readings, redraw material, morph by identity, born from, compare columns, levels) | 16 | 35% | 1 builder for motion abilities, 1 for material redraw | none |
+| B | Depiction: the four tiers behind one interface (drawn props, generated sprites cut with SAM, the user's images with parts, real pictures with parts); states and verbs; a growing prop library by kind of thing, never by topic | 14 | 12% | 1 builder for drawn props and states, 1 for sprites and SAM parts (with wave 5's picture hunter) | A |
+| C | Instruments: salience map, legibility at a viewing size, change load, eye path, visible and hidden, timing against voice, fill and balance, steadiness; one interface, settings chosen by agents | 14 | 30% | 1 builder, 1 researcher for the eye path and salience models | none |
+| D | Intent, goals and requirements: the director and designer agents writing goals and instrument settings per video and moment from intent, audience, platform, purpose and the material's requirements | 12 | 15% | 1 prompt and agent builder, 3 Haiku authors as testers | C |
+| E | Search and look loop: candidate generators (constraint solver, camera planner, transition orders), rendering keyframes and motion samples, viewer panels, revise, budgets | 14 | 10% | 1 builder for generators, 1 for the loop and budgets | A, C, D |
+| F | Direction reasoning: holds that work, predict then reveal, demonstrations that truly happen at the right speed, replays, recaps, slow first then faster, from the viewer model | 8 | 40% | 1 builder with the director prompt | D, E |
+| G | Material: reader agents into parts, data and text; requirements across files; real or redrawn; shared with wave 5's cards | 8 | 20% | 1 builder (with the wave 5 lead) | none |
+| H | Styles as suggestions: every style value marked as a suggestion with an override path; per-style dim, panel and motion treatments | 4 | 60% | the style owner | A |
+| I | Author interface and overrides: the intent language inside scene files, the short guide, precedence, notes, strong-author paths | 5 | 45% | 1 builder | A |
+| K | Proof: bench runs per milestone as instruments, new bench cases for new kinds (material, depiction, TV and 16:9 outputs, purposes where the subject should hide), user review at milestones, Spark confirmation | 5 | 20% | the lead, with the bench owner | all |
 
-Several effect sizes above were confirmed only through secondary sources. They are directions for the engine, not numbers to quote externally.
+Order:
+- A, C and G start at once (they need nothing).
+- B with A. D once C has a first interface.
+- E after A, C and D have first versions; F alongside E.
+- H and I in parallel throughout. K at every milestone.
+- Every merge to main follows a bench run, read as instruments, with the user watching a few clips.
 
-Layout, camera and transitions:
-- Badros, Borning and Stuckey 2001, "The Cassowary Linear Arithmetic Constraint Solving Algorithm", *ACM TOCHI*; kiwi.js.
-- Dayama et al. 2020, "GRIDS", CHI.
-- O'Donovan, Agarwala and Hertzmann 2014, "Learning Layouts for Single-Page Graphic Designs", *IEEE TVCG*; DesignScape, CHI 2015.
-- Christensen, Marks and Shieber 1995 (label placement).
-- Ngo, Teo and Byrne 2000 (aesthetic measures).
-- Bylinskii et al. 2017; Fosco et al. 2020 (UMSI).
-- Lok and Feiner 2001 (survey).
-- Li et al. 2019 (LayoutGAN); Gupta et al. 2021 (LayoutTransformer); Inoue et al. 2023 and Chai et al. 2023 (LayoutDM); Kikuchi et al. 2021 (constrained layout via latent optimization).
-- Feng et al. 2023 (LayoutGPT); Lin et al. 2023 (LayoutPrompter).
-- Christie, Olivier and Normand 2008, "Camera Control in Computer Graphics".
-- Lino and Christie 2015 (toric space), SIGGRAPH.
-- Galvane, Ronfard, Lino and Christie 2015, "Continuity Editing for 3D Animation", AAAI.
-- Heck, Wallick and Gleicher 2007, "Virtual Videography".
-- Gleicher and Liu 2008, "Re-Cinematography".
-- Lee, Forlizzi and Hudson 2002, "The Kinetic Typography Engine".
-- Heer and Robertson 2007, "Animated Transitions in Statistical Data Graphics", InfoVis.
-- Paul Lewis, FLIP.
-- Apple Keynote Magic Move documentation.
+## 10. How each workstream is scored on the bench
+
+The bench (wave 3: 28 cases of 15 to 40 s, Haiku as author, free measures plus learner, words-only, follow, designer and scroller tests) is used as a set of instruments, never as a target to optimize blindly. Each workstream names what it expects to move and checks that nothing else gets worse; disagreements between instruments and viewers are read, not averaged away (as with the drop count in load).
+
+| Workstream | Expected to move | Watched for harm |
+|---|---|---|
+| A, B | picture questions in the quiz, follow on look, designer motion and composition, scroller kept | load, read |
+| C | the agreement between instruments and viewer panels (instruments that disagree with every viewer are recalibrated) | none (it changes no clip) |
+| D | follow "waiting", quiz on what was intended, requirement checks on material cases | any measure on cases with no material |
+| E | designer overall, scroller kept, read, fill and balance (as reported) | lag, holds |
+| F | holds, reveal, pace, follow "waiting", scroller kept through holds | lag |
+| G | material cases: quiz, designer, requirement checks | none |
+| H | designer consistency per style | read |
+| I | author effort (rounds, guide size), first-pass usable plans | none |
+| K | the user's verdict at milestones | none |
+
+The bench needs more cases for this wave: outputs other than a phone (16:9, a TV lesson), purposes where the goal is not a focal point (an ambient piece, a horror beat), more cases from supplied material, and cases with requirements across files.
+
+## 11. Risks
+
+- **Agents cost time and money.** A search loop per moment multiplies calls. Mitigations: budgets set by the director per moment, cheap instruments first, viewer panels only on finalists, caching across similar moments, Spark only where it matters (wave 9).
+- **Instruments that are wrong teach agents wrong things.** The load instrument's drop count is an example. Mitigations: instruments report raw values and pictures, agents see them with the frames, and every instrument is checked against viewer panels on the bench.
+- **Sameness.** One designer agent could make every video alike. Mitigations: goals come from the purpose and audience, styles carry real differences, and the bench grows cases that need different goals.
+- **Plans that are wrong about the world** ("turns pink" before "faint pink"). Mitigations: agents check plans against the material and the research cards (wave 5 grounding).
+- **Depiction becoming a library of special cases.** Mitigations: props are kinds of things with general parts and states; the long tail comes from sprites with SAM parts and real pictures, not from more hand-drawn props.
+- **Fighting explicit authors.** Explicit lines are pinned constraints; conflicts are reported.
+- **Scope overlap with wave 5** (material reading, pictures). The interface is the part card and the depiction tier; the leads share the readers.
+
+## 12. Open questions for the user
+
+1. **Budget per video for search and look**: how many agent calls per moment is acceptable, and should the director spend unevenly (more on the moments that carry the video)?
+2. **Real or redrawn by default** when the user's chart comes with data: the prototype showed the original, then redrew it; the designer viewer found the original too small to read. Should the agent decide per piece, with the original always reachable?
+3. **Who checks the plan against the world**: should the designer agent correct the author's science (pink before faint pink) silently, or note it for the user?
+4. **Captions**: the bench draws its own captions at the bottom; in the product, are captions the design brain's decision per platform (they compete with the frame for space and attention)?
+5. **Depiction tiers**: is a generated sprite cut with SAM acceptable for things the drawn props do not cover, given its cost per object, or should the first build favor drawn props and real pictures?
+6. **Milestone review**: which clips do you want to watch at each milestone, beyond the bench's?

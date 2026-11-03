@@ -1,0 +1,536 @@
+{
+ "run": "2026-11-03-design-brain",
+ "overall": {
+  "cases": 3,
+  "built": 3,
+  "passed": 0,
+  "overall": 0.743,
+  "eye": 0.596,
+  "lag": 0.772,
+  "pace": 0.736,
+  "load": 0.658,
+  "holds": 0.667,
+  "reveal": 1,
+  "read": 0.77,
+  "learner": 1,
+  "wordsOnly": 0.917,
+  "gain": 0.083,
+  "pictureQuestions": 1,
+  "pictureQuestionsWordsOnly": 0.5,
+  "followOnLook": 0.893,
+  "followWaiting": 0.962,
+  "followConfused": 0.476,
+  "designer": 4,
+  "scrollKept": 0.541,
+  "scrollRemembers": 1,
+  "materialCases": 2,
+  "learnerMaterial": 1,
+  "learnerPrompt": 1
+ },
+ "cases": [
+  {
+   "id": "titration-lab",
+   "use": "a lab procedure step, from a handout",
+   "style": "chalkboard",
+   "built": true,
+   "passed": false,
+   "rounds": 0,
+   "reviewed": "",
+   "overall": 0.718,
+   "scores": {
+    "lag": 0.55,
+    "pace": 0.833,
+    "load": 0.32,
+    "read": 0.98,
+    "eye": 0.343,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "follow": {
+    "onLook": 0.8461538461538461,
+    "waiting": 0.8846153846153846,
+    "confused": 0.5384615384615384
+   },
+   "designer": {
+    "overall": 5,
+    "composition": 6,
+    "type": 4,
+    "motion": 5,
+    "hierarchy": 5,
+    "consistency": 5,
+    "issues": [
+     "Sheets 1-13: captions are tiny, thin white text in the lower middle of a 9:16 frame, far too small for a phone, while the top half is mostly empty chalkboard; the key words (faint pink, drop by drop, thirty seconds) get no emphasis.",
+     "Sheets 1-6: the 'When do you stop?' hook title disappears at about 6.5 s, and the first 6 seconds are a static flask and burette with nothing happening (nothing drips or changes), so the opening is dead and the hook never pays off.",
+     "Sheets 9-11: the central instruction (drop by drop, then stop at a faint pink) is not shown as a distinct action; the drops are tiny pale dots, the flask goes from deep magenta to a pale pink with no step, and the faint-pink target is never labelled or compared with the too-dark pink."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "demo_unsettled: Phase 1 of e2's demo (fast, 6.5 to 13.4 s) should end on the finished state, but \"additions into the flask\" is still changing at 13.3 s, 0.00 s before it ends; it never rests on the result.",
+    "competing: During e3 (13.4 to 18.1 s) the eye should be on \"single drops falling\" (drop.burette.0, drop.burette.1, drop.burette.2, drop.burette.7), but only 15% of the change on screen is there; 4 other things pull at it: t.flask for 3.3 s, drop.burette.6 for 1.0 s, t.burette (\"0 10 20 30 40 50\") for 0.9 s, bloom.flask.0 for 0.3 s.",
+    "competing: During e4 (18.1 to 25.3 s) the eye should be on \"the faint lasting pink, then the burette reading\" (t.flask, read.8), but only 25% of the change on screen is there; 4 other things pull at it: t.timer for 3.0 s, t.burette (\"0 10 20 30 40 50\") for 0.9 s, run.7 (\"30 s\") for 0.5 s, readmark.8 for 0.3 s."
+   ],
+   "raw": {
+    "seconds": 25.3,
+    "things": 24,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.55,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.42,
+      "competing": 9
+     },
+     {
+      "event": "e3",
+      "share": 0.15,
+      "competing": 4
+     },
+     {
+      "event": "e4",
+      "share": 0.25,
+      "competing": 4
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 2,
+     "in_time": 1,
+     "late": 0,
+     "already": 0,
+     "missing": 1,
+     "missed": [
+      "Stop (word 43)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 2.53
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 3.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": -0.5
+     }
+    ],
+    "tempo": {
+     "cv": 0.64,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.46
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 3.64
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 2.55
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 1.1
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 6.87,
+      "beats": 24,
+      "settled": 0
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 4.7,
+      "beats": 1,
+      "settled": 0.63
+     }
+    ],
+    "slowThenFaster": 1,
+    "load": {
+     "seconds": 25,
+     "overNew": 7,
+     "overPull": 10,
+     "peakNew": 24,
+     "peakPull": 14,
+     "newPerSecond": 2.84
+    },
+    "read": {
+     "frames": 50,
+     "severe": 1,
+     "mild": 0,
+     "kinds": {
+      "dimmed": 1
+     },
+     "examples": [
+      "dimmed at 18.5 s: 83% of what is on screen is dimmed or faded"
+     ]
+    }
+   }
+  },
+  {
+   "id": "support-tickets",
+   "use": "a meeting slide turned into a clip",
+   "style": "flat",
+   "built": true,
+   "passed": false,
+   "rounds": 0,
+   "reviewed": "",
+   "overall": 0.817,
+   "scores": {
+    "lag": 0.85,
+    "pace": 1,
+    "load": 0.882,
+    "read": 0.783,
+    "eye": 0.701,
+    "holds": 0.5,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 1,
+   "follow": {
+    "onLook": 1,
+    "waiting": 1,
+    "confused": 0.2222222222222222
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 4,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheets 1-2: the video opens on the tiny original slide screenshot (about 1.2 s), a postage stamp in a huge empty beige frame with unreadable text, then jumps to a different chart as a blurry crossfade; the first second carries nothing.",
+     "Sheets 2-9: the chart sits in the top half with a very large empty lower area and bars that fill only about half the width; the chart is small for a phone and the frame is poorly used, with a wide dead zone between chart and caption.",
+     "Sheets 6-9: the payoff is unclear; 'half the queue' is a pale grey label under an arrow pointing off the 412 bar, and the 'half' is never shown as a proportion (no 412 of 840 split, no share, no 'queue shrinks' visual), so the two points to remember (almost half, fixing it halves the queue) are not made visible. The grey label on cream is low contrast."
+    ]
+   },
+   "scroller": {
+    "kept": 0.5384615384615384,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "competing: During e4 (12.5 to 17.5 s) the eye should be on \"the login bar, half of the whole\" (p.slide), but only 33% of the change on screen is there; 3 other things pull at it: parrow.0.half.login for 0.5 s, t.rest (\"160 (shipping and everything els\") for 0.4 s, t.half (\"half the queue\") for 0.4 s.",
+    "hold_frozen: Hold h2 (settle, 2.0 s after word 33) should show: \"the login share stays lit as half of all tickets\". Nothing on screen changes from 15.3 to 17.3 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 17.5,
+    "things": 7,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 0.48,
+      "competing": 2
+     },
+     {
+      "event": "e4",
+      "share": 0.33,
+      "competing": 3
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 15,
+     "in_time": 10,
+     "late": 3,
+     "already": 1,
+     "missing": 1,
+     "missed": [
+      "half. (word 13)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": -0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.23
+     },
+     {
+      "event": "e2",
+      "what": "reveal",
+      "lag": 1.27
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": -0.2
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.87
+     }
+    ],
+    "tempo": {
+     "cv": 0.48,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 1.02
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.33
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 1.37
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.6
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 17,
+     "overNew": 0,
+     "overPull": 2,
+     "peakNew": 2,
+     "peakPull": 4,
+     "newPerSecond": 0.34
+    },
+    "read": {
+     "frames": 35,
+     "severe": 0,
+     "mild": 19,
+     "kinds": {
+      "empty": 2,
+      "dimmed": 17
+     },
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "ball-drop",
+   "use": "predict, then reveal",
+   "style": "chalkboard",
+   "built": true,
+   "passed": false,
+   "rounds": 0,
+   "reviewed": "",
+   "overall": 0.694,
+   "scores": {
+    "lag": 0.917,
+    "pace": 0.375,
+    "load": 0.773,
+    "read": 0.547,
+    "eye": 0.745,
+    "holds": 0.5,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.75,
+   "gain": 0.25,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.8333333333333334,
+    "waiting": 1,
+    "confused": 0.6666666666666666
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 5,
+    "motion": 2,
+    "hierarchy": 3,
+    "consistency": 4,
+    "issues": [
+     "Sheets 4-6: the core event never happens; the balls never visibly fall from the top of the frame, nothing lands on a floor (no ground line), and the only motion is a slight shift and a dashed line at 10.7 to 12 s, so the viewer never sees both balls hit together and the prediction has no payoff.",
+     "Sheets 1-3: the opening 6 s is a static frame of two small balls in the top-left corner with the rest of the frame empty; the balls are crowded to the left and top with no ground or drop-height reference, which wastes the vertical canvas and gives no sense of 'same height'.",
+     "Sheets 4-5: the prediction beat is weak; 'Which lands first?' sits as a title while a tiny grey '?' floats in the middle, with no way to choose or commit (no labels on the balls, no A/B choice, no countdown), and 2 s of silence at 8.0 to 10.0 s is a dead hold with no change."
+    ]
+   },
+   "scroller": {
+    "kept": 0.08333333333333333,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "competing: During e2 (6.4 to 10.7 s) the eye should be on \"the two balls held at the top\" (t.bowl_ball, t.tennis), but only 18% of the change on screen is there; 2 other things pull at it: ph (\"?\") for 1.2 s, q.1 (\"Which lands first?\") for 0.3 s.",
+    "hold_competing: During hold h1 (7.6 to 10.6 s, \"both balls hang at the top; nothing moves toward the answer\") the change is mostly away from the event's look (t.bowl_ball, t.tennis): ph (\"?\") for 0.5 s.",
+    "demo_rushed: Phase 1 of e3's demo (slow, 10.7 to 17.0 s) should go one step at a time, but the picture steps every 0.37 s (8 changes, the closest 0.20 s apart). A slow step needs about 1.0 s to be seen.",
+    "demo_unsettled: Phase 1 of e3's demo (slow, 10.7 to 17.0 s) should end on the finished state, but \"both balls falling side by side\" is still changing at 17.0 s, 0.00 s before it ends; it never rests on the result."
+   ],
+   "raw": {
+    "seconds": 22.6,
+    "things": 14,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 0.18,
+      "competing": 2
+     },
+     {
+      "event": "e3",
+      "share": 0.8,
+      "competing": 4
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 6,
+     "in_time": 4,
+     "late": 1,
+     "already": 1,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": -0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.17
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": -0.1
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": -0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": -0.07
+     }
+    ],
+    "tempo": {
+     "cv": 0.83,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.31
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 1.42
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 1.58
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.33,
+      "beats": 8,
+      "settled": 0
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 22,
+     "overNew": 1,
+     "overPull": 4,
+     "peakNew": 7,
+     "peakPull": 5,
+     "newPerSecond": 0.58
+    },
+    "read": {
+     "frames": 45,
+     "severe": 12,
+     "mild": 21,
+     "kinds": {
+      "empty": 32,
+      "dimmed": 12
+     },
+     "examples": [
+      "empty at 1.0 s: 10% of the usable frame has anything in it; the largest empty band is 63% of its height",
+      "dimmed at 13.0 s: 69% of what is on screen is dimmed or faded"
+     ]
+    }
+   }
+  }
+ ]
+}

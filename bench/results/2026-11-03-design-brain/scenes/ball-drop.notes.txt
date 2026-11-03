@@ -1,0 +1,14 @@
+feel bold, for new, style chalkboard, 6 moments, 30 nodes
+line 8: "withhold bowl_ball tennis until=@19" comes before the first moment, ignored
+@22 moved 1.9 s later so @19 (reveal) holds 3.4 s
+@19 has both show and reveal: "bowl_ball" becomes support, "answer" is the subject
+@19 bowl_ball and tennis fall: side by side, bottoms level, over a floor with room to fall, in every moment they are on screen
+object bowl_ball: "a heavy black bowling ball" reads as a ball (21.8 cm across, its true size)
+object tennis: "a light yellow tennis ball" reads as a ball (6.7 cm across, its true size)
+@16 ask: think time 4.2 s (a placeholder waits in the slot of the reveal)
+@0 still for 6.1 s: a very slow push 1 to 1.02 keeps the frame alive
+@19 the revealed words wait 1.7 s for the landing they describe
+@19 reveal answer: the placeholder dips for 5 frames, then it pops in with an overshoot in the answer color
+@19 bowl_ball and tennis fall together over 1.5 s with gravity's ease; a dashed line joins their bottoms the whole way down and faint marks stay where they passed, so the eye sees they stay level
+@22 stress: the subject is one size step larger and the camera pushes in slowly to 1.05 over 2.0 s
+@34 still for 4.1 s: a very slow push 1 to 1.02 keeps the frame alive

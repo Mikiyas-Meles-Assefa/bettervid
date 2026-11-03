@@ -13,6 +13,7 @@ import type { Ease, NodeSpec, Props, SceneDoc, Step, Value } from "../../engine/
 import { estimate, safeArea, wrap, type Measure } from "../../engine/language/layout.ts";
 import { fontMeasure } from "../../engine/language/measure.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
+import { buretteReading, colorOf, liquidPoly, mouthOf, propNodes, resolve, surfaceY, tipOf, withAlpha, type Prop } from "./depict.ts";
 
 const FPS = 30;
 const W = 1080;
@@ -22,12 +23,14 @@ const CUE = 9; // frames a change starts before its word: the eye lands as the w
 // ---------------------------------------------------------------------------------------------------------------
 // 1. Parsing the intent language. Lenient: anything unknown is a note.
 // ---------------------------------------------------------------------------------------------------------------
-type Def = { id: string; text: string; many?: { n: number; unit: string } };
+type Def = { id: string; text: string; many?: { n: number; unit: string }; obj?: Prop; desc?: string };
+// What an object does in a moment, in the author's verbs.
+type Act = { verb: "flow" | "turns" | "flashes" | "moves" | "falls" | "fills" | "reads" | "runs"; ids: string[]; to?: string; arg?: string; fast?: boolean; slow?: boolean; line: number };
 type Pace = "slow" | "normal" | "fast";
 type Mom = {
   word: number; line: number; show?: string; extraShow: string[]; keep: string[]; becomes: { id: string; text?: string; n?: number }[];
   from: { a: string; b: string }[]; compare?: [string, string]; arrows: { a: string; b: string; label: string }[];
-  ask?: string; reveal?: string; wrong: string[]; stress: boolean; pace: Pace; plain?: boolean;
+  ask?: string; reveal?: string; wrong: string[]; stress: boolean; pace: Pace; plain?: boolean; acts: Act[];
 };
 
 const quoted = (s: string) => /"([^"]*)"/.exec(s)?.[1];
@@ -45,7 +48,7 @@ function parse(src: string, notes: string[]) {
     if (!line || line.startsWith("```") || line.startsWith("#")) return;
     const at = /^@\s*(\d+)/.exec(line);
     if (at) {
-      cur = { word: Number(at[1]), line: ln, extraShow: [], keep: [], becomes: [], from: [], arrows: [], wrong: [], stress: false, pace: "normal" };
+      cur = { word: Number(at[1]), line: ln, extraShow: [], keep: [], becomes: [], from: [], arrows: [], wrong: [], stress: false, pace: "normal", acts: [] };
       moments.push(cur);
       return;
     }
@@ -59,6 +62,11 @@ function parse(src: string, notes: string[]) {
       const m = /^(\w+)\s*(.*)$/.exec(rest);
       if (!m) return void notes.push(`line ${ln}: thing needs an id and a text, ignored`);
       defs.set(m[1]!, { id: m[1]!, text: quoted(m[2]!) ?? (m[2]!.trim() || m[1]!) });
+    } else if (key === "object") {
+      const m = /^(\w+)\s*(.*)$/.exec(rest);
+      if (!m) return void notes.push(`line ${ln}: object needs an id and a description, ignored`);
+      const desc = quoted(m[2]!) ?? (m[2]!.trim() || m[1]!);
+      defs.set(m[1]!, { id: m[1]!, text: m[1]!, obj: resolve(desc), desc });
     } else if (key === "many") {
       const m = /^(\w+)\s+(\d+)\s*(.*)$/.exec(rest);
       if (!m) return void notes.push(`line ${ln}: many needs an id, a count and a unit, ignored`);
@@ -87,7 +95,18 @@ function parse(src: string, notes: string[]) {
     } else if (key === "ask") cur.ask = quoted(rest) ?? (rest || undefined);
     else {
       let m: RegExpExecArray | null;
-      if ((m = /^(\w+)\s+becomes\s+(.*)$/i.exec(line))) {
+      const act = (a: Omit<Act, "line">) => cur!.acts.push({ ...a, line: ln });
+      const arg = (t: string | undefined) => (t === undefined ? undefined : quoted(t) ?? (t.trim() || undefined));
+      if ((m = /^([\w.]+)\s+(drips|pours|flows|drains|drops)\s+into\s+([\w.]+)\s*(.*)$/i.exec(line))) act({ verb: "flow", ids: [m[1]!], to: m[3]!, fast: /fast|quick|stream/i.test(m[4]!) || /pours|flows/i.test(m[2]!), slow: /slow|one|drop by drop/i.test(m[4]!) });
+      else if ((m = /^([\w.]+)\s+(turns|changes to|goes)\s+(.*)$/i.exec(line))) act({ verb: "turns", ids: [m[1]!], arg: arg(m[3]) });
+      else if ((m = /^([\w.]+)\s+(flashes|blushes|glows)\s*(.*)$/i.exec(line))) act({ verb: "flashes", ids: [m[1]!], arg: arg(m[3]) });
+      else if ((m = /^([\w.]+)\s+(swirls|shakes|spins|rocks|wobbles|stirs)\b.*$/i.exec(line))) act({ verb: "moves", ids: [m[1]!], arg: m[2]!.toLowerCase() });
+      else if ((m = /^((?:[\w.]+\s+)+?)(falls?|drops?|fall together|drop together)\s*(together)?\s*$/i.exec(line))) act({ verb: "falls", ids: m[1]!.trim().split(/\s+/) });
+      else if ((m = /^([\w.]+)\s+(fills|empties|rises|drains)\s*(.*)$/i.exec(line))) act({ verb: "fills", ids: [m[1]!], arg: /empties|drains/i.test(m[2]!) ? "0%" : arg(m[3]) });
+      else if ((m = /^([\w.]+)\s+reads\s*(.*)$/i.exec(line))) act({ verb: "reads", ids: [m[1]!], arg: arg(m[2]) });
+      else if ((m = /^([\w.]+)\s+(runs|counts|ticks)\s*(.*)$/i.exec(line))) act({ verb: "runs", ids: [m[1]!], arg: arg(m[3]) });
+      else if ((m = /^(\w+)\s+becomes\s+(.*)$/i.exec(line)) && defs.get(m[1]!)?.obj) act({ verb: "turns", ids: [m[1]!], arg: arg(m[2]) });
+      else if ((m = /^(\w+)\s+becomes\s+(.*)$/i.exec(line))) {
         const v = m[2]!.trim();
         if (/^\d+(\.\d+)?$/.test(v)) cur.becomes.push({ id: m[1]!, n: Number(v) });
         else cur.becomes.push({ id: m[1]!, text: quoted(v) ?? v });
@@ -132,6 +151,7 @@ const Y_TOP = SAFE.y - SAFE.h / 2;
 const Y_BOT = Math.min(SAFE.y + SAFE.h / 2, H * 0.78); // the bottom 22% is kept clear for captions and phone UI
 const Y0 = Y_TOP + 0.47 * (Y_BOT - Y_TOP); // optical center: just above the middle of the region that is kept clear of UI
 const MIN_FS = 0.045 * W;
+const STAGE_TOP = Y_TOP + 0.13 * (Y_BOT - Y_TOP);
 
 // ---------------------------------------------------------------------------------------------------------------
 // 3. Timing that follows the voice.
@@ -143,7 +163,7 @@ const durMove = (px: number, p: Pace) => Math.max(1, Math.round(Math.min(28, Mat
 // Pictures the user gave: a name, a file, a size and named parts (boxes as fractions of the picture).
 // A picture that is a chart may carry its data (from the user's data file, or read off the picture): then the engine can
 // redraw it in the style, every bar addressable, starting exactly on the original's bars.
-type ChartData = { kind: "bars"; title?: string; xname?: string; labels: string[]; values: number[]; ymax: number; plot: [number, number, number, number]; barFrac?: number };
+type ChartData = { kind: "bars"; orient?: "v" | "h"; title?: string; xname?: string; labels: string[]; values: number[]; ymax: number; plot: [number, number, number, number]; barFrac?: number; texts?: Record<string, string> };
 type Pic = { name: string; src: string; w: number; h: number; about: string; parts: Map<string, [number, number, number, number]>; data?: ChartData; barsOf: Map<string, number[]> };
 const pics = new Map<string, Pic>();
 {
@@ -163,10 +183,12 @@ const pics = new Map<string, Pic>();
     if (data) {
       const n = data.values.length;
       const [px0, , px1] = data.plot;
-      for (const [part, [u0, , u1]] of parts) {
+      const [, py0, , py1] = data.plot;
+      for (const [part, [u0, v0, u1, v1]] of parts) {
         const idx = data.values.map((_, i) => i).filter((i) => {
-          const u = px0 + ((i + 0.5) * (px1 - px0)) / n;
-          return u >= u0 && u <= u1;
+          // A bar's center in the picture: along the plot for vertical bars, down the plot for horizontal ones.
+          const [u, v] = data.orient === "h" ? [px0 + (((data.values[i]! / data.ymax) * (px1 - px0)) / 2), py0 + ((i + 0.5) * (py1 - py0)) / n] : [px0 + ((i + 0.5) * (px1 - px0)) / n, (py0 + py1) / 2];
+          return u >= u0 && u <= u1 && (data.orient !== "h" || (v >= v0 && v <= v1));
         });
         if (idx.length) barsOf.set(part, idx);
       }
@@ -201,11 +223,12 @@ for (const m of parsed.moments) {
   m.from = m.from.map((x) => ({ a: canon(x.a, w)!, b: canon(x.b, w)! }));
   m.arrows = m.arrows.map((x) => ({ ...x, a: canon(x.a, w)!, b: canon(x.b, w)! }));
   if (m.compare) m.compare = [canon(m.compare[0], w)!, canon(m.compare[1], w)!];
+  m.acts = m.acts.map((a) => ({ ...a, ids: a.ids.map((x) => canon(x, w)!), to: a.to ? canon(a.to, w) : undefined }));
   m.becomes = m.becomes.filter((b) => !pics.has(b.id) || (notes.push(`${w} a picture cannot become something else: ignored`), false));
 }
 // Declare unknown ids as things whose text is the id.
 for (const m of parsed.moments) {
-  const used = [m.show, ...m.extraShow, ...m.keep, ...m.becomes.map((b) => b.id), ...m.from.flatMap((f) => [f.a, f.b]), ...(m.compare ?? []), ...m.arrows.flatMap((a) => [a.a, a.b]), m.reveal, ...m.wrong];
+  const used = [m.show, ...m.extraShow, ...m.keep, ...m.becomes.map((b) => b.id), ...m.from.flatMap((f) => [f.a, f.b]), ...(m.compare ?? []), ...m.arrows.flatMap((a) => [a.a, a.b]), m.reveal, ...m.wrong, ...m.acts.flatMap((a) => [...a.ids, a.to])];
   for (const id of used) if (id && !pr(id) && !defs.has(id)) (defs.set(id, { id, text: id }), notes.push(`@${m.word} "${id}" was never declared: made a thing whose text is "${id}"`));
 }
 for (const m of parsed.moments) if (m.word >= request.words.length || m.word < 0) notes.push(`@${m.word} is not a word of the narration (0 to ${request.words.length - 1}): moved to the nearest word`);
@@ -221,21 +244,23 @@ const numOf = (t: string) => {
   return { v: Number(m[0].replace(/,/g, "")), unit: symbols || after };
 };
 const subjectOf = (m: Mom): string | undefined => m.reveal ?? m.show ?? m.becomes[0]?.id ?? m.arrows[0]?.b ?? m.wrong[0];
-const dwellOf = (m: Mom) => Math.round(Math.max(m.pace === "slow" ? 1.5 : m.pace === "fast" ? 0.7 : 1.0, m.reveal || m.ask || m.stress ? 1.4 : 0) * FPS);
+// A moment that demonstrates (things fall) holds until the demonstration has landed and been seen.
+const dwellOf = (m: Mom) => Math.round(Math.max(m.pace === "slow" ? 1.5 : m.pace === "fast" ? 0.7 : 1.0, m.reveal || m.ask || m.stress ? 1.4 : 0) * FPS) + (m.acts.some((a) => a.verb === "falls") ? 60 : 0);
 const tag = (m: Mom) => `@${m.word}`;
 
-type FM = { m: Mom; onset: number; carry: string[]; becomes: Mom["becomes"]; wrong: string[]; k: number };
+type FM = { m: Mom; onset: number; carry: string[]; becomes: Mom["becomes"]; wrong: string[]; k: number; acts: Act[] };
 const fms: FM[] = [];
 for (const m of sorted) {
   const nominal = Math.max(1, Math.round(wordStart(m.word) * FPS) - CUE);
-  const fm: FM = { m, onset: nominal, carry: [], becomes: m.becomes, wrong: m.wrong, k: 0 };
+  const fm: FM = { m, onset: nominal, carry: [], becomes: m.becomes, wrong: m.wrong, k: 0, acts: m.acts };
   for (;;) {
     const prev = fms.at(-1);
     if (!prev) break;
     const cand = Math.max(nominal, prev.onset + dwellOf(prev.m));
     const delay = cand - nominal;
     // A reveal or ask is a payoff or a pause: it is never merged away, so the next moment may wait a little longer.
-    if (delay <= (prev.m.reveal || prev.m.ask ? 27 : 15)) {
+    // A demonstration is never cut short: what follows waits for it to land.
+    if (delay <= (prev.m.acts.some((x) => x.verb === "falls") ? 90 : prev.m.reveal || prev.m.ask ? 27 : 15)) {
       fm.onset = cand;
       if (delay > 1) notes.push(`${tag(m)} moved ${(delay / FPS).toFixed(1)} s later so ${tag(prev.m)}${prev.m.reveal ? " (reveal)" : prev.m.ask ? " (ask)" : prev.m.stress ? " (stress)" : ""} holds ${(dwellOf(prev.m) / FPS).toFixed(1)} s`);
       break;
@@ -246,6 +271,7 @@ for (const m of sorted) {
     fm.carry = [...(s ? [s] : []), ...prev.carry, ...fm.carry].filter((x, i, a) => a.indexOf(x) === i).slice(-3);
     fm.becomes = [...prev.becomes, ...fm.becomes];
     fm.wrong = [...prev.wrong, ...fm.wrong];
+    fm.acts = [...prev.acts, ...fm.acts];
     fms.pop();
   }
   fms.push(fm);
@@ -262,6 +288,12 @@ type Cls = "subject" | "support" | "question" | "ph";
 type Slot = { id: string; cls: Cls; wrong: boolean; reveal: boolean; born?: string; ask?: boolean; part?: string; parts?: string[] };
 type PArrow = { t: string; pic: string; part: string; to: boolean };
 type Plan = { slots: Slot[]; pair?: [string, string]; partPair?: { pic: string; parts: [string, string] }; inferred?: boolean; arrows: { a: string; b: string; label: string }[]; parrows: PArrow[]; subject?: string; stress: boolean; question?: string; phFor?: string };
+// Objects that act on each other form one apparatus for the whole piece (found from every moment's verbs).
+const apparatus: string[][] = [];
+for (const f of fms) for (const a of f.acts) {
+  const g = a.verb === "flow" && a.to ? [a.ids[0]!, a.to] : a.verb === "falls" && a.ids.length > 1 ? a.ids : [];
+  if (g.length > 1 && g.every((x) => defs.get(x)?.obj) && !apparatus.some((x) => g.every((y) => x.includes(y)))) apparatus.push(g);
+}
 const sticky = new Set<string>();
 const plans: Plan[] = [];
 const rank = new Map<string, number>();
@@ -340,6 +372,9 @@ fms.forEach((f, k) => {
   }
   for (const x of m.wrong) add(x, "support");
   for (const x of m.becomes) add(x.id, "support");
+  for (const a of f.acts) for (const x of [...a.ids, ...(a.to ? [a.to] : [])]) if (x && sid(x) !== subj) add(x, "support");
+  // An apparatus is one thing: while any part of it is on screen, the rest stays as quiet context.
+  for (const g of apparatus) if (g.some((x) => has(x) || x === subj)) for (const x of g) if (!has(x) && x !== subj) (add(x, "support"), notes.push(`${tag(m)} "${x}" stays as context: it belongs to one apparatus with ${g.filter((y) => y !== x).join(", ")}`));
   if (pair) for (const x of pair) add(x, pairIsSubject ? "subject" : "support");
   if (subj) {
     const s = slots.find((x) => x.id === subj);
@@ -389,6 +424,27 @@ fms.forEach((f, k) => {
   plans.push({ slots, pair: pair && has(pair[0]) && has(pair[1]) ? (pair as [string, string]) : undefined, partPair, inferred, arrows: plainArrows, parrows, subject: subj, stress: m.stress, question: q, phFor });
 });
 // Which pictures ever share the frame with words: those keep the smaller stage in every moment, so the box stays put.
+// Objects that act on each other are composed together in every moment both are on screen: a source over the vessel
+// it drips or pours into (the tip above the mouth), things that fall together side by side at one height over a floor.
+// Objects keep one size for the whole piece: a thing does not grow or shrink because it matters more now.
+const flows = new Map<string, string>();
+const fallGroups: string[][] = [];
+const isObj = (id: string | undefined) => !!id && !!defs.get(id)?.obj;
+const fallenAt: Set<string>[] = []; // per moment: objects that fell in an earlier moment
+{
+  const fallen = new Set<string>();
+  fms.forEach((f) => {
+    fallenAt.push(new Set(fallen));
+    for (const a of f.acts) {
+      if (a.verb === "flow" && a.to && isObj(a.ids[0]) && isObj(a.to) && !flows.has(a.ids[0]!)) (flows.set(a.ids[0]!, a.to), notes.push(`${tag(f.m)} ${a.ids[0]} drips into ${a.to}: they are composed as one apparatus, ${a.ids[0]}'s tip over ${a.to}'s mouth, whenever both are on screen`));
+      if (a.verb === "falls") {
+        const g = a.ids.filter(isObj);
+        if (g.length && !fallGroups.some((x) => g.every((y) => x.includes(y)))) (fallGroups.push(g), notes.push(`${tag(f.m)} ${g.join(" and ")} fall: ${g.length > 1 ? "side by side, bottoms level, " : ""}over a floor with room to fall, in every moment they are on screen`));
+        g.forEach((x) => fallen.add(x));
+      }
+    }
+  });
+}
 const picRoom = new Set<string>();
 for (const p of plans) if (p.slots.some((s) => !pics.has(s.id) && s.cls !== "question") || p.question) for (const s of p.slots) if (pics.has(s.id)) picRoom.add(s.id);
 const picParts = new Map<string, Set<string>>();
@@ -397,7 +453,7 @@ for (const p of plans) for (const s of p.slots) if (pics.has(s.id)) for (const x
 // ---------------------------------------------------------------------------------------------------------------
 // 5. Entities: what is drawn. Versions (becomes "text") and counts (becomes N) over time.
 // ---------------------------------------------------------------------------------------------------------------
-type Ent = { id: string; type: "text" | "many" | "ph" | "pic"; texts: string[]; lines: string[][]; ems: number[]; unit: string; maxN: number; n0: number };
+type Ent = { id: string; type: "text" | "many" | "ph" | "pic" | "obj"; texts: string[]; lines: string[][]; ems: number[]; unit: string; maxN: number; n0: number };
 const ents = new Map<string, Ent>();
 const key = (id: string) => (pics.has(id) ? `p.${id}` : `t.${id}`);
 const verAt: Map<string, number>[] = [];
@@ -406,7 +462,7 @@ const textsOf = new Map<string, string[]>();
 const nOf = new Map<string, number>();
 for (const d of defs.values()) {
   if (d.many) nOf.set(d.id, d.many.n);
-  else textsOf.set(d.id, [d.text]);
+  else if (!d.obj) textsOf.set(d.id, [d.text]);
 }
 const maxN = new Map<string, number>(nOf);
 fms.forEach((f, k) => {
@@ -460,7 +516,10 @@ function pickLines(text: string, subject: boolean): string[] {
   return one * 0.065 * W > SW ? best : [text];
 }
 for (const d of defs.values()) {
-  if (d.many) {
+  if (d.obj) {
+    ents.set(d.id, { id: d.id, type: "obj", texts: [d.text], lines: [[d.text]], ems: [1], unit: "", maxN: 0, n0: 0 });
+    notes.push(`object ${d.id}: ${d.obj.why}`);
+  } else if (d.many) {
     ents.set(d.id, { id: d.id, type: "many", texts: [d.text], lines: [[d.text]], ems: [1], unit: d.many.unit, maxN: Math.max(1, maxN.get(d.id) ?? d.many.n), n0: d.many.n });
   } else {
     const texts = textsOf.get(d.id)!;
@@ -483,7 +542,7 @@ plans.forEach((p, k) => {
 // ---------------------------------------------------------------------------------------------------------------
 type St = { x: number; y: number; s: number; op: number; color: string; w: number; h: number; cls: Cls; ver: number; n: number; wrong: boolean; reveal: boolean; fs: number; dotsY: number; labY: number; label: string; len: number; bar: boolean; z: number; ox: number; oy: number; sub?: string; sup?: string[]; pts: number[]; lit?: string[]; levels?: Lv[] };
 type Lv = { part: string; v: number; tag: string };
-type Item = { id: string; type: "text" | "ph" | "many" | "strike" | "bar" | "arrow" | "pic" | "parrow" | "card" | "vbar"; st: St; born?: string };
+type Item = { id: string; type: "text" | "ph" | "many" | "strike" | "bar" | "arrow" | "pic" | "parrow" | "card" | "vbar" | "obj"; st: St; born?: string };
 const blank = (): St => ({ x: 0, y: 0, s: 1, op: 1, color: C.subject, w: 0, h: 0, cls: "support", ver: 0, n: 0, wrong: false, reveal: false, fs: 0, dotsY: 0, labY: 0, label: "", len: 0, bar: false, z: 1, ox: 0, oy: 0, pts: [] });
 const LINE = 1.12; // line height in em
 const PITCH = 40; // dot spacing in the dots group's own units
@@ -515,35 +574,66 @@ function viewOf(p: Pic, part: string | undefined, mode: "subject" | "support") {
 // Where a part lands on screen, given the picture's placed state.
 // A chart with data, redrawn: every bar at its place, in the chart's own box (title row, plot, label row), or exactly
 // on the original picture's bars (photo), which is where the redrawn bars start.
+type BarR = { x0: number; y0: number; x1: number; y1: number };
 function chartGeom(st: St, p: Pic, mode: "own" | "photo") {
   const d = p.data!;
   const n = d.values.length;
+  const hz = d.orient === "h";
+  const heads = Object.keys(d.texts ?? {});
   if (mode === "photo") {
     const pw = st.w;
     const ph = (pw * p.h) / p.w;
     const left = st.x - pw / 2;
     const top = st.y - ph / 2;
     const [u0, v0, u1, v1] = d.plot;
-    const slot = ((u1 - u0) * pw) / n;
-    const base = top + v1 * ph;
-    const plotH = (v1 - v0) * ph;
-    return { bars: d.values.map((v, i) => ({ x: left + u0 * pw + (i + 0.5) * slot, w: slot * (d.barFrac ?? 0.72), h: (v / d.ymax) * plotH })), base, plotH, left: left + u0 * pw, right: left + u1 * pw, titleY: top + 0.08 * ph, labY: base + 0.05 * ph, pw, ph };
+    const [X0, Y0p, X1, Y1] = [left + u0 * pw, top + v0 * ph, left + u1 * pw, top + v1 * ph];
+    const bf = d.barFrac ?? 0.72;
+    const bars: BarR[] = d.values.map((v, i) => {
+      if (hz) {
+        const slot = (Y1 - Y0p) / n;
+        const cy = Y0p + (i + 0.5) * slot;
+        return { x0: X0, x1: X0 + (v / d.ymax) * (X1 - X0), y0: cy - (slot * bf) / 2, y1: cy + (slot * bf) / 2 };
+      }
+      const slot = (X1 - X0) / n;
+      const cx = X0 + (i + 0.5) * slot;
+      return { x0: cx - (slot * bf) / 2, x1: cx + (slot * bf) / 2, y1: Y1, y0: Y1 - (v / d.ymax) * (Y1 - Y0p) };
+    });
+    const headY = Object.fromEntries(heads.map((h) => [h, p.parts.get(h) ? top + ((p.parts.get(h)![1] + p.parts.get(h)![3]) / 2) * ph : top]));
+    return { hz, bars, axis: hz ? { x0: X0, y0: Y0p, x1: X0, y1: Y1 } : { x0: X0, y0: Y1, x1: X1, y1: Y1 }, scale: hz ? (X1 - X0) / d.ymax : (Y1 - Y0p) / d.ymax, labels: bars.map((b) => (hz ? { x: left + 0.03 * pw, y: (b.y0 + b.y1) / 2, left: true } : { x: (b.x0 + b.x1) / 2, y: b.y1 + 0.05 * ph, left: false })), heads: headY, headX: left + 0.04 * pw, pw, ph };
   }
   const left = st.x - st.w / 2;
   const top = st.y - st.h / 2;
-  const titleH = d.title ? MIN_FS * 1.8 : 0;
+  // Header rows: the chart's own words (its title, a total), one row each, above the plot.
+  // Room for one row set large (when a header part is the subject) and the rest small, the same in every moment.
+  const BIG = 0.11 * W;
+  const headH = heads.length ? BIG * 1.2 + (heads.length - 1) * MIN_FS * 1.4 + 16 : 0;
+  const headY = Object.fromEntries(heads.map((h, i) => [h, top + BIG * 0.6 + i * MIN_FS * 1.4]));
+  if (hz) {
+    // Horizontal bars, one row each: the category name above its bar, the value at the bar's end.
+    const plotTop = top + headH + 16;
+    const slot = (st.y + st.h / 2 - plotTop) / n;
+    const valueRoom = em("0000") * MIN_FS * 1.25 + 24;
+    const len = st.w - valueRoom;
+    const thick = Math.max(20, Math.min(slot - MIN_FS * 1.45, slot * 0.6));
+    const bars: BarR[] = d.values.map((v, i) => {
+      const y0 = plotTop + i * slot + MIN_FS * 1.25;
+      return { x0: left, x1: left + (v / d.ymax) * len, y0, y1: y0 + thick };
+    });
+    return { hz, bars, axis: { x0: left, y0: plotTop + MIN_FS, x1: left, y1: st.y + st.h / 2 }, scale: len / d.ymax, labels: bars.map((b) => ({ x: left, y: b.y0 - MIN_FS * 0.62, left: true })), heads: headY, headX: left, pw: st.w, ph: st.h };
+  }
   const labH = MIN_FS * 1.6;
   const base = top + st.h - labH;
-  const plotH = base - (top + titleH + 24);
+  const plotH = base - (top + headH + 24);
   const slot = st.w / n;
-  return { bars: d.values.map((v, i) => ({ x: left + (i + 0.5) * slot, w: slot * 0.7, h: (v / d.ymax) * plotH })), base, plotH, left, right: left + st.w, titleY: top + titleH / 2, labY: base + labH / 2 + 4, pw: st.w, ph: st.h };
+  const bars: BarR[] = d.values.map((v, i) => ({ x0: left + (i + 0.15) * slot, x1: left + (i + 0.85) * slot, y1: base, y0: base - (v / d.ymax) * plotH }));
+  return { hz, bars, axis: { x0: left, y0: base, x1: left + st.w, y1: base }, scale: plotH / d.ymax, labels: bars.map((b) => ({ x: (b.x0 + b.x1) / 2, y: base + labH / 2 + 4, left: false })), heads: headY, headX: left, pw: st.w, ph: st.h };
 }
 function screenBox(st: St, p: Pic, part: string) {
   if (p.data) {
     const g = chartGeom(st, p, "own");
-    const idx = p.barsOf.get(part) ?? [];
-    const bs = idx.map((i) => g.bars[i]!);
-    return { x0: Math.min(...bs.map((b) => b.x - b.w / 2)), y0: Math.min(...bs.map((b) => g.base - b.h)), x1: Math.max(...bs.map((b) => b.x + b.w / 2)), y1: g.base };
+    const bs = (p.barsOf.get(part) ?? []).map((i) => g.bars[i]!);
+    if (!bs.length) return { x0: st.x - st.w / 2, y0: st.y - st.h / 2, x1: st.x + st.w / 2, y1: st.y - st.h / 2 + MIN_FS * 1.5 };
+    return { x0: Math.min(...bs.map((b) => b.x0)), y0: Math.min(...bs.map((b) => b.y0)), x1: Math.max(...bs.map((b) => b.x1)), y1: Math.max(...bs.map((b) => b.y1)) };
   }
   const [u0, v0, u1, v1] = p.parts.get(part)!;
   const X = (u: number) => st.x + st.s * (st.ox + st.z * (u - 0.5) * REFW);
@@ -611,7 +701,7 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
       const asp = p.w / p.h;
       if (p.data) {
         // A chart with data is redrawn in the style: the full column width, and the same box in every moment.
-        const ch = (lone || !picRoom.has(s.id) ? 0.78 : 0.5) * AVAIL * cp;
+        const ch = (lone || !picRoom.has(s.id) ? 0.78 : 0.68) * AVAIL * cp;
         const lit = plan.partPair?.pic === s.id ? plan.partPair.parts : s.part ? [s.part] : [];
         return { rank: -0.5, h: ch, items: [{ id: s.id, dx: 0, dy: ch / 2, w: SW, h: ch, st: { cls: s.cls, op: 1, s: 1, z: 1, ox: 0, oy: 0, sub: s.part, sup: s.parts, lit } }], decor: [], subjectDy: subjectLike ? ch / 2 : undefined };
       }
@@ -619,6 +709,11 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
       const h = w / asp;
       const v = viewOf(p, s.part ?? s.parts?.[0], s.part ? "subject" : "support");
       return { rank: -0.5, h, items: [{ id: s.id, dx: 0, dy: h / 2, w, h, st: { cls: s.cls, op: 1, s: w / REFW, ...v, sub: s.part, sup: s.parts } }], decor: [], subjectDy: subjectLike ? h / 2 : undefined };
+    }
+    if (e.type === "obj") {
+      const p = defs.get(s.id)!.obj!;
+      const sc = Math.min((0.42 * AVAIL) / p.h, (0.8 * SW) / p.w);
+      return { rank: rank.get(s.id) ?? 0, h: p.h * sc, items: [{ id: s.id, dx: 0, dy: p.h * sc, w: p.w * sc, h: p.h * sc, st: { ...objCls(s.id), s: sc } }], decor: [], subjectDy: subjectLike ? (p.h * sc) / 2 : undefined };
     }
     if (e.type === "many") {
       const Z = manyZ(s, cs, cj, false) * (s.wrong ? 0.85 : 1);
@@ -756,6 +851,52 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
   };
 
   // The blocks of a moment: a compare is one block, an arrow's two ends are one block, everything else stands alone.
+  const objIn = (id: string) => slotOf.has(id) && ents.get(id)?.type === "obj";
+  const objCls = (id: string): Partial<St> => ({ cls: slotOf.get(id)!.cls, op: slotOf.get(id)!.cls === "subject" || !plan.subject || !slotOf.has(plan.subject) ? 1 : 0.72, reveal: slotOf.get(id)!.reveal });
+  const buildFlow = (src: string, dst: string, sats: string[]): Block => {
+    const ps = defs.get(src)!.obj!;
+    const pd = defs.get(dst)!.obj!;
+    const ss = Math.min((0.42 * AVAIL) / ps.h, (0.5 * SW) / ps.w);
+    const sd = Math.min((0.37 * AVAIL) / pd.h, (0.7 * SW) / pd.w);
+    const hs = ps.h * ss;
+    const hd = pd.h * sd;
+    const gap = 0.035 * AVAIL;
+    const items: Placed[] = [
+      { id: src, dx: 0, dy: hs, w: ps.w * ss, h: hs, st: { ...objCls(src), s: ss } },
+      { id: dst, dx: 0, dy: hs + gap + hd, w: pd.w * sd, h: hd, st: { ...objCls(dst), s: sd } },
+    ];
+    // Objects that are not part of the apparatus but are needed now (a timer, a label card) stand small beside it.
+    let side = 1;
+    for (const id of sats) {
+      const p = defs.get(id)!.obj!;
+      const sc = Math.min((0.17 * AVAIL) / p.h, (0.42 * SW - (pd.w * sd) / 2) / p.w);
+      items.push({ id, dx: side * ((pd.w * sd) / 2 + 50 + (p.w * sc) / 2), dy: hs + gap + hd, w: p.w * sc, h: p.h * sc, st: { ...objCls(id), s: sc } });
+      side = -side;
+    }
+    const subj = plan.subject && [src, dst].includes(plan.subject) ? plan.subject : undefined;
+    // The apparatus is centered as a whole, whichever part is the subject, so it never shifts between moments.
+    return { rank: Math.min(rank.get(src) ?? 0, rank.get(dst) ?? 0), h: hs + gap + hd, items, decor: [], subjectDy: subj ? (hs + gap + hd) / 2 : undefined };
+  };
+  const FALL_H = 0.6 * AVAIL;
+  const buildFall = (mem: string[]): Block => {
+    const props = mem.map((id) => defs.get(id)!.obj!);
+    const big = Math.max(...props.map((p) => p.body?.size ?? 10));
+    const D = props.map((p) => Math.max(0.15 * SW, (0.4 * SW * (p.body?.size ?? 10)) / big) * (p.kind === "ball" ? 1 : 0.8));
+    const gx = 0.16 * SW;
+    const total = D.reduce((a, b) => a + b, 0) + gx * (mem.length - 1);
+    const Dmax = Math.max(...D);
+    let x = -total / 2;
+    const items: Placed[] = mem.map((id, i) => {
+      const dx = x + D[i]! / 2;
+      x += D[i]! + gx;
+      const p = props[i]!;
+      const sc = D[i]! / p.w;
+      const down = fallenAt[k]!.has(id);
+      return { id, dx, dy: down ? FALL_H : Dmax, w: D[i]!, h: p.h * sc, st: { ...objCls(id), s: sc, len: FALL_H - Dmax } };
+    });
+    const decor: Dec[] = [{ type: "bar", id: `floor.${mem.join(".")}`, dx: -SW * 0.46, dy: FALL_H + 14, len: SW * 0.92, color: C.muted, op: 0.5 }];
+    return { rank: Math.min(...mem.map((id) => rank.get(id) ?? 0)), h: FALL_H + 28, items, decor, subjectDy: mem.includes(plan.subject ?? "") ? FALL_H / 2 : undefined };
+  };
   const buildAll = (cs: number, cj: number, tell = false) => {
     sCommon = commonS(cs, cj);
     const used = new Set<string>();
@@ -773,6 +914,19 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
       used.add(ar.a);
       used.add(ar.b);
     });
+    for (const [src, dst] of flows) {
+      if (!objIn(src) || !objIn(dst) || used.has(src) || used.has(dst)) continue;
+      const grouped = new Set([...flows.keys(), ...flows.values(), ...fallGroups.flat()]);
+      const sats = plan.slots.filter((sl) => objIn(sl.id) && !grouped.has(sl.id) && !used.has(sl.id)).map((sl) => sl.id);
+      blocks.push(buildFlow(src, dst, sats));
+      [src, dst, ...sats].forEach((x) => used.add(x));
+    }
+    for (const g of fallGroups) {
+      const mem = g.filter((x) => objIn(x) && !used.has(x));
+      if (!mem.length) continue;
+      blocks.push(buildFall(mem));
+      mem.forEach((x) => used.add(x));
+    }
     for (const s of plan.slots) if (!used.has(s.id)) blocks.push(buildSingle(s, cs, cj));
     return blocks.sort((x, y) => x.rank - y.rank);
   };
@@ -807,9 +961,15 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
     buildAll(chosen.cs, chosen.cj, true); // writes the compare notes once
     const { blocks, gap } = chosen;
     const total = blocks.reduce((t, b) => t + b.h, 0) + gap * (blocks.length - 1);
-    const si = blocks.findIndex((b) => b.subjectDy !== undefined);
+    // The stage (objects, or a picture or chart) stands at one fixed place for the whole piece; words take turns above
+    // and below it. Things that stay never move because the words around them changed.
+    const stageI = blocks.findIndex((b) => b.items.some((it) => ents.get(it.id)?.type === "obj" || ents.get(it.id)?.type === "pic"));
+    const si = stageI >= 0 ? -1 : blocks.findIndex((b) => b.subjectDy !== undefined);
     let top: number;
-    if (si >= 0) {
+    if (stageI >= 0) {
+      const before = blocks.slice(0, stageI).reduce((t, b) => t + b.h + gap, 0);
+      top = Math.max(Y_TOP, STAGE_TOP - before);
+    } else if (si >= 0) {
       const before = blocks.slice(0, si).reduce((t, b) => t + b.h + gap, 0);
       top = Y0 - (before + blocks[si]!.subjectDy!);
     } else top = Y0 - total / 2;
@@ -861,7 +1021,7 @@ function layoutMoment(k: number, notes2: string[]): { items: Map<string, Item>; 
   for (const { b, y } of placements) {
     for (const p of b.items) {
       const e = ents.get(p.id)!;
-      const type = e.type === "many" ? "many" : e.type === "ph" ? "ph" : e.type === "pic" ? "pic" : "text";
+      const type = e.type === "many" ? "many" : e.type === "ph" ? "ph" : e.type === "pic" ? "pic" : e.type === "obj" ? "obj" : "text";
       const st = { ...blank(), ...p.st, x: W / 2 + p.dx, y: y + p.dy, w: p.w, h: p.h };
       const id = p.id === "ph" ? "ph" : p.id.startsWith("q.") || p.id.startsWith("lab.") ? p.id : key(p.id);
       items.set(id, { id, type, st, born: slotOf.get(p.id)?.born ? key(sid(slotOf.get(p.id)!.born!)!) : undefined });
@@ -994,12 +1154,15 @@ for (const [id, e] of ents) {
   if (pic.data) {
     // The redrawn chart: bars, a baseline, labels, a title, and one level line and tag per part that can be lit.
     const d = pic.data;
-    d.values.forEach((_, i) => node(`${P}.bar${i}`, "path", { points: [-0.5, 0, 0.5, 0, 0.5, -1, -0.5, -1], closed: 1, fill: C.subject, opacity: 0, scaleX: 1, scaleY: 0 }));
-    node(`${P}.base`, "path", { points: [0, 0, 1, 0], stroke: C.subject, strokeWidth: 4, opacity: 0, scaleX: 1 });
+    // Bars are unit squares from their corner, stretched to their rectangle, so both orientations share one shape.
+    d.values.forEach((_, i) => node(`${P}.bar${i}`, "path", { points: [0, 0, 1, 0, 1, 1, 0, 1], closed: 1, fill: C.subject, opacity: 0, scaleX: 1, scaleY: 1 }));
+    d.values.forEach((v, i) => node(`${P}.val${i}`, "text", { text: String(v), size: MIN_FS * 1.25, role: "heading", color: C.subject, opacity: 0 }));
+    for (const [h, t] of Object.entries(d.texts ?? {})) node(`${P}.hd.${h}`, "text", { text: t, size: 100, role: "title", color: C.subject, opacity: 0 });
+    node(`${P}.base`, "path", { points: [0, 0, 1, 1], stroke: C.subject, strokeWidth: 4, opacity: 0, scaleX: 1, scaleY: 1 });
     d.labels.forEach((t, i) => node(`${P}.lab${i}`, "text", { text: t, size: MIN_FS, role: "label", color: C.muted, opacity: 0 }));
-    if (d.title) node(`${P}.title`, "text", { text: d.title, size: MIN_FS, role: "label", color: C.muted, opacity: 0 });
+    if (d.title && !d.texts) node(`${P}.title`, "text", { text: d.title, size: MIN_FS, role: "label", color: C.muted, opacity: 0 });
     for (const part of pic.barsOf.keys()) {
-      node(`${P}.lv.${part}`, "path", { points: [0, 0, 1, 0], stroke: C.pointer, strokeWidth: 7, lineCap: "round", opacity: 0, trimEnd: 0, scaleX: 1 });
+      node(`${P}.lv.${part}`, "path", { points: [0, 0, 1, 1], stroke: C.pointer, strokeWidth: 7, lineCap: "round", opacity: 0, trimEnd: 0, scaleX: 1 });
       node(`${P}.lt.${part}`, "text", { text: "", size: MIN_FS * 1.25, role: "heading", color: C.pointer, opacity: 0 });
     }
     continue;
@@ -1027,6 +1190,9 @@ for (const [id, e] of ents) {
       node(`${nid}.d${i}`, "path", { x: (c - (cols - 1) / 2) * PITCH, y: (r - (rows - 1) / 2) * PITCH, points: circle(PITCH * 0.36), closed: 1, fill: C.key, opacity: 0, scaleX: 0.3, scaleY: 0.3 }, `${nid}.dots`);
     }
     node(`${nid}.lab`, "text", { y: 0, text: e.unit, size: 0.05 * W, role: "label", color: C.muted }, nid);
+  } else if (e.type === "obj") {
+    node(nid, "group", { opacity: 0, scaleX: 0.01, scaleY: 0.01, x: W / 2, y: H / 2 });
+    propNodes(nid, defs.get(id)!.obj!, (cid, kind, props, parent) => node(cid, kind, props as Props, parent), C.subject, "paper", 60);
   } else makeText(nid, e, id.startsWith("q.") ? "heading" : id.startsWith("lab.") ? "label" : "title");
 }
 for (const id of used) {
@@ -1036,6 +1202,29 @@ for (const id of used) {
   else if (id.startsWith("parrow.")) node(id, "path", { points: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], stroke: C.pointer, strokeWidth: 8, opacity: 0, trimEnd: 0 });
   else if (id.startsWith("arrow.")) node(id, "path", { points: [0, 0, 0, 70, -18, 52, 0, 70, 18, 52], role: "pointer", stroke: C.pointer, strokeWidth: 8, opacity: 0, trimEnd: 0 });
 }
+
+// Pools for what objects do: drops for each source that drips, blooms for each vessel that flashes, a trail and a level
+// line for things that fall together, a reading for a scale that is read, a label for a clock that runs, a think line
+// for each question.
+const readNums: [string, number][] = []; // a scale's numbers: written only when the scale is read up close
+const circleU = Array.from({ length: 20 }, (_, i) => [Math.round(Math.cos((i / 20) * 2 * Math.PI) * 1000) / 1000, Math.round(Math.sin((i / 20) * 2 * Math.PI) * 1000) / 1000]).flat();
+const POOL = 8;
+for (const [src, dst] of flows) {
+  for (let j = 0; j < POOL; j++) node(`drop.${src}.${j}`, "path", { points: circleU.map((v, i) => (i % 2 ? v * 1.25 : v)), closed: 1, fill: withAlpha("#9fd3e6", 0.95), stroke: C.subject, strokeWidth: 0.12, opacity: 0, scaleX: 11, scaleY: 11 });
+  for (let j = 0; j < POOL; j++) node(`bloom.${dst}.${j}`, "path", { points: circleU, closed: 1, fill: "#e8559a", stroke: "none", opacity: 0, scaleX: 40, scaleY: 14 });
+}
+for (const g of fallGroups) {
+  for (const id of g) for (let j = 0; j < 3; j++) node(`ghost.${id}.${j}`, "path", { points: circleU, closed: 1, fill: defs.get(id)!.obj!.body?.fill ?? C.subject, stroke: "none", opacity: 0, scaleX: 50, scaleY: 50 });
+  if (g.length > 1) node(`level.${g.join(".")}`, "path", { points: [0, 0, 1, 0], stroke: C.pointer, strokeWidth: 6, dash: [24, 16], opacity: 0, scaleX: 1 });
+}
+fms.forEach((f, k) => {
+  for (const a of f.acts) {
+    if (a.verb === "reads") for (let ml = 0; ml <= 50; ml += 10) readNums.push([`${key(a.ids[0]!)}.num${ml}`, k]);
+    if (a.verb === "reads") (node(`read.${k}`, "text", { text: "", size: 100, role: "title", color: C.pointer, opacity: 0 }), node(`readmark.${k}`, "path", { points: [0, 0, 1, 0], stroke: C.pointer, strokeWidth: 6, opacity: 0, scaleX: 1 }));
+    if (a.verb === "runs") node(`run.${k}`, "text", { text: a.arg ?? "", size: 100, role: "heading", color: C.pointer, opacity: 0 });
+  }
+  if (plans[k]!.question) node(`think.${k}`, "path", { points: [0, 0, 1, 0], stroke: C.pointer, strokeWidth: 8, lineCap: "round", opacity: 0, trimEnd: 0, scaleX: 1 });
+});
 
 // ---------------------------------------------------------------------------------------------------------------
 // 8. Transitions: staged exits, moves, entrances, with attention effects. All become timed `set` operations.
@@ -1068,6 +1257,8 @@ function target(it: Item): Triple[] {
     );
   } else if (it.type === "many") {
     out.push([id, "x", st.x], [id, "y", st.y], [id, "opacity", st.op], [`${id}.dots`, "y", st.dotsY], [`${id}.dots`, "scaleX", st.s], [`${id}.dots`, "scaleY", st.s], [`${id}.lab`, "y", st.labY], [`${id}.lab`, "text", st.label]);
+  } else if (it.type === "obj") {
+    out.push([id, "x", st.x], [id, "y", st.y], [id, "scaleX", st.s], [id, "scaleY", st.s], [id, "opacity", st.op]);
   } else if (it.type === "pic" && pics.get(id.slice(2))!.data) {
     out.push(...chartTargets(it, "own"));
   } else if (it.type === "pic") {
@@ -1088,6 +1279,7 @@ function target(it: Item): Triple[] {
 }
 // The redrawn chart's targets. In "own" the original picture is hidden and the bars stand in the chart's box, lit by
 // what the moment holds; in "photo" the original shows and the bars wait, unseen, exactly on its bars.
+const chartSeen = new Map<string, Set<number>>(); // bars whose part has been looked at, so their values stay written
 function chartTargets(it: Item, mode: "own" | "photo"): Triple[] {
   const P = it.id;
   const pic = pics.get(P.slice(2))!;
@@ -1096,26 +1288,51 @@ function chartTargets(it: Item, mode: "own" | "photo"): Triple[] {
   const g = chartGeom(st, pic, mode);
   const out: Triple[] = [];
   const pg = chartGeom(st, pic, "photo");
-  out.push([P, "x", st.x], [P, "y", st.y], [P, "scaleX", pg.pw / REFW], [P, "scaleY", pg.pw / REFW], [P, "opacity", mode === "photo" ? 1 : 0]);
+  const own = mode === "own";
+  out.push([P, "x", st.x], [P, "y", st.y], [P, "scaleX", pg.pw / REFW], [P, "scaleY", pg.pw / REFW], [P, "opacity", own ? 0 : 1]);
   const lit = new Set((st.lit ?? []).flatMap((x) => pic.barsOf.get(x) ?? []));
   const held = new Set([st.sub, ...(st.sup ?? [])].flatMap((x) => (x ? pic.barsOf.get(x) ?? [] : [])));
+  const seen = chartSeen.get(P) ?? new Set<number>();
   const focus = lit.size > 0 || held.size > 0;
   g.bars.forEach((b, i) => {
-    const color = lit.has(i) ? C.pointer : C.subject;
-    const op = mode === "photo" ? 0 : !focus || lit.has(i) || held.has(i) ? 1 : 0.22;
-    out.push([`${P}.bar${i}`, "x", b.x], [`${P}.bar${i}`, "y", g.base], [`${P}.bar${i}`, "scaleX", b.w], [`${P}.bar${i}`, "scaleY", b.h], [`${P}.bar${i}`, "fill", color], [`${P}.bar${i}`, "opacity", op]);
-    out.push([`${P}.lab${i}`, "x", b.x], [`${P}.lab${i}`, "y", g.labY], [`${P}.lab${i}`, "opacity", mode === "photo" ? 0 : lit.has(i) ? 1 : 0.75], [`${P}.lab${i}`, "color", lit.has(i) ? C.pointer : C.muted]);
+    const on = lit.has(i);
+    out.push([`${P}.bar${i}`, "x", b.x0], [`${P}.bar${i}`, "y", b.y0], [`${P}.bar${i}`, "scaleX", Math.max(0.5, b.x1 - b.x0)], [`${P}.bar${i}`, "scaleY", Math.max(0.5, b.y1 - b.y0)], [`${P}.bar${i}`, "fill", on ? C.pointer : C.subject], [`${P}.bar${i}`, "opacity", !own ? 0 : !focus || on || held.has(i) ? 1 : 0.22]);
+    const L = g.labels[i]!;
+    const lw = em(d.labels[i]!) * MIN_FS * 1.12;
+    out.push([`${P}.lab${i}`, "x", L.left ? L.x + lw / 2 : L.x], [`${P}.lab${i}`, "y", L.y], [`${P}.lab${i}`, "opacity", !own ? 0 : on ? 1 : focus && !held.has(i) ? 0.45 : 0.8], [`${P}.lab${i}`, "color", on ? C.pointer : C.muted]);
+    // A bar's value is written once its part has been looked at, and stays.
+    const vfs = MIN_FS * 1.25;
+    const vw = em(String(d.values[i])) * vfs;
+    const show = own && (on || held.has(i) || seen.has(i));
+    out.push([`${P}.val${i}`, "x", g.hz ? b.x1 + 16 + vw / 2 : (b.x0 + b.x1) / 2], [`${P}.val${i}`, "y", g.hz ? (b.y0 + b.y1) / 2 : b.y0 - vfs * 0.7], [`${P}.val${i}`, "opacity", show ? (on || !focus || held.has(i) ? 1 : 0.45) : 0], [`${P}.val${i}`, "color", on ? C.pointer : C.subject]);
   });
-  out.push([`${P}.base`, "x", g.left], [`${P}.base`, "y", g.base], [`${P}.base`, "scaleX", g.right - g.left], [`${P}.base`, "opacity", mode === "photo" ? 0 : 1]);
-  if (d.title) out.push([`${P}.title`, "x", st.x], [`${P}.title`, "y", g.titleY], [`${P}.title`, "opacity", mode === "photo" ? 0 : 1]);
+  const A = g.axis;
+  // Lines are drawn by their own points, never by stretching a unit line: a stretched stroke stretches its caps too.
+  out.push([`${P}.base`, "points", [A.x0, A.y0, A.x1, A.y1].map((v) => Math.round(v * 10) / 10)], [`${P}.base`, "opacity", own ? 1 : 0]);
+  if (d.title && !d.texts) out.push([`${P}.title`, "x", st.x], [`${P}.title`, "y", st.y - st.h / 2 + MIN_FS * 0.9], [`${P}.title`, "opacity", own ? 1 : 0]);
+  // The chart's own words: a header row each; the one that is the subject now is set large in the pointer color.
+  for (const h of Object.keys(d.texts ?? {})) {
+    const isSub = st.sub === h || st.lit?.includes(h);
+    const isHeld = st.sup?.includes(h);
+    const fs = isSub ? Math.min(0.11 * W, (st.w * 0.62) / em(d.texts![h]!)) : MIN_FS * 1.1;
+    const w = em(d.texts![h]!) * fs * 1.12; // heavy type runs wider than measured; left-aligned words keep a margin
+    // A large row takes the first line of the header; the others step below it.
+    const keys = Object.keys(d.texts!);
+    const subI = keys.findIndex((x) => st.sub === x || st.lit?.includes(x));
+    const i = keys.indexOf(h);
+    const y = own && subI >= 0 ? (i === subI ? st.y - st.h / 2 + 0.11 * W * 0.6 : st.y - st.h / 2 + 0.11 * W * 1.2 + 8 + MIN_FS * 0.7 + (i < subI ? i : i - 1) * MIN_FS * 1.4) : g.heads[h]!;
+    // A large row is centered on the chart; small rows align to the bars' edge.
+    out.push([`${P}.hd.${h}`, "x", isSub && own ? st.x : g.headX + w / 2], [`${P}.hd.${h}`, "y", y], [`${P}.hd.${h}`, "scaleX", fs / 100], [`${P}.hd.${h}`, "scaleY", fs / 100], [`${P}.hd.${h}`, "opacity", own ? (isSub || isHeld || !focus ? 1 : 0.55) : 0], [`${P}.hd.${h}`, "color", isSub ? C.pointer : C.subject]);
+  }
   for (const part of pic.barsOf.keys()) {
-    const lv = mode === "own" ? st.levels?.find((l) => l.part === part) : undefined;
-    const idx = pic.barsOf.get(part)!;
-    const x0 = g.bars[idx[0]!]!.x - g.bars[idx[0]!]!.w / 2 - 12;
-    const x1 = g.bars[idx.at(-1)!]!.x + g.bars[idx.at(-1)!]!.w / 2 + 12;
-    const y = lv ? g.base - (lv.v / d.ymax) * g.plotH : g.base;
-    out.push([`${P}.lv.${part}`, "x", x0], [`${P}.lv.${part}`, "y", y], [`${P}.lv.${part}`, "scaleX", x1 - x0], [`${P}.lv.${part}`, "opacity", lv ? 1 : 0], [`${P}.lv.${part}`, "trimEnd", lv ? 1 : 0]);
-    out.push([`${P}.lt.${part}`, "x", (x0 + x1) / 2], [`${P}.lt.${part}`, "y", y - MIN_FS * 1.1], [`${P}.lt.${part}`, "opacity", lv?.tag ? 1 : 0]);
+    const lv = own ? st.levels?.find((l) => l.part === part) : undefined;
+    const bs = pic.barsOf.get(part)!.map((i) => g.bars[i]!);
+    const lo = g.hz ? Math.min(...bs.map((b) => b.y0)) - 12 : Math.min(...bs.map((b) => b.x0)) - 12;
+    const hi = g.hz ? Math.max(...bs.map((b) => b.y1)) + 12 : Math.max(...bs.map((b) => b.x1)) + 12;
+    const at = lv ? (g.hz ? A.x0 + lv.v * g.scale : A.y0 - lv.v * g.scale) : g.hz ? A.x0 : A.y0;
+    const [x, y, sx, sy] = g.hz ? [at, lo, 0, hi - lo] : [lo, at, hi - lo, 0];
+    out.push([`${P}.lv.${part}`, "points", [x, y, x + sx, y + sy].map((v) => Math.round(v * 10) / 10)], [`${P}.lv.${part}`, "opacity", lv ? 1 : 0], [`${P}.lv.${part}`, "trimEnd", lv ? 1 : 0]);
+    out.push([`${P}.lt.${part}`, "x", g.hz ? at : (lo + hi) / 2], [`${P}.lt.${part}`, "y", g.hz ? lo - MIN_FS * 0.8 : at - MIN_FS * 1.1], [`${P}.lt.${part}`, "opacity", lv?.tag ? 1 : 0]);
     if (lv?.tag) out.push([`${P}.lt.${part}`, "text", lv.tag]);
   }
   return out;
@@ -1126,10 +1343,230 @@ const CAM_PY = Y0;
 const camPan = (z: number) => CAM_PY - (CAM_PY - H / 2) / z;
 let camZ = 1;
 const camOp = (z: number, at: number, frames: number, ease: Ease) => {
+  ops.push({ id: "camera", prop: "panX", value: W / 2, at: Math.round(at), frames: Math.max(1, Math.round(frames)), ease });
   ops.push({ id: "camera", prop: "zoom", value: z, at: Math.round(at), frames: Math.max(1, Math.round(frames)), ease });
   ops.push({ id: "camera", prop: "panY", value: camPan(z), at: Math.round(at), frames: Math.max(1, Math.round(frames)), ease });
   camZ = z;
 };
+
+// The state of every object as the piece plays: how full, what color, what it flashes when something lands.
+const objState = new Map<string, { level: number; color?: string }>();
+for (const d of defs.values()) if (d.obj) objState.set(d.id, { level: d.obj.level, color: d.obj.liquid });
+const visibleIn = (k: number, id: string) => plans[k]!.slots.some((sl) => sl.id === id);
+// Flashes last from their moment until the vessel turns for good.
+const flashes: { dst: string; color: string; from: number; to: number }[] = [];
+fms.forEach((f, k) => {
+  for (const a of f.acts) {
+    if (a.verb !== "flashes") continue;
+    const c = colorOf(a.arg ?? "") ?? { hex: "#e8559a", alpha: 0.8 };
+    let to = FRAMES;
+    for (let m = k + 1; m < K; m++) if (fms[m]!.acts.some((b) => b.verb === "turns" && b.ids.includes(a.ids[0]!))) (to = onsets[m]!, (m = K));
+    flashes.push({ dst: a.ids[0]!, color: c.hex, from: onsets[k]!, to });
+  }
+});
+const flashAt = (dst: string, t: number) => flashes.find((x) => x.dst === dst && t >= x.from && t < x.to)?.color;
+const poolAt = new Map<string, number>();
+const nextOf = (name: string) => {
+  const j = poolAt.get(name) ?? 0;
+  poolAt.set(name, j + 1);
+  return `${name}.${j % POOL}`;
+};
+const toScreen = (it: Item, x: number, y: number) => ({ x: it.st.x + it.st.s * x, y: it.st.y + it.st.s * y });
+const ML_PER_S = 2.6;
+// A line that fills under a question while the viewer thinks: an ability, off unless asked for (the bench's eye
+// instrument showed it pulling the eye away from what the viewer should be predicting about).
+const THINK_LINE = process.env.THINK_LINE === "1"; // a quick stream from a burette
+function scheduleActs(k: number, at0: number, cur: Map<string, Item>) {
+  const f = fms[k]!;
+  const nextOn = onsets[k + 1] ?? FRAMES;
+  const pace = f.m.pace;
+  for (const a of f.acts) {
+    const A = a.ids[0]!;
+    const itA = cur.get(key(A));
+    const pa = defs.get(A)?.obj;
+    if (!itA || !pa) {
+      notes.push(`${tag(f.m)} "${A}" ${a.verb}: it is not an object on screen, so nothing moves`);
+      continue;
+    }
+    const st = objState.get(A)!;
+    if (a.verb === "flow") {
+      const B = a.to!;
+      const itB = cur.get(key(B));
+      const pb = defs.get(B)?.obj;
+      if (!itB || !pb) continue;
+      let end = FRAMES - 6;
+      for (let m = k + 1; m < K; m++) {
+        const stop = fms[m]!.acts.some((b) => (b.verb === "flow" && b.ids[0] === A) || (b.verb === "turns" && b.ids.includes(B))) || !visibleIn(m, A) || !visibleIn(m, B);
+        if (stop) (end = onsets[m]!, (m = K));
+      }
+      end = Math.max(at0 + 20, end - 18); // the flow stops a little before what follows, so the result is seen at rest
+      const slow = a.slow || (!a.fast && pace === "slow");
+      const every = slow ? 22 : 5;
+      const fallF = slow ? 12 : 9;
+      const hang = slow ? 14 : 0;
+      const tip = toScreen(itA, tipOf(pa).x, tipOf(pa).y);
+      const sB = objState.get(B)!;
+      const startA = st.level;
+      const startB = sB.level;
+      const n = Math.max(1, Math.floor((end - at0 - hang - fallF) / every));
+      const ml = slow ? 0.05 * n : (ML_PER_S * (end - at0)) / FPS;
+      const levelA = pa.shape === "burette" ? Math.max(0.05, startA - (ml / 50) * (0.96 - 0.0)) : Math.max(0, startA - 0.15);
+      const levelB = Math.min(0.78, startB + (slow ? 0.004 * n : 0.12));
+      for (let i = 0; i < n; i++) {
+        const t = at0 + i * every;
+        const tl = t + hang + fallF;
+        const u = (tl - at0) / Math.max(1, end - at0);
+        const land = toScreen(itB, 0, surfaceY(pb, startB + (levelB - startB) * u));
+        const d = nextOf(`drop.${A}`);
+        put(d, "x", tip.x, t - 1);
+        put(d, "y", tip.y + (slow ? 10 : 14), t - 1);
+        put(d, "scaleX", slow ? 2 : 10, t - 1);
+        put(d, "scaleY", slow ? 2 : 10, t - 1);
+        put(d, "opacity", 1, t, 2, "out");
+        if (slow) (put(d, "scaleX", 13, t, hang, "out"), put(d, "scaleY", 13, t, hang, "out"));
+        put(d, "y", land.y - 6, t + hang, fallF, "in");
+        put(d, "opacity", 0, tl, 2, "linear");
+        const fc = flashAt(B, tl);
+        const halfW = Math.abs(liquidPoly(pb, startB)[2]! - liquidPoly(pb, startB)[0]!) * itB.st.s * 0.5;
+        if (fc) {
+          const b = nextOf(`bloom.${B}`);
+          const jx = (((i * 37) % 9) - 4) / 4;
+          put(b, "fill", withAlpha(fc, 0.85), tl - 1);
+          put(b, "x", land.x + jx * halfW * 0.3, tl - 1);
+          put(b, "y", land.y + 14, tl - 1);
+          put(b, "scaleX", 0.25 * halfW, tl - 1);
+          put(b, "scaleY", 12, tl - 1);
+          put(b, "opacity", 1, tl, 3, "out");
+          put(b, "scaleX", 0.5 * halfW, tl, 10, "out");
+          put(b, "scaleY", 30, tl, 10, "out");
+          put(b, "opacity", 0, tl + 5, slow ? 40 : 18, "smooth");
+        }
+      }
+      // The levels move with the flow: the source drains, the vessel fills.
+      const dur = Math.max(1, end - at0);
+      put(`${key(A)}.liq`, "points", liquidPoly(pa, levelA), at0, dur, "linear");
+      put(`${key(A)}.surf`, "points", liquidPoly(pa, levelA).slice(0, 4), at0, dur, "linear");
+      put(`${key(B)}.liq`, "points", liquidPoly(pb, levelB), at0, dur, "linear");
+      put(`${key(B)}.surf`, "points", liquidPoly(pb, levelB).slice(0, 4), at0, dur, "linear");
+      st.level = levelA;
+      sB.level = levelB;
+      notes.push(`${tag(f.m)} ${A} drips into ${B} ${slow ? "one drop at a time (each drop hangs at the tip, then falls)" : "in a quick stream"}: ${n} drops until ${(end / FPS).toFixed(1)} s${pa.shape === "burette" ? `, about ${ml.toFixed(2)} mL, so the reading moves to ${buretteReading(levelA).toFixed(2)} mL` : ""}${flashes.some((x) => x.dst === B) ? `; drops that land while ${B} flashes make a bloom of color that fades` : ""}`);
+    } else if (a.verb === "flashes") {
+      if (![...flows.entries()].some(([, d]) => d === A)) notes.push(`${tag(f.m)} ${A} flashes, but nothing lands in it: the flash shows on its own`);
+      else notes.push(`${tag(f.m)} ${A} flashes ${a.arg ?? ""}: from here every drop that lands blooms and fades`);
+    } else if (a.verb === "turns" || a.verb === "fills") {
+      if (a.verb === "turns") {
+        const c = colorOf(a.arg ?? "");
+        if (!c) {
+          notes.push(`${tag(f.m)} ${A} turns "${a.arg}": no color in it, so it only pulses`);
+          plays.push({ at: at0 + 4, target: key(A), behavior: "pulse", args: { size: 1.05, frames: 16 } });
+          continue;
+        }
+        const col = withAlpha(c.hex, c.alpha);
+        const node2 = pa.kind === "vessel" ? `${key(A)}.liq` : pa.kind === "ball" ? `${key(A)}.ball` : undefined;
+        if (node2) put(node2, "fill", col, at0 + 4, pace === "slow" ? 40 : 26, "smooth");
+        st.color = col;
+        notes.push(`${tag(f.m)} ${A} turns ${a.arg}: its contents shift to that color over ${pace === "slow" ? "1.3" : "0.9"} s and stay`);
+      } else {
+        const pct = Number(/(\d+(?:\.\d+)?)/.exec(a.arg ?? "")?.[1] ?? "50") / 100;
+        put(`${key(A)}.liq`, "points", liquidPoly(pa, pct), at0 + 4, 30, "smooth");
+        put(`${key(A)}.surf`, "points", liquidPoly(pa, pct).slice(0, 4), at0 + 4, 30, "smooth");
+        st.level = pct;
+      }
+    } else if (a.verb === "moves") {
+      const g = key(A);
+      const amp = a.arg === "spins" ? 0 : 7;
+      if (a.arg === "spins") put(g, "rotate", 360, at0 + 2, 40, "smooth");
+      else [amp, -amp, amp * 0.8, -amp * 0.8, amp * 0.4, 0].forEach((v, i) => put(g, "rotate", v, at0 + 2 + i * 8, 8, "smooth"));
+      notes.push(`${tag(f.m)} ${A} ${a.arg}: it rocks on its base, ${amp} degrees each way, settling in 1.6 s`);
+    } else if (a.verb === "falls") {
+      const mem = a.ids.filter((x) => cur.has(key(x)));
+      const Fd = Math.round((pace === "slow" || f.m.reveal ? 54 : 36) * feelMul);
+      const t = at0 + 2;
+      for (const id of mem) {
+        const it = cur.get(key(id))!;
+        const drop = it.st.len;
+        put(key(id), "y", it.st.y + drop, t, Fd, "in");
+        put(key(id), "scaleY", it.st.s * 0.9, t + Fd, 3, "out");
+        put(key(id), "scaleX", it.st.s * 1.06, t + Fd, 3, "out");
+        put(key(id), "scaleY", it.st.s, t + Fd + 3, 8, "spring");
+        put(key(id), "scaleX", it.st.s, t + Fd + 3, 8, "spring");
+        const r = it.st.w / 2;
+        [0.3, 0.55, 0.8].forEach((fr, j) => {
+          const gh = `ghost.${id}.${j}`;
+          const when = t + Math.round(Fd * Math.cbrt(fr));
+          put(gh, "x", it.st.x, t - 1);
+          put(gh, "y", it.st.y - r + drop * fr, t - 1);
+          put(gh, "scaleX", r, t - 1);
+          put(gh, "scaleY", r, t - 1);
+          put(gh, "opacity", 0.16, when, 3, "out");
+          put(gh, "opacity", 0, nextOn - 6, 10, "smooth");
+        });
+      }
+      const g = fallGroups.find((x) => mem.every((y) => x.includes(y)));
+      if (g && g.length > 1 && mem.length > 1) {
+        const its = mem.map((id) => cur.get(key(id))!);
+        const x0 = Math.min(...its.map((i) => i.st.x));
+        const x1 = Math.max(...its.map((i) => i.st.x));
+        const yb = its[0]!.st.y;
+        const L = `level.${g.join(".")}`;
+        put(L, "points", [x0, 0, x1, 0], t - 1);
+        put(L, "y", yb, t - 1);
+        put(L, "opacity", 0.85, t, 4, "out");
+        put(L, "y", yb + its[0]!.st.len, t, Fd, "in");
+        put(L, "opacity", 0, t + Fd + 30, 14, "smooth");
+        notes.push(`${tag(f.m)} ${mem.join(" and ")} fall together over ${(Fd / FPS).toFixed(1)} s with gravity's ease; a dashed line joins their bottoms the whole way down and faint marks stay where they passed, so the eye sees they stay level`);
+      }
+    } else if (a.verb === "reads") {
+      const R = `read.${k}`;
+      const M = `readmark.${k}`;
+      const yLoc = surfaceY(pa, st.level);
+      const m = toScreen(itA, 0, yLoc);
+      const value = /\d/.test(a.arg ?? "") ? a.arg! : pa.shape === "burette" ? `${buretteReading(st.level).toFixed(2)} mL` : a.arg ?? "";
+      for (const [nn, kk] of readNums) if (kk === k) put(nn, "opacity", 0.9, at0 + 14, 12, "out");
+      const z = 2.4;
+      const fsW = (0.085 * W) / z;
+      const wTxt = em(value) * fsW;
+      ops.push({ id: "camera", prop: "zoom", value: z, at: at0 + 2, frames: 30, ease: "smooth" });
+      ops.push({ id: "camera", prop: "panX", value: m.x + wTxt / 2 + 20 / z, at: at0 + 2, frames: 30, ease: "smooth" });
+      ops.push({ id: "camera", prop: "panY", value: m.y, at: at0 + 2, frames: 30, ease: "smooth" });
+      camZ = z;
+      put(R, "text", value, at0);
+      put(R, "x", m.x + (itA.st.w / 2 + 40 / z) + wTxt / 2, at0);
+      put(R, "y", m.y - fsW * 0.9, at0);
+      put(R, "scaleX", fsW / 100, at0);
+      put(R, "scaleY", fsW / 100, at0);
+      put(R, "opacity", 1, at0 + 24, 10, "out");
+      put(M, "points", [m.x - itA.st.w / 2 - 14 / z, m.y, m.x + itA.st.w / 2 + 44 / z, m.y], at0);
+      put(M, "strokeWidth", 6 / z, at0);
+      put(M, "opacity", 1, at0 + 20, 8, "out");
+      notes.push(`${tag(f.m)} ${A} reads: the camera closes in ${z}x on the liquid's surface and the reading ${value} stands beside it${/\d/.test(a.arg ?? "") ? "" : " (read off the drawn scale, which the drops really emptied)"}`);
+    } else if (a.verb === "runs") {
+      const secs = Number(/(\d+(?:\.\d+)?)/.exec(a.arg ?? "")?.[1] ?? "30");
+      const deg = 360 * Math.min(1, secs / 60);
+      const hand = `${key(A)}.hand`;
+      const lab = `run.${k}`;
+      const fsr = 0.07 * W;
+      put(hand, "rotate", deg, at0 + 6, Math.max(20, nextOn - at0 - 12), "linear");
+      put(lab, "x", itA.st.x, at0);
+      put(lab, "y", itA.st.y + fsr * 0.8, at0);
+      put(lab, "scaleX", fsr / 100, at0);
+      put(lab, "scaleY", fsr / 100, at0);
+      put(lab, "opacity", 1, at0 + 4, 8, "out");
+      put(lab, "opacity", 0, nextOn, 8, "in");
+      notes.push(`${tag(f.m)} ${A} runs ${a.arg ?? ""}: its hand sweeps ${Math.round(deg)} degrees until the next moment, the time written under it`);
+    }
+  }
+  // A question gets a line under it that fills while the viewer thinks.
+  const q = THINK_LINE ? cur.get(`q.${k}`) : undefined;
+  if (q) {
+    const T = `think.${k}`;
+    put(T, "points", [q.st.x - q.st.w / 2, q.st.y + q.st.h / 2 + 22, q.st.x + q.st.w / 2, q.st.y + q.st.h / 2 + 22], at0);
+    put(T, "opacity", 0.8, at0 + 10, 6, "out");
+    put(T, "trimEnd", 1, at0 + 12, Math.max(10, nextOn - at0 - 16), "linear");
+    put(T, "opacity", 0, nextOn, 6, "in");
+  }
+}
 
 for (let k = 0; k < K; k++) {
   const f = fms[k]!;
@@ -1179,6 +1616,14 @@ for (let k = 0; k < K; k++) {
   const enOff = exits.length ? Math.max(Math.round(enOff0 * scale), Math.round(dEx * 0.9)) : Math.round(enOff0 * scale);
   let subjAt = t0 + enOff + STAG * entering.length;
   if (phDip) subjAt = Math.max(subjAt, t0 + 5);
+  // When a moment both demonstrates (things fall) and reveals words, the words wait for the landing: the viewer sees
+  // the answer happen, and the words confirm it.
+  const actAt = subjAt;
+  if (f.acts.some((a) => a.verb === "falls") && revealId && cur.get(revealId)?.type === "text") {
+    const wait = Math.round((f.m.pace === "slow" || f.m.reveal ? 54 : 36) * feelMul) + 4;
+    subjAt += wait;
+    notes.push(`${tag(f.m)} the revealed words wait ${(wait / FPS).toFixed(1)} s for the landing they describe`);
+  }
   const subjDur = lastId && prev.has(lastId) ? durMove(pxOf(lastId), pace) : base;
 
   // Exits: fade and slight shrink, accelerating.
@@ -1191,7 +1636,7 @@ for (let k = 0; k < K; k++) {
       continue;
     }
     put(id, "opacity", 0, t0, dEx, "in");
-    if (it.type === "text" || it.type === "ph" || it.type === "pic") {
+    if (it.type === "text" || it.type === "ph" || it.type === "pic" || it.type === "obj") {
       put(id, "scaleX", it.st.s * 0.92, t0, dEx, "in");
       put(id, "scaleY", it.st.s * 0.92, t0, dEx, "in");
     } else if (it.type === "many") put(`${id}.dots`, "scaleX", it.st.s * 0.92, t0, dEx, "in"), put(`${id}.dots`, "scaleY", it.st.s * 0.92, t0, dEx, "in");
@@ -1268,27 +1713,47 @@ for (let k = 0; k < K; k++) {
       const own = chartTargets(it, "own");
       const room = (onsets[k + 1] ?? FRAMES) - at;
       const pic = pics.get(id.slice(2))!;
-      if (room >= 50) {
+      const nextHas = k + 1 < K && laid[k + 1]!.items.has(id);
+      if (room < 70 && nextHas) {
+        // Too short to see the original and its redrawing in one moment: the original holds, and the next moment's
+        // own change is the redrawing (its bars move from the original's bars to their new places).
         for (const [n, p, v] of photo) put(n, p, v, t0 - 1);
         put(id, "opacity", 0, t0 - 1);
         put(id, "opacity", 1, at, 10, "out");
-        const tm = at + Math.min(60, Math.max(24, Math.round(room * 0.45)));
+        notes.push(`${tag(f.m)} ${pic.name}: the user's own chart shows as it is; the next moment redraws it on its own bars`);
+      } else if (room >= 30) {
+        for (const [n, p, v] of photo) put(n, p, v, t0 - 1);
+        put(id, "opacity", 0, t0 - 1);
+        put(id, "opacity", 1, at, 10, "out");
+        const tm = at + Math.max(22, Math.min(60, room - 40)); // every part of the redraw ends before the next moment
         pic.data!.values.forEach((_, i) => put(`${id}.bar${i}`, "opacity", 1, tm, 6, "out"));
         put(id, "opacity", 0, tm + 6, 10, "in");
         for (const [n, p, v] of own) {
           if (n === id && p === "opacity") continue;
-          const late = /\.(lv|lt|lab\d+|title|base)/.test(n) || p === "fill";
+          const late = /\.(lv|lt|lab\d+|val\d+|hd\.|title|base)/.test(n) || p === "fill";
           put(n, p, v, late ? tm + 22 : tm + 6, late ? 14 : 24, "smooth");
         }
         notes.push(`${tag(f.m)} ${pic.name}: the user's own chart shows as it is for ${((tm - at) / FPS).toFixed(1)} s, then its ${pic.data!.values.length} bars are redrawn on top of the originals and the chart grows to fill the stage`);
       } else {
+        const hz = pic.data!.orient === "h";
+        const base = new Map(own.filter(([n, p]) => /\.base$/.test(n) && p === "y").map(([, , v]) => ["y", v as number]));
+        const tri = new Map(own.map(([n, p, v]) => [`${n}|${p}`, v]));
         for (const [n, p, v] of own) {
           const bar = /\.bar(\d+)$/.exec(n);
-          if (bar && p === "scaleY") {
+          const delay = bar ? 4 * Number(bar[1]) : 0;
+          if (bar && p === (hz ? "scaleX" : "scaleY")) {
+            put(n, p, 0.5, t0 - 1);
+            put(n, p, v, at + delay, 16, "out");
+          } else if (bar && !hz && p === "y") {
+            const bottom = (v as number) + ((tri.get(`${n}|scaleY`) as number) ?? 0);
+            put(n, p, bottom, t0 - 1);
+            put(n, p, v, at + delay, 16, "out");
+          } else if (bar && p === "opacity") {
             put(n, p, 0, t0 - 1);
-            put(n, p, v, at + 2 * Number(bar[1]), 14, "out");
-          } else put(n, p, v, at, 10, "out");
+            put(n, p, v, at + delay, 6, "out");
+          } else put(n, p, v, at + (/\.(val|lv|lt)/.test(n) ? 20 : 0), 10, "out");
         }
+        void base;
         notes.push(`${tag(f.m)} ${pic.name}: the chart is redrawn in the style, its bars growing in one by one`);
       }
       return;
@@ -1316,6 +1781,9 @@ for (let k = 0; k < K; k++) {
         if (n === `${id}.dots` && (p === "scaleX" || p === "scaleY")) from = (v as number) * 0.9;
         if (n.endsWith(".lab") && p === "text") (from = v);
         if (born && n === id && (p === "x" || p === "y")) from = p === "x" ? born.st.x : born.st.y;
+      } else if (it.type === "obj") {
+        if (n === id && p === "opacity") (from = 0, (frames = 12));
+        if (n === id && (p === "scaleX" || p === "scaleY")) from = (v as number) * 0.92;
       } else if (it.type === "pic") {
         // The picture arrives whole, then its content closes in on the part and the marks draw on.
         if (n === id && p === "opacity") (from = 0, (frames = 10));
@@ -1376,11 +1844,21 @@ for (let k = 0; k < K; k++) {
     else if (it.st.sup?.length && it.st.sup.join() !== (before?.sup ?? []).join()) notes.push(`${tag(f.m)} picture ${pic.name}: kept part ${it.st.sup.join(", ")} gets a quiet outline${it.st.z > 1.08 ? `, the view eases to zoom ${it.st.z.toFixed(1)}x` : ""}, no dimming`);
     else if (!it.st.sub && !it.st.sup?.length && before && (before.sub || before.sup?.length)) notes.push(`${tag(f.m)} picture ${pic.name}: whole picture again, the zoom eases back and the marks leave`);
   }
+  scheduleActs(k, actAt, cur);
+  for (const [id, it] of cur) {
+    if (it.type !== "pic" || !pics.get(id.slice(2))!.data) continue;
+    const pic = pics.get(id.slice(2))!;
+    const set = chartSeen.get(id) ?? chartSeen.set(id, new Set()).get(id)!;
+    for (const part of [...(it.st.lit ?? []), it.st.sub, ...(it.st.sup ?? [])]) if (part) for (const i of pic.barsOf.get(part) ?? []) set.add(i);
+  }
+  if (f.m.reveal && cur.get(key(sid(f.m.reveal)!))?.type === "obj") plays.push({ at: subjAt + 6, target: key(sid(f.m.reveal)!), behavior: "pulse", args: { size: 1.05, frames: 18 } });
   // Camera: stress pushes in slowly; a long still moment gets a very slow push so the frame stays alive.
   const tEnd = subjAt + Math.max(subjDur, base) + 4;
   const nextOn = onsets[k + 1] ?? FRAMES;
   const window = nextOn - tEnd;
-  if (plan.stress && window > 20) (camOp(1.05, tEnd - 8, window + 8, "linear"), notes.push(`${tag(f.m)} stress: the subject is one size step larger and the camera pushes in slowly to 1.05 over ${(window / FPS).toFixed(1)} s`));
+  if (f.acts.some((a) => a.verb === "reads")) {
+    /* the camera is busy reading */
+  } else if (plan.stress && window > 20) (camOp(1.05, tEnd - 8, window + 8, "linear"), notes.push(`${tag(f.m)} stress: the subject is one size step larger and the camera pushes in slowly to 1.05 over ${(window / FPS).toFixed(1)} s`));
   else if (window > 60 && (nextOn - t0) / FPS > 3 && !plan.question) (camOp(1.02, tEnd, window, "linear"), notes.push(`${tag(f.m)} still for ${((nextOn - t0) / FPS).toFixed(1)} s: a very slow push 1 to 1.02 keeps the frame alive`));
   if (becomesNow.length) notes.push(`${tag(f.m)} ${becomesNow.map((i) => entOfKey(i)!.id).join(", ")} changes in place (old words lift and fade, new words rise, then a pulse)`);
 }

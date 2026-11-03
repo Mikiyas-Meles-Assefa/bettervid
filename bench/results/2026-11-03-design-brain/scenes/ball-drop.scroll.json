@@ -1,0 +1,17 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "A dark bowling ball and a small yellow tennis ball sit on a chalkboard. Nothing moves yet, but the two-ball contrast is mildly interesting."},
+    {"sheet": 2, "watching": false, "noticed": "Both balls are still sitting in the same place and nothing moves for four seconds. Only the caption changes. I would swipe away here."},
+    {"sheet": 3, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 4, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 5, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 6, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 7, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 8, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 9, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 10, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 11, "watching": false, "noticed": "Not looked at. I had already swiped away."},
+    {"sheet": 12, "watching": false, "noticed": "Not looked at. I had already swiped away."}
+  ],
+  "swiped_at": 2,
+  "remembers": "A bowling ball and a tennis ball dropped from the same height at the same moment. Gravity speeds both up at the same rate, so they land together, and only air resistance could split them."}

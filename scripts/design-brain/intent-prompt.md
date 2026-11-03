@@ -10,6 +10,11 @@ Name each thing once, before the first moment. A thing is what it means, not how
     thing rate "10% a year"
     many crowd 40 "person"             many of one kind, shown as countable marks
 
+    object flask "a glass flask of clear acid"
+    object ball "a heavy black bowling ball"
+
+`object` is a real thing the viewer should SEE, not read: an apparatus, a tool, an animal, a building, a ball, a document. Describe it in plain words: what it is, what it holds or is made of, how it looks. The engine draws it in the video's style, with parts that can change (a liquid that rises or changes color, a body that falls, a scale that can be read). Prefer an object over a word whenever the narration talks about a thing you could point at.
+
 Ids are short: letters, digits, `_`.
 
 Material the user gave (a photo, screenshot, chart, slide, diagram, code) is listed in the request by name, with its named parts. It is already a thing with that name, so do not declare it: `show chart` puts the whole picture up, and `show chart.jump` makes a named part the subject, which the engine finds inside the picture and draws the eye to. Prefer the user's own material over words whenever it shows what is being said.
@@ -31,9 +36,24 @@ Material the user gave (a photo, screenshot, chart, slide, diagram, code) is lis
     stress                  this moment matters most: the engine gives it more weight
     pace slow|normal|fast   how fast the viewer can take this in (slow for a first time)
 
+What objects do, in plain verbs (the engine animates it, timed to the words):
+
+    A drips into B fast     liquid leaves A and lands in B (fast: a quick stream of drops; slow: one drop at a time)
+    A pours into B
+    A turns "faint pink"    A's color or contents change, and stay changed
+    A flashes "pink"        A changes for a moment where something lands, then goes back
+    A swirls                A moves in place (also: shakes, spins)
+    A falls                 A drops under gravity; `A B fall` drops them together, side by side from one height
+    A fills "75%"           A's contents rise or fall to that level
+    A reads "24.30 mL"      the reading on A's scale, brought close so it can be read
+    A runs "30 s"           a clock or timer A runs that long
+    A moves to B            A travels to B
+
+Say what happens on the word where it happens. If a verb you need is not here, use the nearest one.
+
 Rules that make it work:
 - Each moment has exactly one `show`. Use `keep` for anything else that must stay visible.
-- Anything not named in a moment (by `show`, `keep`, `compare`, `->`, `from` or `wrong`) leaves the screen. So name only what matters now.
+- Anything not named in a moment (by `show`, `keep`, `compare`, `->`, `from`, `wrong` or a verb line) leaves the screen. So name only what matters now.
 - Put a moment on the word where the viewer should start looking at the new thing, usually the word that names it.
 - A number the voice says should be on screen as a thing when it matters; words the voice already says need not be.
 - Do not give away an answer before the words do. Use `ask` before a `reveal` when the viewer could guess.

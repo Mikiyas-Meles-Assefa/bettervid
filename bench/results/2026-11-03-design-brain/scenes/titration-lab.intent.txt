@@ -1,0 +1,47 @@
+feel serious
+for new
+
+object burette "a glass burette with a tap, full of clear sodium hydroxide, with a volume scale"
+object flask "a conical flask holding clear acid with a few drops of phenolphthalein"
+object timer "a stopwatch that counts seconds"
+
+@0
+    show burette
+    keep flask
+    ask "When do you stop?"
+@15
+    show burette
+    burette drips into flask fast
+    keep flask
+    pace normal
+@22
+    show flask
+    flask flashes "pink"
+    keep burette
+@31
+    show flask
+    flask swirls
+    keep burette
+@34
+    show flask
+    flask turns "pink"
+    keep burette
+@38
+    show burette
+    burette drips into flask slow
+    keep flask
+    pace slow
+@46
+    reveal flask
+    flask turns "faint pink"
+    keep burette
+    stress
+@51
+    show flask
+    keep timer
+    timer runs "30 s"
+    stress
+@53
+    show burette
+    burette reads "the volume"
+    keep flask

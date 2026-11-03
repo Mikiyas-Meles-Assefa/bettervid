@@ -1,0 +1,32 @@
+feel bold
+for new
+
+thing answer "They land together"
+thing air "air resistance"
+object bowl_ball "a heavy black bowling ball"
+object tennis "a light yellow tennis ball"
+withhold bowl_ball tennis until=@19
+
+@0
+  show bowl_ball
+  keep tennis
+  pace slow
+@16
+  ask "Which lands first?"
+  show bowl_ball
+  keep tennis
+@19
+  show bowl_ball
+  keep tennis
+  bowl_ball tennis fall
+  reveal answer
+@22
+  show bowl_ball
+  keep tennis
+  stress
+@34
+  show air
+  keep bowl_ball tennis
+@44
+  show air
+  keep bowl_ball tennis

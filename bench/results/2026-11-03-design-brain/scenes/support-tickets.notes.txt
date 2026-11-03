@@ -1,0 +1,8 @@
+feel calm, for new, style flat, 9 moments, 38 nodes
+picture slide is a chart with its data (4 bars): it is shown as it is first, then redrawn in the style on its own bars
+@26 moved 0.5 s later so @24 (reveal) holds 1.4 s
+@26 arrow label "half the queue goes away" is dropped: words stay off the picture
+@23 ask: think time 2.0 s (a placeholder waits in the slot of the reveal)
+@0 slide: the user's own chart shows as it is; the next moment redraws it on its own bars
+@24 reveal rest: the placeholder dips for 5 frames, then it pops in with an overshoot in the answer color
+@26 stress: the subject is one size step larger and the camera pushes in slowly to 1.05 over 3.4 s
