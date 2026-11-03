@@ -142,9 +142,7 @@ export const render: Step = async (run, ids) => {
     writeWatchTasks(run, id, b.p);
     console.log(`${id}: ${mp4} in ${((Date.now() - t0) / 1000).toFixed(0)} s, ${readdirSync(sheets).length} sheets`);
   }
-  // The bundle is about 30 MB in the system's temp folder; it is ours alone, so it goes once the clips are made.
-  rmSync(url, { recursive: true, force: true });
-  bundled = undefined;
+  // The bundle stays in the bench's bundle cache (work/.bundles) for later cases and runs.
 };
 
 // The tasks the watch tests give their agents: the quiz without answers, and where the sheets and words are.
