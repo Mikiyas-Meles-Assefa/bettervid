@@ -4,6 +4,7 @@
 import { readFileSync } from "node:fs";
 import { ARRANGEMENTS } from "../compose/pack.ts";
 import { instruments } from "../instruments/index.ts";
+import { LAYOUT } from "../search/evaluate.ts";
 import type { Decided, From, Goal, IntentPlan, PartCard, Requirement, Viewing, Word } from "../types.ts";
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -31,6 +32,8 @@ export function planNames(plan: IntentPlan, cards: PartCard[] = []): Set<string>
   }
   // Ids a moment names that no line declares (a part of the material written only in a moment) count too.
   for (const m of plan.moments) for (const id of [m.show, m.reveal, ...m.keep, ...(m.compare ?? []), ...m.wrong, ...m.acts.flatMap((a) => a.ids)]) if (id) out.add(id);
+  // The composer names a moment's question as ask@<its word> (compose.ts ids), so a goal can measure it.
+  for (const m of plan.moments) if (m.ask) out.add(`ask@${m.word}`);
   return out;
 }
 
@@ -151,6 +154,8 @@ export function settingNames(describe: string): string[] {
 /** Problems with a value name for an instrument: unknown names, and placeholders that name nothing in the plan. */
 export function valueProblem(describe: string, value: string, names: Set<string>, holds: Set<string>): string | undefined {
   const pats = valueNames(describe);
+  // A value the description names in full (area.anchor) is known before any pattern with a placeholder (area.<name>).
+  if (pats.includes(value)) return undefined;
   for (const p of pats) {
     const segs = p.split(/\.(?![^<]*>)/);
     const vs = value.split(".");
@@ -212,8 +217,9 @@ export function checkGoals(goals: Goal[], ctx: GoalCtx, at: string): string[] {
     if (g.scope && g.scope !== ctx.scope) out.push(`${p}: scope is "${g.scope}", but this answer writes ${ctx.scope} goals`);
     if (ctx.scope === "moment" && g.moment !== undefined && g.moment !== ctx.moment) out.push(`${p}: moment ${g.moment}, but this answer is about moment ${ctx.moment}`);
     if (ctx.scope === "video" && g.moment !== undefined) out.push(`${p}: a video goal has no moment (moment goals are the designer's)`);
-    const inst = instruments[g.instrument];
-    if (!inst) return void out.push(`${p}: no instrument "${g.instrument}" (there are ${Object.keys(instruments).join(", ")})`);
+    // The search's own reading of the composer's boxes counts as an instrument too (search/evaluate.ts LAYOUT).
+    const inst = instruments[g.instrument] ?? (g.instrument === LAYOUT.name ? { describe: LAYOUT.describe, suggest: () => LAYOUT.suggested } : undefined);
+    if (!inst) return void out.push(`${p}: no instrument "${g.instrument}" (there are ${[LAYOUT.name, ...Object.keys(instruments)].join(", ")})`);
     const vp = typeof g.value === "string" ? valueProblem(inst.describe, g.value, ctx.names, ctx.holds) : `value should be a value name`;
     if (vp) out.push(`${p}: ${vp}`);
     const want = g.want ?? {};

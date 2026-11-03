@@ -28,9 +28,9 @@ export const newCache = (limit = 40): EvalCache => ({ compositions: new Map(), r
 export const LAYOUT = {
   name: "layout",
   describe:
-    "The composer's own boxes on the moment's settled layout, as shares of the frame. Values: area.<plan name> (share of the frame's area its box covers), w.<plan name> and h.<plan name> (shares of the frame's width and height), " +
-    "and the same for anchor (the moment's subject, or the stage that holds it): area.anchor, w.anchor, h.anchor; stage when a stage is on screen. " +
-    "Under the moment's camera at its closest (its zoom about its fixed point): out.<plan name> (share of the box's area outside the frame) and outMax (the largest). No settings.",
+    "The composer's own boxes on the moment's settled layout, as shares of the frame. Values: area.<plan name> (share of the frame's area its box covers), w.<plan name> (share of the frame's width), h.<plan name> (share of its height), " +
+    "area.anchor, w.anchor, h.anchor (the same for the moment's subject, or the stage that holds it), stage (present when a stage is on screen), " +
+    "out.<plan name> (share of the box's area outside the frame under the moment's camera at its closest, its zoom about its fixed point), outMax (the largest of those). Settings: none.",
   suggested: {},
 };
 

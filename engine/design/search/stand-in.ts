@@ -1,7 +1,7 @@
 // A plain implementation of the designer and viewer side of the Agents contract (engine/design/agents/api.ts), so the
 // search loop runs end to end before engine/design/agents lands. It writes what the agent is given as plain text and
 // applies answers literally; it decides nothing. The director side passes its answer through as it is written. When
-// engine/design/agents exports its own Agents, callers use that instead (see agentsFor in scripts/design-brain/search.ts).
+// engine/design/agents exports its own Agents, callers use that instead (engine/design/search/design.ts brainAgents).
 import type { Agents, DesignerAnswer, DesignerInput, DirectorAnswer, ViewerInput } from "../agents/api.ts";
 import { idsOf } from "../intent/parse.ts";
 import type { AgentTask, Design, Goal } from "../types.ts";

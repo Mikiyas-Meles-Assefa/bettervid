@@ -156,7 +156,7 @@ test("an unanswered task stops the run as pending; the call budget leaves the le
   const done = (t: AgentTask): DesignerAnswer => ({ goals: [goal(Number(t.id.match(/\.m(\d+)\./)![1]), {})], space: {}, overrides: [], proposals: [], done: true, why: "" });
   const pend = await runSearch({ plan, design: d, director: keepDirector(d, "t"), cards: [], words, holds: [], theme, frames, agents: standInAgents(), reasoner: memory(() => undefined), dir: "/tmp/unused" });
   assert.equal(pend.status, "pending");
-  assert.equal(pend.pending.length, 1);
+  assert.equal(pend.pending.length, 2, "the moments within the budget are asked side by side");
   assert.equal(pend.moments.find((m) => m.status === "pending")?.moment, 1, "the most important moment is asked first");
   const r = await runSearch({ plan, design: d, director: keepDirector(d, "t"), cards: [], words, holds: [], theme, frames, agents: standInAgents(), reasoner: memory(done), dir: "/tmp/unused" });
   assert.equal(r.status, "done");
@@ -169,7 +169,7 @@ test("the viewer panel's pick and fixes are measured and kept", async () => {
   d.budget = { candidatesPerMoment: 4, rounds: 1, calls: 4 };
   const reasoner = memory((t) => {
     if (t.role === "designer") return { goals: [goal(1, {})], space: { subjectScale: [0.5, 0.9] }, overrides: [], proposals: [], done: true, why: "" } satisfies DesignerAnswer;
-    const ids = t.request.match(/Candidates: (.*)\./)![1]!.split(", ");
+    const ids = t.request.match(/Candidates: (.*)\./)![1]!.split("; ");
     return { seats: [{ who: "a scroller", candidate: ids.at(-1)!, saw: "the bowl", remembers: "the bowl", problems: [], wouldKeepWatching: true }], pick: ids.at(-1)!, fixes: [{ candidate: ids.at(-1)!, field: "supportOpacity", value: 0.4, why: "the jug competes" }] } satisfies ViewerAnswer;
   });
   const stills = { async stills(_s: unknown, fs: number[], _d: string, tag: string) { return fs.map((f) => `${tag}-${f}.jpg`); } };

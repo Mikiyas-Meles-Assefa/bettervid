@@ -4,10 +4,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { evaluate } from "../../engine/core/evaluate.ts";
 import type { Resolved, Scene } from "../../engine/core/types.ts";
-import { composeOnce } from "../lib/design-run.ts";
+import { compose } from "../../engine/design/compose/compose.ts";
+import { suggestDesign } from "../../engine/design/suggest.ts";
 import { checkPlan, intentSystem, materialText, wholeLanguage } from "../lib/intent-author.ts";
 import { parseIntent } from "../../engine/design/intent/parse.ts";
 import { viewingFrom } from "../../engine/design/suggest.ts";
+import { designRunner } from "../lib/design-run.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { loadLibrary } from "../../engine/language/library.ts";
 import type { PartCard } from "../../engine/design/types.ts";
@@ -70,9 +72,10 @@ test("window keys cut in one frame, and touching windows are one", () => {
 test("a composed part shows only in its window, over a language scene hidden there", async () => {
   const theme = themeFrom("flat");
   const viewing = viewingFrom({ width: 1080, height: 1920, fps: 30, screen: "phone", frameWidthMm: 65, distanceMm: 300, watch: "glancing", why: "test" });
-  const out = await composeOnce("", { plan: parseIntent(PLAN), words, holds: [], range, frames: 300, cards: [], requirements: [], assets: {}, brief: "", theme, styleName: "flat", viewing }, { ask: async () => assert.fail("composing once asks no agent") });
+  // A composed part (here the style's suggested design, composed once: gating does not depend on how it was designed).
+  const plan = parseIntent(PLAN);
+  const out = compose(plan, suggestDesign(plan, viewing, theme, [], words), { theme, words, frames: 300 });
   assert.ok(out.scene.nodes.length > 0);
-  assert.ok(out.notes[0]!.includes("no design search"));
   const base: Scene = { fps: 30, width: 1080, height: 1920, frames: 300, background: "#fff", nodes: [{ id: "title", kind: "text", props: { text: "Hi", opacity: 1 } }], tracks: [], events: [] };
   const whole = gateScenes(base, [{ id: "s2", scene: out.scene, from: 100, to: 200 }]);
   const before = ids(evaluate(whole, 50));
@@ -84,6 +87,12 @@ test("a composed part shows only in its window, over a language scene hidden the
   assert.equal(during.get("s2__"), 1);
   assert.equal(after.get("s2__"), 0);
   assert.ok([...during.keys()].filter((k) => k.startsWith("s2__")).length === out.scene.nodes.length + 1);
+});
+
+test("the scene stage's design brain is the whole run with the real agents, not a composition without agents", () => {
+  const { run, agents } = designRunner();
+  assert.equal(run.length, 4);
+  assert.ok(agents?.checkDirector && agents.checkDesigner && agents.checkViewer && agents.applyCorrections);
 });
 
 test("image sources map both ways", () => {

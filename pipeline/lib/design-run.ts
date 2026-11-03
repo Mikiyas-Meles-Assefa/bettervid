@@ -1,36 +1,17 @@
-// Where the scene stage hands an intent plan to the design brain. The search loop (director, designer, viewer and the
-// instruments, engine/design/search) and the agents that drive it (engine/design/agents) are set here by whoever wires
-// them in, with `useDesignRun`, so the scene stage depends only on this contract and not on how the search is built.
+// Where the scene stage hands an intent plan to the design brain: runDesign (engine/design/search/design.ts), the one
+// run that asks the depicter and the director, searches every moment with the designer and the viewer panel, composes
+// the whole video and measures it against the director's goals. The scene stage depends only on this contract;
+// `useDesignRun` sets another run or other agents (tests inject fakes there).
 //
-// Until a search is set, a plan is composed once with the style's suggested design (engine/design/suggest.ts and
-// compose.ts): the same composer the search runs, with no candidates tried. Every result says which one made it, as a
-// visible note, so a video made without the search never passes for one made with it.
+// In production the Reasoner is a Meta model, which always answers (or fails loudly), so a run never stays pending; a
+// run that does is an error, never a lesser composition.
 import type { Scene, Theme } from "../../engine/core/types.ts";
-import type { Agents, DirectorAnswer } from "../../engine/design/agents/api.ts";
-import { compose } from "../../engine/design/compose/compose.ts";
-import { suggestDesign } from "../../engine/design/suggest.ts";
-import type { DecisionRecord, Design, IntentPlan, PartCard, Reasoner, Requirement, Viewing, Word } from "../../engine/design/types.ts";
+import type { DirectorAnswer } from "../../engine/design/agents/api.ts";
+import { brainAgents, runDesign, type DesignAgents, type DesignInputs, type DesignOptions } from "../../engine/design/search/design.ts";
+import { remotionStills, type StillRenderer } from "../../engine/design/search/sheet.ts";
+import type { DecisionRecord, Design, Reasoner } from "../../engine/design/types.ts";
 
-export type DesignInputs = {
-  plan: IntentPlan;
-  /** Every spoken word of the video, with global numbers, so the plan's `@N` and the scene's frames are the video's own. */
-  words: Word[];
-  holds: { id: string; afterWord: number; seconds: number; purpose?: string }[];
-  /** The part of the narration this plan covers. */
-  range: { id: string; firstWord: number; lastWord: number };
-  frames: number;
-  cards: PartCard[];
-  requirements: Requirement[];
-  /** The user's pictures by card name, as URLs the renderer can load (data URLs for stills). */
-  assets: Record<string, string>;
-  /** The user's request and what the plan stage knows, in plain text. */
-  brief: string;
-  /** The direction's events for this part, in plain text. */
-  direction?: string;
-  theme: Theme;
-  styleName: string;
-  viewing: Viewing;
-};
+export type { DesignInputs };
 
 export type DesignResult = {
   scene: Scene;
@@ -41,20 +22,28 @@ export type DesignResult = {
   corrections: DirectorAnswer["corrections"];
 };
 
-/** Runs the design brain on one plan, keeping its working files (candidates, sheets, readings) under `dir`. */
-export type DesignRun = (dir: string, inputs: DesignInputs, reasoner: Reasoner, agents?: Agents) => Promise<DesignResult>;
+/** Runs the design brain on one plan, keeping its working files (tasks, sheets, readings, decisions) under `dir`. */
+export type DesignRun = (dir: string, inputs: DesignInputs, reasoner: Reasoner, agents?: DesignAgents) => Promise<DesignResult>;
 
-/** One composition with the style's suggested design: no search, no agents. */
-export const composeOnce: DesignRun = async (_dir, x) => {
-  const design = suggestDesign(x.plan, x.viewing, x.theme, x.cards, x.words);
-  const out = compose(x.plan, design, { theme: x.theme, words: x.words, frames: x.frames, cards: x.cards, assets: x.assets });
-  return { scene: out.scene, design, decisions: [...design.decisions, ...out.decisions], notes: ["composed once with the style's suggested design: no design search was set", ...out.notes], corrections: [] };
-};
+/**
+ * The design brain with the given options: repair rounds, and stills for the contact sheets the designer and the viewer
+ * panel look at (a renderer, or one made for the video's theme).
+ */
+export function designRun(opts: Omit<DesignOptions, "stills"> & { stills?: StillRenderer | ((theme: Theme) => StillRenderer) } = {}): DesignRun {
+  return async (dir, inputs, reasoner, agents) => {
+    const stills = typeof opts.stills === "function" ? opts.stills(inputs.theme) : opts.stills;
+    const r = await runDesign(dir, inputs, reasoner, agents ?? brainAgents, { ...opts, stills });
+    if (r.status === "pending") throw new Error(`the design brain is waiting on ${r.waiting.length} agent task${r.waiting.length > 1 ? "s" : ""} the reasoner did not answer: ${r.waiting.slice(0, 3).join(", ")}`);
+    return { scene: r.scene, design: r.design, decisions: r.decisions, notes: r.notes, corrections: r.corrections };
+  };
+}
 
-let current: { run: DesignRun; agents?: Agents } = { run: composeOnce };
+// Contact sheets are rendered small (a fifth of the frame) with the engine's preview composition; the stills are deleted
+// once a sheet is joined.
+let current: { run: DesignRun; agents?: DesignAgents } = { run: designRun({ stills: (theme) => remotionStills({ theme, scale: 0.2 }) }), agents: brainAgents };
 
-/** Sets the design brain the scene stage uses: the search's run function and the agents it calls. */
-export function useDesignRun(run: DesignRun, agents?: Agents) {
+/** Sets the design brain the scene stage uses: the run function and the agents it calls. */
+export function useDesignRun(run: DesignRun, agents?: DesignAgents) {
   current = { run, agents };
 }
 
