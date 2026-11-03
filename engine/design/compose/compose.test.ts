@@ -402,3 +402,21 @@ test("a redrawn chart's words follow the moment's type scale", () => {
   const size = (ts: number) => Number(at(run(view(1080, 1920), (d) => (d.moments[0]!.typeScale = { value: ts, from: "designer" }), plan, [card]).out, 200).get("p.chart.lab0")!.props.scaleX);
   assert.ok(size(1.4) > size(1) * 1.3, `${size(1)} then ${size(1.4)}`);
 });
+
+test("a share said over a chart stands at that share of the total, and a pointer to a bar points at its value", () => {
+  const card: PartCard = { name: "slide", file: "x.png", size: [1280, 720], kind: "chart", about: "tickets", parts: { "bar-a": { box: [0.2, 0.2, 0.9, 0.5], about: "bar a" }, "bar-b": { box: [0.2, 0.5, 0.6, 0.9], about: "bar b" } }, data: { kind: "bars", orient: "h", labels: ["a", "b"], values: [412, 268], unit: "tickets", ymax: 412, total: 840, plot: [0.2, 0.2, 0.9, 0.9], parts: ["bar-a", "bar-b"] }, requirements: [], checked: { ok: true, notes: [] } };
+  const plan = parseIntent(`thing half "almost half"\n@0\n  show slide.bar-a\n  keep slide\n@10\n  show half\n  keep slide.bar-a`);
+  const { out } = run(view(1080, 1920), (d) => d.moments[1]!.proposals.push({ value: { kind: "pointer", ids: ["half", "slide.bar-a"] }, from: "designer", why: "joins the words to the bar" }), plan, [card]);
+  const s = at(out, 400);
+  const bar = s.get("p.slide.bar0")!.props.points as number[];
+  const lv = s.get("p.slide.lv.bar-a")!.props.points as number[];
+  const xs = [bar[0]!, bar[2]!, bar[4]!, bar[6]!];
+  const [bx0, bx1] = [Math.min(...xs), Math.max(...xs)];
+  // The level is at 420 of 840: just past the 412 bar's end, on the chart's own scale (which reaches it).
+  assert.ok(lv[0]! > bx1, `level ${lv[0]} beyond the bar's end ${bx1}`);
+  assert.ok(Math.abs((lv[0]! - bx0) / (bx1 - bx0) - 420 / 412) < 0.02, `level at ${(lv[0]! - bx0) / (bx1 - bx0)} of the bar`);
+  const ptr = [...s.keys()].find((k) => k.startsWith("parrow."));
+  assert.ok(ptr, "the pointer is drawn");
+  const pts = s.get(ptr!)!.props.points as number[];
+  assert.ok(pts[2]! > bx0 + (bx1 - bx0) * 0.9, `the pointer ends at the bar's value end (${pts[2]}), not its middle`);
+});

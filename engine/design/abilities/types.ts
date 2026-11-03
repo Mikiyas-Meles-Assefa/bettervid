@@ -41,6 +41,21 @@ export const blankSt = (color: string): St => ({ x: 0, y: 0, s: 1, op: 1, color,
 export type Measure = (text: string, size: number, font?: string) => number;
 
 /** A number in a text, and what it counts: a symbol ($ % and the like) is a unit by itself, otherwise the word after it. */
+/**
+ * The share a phrase names of something else ("almost half", "a third of", "three quarters", "40%"), when it names one:
+ * a share is never a value by itself, only of what it is a share of.
+ */
+export function fractionOf(t: string): number | undefined {
+  const s = t.toLowerCase();
+  const pct = /(\d+(?:\.\d+)?)\s*(%|percent|per cent)/.exec(s);
+  if (pct) return Number(pct[1]) / 100;
+  const count: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
+  const part: Record<string, number> = { half: 2, halves: 2, third: 3, thirds: 3, quarter: 4, quarters: 4, fourth: 4, fourths: 4, fifth: 5, fifths: 5, tenth: 10, tenths: 10 };
+  const m = /\b(?:(a|an|one|two|three|four|five|six|seven|eight|nine)[\s-]+)?(half|halves|thirds?|quarters?|fourths?|fifths?|tenths?)\b/.exec(s);
+  if (!m) return undefined;
+  return (m[1] ? count[m[1]]! : 1) / part[m[2]!]!;
+}
+
 export function numOf(t: string): { v: number; unit: string } | undefined {
   const m = /\d[\d,]*(?:\.\d+)?/.exec(t);
   if (!m) return undefined;

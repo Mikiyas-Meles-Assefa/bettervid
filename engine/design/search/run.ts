@@ -240,9 +240,11 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
       if (!input.stills || !input.sheet || !rows.length) return undefined;
       const window = windowOf(plan, withMoment(d, rows[0]!.design), words, k, input.frames);
       const list = rows.map((c) => ({ label: `${c.id} ${c.label}: miss ${c.total.toFixed(2)}`, d: withMoment({ ...d, overrides: [...d.overrides, ...(extra.get(c.id) ?? [])] }, c.design) }));
-      const file = `${input.dir}/sheets/m${k}.${r}.jpg`;
-      // A sheet of the same designs over the same window is not rendered again (a resumed run replays its rounds).
+      // A sheet of the same designs over the same window is not rendered again (a resumed run replays its rounds). Its
+      // name carries what it shows, so a task names exactly the sheet of its own candidates: a later run whose round
+      // made other candidates writes another sheet, never over the one an earlier task still points at.
       const key = createHash("sha1").update(JSON.stringify({ rows: list.map((x) => [x.label, designHash(x.d)]), window, frames: input.sheet.frames })).digest("hex");
+      const file = `${input.dir}/sheets/m${k}.${r}.${key.slice(0, 10)}.jpg`;
       if (existsSync(file) && existsSync(`${file}.key`) && readFileSync(`${file}.key`, "utf8") === key) return file;
       const made = await candidateSheet(list.map((x) => ({ label: x.label, scene: composeCached(plan, x.d, ectx).scene })), window, input.sheet.frames, fps, file, input.stills, input.sheet);
       if (existsSync(file)) writeFileSync(`${file}.key`, key);

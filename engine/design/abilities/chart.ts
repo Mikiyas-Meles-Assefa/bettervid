@@ -6,7 +6,8 @@ import { REFW, type Pic } from "./picture.ts";
 import type { St, Triple } from "./types.ts";
 import type { Writer } from "./writer.ts";
 
-export type Chart = Pic & { data: ChartData & { ymax: number }; barsOf: Map<string, number[]> };
+/** `reach`: the largest value the redrawn chart must show on its own scale (a level beyond its longest bar); the original keeps its own axis. */
+export type Chart = Pic & { data: ChartData & { ymax: number; reach?: number }; barsOf: Map<string, number[]> };
 
 /** A round ceiling for a scale when the data gives none: the next 1, 2 or 5 times a power of ten above the largest value. */
 export function niceCeil(v: number): number {
@@ -167,6 +168,7 @@ export function chartGeom(st: St, p: Chart, mode: "own" | "photo", L: ChartLook)
   }
   const left = st.x - st.w / 2;
   const top = st.y - st.h / 2;
+  const scaleMax = Math.max(d.ymax, d.reach ?? 0);
   const fit = chartFit({ w: st.w, h: st.h, sub: st.sub, lit: st.lit }, p, L);
   const { small, valueFs } = fit;
   // Header rows: the chart's own words above the plot, the one in focus first and large, each broken into lines.
@@ -196,9 +198,9 @@ export function chartGeom(st: St, p: Chart, mode: "own" | "photo", L: ChartLook)
       labels.push({ x: left, y: yy + lh / 2, left: true, lines: fit.lines[i]!, lh, fs: small });
       const y0 = yy + labH[i]!;
       yy = y0 + thick + spare;
-      return { x0: left, x1: left + (v / d.ymax) * len, y0, y1: y0 + thick };
+      return { x0: left, x1: left + (v / scaleMax) * len, y0, y1: y0 + thick };
     });
-    return { hz: true, bars, axis: { x0: left, y0: plotTop + labH[0]! * 0.7, x1: left, y1: Math.max(plotTop, yy - spare) }, scale: len / d.ymax, labels, heads: headsAt, headX: left, pw: st.w, ph: st.h, small, valueFs, fits: fit.fits, needH: fit.needH };
+    return { hz: true, bars, axis: { x0: left, y0: plotTop + labH[0]! * 0.7, x1: left, y1: Math.max(plotTop, yy - spare) }, scale: len / scaleMax, labels, heads: headsAt, headX: left, pw: st.w, ph: st.h, small, valueFs, fits: fit.fits, needH: fit.needH };
   }
   const labRows = Math.max(...fit.lines.map((l) => l.length));
   const labH = labRows * lh * 1.05;
@@ -206,8 +208,8 @@ export function chartGeom(st: St, p: Chart, mode: "own" | "photo", L: ChartLook)
   const plotH = Math.max(0, base - (top + headH + L.gap + valueFs * L.rowLine));
   const slot = st.w / n;
   const m = (1 - L.barFrac) / 2;
-  const bars: BarR[] = d.values.map((v, i) => ({ x0: left + (i + m) * slot, x1: left + (i + 1 - m) * slot, y1: base, y0: base - (v / d.ymax) * plotH }));
-  return { hz: false, bars, axis: { x0: left, y0: base, x1: left + st.w, y1: base }, scale: plotH / d.ymax, labels: bars.map((b, i) => ({ x: (b.x0 + b.x1) / 2, y: base + lh * 0.6, left: false, lines: fit.lines[i]!, lh, fs: small })), heads: headsAt, headX: left, pw: st.w, ph: st.h, small, valueFs, fits: fit.fits, needH: fit.needH };
+  const bars: BarR[] = d.values.map((v, i) => ({ x0: left + (i + m) * slot, x1: left + (i + 1 - m) * slot, y1: base, y0: base - (v / scaleMax) * plotH }));
+  return { hz: false, bars, axis: { x0: left, y0: base, x1: left + st.w, y1: base }, scale: plotH / scaleMax, labels: bars.map((b, i) => ({ x: (b.x0 + b.x1) / 2, y: base + lh * 0.6, left: false, lines: fit.lines[i]!, lh, fs: small })), heads: headsAt, headX: left, pw: st.w, ph: st.h, small, valueFs, fits: fit.fits, needH: fit.needH };
 }
 
 /** The screen box of a part of the redrawn chart (the bars it covers, or a header row). */
@@ -216,6 +218,17 @@ export function chartPartBox(st: St, p: Chart, part: string, L: ChartLook) {
   const bs = (p.barsOf.get(part) ?? []).map((i) => g.bars[i]!);
   if (!bs.length) return { x0: st.x - st.w / 2, y0: st.y - st.h / 2, x1: st.x + st.w / 2, y1: st.y - st.h / 2 + L.headBig };
   return { x0: Math.min(...bs.map((b) => b.x0)), y0: Math.min(...bs.map((b) => b.y0)), x1: Math.max(...bs.map((b) => b.x1)), y1: Math.max(...bs.map((b) => b.y1)) };
+}
+
+/**
+ * Where a part of the redrawn chart is read: the end of its bars, where their value stands (a horizontal bar's right
+ * end, a column's top). A pointer to a bar points there, at the bar's value, never at its middle (which reads as half).
+ */
+export function chartValueEnd(st: St, p: Chart, part: string, L: ChartLook) {
+  const b = chartPartBox(st, p, part, L);
+  if (!(p.barsOf.get(part) ?? []).length) return b;
+  const e = Math.max(1, L.levelPad);
+  return p.data.orient === "h" ? { x0: Math.max(b.x0, b.x1 - e), y0: b.y0, x1: b.x1, y1: b.y1 } : { x0: b.x0, y0: b.y0, x1: b.x1, y1: Math.min(b.y1, b.y0 + e) };
 }
 
 export function chartNodes(w: Writer, id: string, p: Chart, c: { subject: string; muted: string; pointer: string; small: number; valueFs: number; baseWidth: number; levelWidth: number }) {

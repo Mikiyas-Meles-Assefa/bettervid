@@ -246,3 +246,28 @@ test("every moment the search reaches ends with the designer's look at its final
   assert.deepEqual(few.moments.filter((m) => m.status === "done").map((m) => m.moment).sort(), [1, 2]);
   assert.ok(few.moments.filter((m) => m.status === "skipped").every((m) => /most important moments only/.test(m.why)));
 });
+
+test("the sheet a viewer task names shows exactly the candidates the task names, in its order, run after run", async () => {
+  const shown = new Map<string, string[]>();
+  const stills = { async stills(_s: unknown, fs: number[], _d: string, tag: string) { return fs.map((f) => `${tag}-${f}.jpg`); } };
+  const join = (rows: { label: string; files: string[] }[], _t: string[], out: string) => (shown.set(out, rows.map((x) => x.label.split(" ")[0]!)), out);
+  const asked: AgentTask[] = [];
+  for (const space of [{ subjectScale: [0.5, 0.9] }, { subjectScale: [0.62, 0.7, 0.8] }]) {
+    const d = base();
+    d.budget = { candidatesPerMoment: 4, rounds: 1, calls: 4 };
+    const reasoner = memory((t) => {
+      if (t.role === "designer") return { goals: [goal(1, {})], space, overrides: [], proposals: [], done: true, why: "" } satisfies DesignerAnswer;
+      asked.push(t);
+      const ids = t.request.match(/Candidates: (.*)\./)![1]!.split("; ");
+      return { seats: [{ who: "a scroller", candidate: ids[0]!, saw: "the bowl", remembers: "the bowl", problems: [], wouldKeepWatching: true }], pick: ids[0]!, fixes: [] } satisfies ViewerAnswer;
+    });
+    await runSearch({ plan, design: d, director: keepDirector(d, "t"), cards: [], words, holds: [], theme, frames, agents: standInAgents(), reasoner, dir: "/tmp/unused", only: [1], viewers: true, stills, sheet: { finalists: 3, frames: 2, join } });
+  }
+  assert.equal(asked.length, 2);
+  for (const t of asked) {
+    const ids = t.request.match(/Candidates: (.*)\./)![1]!.split("; ");
+    assert.equal(t.images?.length, 1);
+    assert.deepEqual(shown.get(t.images![0]!), ids, "the sheet's rows are the task's candidates, in order");
+  }
+  assert.notEqual(asked[0]!.images![0], asked[1]!.images![0], "another set of candidates gets its own sheet");
+});

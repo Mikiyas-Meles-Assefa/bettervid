@@ -87,6 +87,29 @@ test("lengths are read with their units, and a width or a diagonal is told apart
   assert.deepEqual(lengthsIn("24.30 mL at 30 s").distance, [], "millilitres and seconds are not lengths");
 });
 
+test("a share said over a chart is a level at that share of what it is a share of, never of the bar it is about", () => {
+  const card: PartCard = {
+    name: "slide",
+    file: "slide.png",
+    kind: "chart",
+    about: "a bar chart of tickets",
+    parts: { "bar-a": { box: [0, 0, 1, 0.5], about: "bar a" }, "bar-b": { box: [0, 0.5, 1, 1], about: "bar b" } },
+    data: { kind: "bars", orient: "h", labels: ["a", "b"], values: [412, 428], unit: "tickets", ymax: 428, total: 840, plot: [0, 0, 1, 1], parts: ["bar-a", "bar-b"] } as unknown as PartCard["data"],
+    requirements: [],
+    checked: { ok: true, notes: [] },
+  };
+  const level = (src: string) => proposalsOf(parseIntent(src), 0, [card]).filter((x) => x.value.kind === "level");
+  // No reference named: the total the chart states.
+  const a = level(`thing half "almost half"\n@0\n  show half\n  keep slide.bar-a\n`);
+  assert.equal(a.length, 1);
+  assert.equal(a[0]!.value.args?.value, 420);
+  assert.deepEqual(a[0]!.value.ids, ["slide.bar-a", "half"]);
+  // A quantity in the chart's unit named in the moment is the reference.
+  assert.equal(level(`thing total "600 tickets"\nthing q "a third of the queue"\n@0\n  show q\n  keep slide.bar-a total\n`)[0]!.value.args?.value, 200);
+  // The plan's own `from` wins.
+  assert.equal(level(`thing t2 "1000 tickets"\nthing total "600 tickets"\nthing q "40%"\n@0\n  show q\n  q from t2\n  keep slide.bar-a total\n`)[0]!.value.args?.value, 400);
+});
+
 test("a quantity said that is the gap between two bars is not drawn as a level on the chart's scale", () => {
   const card = (values: number[]): PartCard => ({
     name: "chart",

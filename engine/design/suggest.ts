@@ -8,7 +8,7 @@ import { computedIn, computedOf, idsOf } from "./intent/parse.ts";
 import { actKinds, depictAll, type ActKind } from "./compose/acts.ts";
 import type { PropSpec } from "./depict/index.ts";
 import type { Box, CameraPlan, Decided, DemoPlan, Design, IntentPlan, Moment, MomentDesign, PartCard, Viewing, Word } from "./types.ts";
-import { numOf } from "./abilities/types.ts";
+import { fractionOf, numOf } from "./abilities/types.ts";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Viewing: built from a plain description; nothing is assumed (no phone, no captions, no UI) unless the caller says so.
@@ -394,7 +394,7 @@ export function proposalsOf(plan: IntentPlan, k: number, cards: PartCard[]): Dec
     const r = plan.moments.slice(k + 1, k + 3).find((x) => x.reveal)?.reveal;
     if (r) out.push(dec({ kind: "placeholder", ids: [r] }, "style", `the question waits for ${r}: a "?" holds its slot`));
   }
-  const quantities = named.filter((id) => things.get(id)?.kind === "thing").map((id) => ({ id, n: numOf(things.get(id)!.text ?? "") })).filter((x) => x.n && x.n.v > 0 && x.n.unit);
+  const quantities = named.filter((id) => things.get(id)?.kind === "thing").map((id) => ({ id, n: numOf(things.get(id)!.text ?? "") })).filter((x) => x.n && x.n.v > 0 && x.n.unit && fractionOf(things.get(x.id)!.text ?? "") === undefined);
   if (!m.compare && !charts.length) {
     outer: for (let i = 0; i < quantities.length; i++)
       for (let j = i + 1; j < quantities.length; j++)
@@ -427,6 +427,30 @@ export function proposalsOf(plan: IntentPlan, k: number, cards: PartCard[]): Dec
         if (!best || dd < best.d) best = { part, d: dd };
       }
       if (best && !out.some((p) => p.value.kind === "level" && p.value.ids[0] === `${cd.name}.${best!.part}`)) out.push(dec({ kind: "level", ids: [`${cd.name}.${best.part}`, q.id], args: { value: q.n!.v } }, "style", `"${things.get(q.id)!.text}" is a level of ${cd.name}.${best.part}: a line at ${q.n!.v} on the chart's own scale`));
+    }
+    // A share said while a chart is on screen ("almost half") is a level at that share of what it is a share of: the
+    // thing the plan derives it from (`half from total`), else a quantity in the chart's unit this moment names, else
+    // the total the chart itself states. Never a share of the bar it points at.
+    const unitOf = (u: string | undefined) => (u ?? "").toLowerCase().replace(/s$/, "");
+    for (const id of named.filter((x) => things.get(x)?.kind === "thing")) {
+      const text = things.get(id)!.text ?? "";
+      const share = fractionOf(text);
+      if (share === undefined || out.some((p) => p.value.kind === "level" && p.value.ids[1] === id)) continue;
+      const src = m.from.find((f) => f.a === id)?.b;
+      const ofThing = (x: string | undefined) => (x && things.get(x)?.kind === "thing" ? numOf(things.get(x)!.text ?? "") : undefined);
+      const fromQ = ofThing(src);
+      const sameUnit = named.filter((x) => x !== id).map((x) => ({ x, n: ofThing(x) })).find((q) => q.n && !fractionOf(things.get(q.x)!.text ?? "") && unitOf(q.n.unit) === unitOf(data.unit));
+      const ref = fromQ ? { v: fromQ.v, what: src! } : sameUnit ? { v: sameUnit.n!.v, what: sameUnit.x } : data.total !== undefined ? { v: data.total, what: `the total ${cd.name} states` } : undefined;
+      if (!ref) continue;
+      const v = Math.round(share * ref.v * 1000) / 1000;
+      let best: { part: string; d: number } | undefined;
+      for (const part of held) {
+        const vs = barValues(cd, part);
+        if (!vs.length) continue;
+        const dd = Math.min(...vs.map((x) => Math.abs(x - v)));
+        if (!best || dd < best.d) best = { part, d: dd };
+      }
+      if (best && !out.some((p) => p.value.kind === "level" && p.value.ids[0] === `${cd.name}.${best!.part}`)) out.push(dec({ kind: "level", ids: [`${cd.name}.${best.part}`, id], args: { value: v } }, "style", `"${text}" is a share of ${ref.what} (${ref.v}): a line at ${v} on the chart's own scale, beside ${cd.name}.${best.part}`));
     }
     const subj = m.reveal ?? m.show;
     const sub = subj ? things.get(subj) : undefined;
