@@ -12,6 +12,7 @@
 //   node --experimental-strip-types bench/run.ts grade <run>                grading requests for the watch tests
 //   node --experimental-strip-types bench/run.ts requirements <run>         the material's requirements on the built scenes
 //   node --experimental-strip-types bench/run.ts report <run>               the summary in bench/results/<run>/
+//   node --experimental-strip-types bench/run.ts design <run> [case ...]    the design brain's search loop (bench/lib/design.ts)
 // `--voice` on prepare records the real narration with ElevenLabs instead of timing it from the text (it costs credits).
 // See bench/README.md for the whole protocol.
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
@@ -23,7 +24,7 @@ import { WORK, folderOf } from "./lib/paths.ts";
 const [cmd, run, ...rest] = process.argv.slice(2);
 const flags = new Set(rest.filter((x) => x.startsWith("--")));
 const named = rest.filter((x) => !x.startsWith("--"));
-if (!cmd || !run) throw new Error("usage: bench/run.ts <read|prepare|submit|intent-prepare|intent-submit|status|map|measure|render|tasks|grade|requirements|report> <run> [case ...]");
+if (!cmd || !run) throw new Error("usage: bench/run.ts <read|prepare|submit|intent-prepare|intent-submit|status|map|measure|render|tasks|grade|requirements|report|design|design-status> <run> [case ...]");
 const cases = () => (named.length ? named : listCases());
 
 if (cmd === "prepare") {
@@ -70,7 +71,7 @@ if (cmd === "prepare") {
     console.log(`${id}: ${s.stage}, round ${s.round}${s.stage === "done" ? `, ${s.ok ? "builds" : "FAILS"}, review ${s.reviewed ?? "-"}, ${s.warnings?.length ?? 0} warnings` : ""}`);
   }
 } else {
-  const mod = await import("./lib/steps.ts");
+  const mod = { ...(await import("./lib/steps.ts")), ...(await import("./lib/design.ts")) };
   const fn = (mod as Record<string, (run: string, ids: string[], flags: Set<string>) => Promise<void>>)[cmd];
   if (!fn) throw new Error(`unknown command ${cmd}`);
   mkdirSync(join(WORK, run), { recursive: true });
