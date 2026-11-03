@@ -40,6 +40,8 @@ import { emptyToolbox, prepareToolbox, toolboxKit, toolboxNotes, type Toolbox, t
 import { lookSchema } from "./direction.ts";
 import { metaDepictMakers, spriteStyle } from "../lib/depict-makers.ts";
 import { mend, unwrap } from "../lib/mend.ts";
+import { imageFile, tasteNotes, tasteReview, type TasteContext } from "../../engine/review/taste.ts";
+import type { Ask } from "../../engine/review/model.ts";
 
 const VERSION = 6; // bump when the way sections are written or checked changes, so cached sections are redone
 const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
@@ -596,6 +598,7 @@ export type Job = {
   log: (line: string) => void;
   review?: boolean; // false: no review round after the look (reviewRound)
   once?: boolean; // one repair round: write, build, look once, one repair with every note (writeOnce)
+  taste?: Ask; // the taste review's model calls (Spark when not given); tests pass a fake
   // Path A: what prepares the depictions a part asks for before each build, and the toolbox they are kept in.
   toolbox?: { box: Toolbox; makers: ToolboxMakers; inflight: Map<string, Promise<void>>; save: () => void };
 };
@@ -1100,6 +1103,34 @@ async function checkMended(job: Job, written: string, fixed: string[]): Promise<
   return { source, c };
 }
 
+// The taste review on a part's stills (engine/review/taste.ts): an art director's judgment from the frames and the
+// part's context, run beside the look on the same stills. Its notes join the one repair request; it adds a call, not a round.
+export function tasteContext(job: Job): TasteContext {
+  const p = job.p;
+  const s = style(p.input.style);
+  const words = p.narration!.words.slice(job.range.firstWord, job.range.lastWord + 1).map((w) => w.text).join(" ");
+  const events = eventsIn(p, job.range);
+  const v = projectViewing(p);
+  return {
+    words,
+    purpose: events.map((e) => `${e.job}; the eye should be on ${e.look}`).join(" Then: ") || "carry these words",
+    ...(p.plan?.intent || p.direction?.goal ? { intent: [p.plan?.intent, p.direction?.goal].filter(Boolean).join(". ") } : {}),
+    style: { name: s.name, palette: Object.entries(s.palette ?? {}).map(([k, x]) => `${k} ${x}`), fonts: [...new Set(Object.values(s.fonts ?? {}))], ...(s.art?.scene ? { texture: s.art.scene } : {}) },
+    platform: `${v.screen}, ${v.width} by ${v.height}, ${v.watch}`,
+  };
+}
+export async function tasteFor(job: Job, seen: Seen, ask: Ask): Promise<string[]> {
+  const t0 = seen.moments[0]?.frame ?? 0;
+  const frames = seen.moments.map((m, k) => ({ at: (m.frame - t0) / FPS, image: imageFile(seen.files[k]!) }));
+  return tasteNotes(await tasteReview(ask, frames, tasteContext(job)));
+}
+// The taste review's calls on Spark, charged with the part's other calls.
+const sparkAsk = (pay: (usd: number) => void): Ask => async <T>(c: Parameters<Ask>[0]) => {
+  const r = await json<T>({ system: c.system, user: c.user as string, schema: c.schema as Record<string, unknown>, schemaName: c.name, effort: c.effort ?? "medium", ...(c.model ? { model: c.model as never } : {}) });
+  pay(r.usd);
+  return r.value;
+};
+
 // One repair round (the project's `sceneRepair: "once"`): the writer writes, the part is built and mended in code, rendered
 // once and looked at, and every note goes back together in a single request: the build's problems and notes, what code
 // sees, the look's issues on the frames, and the instruments' readings when the part has them. The repair is kept if it
@@ -1122,20 +1153,22 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   if (built(first.c)) {
     const w = written(first.source, first.c, 1);
     const seen = await see(job, first.c.result.scene!, first.source, join(job.folder, "once"));
-    const j = await judge(job, w, seen);
+    // The look and, on path A, the taste review read the same stills at the same time.
+    const [j, taste] = await Promise.all([judge(job, w, seen), job.toolbox ? tasteFor(job, seen, job.taste ?? sparkAsk((x) => (usd += x))).catch((e) => (job.log(`  ${job.range.id} taste review failed: ${(e as Error).message.slice(0, 160)}`), [] as string[])) : Promise.resolve([] as string[])]);
     usd += j.usd;
     const issues = issuesFrom(j.judged.issues, seen.measured);
     const said = review(job, first.source, first.c.result);
     const notes = job.toolbox ? measurePart(job, first.c.result.scene!) : undefined;
-    writeFileSync(join(job.folder, "once", "issues.json"), JSON.stringify({ design: j.judged.design, issues, said, warnings: first.c.warnings, instruments: notes?.lines ?? [] }, null, 1));
-    job.log(`  ${job.range.id} look: design ${j.judged.design}/5, ${issues.length} issues, ${first.c.warnings.length} build notes${notes ? `, ${notes.lines.length} instrument lines` : ""}`);
-    if (!issues.length && !first.c.warnings.length && !said.trim()) return { ...w, usd, looks: ["fine"], repairs: 0, fixed };
+    writeFileSync(join(job.folder, "once", "issues.json"), JSON.stringify({ design: j.judged.design, issues, said, warnings: first.c.warnings, instruments: notes?.lines ?? [], taste }, null, 1));
+    job.log(`  ${job.range.id} look: design ${j.judged.design}/5, ${issues.length} issues, ${first.c.warnings.length} build notes${notes ? `, ${notes.lines.length} instrument lines` : ""}${job.toolbox ? `, taste: ${taste.length ? `${taste.length} notes` : "ship"}` : ""}`);
+    if (!issues.length && !first.c.warnings.length && !said.trim() && !taste.length) return { ...w, usd, looks: ["fine"], repairs: 0, fixed };
     const shown = new Set(issues.flatMap((x) => x.frames).filter((f) => f >= 1 && f <= seen.moments.length).slice(0, 4));
     const parts = [
       `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(first.source)}\n\n${reviewPart("Once")}`,
       first.c.warnings.length ? `What the build reports:\n${first.c.warnings.map((x) => `- ${x}`).join("\n")}` : "",
       said.trim() ? `What code sees:\n${said}` : "",
       issues.length ? `Issues the reviewer saw on the frames:\n${issueText(issues)}` : "",
+      taste.length ? `An art director looked at the same frames:\n${taste.map((x) => `- ${x}`).join("\n")}` : "",
       notes ? `${NOTES_HEAD}\n${notes.lines.join("\n")}` : "",
       shown.size ? "The frames the issues name:" : "",
     ].filter(Boolean).join("\n\n");
