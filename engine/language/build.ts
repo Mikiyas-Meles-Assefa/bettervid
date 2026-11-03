@@ -1866,7 +1866,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       else groups.push([j]);
     });
     groups.forEach((g, n) => {
-      const list = g.map((j) => areas[j]).filter((a): a is Box => !!a);
+      // Everything this stretch has worked on so far stays in view with the step at hand: the view widens as the result
+      // grows, so what the steps built is never out of view while the words go on about it.
+      const list = areas.slice(0, g.at(-1)! + 1).filter((a): a is Box => !!a);
       const at = plan.times[g[0]!]!;
       const until = groups[n + 1] ? plan.times[groups[n + 1]![0]!]! : end;
       const own = [plan.from + g[0]! - 1, ...g.map((j) => plan.from + j)].flatMap((step) => wordsAfter(board, made.nodes, step)).map((w): Seen => ({ id: w.id, box: toScene(w.box), line: f.line, what: "text", text: w.text, laid: false, slot: f.target }));
