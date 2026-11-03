@@ -25,7 +25,9 @@ export type Item = {
   unit: string;
   kind: "text" | "image" | "shape";
   text?: string;
-  box: Rect;
+  box: Rect; // what shows: through every transform (the camera's included), cut to its clips
+  full: Rect; // the same before its clips
+  rest: Rect; // where it would be with the camera (and any frame around things) at rest, before clips
   opacity: number; // after every parent's fade
   size?: number; // text size on the frame, in pixels
   paint?: RGB; // text color, a shape's fill (its stroke when it has no fill), after brightness
@@ -68,6 +70,8 @@ export type Sampled = {
   /** Per frame: 1 while the camera (or any frame around things) moves. */
   camera: Uint8Array;
   jumps: CameraJump[];
+  /** Frames where a move of the camera (or any frame around things) starts or ends: where it is closest or farthest. */
+  cameraKeys: number[];
   /** Per unit: frames it becomes visible, and frames it starts to change (arrivals included). */
   arrivals: number[][];
   onsets: number[][];
@@ -304,7 +308,8 @@ function build(scene: Scene): Sampled {
     thingCache.set(key, made);
     return made;
   };
-  return { scene, fps, frames, W, H, units, unitIndex, vis, act, camera, jumps, arrivals, onsets, texts: texts.map((s) => [...s].join(" ")), signature, pos, items, things };
+  const cameraKeys = [...new Set(Object.values(camKeys).flatMap((ks) => ks.map((k) => Math.round(k.at))))].filter((f) => f >= 0 && f < frames).sort((x, y) => x - y);
+  return { scene, fps, frames, W, H, units, unitIndex, vis, act, camera, jumps, cameraKeys, arrivals, onsets, texts: texts.map((s) => [...s].join(" ")), signature, pos, items, things };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -331,14 +336,35 @@ const inside = (r: Rect, x: number, y: number) => x >= r.x0 && x <= r.x1 && y >=
 function inventory(scene: Scene, frame: number, nodeUnit: (string | undefined)[], slot: Map<string, number>, paper: RGB): Item[] {
   const out: (Omit<Item, "behind" | "contrast"> & { layer: number; seq: number })[] = [];
   let seq = 0;
-  const walk = (list: Resolved[], m: M, opacity: number, muted: boolean, layer: number) => {
+  // A part's clip (a shape in its own coordinates) bounds what it and its children draw; a part lifted to its own layer
+  // leaves its parents' clips, as the renderer draws it. Boxes are cut to the clip, so a liquid clipped by its vessel
+  // is as big as what shows, not as big as its rectangle.
+  const clipped = (box: Rect, clip: Rect | undefined): Rect | undefined => {
+    if (!clip) return box;
+    const b = meet(box, clip);
+    return b.x1 > b.x0 && b.y1 > b.y0 ? b : undefined;
+  };
+  // `m` places a part on the frame through every transform, the camera's included; `mr` leaves out the frames around
+  // things (the camera, layers), so `rest` is where the part would be with the camera at rest.
+  const walk = (list: Resolved[], m: M, mr: M, opacity: number, muted: boolean, layer: number, inherited: Rect | undefined) => {
     const sorted = list.map((r, i) => ({ r, i })).sort((a, b) => num(a.r.props.z) - num(b.r.props.z) || a.i - b.i).map((x) => x.r);
     for (const r of sorted) {
       const a = r.props;
       const o = opacity * num(a.opacity, 1);
       if (o <= 0.02) continue;
       const w = times(m, local(a));
+      const frameAround = r.kind === "group" && nodeUnit[slot.get(r.id) ?? -1] === undefined;
+      const wr = frameAround ? mr : times(mr, local(a));
+      const boxes = (rect: Rect) => ({ full: place(w, rect), rest: place(wr, rect) });
       const lay = num(a.layer) || layer;
+      let clip = num(a.layer) ? undefined : inherited;
+      if (Array.isArray(a.clip) && a.clip.length >= 6) {
+        const c = a.clip as number[];
+        let [cx0, cy0, cx1, cy1] = [Infinity, Infinity, -Infinity, -Infinity];
+        for (let i = 0; i + 1 < c.length; i += 2) [cx0, cy0, cx1, cy1] = [Math.min(cx0, c[i]!), Math.min(cy0, c[i + 1]!), Math.max(cx1, c[i]!), Math.max(cy1, c[i + 1]!)];
+        const own = place(w, { x0: cx0, y0: cy0, x1: cx1, y1: cy1 });
+        clip = clip ? meet(clip, own) : own;
+      }
       const dull = muted || num(a.brightness, 1) < 0.8 || num(a.saturation, 1) < 0.6 || (num(a.blur) > 2 && r.kind !== "image");
       const unit = nodeUnit[slot.get(r.id) ?? -1] ?? r.id;
       const light = (c: RGB | undefined): RGB | undefined => (c ? (c.map((v) => Math.min(255, v * num(a.brightness, 1))) as RGB) : undefined);
@@ -347,27 +373,34 @@ function inventory(scene: Scene, frame: number, nodeUnit: (string | undefined)[]
         const width = estimate(String(a.text), size, typeof a.font === "string" && /mono|courier/i.test(a.font) ? "mono" : undefined);
         const anchor = String(a.anchor ?? "middle");
         const x0 = anchor === "start" ? 0 : anchor === "end" ? -width : -width / 2;
-        const box = place(w, { x0, y0: -size * 0.6, x1: x0 + width, y1: size * 0.6 });
-        out.push({ id: r.id, unit, kind: "text", text: String(a.text), box, opacity: o * alphaOf(a.color), size: size * Math.hypot(w[0], w[1]), paint: light(rgbOf(a.color)), filled: false, muted: dull, order: 0, layer: lay, seq: seq++ });
+        const b = boxes({ x0, y0: -size * 0.6, x1: x0 + width, y1: size * 0.6 });
+        const box = clipped(b.full, clip);
+        if (box) out.push({ id: r.id, unit, kind: "text", text: String(a.text), box, ...b, opacity: o * alphaOf(a.color), size: size * Math.hypot(w[0], w[1]), paint: light(rgbOf(a.color)), filled: false, muted: dull, order: 0, layer: lay, seq: seq++ });
       } else if (r.kind === "image") {
         const [iw, ih] = [num(a.w), num(a.h)];
-        if (iw > 0 && ih > 0) out.push({ id: r.id, unit, kind: "image", box: place(w, { x0: -iw / 2, y0: -ih / 2, x1: iw / 2, y1: ih / 2 }), opacity: o, filled: true, muted: dull, order: 0, layer: lay, seq: seq++ });
+        const b = boxes({ x0: -iw / 2, y0: -ih / 2, x1: iw / 2, y1: ih / 2 });
+        const box = iw > 0 && ih > 0 ? clipped(b.full, clip) : undefined;
+        if (box) out.push({ id: r.id, unit, kind: "image", box, ...b, opacity: o, filled: true, muted: dull, order: 0, layer: lay, seq: seq++ });
       } else if (r.kind === "path" && Array.isArray(a.points) && a.points.length >= 4 && num(a.drawn, 1) > 0.01) {
         const p = a.points as number[];
         let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
         for (let i = 0; i + 1 < p.length; i += 2) [x0, y0, x1, y1] = [Math.min(x0, p[i]!), Math.min(y0, p[i + 1]!), Math.max(x1, p[i]!), Math.max(y1, p[i + 1]!)];
         const hasFill = painted(a.fill) && num(a.fillOpacity, 1) > 0.05;
         const pad = num(a.strokeWidth) / 2;
-        const box = place(w, { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad });
+        const b = boxes({ x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad });
+        const box = clipped(b.full, clip);
         const paintOf = hasFill ? a.fill : a.stroke;
         const alpha = hasFill ? alphaOf(a.fill) * num(a.fillOpacity, 1) : painted(a.stroke) ? alphaOf(a.stroke) * num(a.strokeOpacity, 1) : 0;
-        if (alpha <= 0.02) continue;
-        out.push({ id: r.id, unit, kind: "shape", box, opacity: o * alpha, paint: light(rgbOf(paintOf)), filled: hasFill && o * alpha > 0.85, muted: dull, order: 0, layer: lay, seq: seq++ });
+        if (alpha <= 0.02 || !box) {
+          walk(r.children, w, wr, o, dull, lay, clip);
+          continue;
+        }
+        out.push({ id: r.id, unit, kind: "shape", box, ...b, opacity: o * alpha, paint: light(rgbOf(paintOf)), filled: hasFill && o * alpha > 0.85, muted: dull, order: 0, layer: lay, seq: seq++ });
       }
-      walk(r.children, w, o, dull, lay);
+      walk(r.children, w, wr, o, dull, lay, clip);
     }
   };
-  walk(evaluate(scene, frame), [1, 0, 0, 1, 0, 0], 1, false, 0);
+  walk(evaluate(scene, frame), [1, 0, 0, 1, 0, 0], [1, 0, 0, 1, 0, 0], 1, false, 0, undefined);
   const list = out.sort((a, b) => a.layer - b.layer || a.seq - b.seq).map(({ layer: _l, seq: _s, ...t }, i) => ({ ...t, order: i }));
   // What lies behind each item's center: the topmost filled shape or picture painted before it, over the background.
   return list.map((t) => {
@@ -387,11 +420,15 @@ function inventory(scene: Scene, frame: number, nodeUnit: (string | undefined)[]
   });
 }
 
+/** A shape over `share` of the frame with the camera at rest is a backdrop, not a thing; a push that makes a thing
+ * fill the frame does not make it a backdrop. */
+export const isBackdrop = (t: Item, W: number, H: number, share: number) => t.kind === "shape" && area(meet(t.rest, { x0: 0, y0: 0, x1: W, y1: H })) > W * H * share;
+
 function gather(items: Item[], W: number, H: number, backdrop: number): Thing[] {
   const frame: Rect = { x0: 0, y0: 0, x1: W, y1: H };
   const by = new Map<string, Item[]>();
   for (const t of items) {
-    if (t.kind === "shape" && area(meet(t.box, frame)) > W * H * backdrop) continue; // a backdrop, not a thing
+    if (isBackdrop(t, W, H, backdrop)) continue;
     by.set(t.unit, [...(by.get(t.unit) ?? []), t]);
   }
   return [...by].map(([unit, list]) => {
@@ -425,6 +462,12 @@ export function framesOf(fps: number, [a, b]: [number, number], perSecond: numbe
   if (!out.size && b > a) out.add(a);
   return [...out].sort((x, y) => x - y);
 }
+
+/**
+ * The frames an instrument that reads the picture samples: evenly spaced, plus where camera moves start and end and the
+ * window's last frame, so a push is read at its closest and not only between samples.
+ */
+export const pictureFrames = (s: Sampled, range: [number, number], perSecond: number): number[] => framesOf(s.fps, range, perSecond, [...s.cameraKeys.flatMap((f) => [f - 1, f]), range[1] - 1]);
 
 /** Text height in arcminutes for a viewer: the frame's physical width and distance turn pixels into angle. */
 export function arcmin(px: number, viewing: Viewing, frameWidthPx: number): number {

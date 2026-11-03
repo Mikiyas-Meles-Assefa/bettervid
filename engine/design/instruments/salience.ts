@@ -9,7 +9,7 @@
 // single focal point, another wants none, another wants the threat to stay unnoticed.
 import type { Instrument, MeasureInput, Reading, Viewing } from "../types.ts";
 import { STREAMS, streamGroups, type StreamSettings } from "./load.ts";
-import { clamp, covers, frameDegrees, framesOf, label, mean, round, sampled, windowOf, type Sampled, type Thing } from "./sample.ts";
+import { clamp, covers, frameDegrees, pictureFrames, label, mean, round, sampled, windowOf, type Sampled, type Thing } from "./sample.ts";
 
 export type SalienceSettings = {
   perSecond: number; // frames sampled a second
@@ -125,21 +125,19 @@ export function suggestSalience(v: Viewing): SalienceSettings {
     kinds: { text: 1.3, picture: 1.1, shape: 1 },
     backdrop: 0.8,
     streams: (({ why: _w, ...st }) => st)(STREAMS(v)),
-    why: `suggested for ${v.screen} (${deg.toFixed(0)} degrees wide): an arrival or a change pulls strongly for about a second whatever its size (the bench's follow viewers name the newest thing in most 2 s windows), words and pictures draw more fixations than plain shapes, and the center bias spreads over ${Math.round(spread * 100)}% of the half diagonal`,
+    why: `for ${v.screen} (${deg.toFixed(0)} degrees wide): an arrival or change pulls hard for about a second (the bench's viewers name the newest thing in most 2 s windows); words and pictures draw more looks than shapes; center bias over ${Math.round(spread * 100)}% of the half diagonal`,
   };
 }
 
 export const salience: Instrument<SalienceSettings> = {
   name: "salience",
   describe:
-    "Analytic attention share per thing on each sampled frame (size, contrast against what is behind, recent arrival or change, motion now, center bias, words or picture or shape), averaged over the window. " +
-    "Values: share.<plan name> (mean share of the named thing; ids map needed), top (mean share of the most salient thing), lead (top minus second), entropy (0 all on one thing, 1 spread evenly), things (mean count on screen). " +
-    "Series per frame: top, entropy, and share.<name>. Settings: weights of each cue, onsetFade, centerSpread, kinds, perSecond.",
+    "Attention share per thing per sampled frame, through the camera (size, contrast, arrival or change, motion, center, kind), averaged. Values: share.<plan name> (0 to 1; needs ids), top (the strongest thing's share), lead (top minus second), entropy (0 one thing, 1 even), things (count). Series per frame: top, entropy, share.<name>. Settings: size, contrast, pictureContrast, onset, motion, center (cue weights), onsetSize, fadeIn, onsetFade (s), centerSpread, kinds (text, picture, shape weights), streams, backdrop, perSecond.",
   suggest: suggestSalience,
   measure(input: MeasureInput, set: SalienceSettings): Reading {
     const s = sampled(input.scene);
     const range = windowOf(input);
-    const frames = framesOf(s.fps, range, set.perSecond);
+    const frames = pictureFrames(s, range, set.perSecond);
     const names = input.ids ?? {};
     const series: Reading["series"] = [];
     const tops: number[] = [];

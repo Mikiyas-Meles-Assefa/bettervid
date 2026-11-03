@@ -3,7 +3,7 @@
 // center of mass. Weight is area times contrast (Arnheim's visual weight: larger and stronger reads heavier).
 // Works on any frame shape: the grid's cells are square, so a 16:9 frame gets more columns than rows.
 import type { Instrument, MeasureInput, Reading, Viewing } from "../types.ts";
-import { UI, area, clamp, framesOf, mean, meet, round, sampled, windowOf, type Rect } from "./sample.ts";
+import { UI, area, clamp, pictureFrames, mean, meet, round, sampled, windowOf, type Rect } from "./sample.ts";
 
 export type FillSettings = {
   perSecond: number;
@@ -20,9 +20,7 @@ export type FillSettings = {
 export const fill: Instrument<FillSettings> = {
   name: "fill",
   describe:
-    "Fill and balance of the usable frame (outside UI zones). Values: filled (share of usable cells with anything in them), emptyBand (tallest run of empty rows, share of the usable height), emptyColumn (widest run of empty columns, share of the width), " +
-    "massX and massY (center of visual weight, 0 to 1 across the frame), balanceX (right minus left weight over their sum, -1 to 1), balanceY (bottom minus top). Series per frame. " +
-    "Settings: cells (grid cells along the shorter side), occupied, settled and busy (skip frames caught mid change), perSecond.",
+    "Fill and balance of the usable frame (outside UI zones) on settled frames, through the camera. Values: filled (share of usable cells occupied), emptyBand (tallest empty run of rows, share of usable height), emptyColumn (widest, share of width), massX, massY (center of visual weight, 0 to 1), balanceX (right minus left, -1 to 1), balanceY (bottom minus top), frames (settled frames read). Series per frame. Settings: cells (along the shorter side), occupied (share of a cell), contrastWeight, pictureContrast, settled, busy (most changing things on a read frame), backdrop, perSecond.",
   suggest: (v: Viewing) => ({ perSecond: 2, cells: 9, occupied: 0.15, backdrop: 0.8, settled: true, busy: 2, contrastWeight: 0.7, pictureContrast: 0.6, why: `suggested for ${v.screen}: a 9-cell grid on the shorter side as the bench used, read on settled frames as a viewer sees a layout` }),
   measure(input: MeasureInput, set: FillSettings): Reading {
     const s = sampled(input.scene);
@@ -40,7 +38,7 @@ export const fill: Instrument<FillSettings> = {
     const usable = cells.filter((c) => c.usable);
     const usableRows = [...new Set(usable.map((c) => c.r))];
     const usableCols = [...new Set(usable.map((c) => c.c))];
-    const frames = framesOf(s.fps, range, set.perSecond).filter((f) => !set.settled || s.act.filter((a) => a[f]).length <= set.busy);
+    const frames = pictureFrames(s, range, set.perSecond).filter((f) => !set.settled || s.act.filter((a) => a[f]).length <= set.busy);
     const series: Reading["series"] = [];
     const acc = { filled: [] as number[], band: [] as number[], column: [] as number[], mx: [] as number[], my: [] as number[], bx: [] as number[], by: [] as number[] };
     for (const f of frames) {

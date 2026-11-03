@@ -230,9 +230,7 @@ export const STREAMS = (v: Viewing): StreamSettings & { why: string } => ({
 export const load: Instrument<LoadSettings> = {
   name: "load",
   describe:
-    "Change load: new things arriving around each second and independent changes pulling at once. Things changing together count as one pull; a stream of look-alike things (drops, particles, a flock) counts as one thing. " +
-    "Values: peakNew, meanNew, newPerSecond (arrivals per second), peakPull, meanPull, streams (how many flows were grouped), streamMembers. Series per second: new, pull. " +
-    "Settings: span (seconds counted around each second), sameFate (share of shared changing frames to be one pull), gap, min, move, near, sameWay (what joins look-alike arrivals into one stream).",
+    "Change load around each second: arrivals, and independent changes at once (things changing together are one pull; a stream of look-alikes is one thing). Values: peakNew, meanNew (arrivals in a span), newPerSecond, peakPull, meanPull (independent changes at once), streams, streamMembers (counts). Series per second: new, pull. Settings: span (s), sameFate (share of frames shared to be one pull), gap (s), min (count), move, near (shares of the frame), sameWay (share): what makes a stream.",
   suggest: (v) => ({ ...STREAMS(v), span: 2, sameFate: 0.8, why: `suggested for ${v.screen}, ${v.watch}: 2 s spans and 80% shared frames as the bench used; working memory holds about four chunks (Cowan 2001)` }),
   measure(input: MeasureInput, set: LoadSettings): Reading {
     const s = sampled(input.scene);

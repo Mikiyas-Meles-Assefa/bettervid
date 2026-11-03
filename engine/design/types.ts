@@ -90,6 +90,8 @@ export type MeasureInput = {
   ids?: Record<string, string[]>;
   /** Silences in the narration, by id. */
   holds?: { id: string; from: number; to: number }[];
+  /** Per plan name, the words (indices into `words`) of the moments the plan anchors on it: its cue when the narration never says its name. */
+  cues?: Record<string, number[]>;
 };
 
 export type Reading = {

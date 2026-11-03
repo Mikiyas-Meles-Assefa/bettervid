@@ -61,9 +61,7 @@ export function eyeVisits(s: Sampled, frames: number[], set: EyePathSettings): V
 export const eyePath: Instrument<EyePathSettings> = {
   name: "eyePath",
   describe:
-    "The likely order the eye visits things, from salience over time, and the changes it may miss: during a camera move, right after a cut, or while something stronger holds the eye. " +
-    "Values: visits, switchesPerSecond, changes (onsets in the window), missed, missedCamera, missedCut, missedCompeting, cuts, firstVisit.<name> (seconds from the window's start; -1 never), dwell.<name> (seconds the eye is on it). " +
-    "Settings: switchRatio, minDwell, reach, afterCut, cut detection (cutZoom, cutShift, cutSwap), and the salience settings it runs on.",
+    "Likely order the eye visits things (from salience), and the changes it may miss. Values: visits, switchesPerSecond, changes, missed, missedCamera (during a camera move), missedCut (just after a cut), missedCompeting (while something stronger holds the eye), cuts, firstVisit.<name> (s from the window's start; -1 never), dwell.<name> (s). Settings: switchRatio, minDwell (s), reach (s), afterCut (s), cutZoom, cutShift, cutSwap (what counts as a cut), salience (its settings), perSecond.",
   suggest: (v: Viewing) => ({
     perSecond: 8,
     switchRatio: 1.3,
@@ -73,7 +71,8 @@ export const eyePath: Instrument<EyePathSettings> = {
     cutZoom: 1.15,
     cutShift: 0.15,
     cutSwap: 0.6,
-    salience: suggestSalience(v),
+    // The salience instrument's own suggestion, without its reason (which the salience entry gives).
+    salience: (({ why: _w, ...rest }) => rest)(suggestSalience(v)) as SalienceSettings,
     why: `suggested for ${v.screen}: a fixation and a look around take about 0.3 s; a change the eye has not reached within about 0.6 s is likely missed; the eye recovers about a quarter second after a cut`,
   }),
   measure(input: MeasureInput, set: EyePathSettings): Reading {
