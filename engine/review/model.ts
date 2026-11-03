@@ -5,7 +5,7 @@ import { outputText, post, tokenCost } from "../../pipeline/lib/meta.ts";
 
 export type Part = { type: "input_text"; text: string } | { type: "input_image"; image_url: string } | { type: "input_video"; video_url: string };
 export type AskCall = {
-  model?: "muse-spark-1.3" | "muse-spark-1.2"; // 1.2 for anything that must hear sound
+  model?: "muse-spark-1.3" | "muse-spark-1.2" | "muse-wonder-1.0"; // 1.2 for anything that must hear sound
   effort?: "minimal" | "low" | "medium" | "high";
   system: string;
   user: string | Part[];

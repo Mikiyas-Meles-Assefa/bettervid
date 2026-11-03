@@ -9,3 +9,7 @@ Only these, in this order. No grading, no watch tests, no bench comparison.
 5. **Three 15-second clips of the same merge sort moment**, same narration, same style (neon), real Muse Spark in every product role: A) Spark writes the scene + new engine (step 4); B) Spark writes the scene + old path; C) Spark writes intent + design brain composer. No grading, no bench, no other styles.
 
 Rules: every agent on Opus; zero hardcoding; general fixes; keep tsc, test:engine and test:pipeline clean; plain commit messages with no attribution lines; no em dashes. Where things stand: docs/ROADMAP.md, "Wave 4 status".
+
+## Taste review (built Nov 3, not wired yet)
+`engine/review/taste.ts` with `prompts/taste-review.md`: a strict art-director review of a moment's stills, from the model's own eye and the moment's context (words, purpose, intent, style, audience, platform). Answers ship or revise with the weakest element and concrete fixes. Spark by default, Wonder optional. To wire into path A: run it in parallel with the look review on the same stills and add `tasteNotes()` to the one repair request. No extra rounds.
+Later, only if repairs turn out to make things worse: one comparison call after the repair (stills of the repaired scene vs the first draft, keep the better).
