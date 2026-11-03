@@ -1,7 +1,8 @@
 // The camera follows computed work that would read small, and keeps out of the way of a scene that moves it.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { CompileContext, Theme } from "../core/types.ts";
+import { evaluate } from "../core/evaluate.ts";
+import type { CompileContext, Scene, Theme } from "../core/types.ts";
 import { KITS } from "../kits/index.ts";
 import { build, formatProblems } from "./build.ts";
 
@@ -38,17 +39,26 @@ test("the camera stays where the scene puts it, on request stays still, and leav
   assert.equal(big.length, 0);
 });
 
-test("a close view never cuts a tag or the words just put up, and keeps every line whole or out of view", async () => {
-  const src = `@0\ntext t "Sixteen values" role=heading\nsort s data=${data} algo=merge order=levels show=boxes\n@4 keep\ndo steps s from=1 to=15 until=@20 pace=fast\n@20 keep\ntext q "Which comes out first?" role=heading\ntag s.item.1 "starts here"\ndo steps s from=16 to=18 until=@40 pace=slow\n`;
-  const cams = await moves(src);
-  // The question is wide; any view while it is up holds it whole, so it goes no closer than the question allows.
-  for (const c of cams.filter((x) => x.at >= 300 && x.at < 600)) assert.ok(c.zoom < 1.8, `zoom ${c.zoom} would cut the question`);
-});
+// Where a part is on screen: inside the camera, the camera's offset plus its own place times the zoom.
+const onScreen = (scene: Scene, frame: number, id: string) => {
+  const tree = evaluate(scene, frame);
+  const cam = tree.find((n) => n.id === "camera");
+  const n = (cam?.children ?? tree).find((x) => x.id === id);
+  if (!n) return undefined;
+  const [x, y, k] = cam ? [Number(cam.props.x ?? 0), Number(cam.props.y ?? 0), Number(cam.props.scaleX ?? 1)] : [0, 0, 1];
+  return { x: x + Number(n.props.x ?? 0) * k, y: y + Number(n.props.y ?? 0) * k, scale: Number(n.props.scaleX ?? 1) * k };
+};
 
-test("a follow keeps every line of words beside the work in view, and goes only as close as they allow", async () => {
-  const r = await build(`@0\ntext t "Sixteen values" role=heading\nsort s data=${data} algo=merge order=levels show=boxes\n@4 keep\ndo steps s from=1 to=15 until=@20 pace=fast\n@20 keep\ndo steps s from=16 to=21 until=@40 pace=slow\n@60 keep\n`, { ctx });
+test("words beside followed work stay pinned on screen while the camera moves in on the work", async () => {
+  const r = await build(`@0\ntext t "Sixteen values" role=heading\nsort s data=${data} algo=merge order=levels show=boxes\n@4 keep\ndo steps s from=1 to=15 until=@20 pace=fast\n@20 keep\ntext q "Which comes out first?" role=heading\ntag s.item.1 "starts here"\ndo steps s from=16 to=21 until=@40 pace=slow\n@60 keep\n`, { ctx });
   assert.deepEqual(r.problems, [], formatProblems(r.problems));
-  const cams = r.doc!.steps.filter((s) => s.set?.camera).map((s) => s.set!.camera as { panX: number; panY: number; zoom: number });
-  // The heading sits near the top; any view the camera takes still shows it.
-  for (const c of cams) assert.ok(c.panY - ctx.height / (2 * c.zoom) <= 400, `a view from ${JSON.stringify(c)} leaves the heading out`);
+  const cams = r.doc!.steps.filter((s) => s.set?.camera).map((s) => ({ at: Number(s.at), ...(s.set!.camera as { zoom: number }) }));
+  const close = cams.find((c) => c.at >= 300 && c.zoom > 1.5);
+  assert.ok(close, `the camera moves in: ${JSON.stringify(cams)}`);
+  const rest = onScreen(r.scene!, 290, "t")!;
+  for (const f of [close.at + 5, close.at + 40]) {
+    const now = onScreen(r.scene!, f, "t")!;
+    assert.ok(Math.abs(now.x - rest.x) < 2 && Math.abs(now.y - rest.y) < 2 && Math.abs(now.scale - 1) < 0.01, `the heading stays put at frame ${f}: ${JSON.stringify(now)}`);
+  }
+  assert.ok(Math.abs(onScreen(r.scene!, close.at + 40, "q")!.scale - 1) < 0.01, "the question is drawn at its own size");
 });

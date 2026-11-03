@@ -1743,11 +1743,19 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   // every other line of words whole or wholly out of view: centered on them, or moved just enough to clear a cut line.
   // Every line of words beside the followed thing (a heading, a caption, a question) is what the viewer reads as its
   // steps play, so the view keeps them all in, and goes only as close as they allow.
+  // Words laid out beside the followed thing stay pinned to the glass while the camera moves in (see `pins` below), so the
+  // view need not hold them: it moves in on the work as far as keeps the work's values clear of them.
+  const pinnable = (x: Seen, target: string) => x.laid && x.slot !== target && !x.id.startsWith(`${target}.`);
   const viewOn = (area: Box, most: number, from: number, to: number, own: Seen[] = [], target = ""): View | undefined => {
     const seen = stateWords.filter((w, i) => w.at < to && (stateWords[i + 1]?.at ?? Infinity) > from);
-    const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => x.slot !== target && !x.id.startsWith(`${target}.`)).map((x) => x.box))]);
+    const pinned = seen.flatMap((w) => w.words.filter((x) => pinnable(x, target)).map((x) => x.box));
+    const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => !pinnable(x, target) && w.tags.has(x.id) && x.slot !== target).map((x) => x.box))]);
     // The kit's own words where its steps put them, too: a value half out of view is as unreadable as a cut line.
-    const cuts = (v: View) => [...seen.flatMap((w) => cutFrom(v, w.words, w.tags)), ...cutFrom(v, own)];
+    const cuts = (v: View) => [...seen.flatMap((w) => cutFrom(v, w.words.filter((x) => !pinnable(x, target)), w.tags)), ...cutFrom(v, own)];
+    const values = [...own, ...seen.flatMap((w) => w.words.filter((x) => x.slot === target || x.id.startsWith(`${target}.`)))].map((x) => x.box);
+    const onGlass = (b: Box, v: View): Box => ({ x: (b.x - v.panX) * v.zoom + ctx.width / 2, y: (b.y - v.panY) * v.zoom + ctx.height / 2, w: b.w * v.zoom, h: b.h * v.zoom });
+    const pad = (b: Box): Box => ({ ...b, w: b.w + 24, h: b.h + 24 });
+    const clear = (v: View) => !values.some((b) => pinned.some((q) => hits(onGlass(b, v), pad(q)) > 0));
     for (let z = Math.min(most, 0.94 * Math.min(safe.w / Math.max(1, r.w), safe.h / Math.max(1, r.h))); z >= 1.12; z *= 0.93) {
       const base = frameView({ panX: r.x, panY: r.y - (safe.y - ctx.height / 2) / z, zoom: z });
       // The view centered on them, else the nearest one around it whose edges fall between things rather than through them.
@@ -1755,10 +1763,11 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       const tries = Array.from({ length: 17 * 17 }, (_, i) => [((i % 17) - 8) / 16, (Math.floor(i / 17) - 8) / 16] as const)
         .sort((p, q) => Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]))
         .map(([dx, dy]) => frameView({ ...base, panX: base.panX + dx * f.w, panY: base.panY + dy * f.h }));
-      const v = tries.find((x) => inside(r, x) && !cuts(x).length);
+      const v = tries.find((x) => inside(r, x) && !cuts(x).length && clear(x));
       if (v) return v;
     }
   };
+  const pins: { from: number; to: number; target: string; words: Set<string> }[] = [];
   // Words tagged on a part of a computed thing travel with that part as its steps play. Where that carries them onto the
   // thing's values, both stop reading, so it is refused with the step it happens at.
   for (const f of follows) {
@@ -1856,6 +1865,12 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     const next = follows[i + 1];
     const onward = next && !next.still && next.target === f.target && next.at <= back + ctx.fps;
     if (!onward && back < stop && back < ctx.frames - 1) autoShots.push({ at: back, frames: glide, ease: "smooth", view: REST, drift: 0, line: f.line, zoomBy: 1 });
+    const close = views.filter((v) => v.view !== REST && v.at < stop);
+    if (close.length) {
+      const until = Math.min(stop, onward ? next!.at : back + glide, ctx.frames - 1);
+      const words = new Set(stateWords.filter((w, j) => w.at < until && (stateWords[j + 1]?.at ?? Infinity) > close[0]!.at).flatMap((w) => w.words.filter((x) => pinnable(x, f.target)).map((x) => x.id)));
+      pins.push({ from: close[0]!.at, to: until, target: f.target, words });
+    }
   }
   shots.push(...autoShots);
   shots.sort((a, b) => a.at - b.at);
@@ -1891,7 +1906,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
 
   const sceneDoc: SceneDoc = { background: doc.background ?? "paper", steps };
   try {
-    const scene = settle(compile(sceneDoc, kitCtx));
+    const scene = pin(settle(compile(sceneDoc, kitCtx)), pins, ctx);
     if (heldAt.length) scene.held = heldAt;
     for (const f of [0, Math.floor(ctx.frames / 2), ctx.frames - 1]) evaluate(scene, f);
     // A position or size that is not a number draws nothing where it should be and drags its neighbors with it. Say
@@ -1920,6 +1935,73 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }
+}
+
+// Words pinned to the glass while the camera follows work: each top-level part that holds them is moved and scaled
+// against the camera frame by frame, so it stays where it was laid out on the screen while the work grows behind it.
+// The camera is a plain group (x, y, scale), so a part at screen point P sits at (P - camera) / zoom inside it.
+function pin(scene: Scene, pins: { from: number; to: number; target: string; words: Set<string> }[], ctx: CompileContext): Scene {
+  if (!pins.length) return scene;
+  const byId = new Map(scene.nodes.map((n) => [n.id, n]));
+  const camera = scene.nodes.find((n) => n.id === "camera");
+  if (!camera) return scene;
+  const top = (id: string): string | undefined => {
+    let n = byId.get(id);
+    while (n && n.parent && n.parent !== camera.id) n = byId.get(n.parent);
+    return n && n.parent === camera.id ? n.id : undefined;
+  };
+  const above = (id: string, of: string) => {
+    for (let n = byId.get(of); n; n = n.parent ? byId.get(n.parent) : undefined) if (n.id === id) return true;
+    return false;
+  };
+  // Stretches that touch are one: the camera does not come back to rest between them.
+  const spans: { from: number; to: number; ids: Set<string> }[] = [];
+  for (const p of [...pins].sort((a, b) => a.from - b.from)) {
+    const ids = [...p.words].map(top).filter((x): x is string => !!x && !above(x, p.target));
+    const from = Math.max(1, p.from);
+    const to = Math.min(ctx.frames - 2, p.to);
+    const last = spans.at(-1);
+    if (last && from <= last.to + 1) {
+      last.to = Math.max(last.to, to);
+      ids.forEach((x) => last.ids.add(x));
+    } else spans.push({ from, to, ids: new Set(ids) });
+  }
+  // Every frame is read from the scene as built, before any part is pinned, then the tracks are written.
+  const PROPS = ["x", "y", "scaleX", "scaleY"] as const;
+  const keys = new Map<string, { at: number; value: number }[]>();
+  const cut: { id: string; from: number; to: number }[] = [];
+  for (const span of spans) {
+    if (!span.ids.size) continue;
+    for (const id of span.ids) cut.push({ id, from: span.from - 1, to: span.to + 1 });
+    for (let f = span.from - 1; f <= span.to + 1; f++) {
+      const tree = evaluate(scene, f);
+      const cam = tree.find((n) => n.id === camera.id);
+      if (!cam) continue;
+      const [cx, cy, zoom] = [Number(cam.props.x ?? 0), Number(cam.props.y ?? 0), Number(cam.props.scaleX ?? 1)];
+      const edge = f < span.from || f > span.to;
+      for (const id of span.ids) {
+        const n = cam.children.find((x) => x.id === id);
+        if (!n) continue;
+        const base = { x: Number(n.props.x ?? 0), y: Number(n.props.y ?? 0), scaleX: Number(n.props.scaleX ?? 1), scaleY: Number(n.props.scaleY ?? 1) };
+        const pinned = edge ? base : { x: (base.x - cx) / zoom, y: (base.y - cy) / zoom, scaleX: base.scaleX / zoom, scaleY: base.scaleY / zoom };
+        for (const prop of PROPS) {
+          const key = `${id}\u0000${prop}`;
+          (keys.get(key) ?? keys.set(key, []).get(key)!).push({ at: f, value: Math.round(pinned[prop] * 1000) / 1000 });
+        }
+      }
+    }
+  }
+  for (const [key, list] of keys) {
+    const [target, prop] = key.split("\u0000") as [string, string];
+    let track = scene.tracks.find((t) => t.target === target && t.prop === prop);
+    if (!track) scene.tracks.push((track = { target, prop, keys: [] }));
+    const mine = cut.filter((c) => c.id === target);
+    // A run of equal values needs only its two ends.
+    const kept = list.filter((k, i) => i === 0 || i === list.length - 1 || k.value !== list[i - 1]!.value || k.value !== list[i + 1]!.value);
+    track.keys = [...track.keys.filter((k) => !mine.some((c) => k.at >= c.from && k.at <= c.to)), ...kept.map((k) => ({ at: k.at, value: k.value, ease: "linear" as const }))].sort((a, b) => a.at - b.at);
+  }
+  // A new scene, since evaluate keeps what it worked out about the old one.
+  return { ...scene, tracks: [...scene.tracks] };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
