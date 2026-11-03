@@ -790,6 +790,33 @@ async function look(job: Job, start: Written, log: string[]): Promise<{ w: Writt
   return { w, usd, rounds, severe: severeOf(judged ?? [], seen.measured) };
 }
 
+// Every repair keeps only an improvement. Both versions are rendered and measured as the look step does; with `named`
+// (the problems the repair was for) a second look also compares them, as the look step's recheck does. The changed
+// version is kept only when it is better overall and brings no new severe problem; otherwise the version before stays,
+// so a repair that does not converge never ships a worse part.
+export async function gate(job: Job, before: string, after: Written, named: Issue[] | undefined, label: string): Promise<{ keep: boolean; usd: number; why: string }> {
+  const was = await check(job, before);
+  // A version that does not build cannot ship: the other one wins, and with neither building nothing changes here.
+  if (!was.result.scene || !after.result.scene) return { keep: !was.result.scene, usd: 0, why: !was.result.scene && !after.result.scene ? "neither version builds" : "one version does not build" };
+  const folder = join(job.folder, `gate-${label}`);
+  const [b, a] = await Promise.all([see(job, was.result.scene, before, join(folder, "before")), see(job, after.result.scene, after.source, join(folder, "after"))]);
+  const heavy = (x: Seen) => weight(x.measured.flatMap((m) => m.findings.filter((f) => f.severity >= 2)));
+  const severe = (x: Seen) => x.measured.flatMap((m) => m.findings.filter((f) => f.severity >= 3)).length;
+  const [mb, ma] = [heavy(b), heavy(a)];
+  const newSevere = Math.max(0, severe(a) - severe(b));
+  if (!named) {
+    const keep = ma <= mb && !newSevere;
+    return { keep, usd: 0, why: `measured ${mb} -> ${ma}${newSevere ? `, ${newSevere} new severe` : ""}` };
+  }
+  const shown = named.map((x) => ({ ...x, frames: x.frames.length ? x.frames : Array.from({ length: Math.min(4, b.moments.length) }, (_, k) => k + 1) }));
+  const { re, usd } = await recheck(job, after, a, b, shown);
+  writeFileSync(join(folder, "recheck.json"), JSON.stringify(re, null, 1));
+  const open = shown.filter((x) => re.named.find((n) => n.id === x.id)?.fixed !== "yes");
+  const fresh = re.issues.filter((x) => x.severity >= 2);
+  const keep = better({ measuredBefore: mb, measuredAfter: ma, seenBefore: weight(shown), seenAfter: weight([...open, ...fresh]), newSevere: newSevere + fresh.filter((x) => x.severity >= 3).length, prefer: re.better });
+  return { keep, usd, why: `measured ${mb} -> ${ma}, named ${shown.length} -> ${open.length} open, ${fresh.length} new, prefers ${re.better}` };
+}
+
 // What still breaks a frame in a version: severe issues seen, and severe measured findings.
 export const severeOf = (judged: Judged["issues"], measured: Seen["measured"]): Issue[] => issuesFrom(judged, measured).filter((x) => x.severity >= 3);
 
@@ -865,6 +892,21 @@ export async function writeAgain(p: Project, sectionId: string, assets: Record<s
   const opts = sceneBuildOptions(p, assets);
   const job: Job = { p, range: ranges[i]!, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system: languagePrompt(opts), request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)), opts, folder: join(dir(p), "scene", sectionId, "again"), log: (l) => console.log(l) };
   return writeSection(job, "");
+}
+
+// Two versions of one section compared by the gate, as a repair is: `before` stays unless `after` is better overall
+// and brings no new severe problem. For checking a change after the fact without writing anything again.
+export async function compareVersions(p: Project, sectionId: string, before: string, after: string, assets: Record<string, string>): Promise<{ keep: boolean; usd: number; why: string }> {
+  const ranges = sectionsOf(p);
+  const i = ranges.findIndex((r) => r.id === sectionId);
+  if (i < 0) throw new Error(`no section ${sectionId}`);
+  const castFile = join(dir(p), "scene", "cast.json");
+  const cast: CastPart[] = existsSync(castFile) ? JSON.parse(readFileSync(castFile, "utf8")).cast : ranges.map(() => ({ shows: "", handoff: [] }));
+  const opts = sceneBuildOptions(p, assets);
+  const job: Job = { p, range: ranges[i]!, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system: "", request: "", opts, folder: join(dir(p), "scene", sectionId), log: (l) => console.log(l) };
+  const now = await check(job, after);
+  const written: Written = { source: after, result: now.result, problems: now.problems, warnings: now.warnings, usd: 0, rounds: 0 };
+  return gate(job, before, written, [], "compare");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1261,12 +1303,19 @@ export async function scene(p: Project, force = false) {
         console.log(`  ${tickets.length} tickets from watching the video send back ${[...byPart.keys()].map((i) => ranges[i]!.id).join(", ")}`);
         await Promise.all([...byPart].map(async ([i, list]) => {
           const job = jobs[i]!;
+          const named: Issue[] = list.map((what, k) => ({ id: `t${k + 1}`, frames: [], kind: "measured", what, want: "what the direction and the words ask for here", severity: 2, source: "seen" }));
           const ask = `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(sections[i]!.source)}\n\nThe finished video was rendered and watched. These problems were seen in your part (times in seconds of the video):\n${list.map((x) => `- ${x}`).join("\n")}\n\nChange your part so each of them is fixed, as the direction above asks, and keep everything else as it is. Return the whole part, with no commentary.`;
           const w = await compose(job, undefined, ask, false);
           spent.usd += w.usd;
           const ok = !w.problems.length && !!w.result.scene;
-          job.log(`  ${job.range.id}: ${ok ? "repaired from the tickets" : `!!! the repair from the tickets does not build (${w.problems.slice(0, 2).join(" | ").slice(0, 200)}); kept as it was`}, $${w.usd.toFixed(3)}`);
-          if (!ok) return;
+          if (!ok) {
+            job.log(`  ${job.range.id}: !!! the repair from the tickets does not build (${w.problems.slice(0, 2).join(" | ").slice(0, 200)}); kept as it was, $${w.usd.toFixed(3)}`);
+            return;
+          }
+          const g = await gate(job, sections[i]!.source, w, named, "tickets");
+          spent.usd += g.usd;
+          job.log(`  ${job.range.id}: repair from the tickets ${g.keep ? "kept" : "not better, kept the version before"} (${g.why}), $${(w.usd + g.usd).toFixed(3)}`);
+          if (!g.keep) return;
           sections[i] = { ...sections[i]!, source: plainMoments(w.source, opts), rounds: sections[i]!.rounds + w.rounds, usd: +(sections[i]!.usd + w.usd).toFixed(4) };
           writeFileSync(join(job.folder, "scene.txt"), w.source);
           writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notes[i] }, null, 1));
@@ -1297,6 +1346,10 @@ export async function scene(p: Project, force = false) {
           spent.usd += w.usd;
           job.log(`  ${job.range.id}: repaired for the joined scene: ${w.problems.length ? `still ${w.problems.length} problems` : "builds"}, $${w.usd.toFixed(3)}`);
           if (w.problems.length || !w.result.scene) return;
+          // The version before cannot ship in the whole, but a repair that measures worse is tried again, not kept.
+          const g = await gate(job, sections[i]!.source, w, undefined, `joined${round}`);
+          job.log(`  ${job.range.id}: the joined repair ${g.keep ? "measures no worse, kept" : "measures worse, tried again"} (${g.why})`);
+          if (!g.keep) return;
           sections[i] = { ...sections[i]!, source: plainMoments(w.source, opts), rounds: sections[i]!.rounds + w.rounds, usd: +(sections[i]!.usd + w.usd).toFixed(4) };
           writeFileSync(join(job.folder, "scene.txt"), w.source);
           writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notes[i] }, null, 1));
