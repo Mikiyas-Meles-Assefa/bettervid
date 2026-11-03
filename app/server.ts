@@ -356,7 +356,7 @@ async function body(req: IncomingMessage): Promise<any> {
   return JSON.parse(raw);
 }
 
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
   try {
     const path = new URL(req.url ?? "/", "http://x").pathname;
     if (path === "/api/options") {
@@ -517,7 +517,8 @@ createServer(async (req, res) => {
   } catch (e: any) {
     send(res, 500, { error: e.message });
   }
-}).listen(PORT, HOST, () => {
-  console.log(`bettervid on http://${HOST}:${PORT}, $${spent().toFixed(2)} spent so far${DRY ? ", batch is dry (records only)" : ""}`);
+});
+server.listen(PORT, HOST, () => {
+  console.log(`bettervid on http://${HOST}:${(server.address() as { port: number }).port}, $${spent().toFixed(2)} spent so far${DRY ? ", batch is dry (records only)" : ""}`);
   pump();
 });
