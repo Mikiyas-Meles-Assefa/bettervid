@@ -112,6 +112,27 @@ const localPoints = (d: Depiction): Record<string, [number, number]> => {
   return out;
 };
 
+// Each part's drawing goes by the part's own name, `ID.PART`, so the writer can point at what it was told the thing
+// has; a drawing two parts share takes the first part's name. Internal names (`ID.outline`) are renamed.
+export function partIds(d: Depiction): Map<string, string> {
+  const ids = new Set(d.nodes.map((n) => n.id));
+  const out = new Map<string, string>();
+  // A drawing already named after one of its parts keeps that name.
+  const kept = new Set(Object.entries(d.parts).filter(([name, part]) => part.node === `${d.id}.${name}`).map(([, part]) => part.node));
+  for (const [name, part] of Object.entries(d.parts)) {
+    const want = `${d.id}.${name}`;
+    if (part.node === d.id || kept.has(part.node) || out.has(part.node) || ids.has(want) || !ids.has(part.node)) continue;
+    out.set(part.node, want);
+    ids.add(want);
+  }
+  return out;
+}
+const renamed = (nodes: NodeSpec[], names: Map<string, string>): NodeSpec[] => nodes.map((n) => {
+  const to = (x: unknown) => (typeof x === "string" ? names.get(x) ?? x : x);
+  const props = n.props && typeof n.props.mask === "string" && names.has(n.props.mask) ? { ...n.props, mask: names.get(n.props.mask)! } : n.props;
+  return { ...n, id: to(n.id) as string, ...(n.parent ? { parent: to(n.parent) as string } : {}), ...(props ? { props } : {}) };
+});
+
 /** What a prepared thing can do, for the writer: its states, verbs and points. */
 export function describeDepiction(d: Depiction): string {
   // Its own states first (a level, a color, a reading), then the ones every thing has (place, turn, size).
@@ -120,7 +141,7 @@ export function describeDepiction(d: Depiction): string {
   const states = Object.entries(d.states).sort(([a], [b]) => Number(pose.has(a)) - Number(pose.has(b))).map(([k, s]) => `${k} (${s.type}${range(s)}${s.unit ? ` ${s.unit}` : ""}, now ${JSON.stringify(d.state[k])}): ${s.about}`);
   const verbs = Object.keys(d.verbs).filter((v) => !(v in POSE_VERBS));
   const points = Object.keys(d.points ?? {});
-  return `${d.id}, drawn as ${d.label} (${d.kind}${d.form ? ` ${d.form}` : ""}${d.size ? `, ${d.size.w} by ${d.size.h} ${d.size.unit}` : ""}). States for \`do change ${d.id} STATE=VALUE\`: ${states.join("; ") || "none"}. Verbs for \`do act ${d.id} verb="..."\`: ${verbs.join(", ") || "none"} (and moves to, moves, turns, falls, ... as any thing). Parts: ${Object.keys(d.parts).map((p) => `${d.id}.${d.parts[p]!.node.slice(d.id.length + 1) || p}`).slice(0, 12).join(", ")}${points.length ? `. Points it meets other things by: ${points.join(", ")}` : ""}.${d.read?.() ? ` It reads ${d.read()}.` : ""}`;
+  return `${d.id}, drawn as ${d.label} (${d.kind}${d.form ? ` ${d.form}` : ""}${d.size ? `, ${d.size.w} by ${d.size.h} ${d.size.unit}` : ""}). States for \`do change ${d.id} STATE=VALUE\`: ${states.join("; ") || "none"}. Verbs for \`do act ${d.id} verb="..."\`: ${verbs.join(", ") || "none"} (and moves to, moves, turns, falls, ... as any thing). Parts: ${[...new Set(Object.values(d.parts).map((p) => partIds(d).get(p.node) ?? p.node))].filter((x) => x !== d.id).slice(0, 12).join(", ")}${points.length ? `. Points it meets other things by: ${points.join(", ")}` : ""}.${d.read?.() ? ` It reads ${d.read()}.` : ""}`;
 }
 
 /** The toolbox as a kit: the `depict` kind and the `change` and `act` behaviors. */
@@ -128,6 +149,12 @@ export function toolboxKit(box: Toolbox): Kit {
   // One build's depictions, by the kit list of that build's context (one list per build), so builds never share state.
   const builds = new WeakMap<object, Live>();
   const specs = new Map<string, PropSpec>();
+  const named = new WeakMap<object, Map<string, Map<string, string>>>();
+  const namesOf = (ctx: CompileContext) => {
+    const key = (ctx.kits ?? ctx) as object;
+    return named.get(key) ?? named.set(key, new Map()).get(key)!;
+  };
+  const rename = (ctx: CompileContext, target: string) => (id: string) => namesOf(ctx).get(target)?.get(id) ?? id;
   const liveOf = (ctx: CompileContext): Live => {
     const key = (ctx.kits ?? ctx) as object;
     return builds.get(key) ?? builds.set(key, new Map()).get(key)!;
@@ -155,11 +182,14 @@ export function toolboxKit(box: Toolbox): Kit {
     const real = sizeCm(e.spec);
     const root = d.nodes.find((n) => n.id === d.id);
     const props = { ...root?.props, ...(real ? { realW: real.w, realH: real.h } : {}), pointsLocal: JSON.stringify(localPoints(d)) };
-    const rest = d.nodes.filter((n) => n.id !== d.id).map((n) => (n.props?.src !== undefined ? { ...n, props: { ...n.props, src: loadable(n.props.src) as string } } : n));
+    const names = partIds(d);
+    namesOf(ctx).set(node.id, names);
+    const rest = renamed(d.nodes.filter((n) => n.id !== d.id), names).map((n) => (n.props?.src !== undefined ? { ...n, props: { ...n.props, src: loadable(n.props.src) as string } } : n));
     return [{ ...(root ?? { id: d.id, kind: "group" }), props }, ...rest];
   };
-  const tracksOf = (changes: { id: string; prop: string; value: Value; at: number; frames: number; ease: string }[], start: number, tools: Parameters<Behavior>[0]["tools"]): Track[] =>
-    changes.map((c) => {
+  const tracksOf = (changes: { id: string; prop: string; value: Value; at: number; frames: number; ease: string }[], start: number, tools: Parameters<Behavior>[0]["tools"], name: (id: string) => string): Track[] =>
+    changes.map((c0) => {
+      const c = { ...c0, id: name(c0.id) };
       const at = Math.round(start + c.at);
       const was = tools.value(c.id, c.prop, at) ?? tools.props(c.id)[c.prop] ?? c.value;
       return { target: c.id, prop: c.prop, keys: [{ at, value: was }, { at: at + Math.max(0, Math.round(c.frames)), value: c.value, ease: c.ease as Track["keys"][0]["ease"] }] };
@@ -179,7 +209,7 @@ export function toolboxKit(box: Toolbox): Kit {
       if (!d.states[k]) throw new Error(`${target} has no state ${k}. ${describeDepiction(d)}`);
       next[k] = stateValue(d, k, v, spec, ctx.theme);
     }
-    return tracksOf(d.apply(next, timing(args, ctx)), start, tools);
+    return tracksOf(d.apply(next, timing(args, ctx)), start, tools, rename(ctx, target));
   };
   const act: Behavior = ({ target, start, args, ctx, tools }) => {
     const d = need(target, ctx);
@@ -194,7 +224,9 @@ export function toolboxKit(box: Toolbox): Kit {
       const other = need(args.to, ctx);
       out.push(...transfer(d, other, Number(args.amount), t).changes.filter((c) => !c.id.startsWith(`${d.id}.`) || !r.changes.some((x) => x.id === c.id && x.prop === c.prop)));
     }
-    return tracksOf(out, start, tools);
+    const own = rename(ctx, target);
+    const theirs = typeof args.to === "string" ? rename(ctx, args.to) : own;
+    return tracksOf(out, start, tools, (id) => (id.startsWith(`${target}.`) || id === target ? own(id) : theirs(id)));
   };
   return {
     name: "toolbox",
@@ -227,6 +259,7 @@ export function wantedIn(source: string, kitKinds: Iterable<string>): Wanted[] {
     visit(i.children);
   });
   doc.states.forEach((s) => visit(s.items));
+  for (const s of doc.states) for (const r of s.relations ?? []) relations.push({ a: r.a, b: r.b, line: `${r.a} ${r.words} ${r.b}${r.at ? ` "${r.at}"` : r.gapCm !== undefined ? ` "${r.gapCm} cm"` : ""}` });
   const all = [...found.values()];
   for (const s of doc.states) for (const c of s.commands) {
     if (c.do !== "play" || (c.behavior !== "act" && c.behavior !== "change")) continue;

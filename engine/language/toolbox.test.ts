@@ -138,3 +138,81 @@ test("a thing that cannot be prepared is said to the writer, not drawn as someth
   const b = await build(LAB, { ctx: ctxWith(emptyToolbox()) });
   assert.match(formatProblems(b.problems), /no depiction of "a 50 mL burette of NaOH" is prepared/);
 });
+
+// Every whole scene the path A guide shows must build as written, so the writer is never taught a form that fails.
+test("every whole-scene example in the toolbox parts of the guide builds, with things depicted and a sprite made", async () => {
+  const { readFileSync, mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const guide = readFileSync(new URL("../../prompts/engine-language.md", import.meta.url), "utf8");
+  const parts = [...guide.matchAll(/\[\[toolbox\]\]\n([\s\S]*?)\[\[\/toolbox\]\]/g)].map((m) => m[1]!);
+  const blocks = parts.flatMap((p) => p.split(/\n(?!    )/).join("\n").split(/\n\n+/)).map((b) => b.split("\n").filter((l) => l.startsWith("    ")).map((l) => l.slice(4)).join("\n")).filter((b) => /^@\d/m.test(b) && /^@0/.test(b));
+  assert.ok(blocks.length >= 2, `found ${blocks.length} whole scenes`);
+  const fx = (n: string) => readFileSync(new URL(`../design/depict/fixtures/${n}`, import.meta.url));
+  const spec = (desc: string): PropSpec => /kettle|jug|pot|cup|jar|glass/.test(desc)
+    ? { kind: "container", label: desc.split(",")[0]!, size: { w: 22, h: 24, unit: "cm" }, params: { profile: [[0.4, 0], [0.5, 0.7], [0.3, 1]], spout: "right", contents: [{ name: "water", level: 0.5, color: "water" }], bubbles: 6 }, colors: { water: "#bfe3f2cc" }, colorSources: { water: "known" }, why: "test" }
+    : /flame|cup.*sprite/.test(desc)
+      ? { kind: "sprite", label: "flame", tier: 2, sprite: { parts: [{ name: "tip", phrase: "the tip", changes: ["tint"] }] }, why: "test" }
+      : bench;
+  const depicter: Reasoner = { async ask<T>(task: AgentTask): Promise<Answer<T>> { return { status: "answered", value: spec(/Description: (.*)/.exec(task.request)![1]!) as T, usd: 0 } as Answer<T>; } } as Reasoner;
+  const root = mkdtempSync(join(tmpdir(), "sprites-"));
+  const sprite = { make: async () => ({ png: fx("lamp.png"), size: [160, 160] as [number, number], masks: { tip: { png: fx("lamp-shade.png"), box: [0.18, 0.18, 0.82, 0.47] as [number, number, number, number] } } }) };
+  try {
+    for (const b of blocks) {
+      const box = emptyToolbox();
+      const prep = await prepareToolbox(b, kinds, box, { depicter, sprite, spriteRoot: root, style: { name: "flat", art: "flat" } });
+      assert.deepEqual(prep.problems, []);
+      const r = await build(b, { ctx: ctxWith(box) });
+      assert.deepEqual(r.problems, [], `${formatProblems(r.problems)}\nin:\n${b}`);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("each move the guide teaches plays as written, and arc and hop land where the named thing is", async () => {
+  const src = `@0
+row top gap=80
+  circle coin "1" w=120
+  box jar "jar" w=260 h=300
+  circle frog "f" w=120
+  box pad "pad" w=220 h=80
+@3 keep
+do arc coin to=jar bend=0.4 frames=30
+do hop frog to=pad height=200 frames=40
+@6
+stack s gap=60
+  row r1 gap=60
+    box home "home"
+    box school "school"
+  circle seed "" w=100
+  box sprout "" w=100 h=200
+  circle earth "earth" w=200
+  dot moon
+arrow home -> school id=route
+@8 keep
+circle bus "b" w=80
+do follow bus path=route frames=60 orient=1
+do morph seed.shape to=sprout.shape frames=30
+do orbit moon around=earth turns=1 frames=120
+do spring earth scaleX=1.2 scaleY=1.2 stiffness=200 damping=12
+do squash school amount=0.3 axis=y
+do jiggle home prop=rotate size=8 cycles=3
+do wiggle sprout prop=y size=6 speed=3 frames=90
+@12 keep
+box stamp "OK" role=key enter=slam
+do fall earth bounce=0.4 squash=0.2
+@16 cut
+text then "Later" role=title
+`;
+  const r = await build(src, { ctx: ctxWith(emptyToolbox()) });
+  assert.deepEqual(r.problems, [], formatProblems(r.problems));
+  const s = r.scene!;
+  const pos = (id: string, f: number) => { const n = at(s, f, id)!; return [Number(n.props.x), Number(n.props.y)]; };
+  const landed = pos("coin", 45 + 31);
+  const jar = pos("jar", 45 + 31);
+  assert.ok(Math.hypot(landed[0]! - jar[0]!, landed[1]! - jar[1]!) < 2, `coin ${landed} jar ${jar}`);
+  const f = pos("frog", 45 + 41);
+  const p = pos("pad", 45 + 41);
+  assert.ok(Math.abs(f[0]! - p[0]!) < 2, `frog ${f} pad ${p}`);
+});

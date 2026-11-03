@@ -39,7 +39,8 @@ export type Command =
   | { do: "camera"; line: number; target?: string; attrs: Attrs };
 
 // `cut`: everything changes at once, with no fades or moves, as a film cuts.
-export type State = { line: number; at: Time; keep: boolean; cut: boolean; attrs: Attrs; items: Item[]; commands: Command[] };
+// `relations`: where things of a stage are, written at the state's edge so a keep state can place what joins a stage.
+export type State = { line: number; at: Time; keep: boolean; cut: boolean; attrs: Attrs; items: Item[]; commands: Command[]; relations?: StageRelation[] };
 export type ProgramDef = { name: string; line: number; params: Attrs; doc?: string; source: string };
 // `read` overrides the style's readability settings for this scene: text (smallest text, share of the frame) and dim.
 // `withholds`: things that must not be on screen before a moment (the answer before its reveal); none names nothing,
@@ -408,6 +409,14 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
       continue;
     }
 
+    // A relation line at the state's edge places things of a stage that is on screen: `lamp hangs over table`.
+    if (!holder && !WORDS.includes(head) && !kits.has(head) && ID.test(head)) {
+      const r = readRelation(line);
+      if (r) {
+        (state.relations ??= []).push({ ...r, line: number });
+        continue;
+      }
+    }
     fail(`Unknown line.${suggest(head, [...WORDS, ...kits])}`);
   }
 

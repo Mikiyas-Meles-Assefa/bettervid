@@ -12,6 +12,15 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const clamp = (t: number) => Math.max(0, Math.min(1, t));
 const smooth = EASES.smooth;
 
+// A place named by another thing's id: where that thing's origin is, in the moving thing's parent's coordinates, so a
+// writer says where a thing goes without a pixel position.
+const placeOf = (tools: Parameters<Behavior>[0]["tools"], target: string, other: string, at: number): Pt => {
+  if (!tools.has(other)) throw new Error(`to=${other} names nothing on screen`);
+  const parent = tools.parent(target);
+  const m = parent ? mul(invert(tools.matrix(parent, at) as Mat), tools.matrix(other, at) as Mat) : (tools.matrix(other, at) as Mat);
+  return [m[4]!, m[5]!];
+};
+
 export const MOVES: Record<string, Behavior> = {
   // Reshapes a path into another path or point list. Matches like with like, so it never needs equal point counts.
   // args: to (a path id or points), frames, ease
@@ -78,10 +87,11 @@ export const MOVES: Record<string, Behavior> = {
 
   // Moves to a place along a true circular arc. bend is how far the arc bows, as a share of the distance; its sign picks the side.
   // args: x, y, bend, frames, ease, orient
-  arc: ({ target, start, args, ctx, now }) => {
+  arc: ({ target, start, args, ctx, now, tools }) => {
+    // `to`: another thing's id instead of x and y, to land where it is.
     const frames = num(args.frames, ctx.theme.moveFrames * 2);
     const [x0, y0] = [num(now("x"), 0), num(now("y"), 0)];
-    const [x1, y1] = [num(args.x, x0), num(args.y, y0)];
+    const [x1, y1] = typeof args.to === "string" ? placeOf(tools, target, args.to, start) : [num(args.x, x0), num(args.y, y0)];
     const chord = Math.hypot(x1 - x0, y1 - y0);
     const bend = num(args.bend, 0.3);
     const sag = bend * chord;
@@ -207,9 +217,10 @@ export const MOVES: Record<string, Behavior> = {
   // A whole jump with weight: crouch (anticipation), stretch in flight, squash on landing, then settle (follow-through).
   // The base stays planted while on the ground. args: x, y, height, frames, crouch, land (shares of the time), squash, stretch
   hop: ({ target, start, args, ctx, now, tools }) => {
+    // `to`: another thing's id instead of x and y, to land where it is; neither is a hop in place.
     const frames = num(args.frames, 40);
     const [x0, y0] = [num(now("x"), 0), num(now("y"), 0)];
-    const [x1, y1] = [num(args.x, x0), num(args.y, y0)];
+    const [x1, y1] = typeof args.to === "string" ? placeOf(tools, target, args.to, start) : [num(args.x, x0), num(args.y, y0)];
     const height = num(args.height, 160);
     const [crouch, land] = [num(args.crouch, 0.22), num(args.land, 0.28)];
     const [amount, stretch] = [num(args.squash, 0.3), num(args.stretch, 0.22)];

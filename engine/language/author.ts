@@ -100,7 +100,7 @@ export function languagePrompt(opts: BuildOptions): string {
   // The design brain's toolbox (engine/language/toolbox.ts) is taught only to a writer whose engine has it.
   const toolbox = kits.some((k) => k.name === "toolbox");
   if (!toolbox) fill.leans = "";
-  return withLooks(read("engine-language.md"), roles).replace(/\[\[toolbox\]\]\n?([\s\S]*?)\[\[\/toolbox\]\]\n?/g, (_, body: string) => (toolbox ? body : "")).replace(/\{\{(\w+)\}\}/g, (_, k: string) => fill[k] ?? "");
+  return withLooks(read("engine-language.md").replace(toolbox ? /^$/ : /\{\{leans\}\}\n/, ""), roles).replace(/\[\[toolbox\]\]\n?([\s\S]*?)\[\[\/toolbox\]\]\n?/g, (_, body: string) => (toolbox ? body : "")).replace(/\{\{(\w+)\}\}/g, (_, k: string) => fill[k] ?? "");
 }
 
 // The style's motion leanings, as suggestions the writer weighs against what the words need (engine/style/design.ts).

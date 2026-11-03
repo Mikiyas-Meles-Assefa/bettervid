@@ -461,6 +461,19 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       }
       board = pruneEmpty(board);
     }
+    // Relation lines at the state's edge join the stage that holds both things, for this state and the ones it keeps.
+    for (const r of s.relations ?? []) {
+      const stageOf = (list: Item[]): Item | undefined => {
+        for (const i of list) {
+          if (i.kind === "stage" && i.children.some((c) => c.id === r.a) && i.children.some((c) => c.id === r.b)) return i;
+          const hit = stageOf(i.children);
+          if (hit) return hit;
+        }
+      };
+      const st = stageOf(board);
+      if (!st) report(r.line, `${r.a} ${r.words} ${r.b}: a relation places two things of one stage, and no stage on screen holds both. Put both in a stage (into=ID for one that is already there), or write the relation inside it.`);
+      else if (!(st.relations ?? []).some((x) => x.a === r.a && x.b === r.b && x.kind === r.kind)) (st.relations ??= []).push(r);
+    }
     for (const c of s.commands) {
       if (c.do !== "arrow" && c.do !== "mark" && c.do !== "tag") continue;
       attached = attached.filter((a) => attachedId(a) !== attachedId(c));
