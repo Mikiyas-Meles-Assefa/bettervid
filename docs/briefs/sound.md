@@ -16,11 +16,14 @@ Today `pipeline/stages/mix.ts` places a few effects by shot type (`placeEffects`
 6. **Tests**: unit tests for collecting moments from a compiled scene, the placement and spacing, and the music changes, with a fake reasoner (see existing `*.test.ts`). Keep `npx tsc --noEmit -p .`, `npm run -s test:pipeline` and `npm run -s test:engine` passing.
 7. **One real check**: run only `--only mix --force mix` on two existing engine projects in `projects/` (for example `merge-w2` and `stats-w2`, which have scenes, narration and a direction plan), then re-render one with `--only render` and listen to it. Meta spend at most $0.50.
 
+## Stay inside this folder
+Read and write only inside this repository folder (`/Users/miki/Desktop/deskt/bettervid`, including your worktree under `.worktrees/`). Do not read or search anything outside it: no home folder, no other projects, no system files, no other config. Everything you need is in this repo.
+
 ## Do not touch
 `engine/design/`, `bench/`, `app/`, and the early pipeline stages (plan, research, writer, direction): other sessions are changing them now. Limit changes to `pipeline/stages/mix.ts`, `pipeline/lib/kit.ts`, `audio/`, new files, and the smallest read-only hook in `pipeline/stages/timeline.ts` if needed.
 
 ## Rules
-- Work in a git worktree on a new branch, not in the main checkout, so other sessions working there are not disturbed: `git worktree add ../bettervid-sound -b sound main`, then work in `../bettervid-sound` (symlink `node_modules` from the main checkout if it is missing, and remove the link before committing). Commit with plain messages and NO Co-Authored-By or "Generated with" lines, ever. Do not push; do not merge to main.
+- Work in a git worktree on a new branch, not in the main checkout, so other sessions working there are not disturbed: `git worktree add .worktrees/sound -b sound main`, then work in `.worktrees/sound` (symlink `node_modules` from the main checkout if it is missing, and remove the link before committing). Commit with plain messages and NO Co-Authored-By or "Generated with" lines, ever. Do not push; do not merge to main.
 - No em dashes anywhere. Match the surrounding code style and comment density.
 - General, never tuned to one video or topic; repair over fallbacks.
 - Never commit `.env` or secrets. Do not create keys on dev.meta.ai.

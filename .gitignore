@@ -11,3 +11,6 @@ out/
 node_modules/
 projects/
 bench/work/
+
+# Local git worktrees for other sessions
+.worktrees/
