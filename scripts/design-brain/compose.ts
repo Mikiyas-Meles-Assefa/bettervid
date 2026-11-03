@@ -13,7 +13,7 @@ import type { Ease, NodeSpec, Props, SceneDoc, Step, Value } from "../../engine/
 import { estimate, safeArea, wrap, type Measure } from "../../engine/language/layout.ts";
 import { fontMeasure } from "../../engine/language/measure.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
-import { buretteReading, colorOf, liquidPoly, mouthOf, propNodes, resolve, surfaceY, tipOf, withAlpha, type Prop } from "./depict.ts";
+import { buretteReading, colorOf, liquidPoly, mouthOf, propNodes, resolve, surfaceY, tipOf, withAlpha, type Prop } from "../../engine/design/depict/drawn.ts";
 
 const FPS = 30;
 const W = 1080;
