@@ -250,10 +250,18 @@ export const container: KindDef = {
       }
       return v;
     };
-    const full = volTo(1);
-    const capacity = { unit: "mL", at: volTo, levelOf: (ml: number) => {
+    // A scale in a unit of volume is the vessel's own calibration: the volume between two marks is what the marks say,
+    // so a transfer and a reading agree. The drawn size gives the shape (where the vessel is wide or narrow); the
+    // scale gives the amount. Without a volume scale the real size alone gives the volume.
+    const perUnit = scale ? volumeUnit(scale.unit) : undefined;
+    const levelAtT = (t: number) => clamp((cavBottom - yOf(t)) / insideH);
+    const geomSpan = scale ? Math.abs(volTo(levelAtT(scale.to)) - volTo(levelAtT(scale.from))) : 0;
+    const calib = perUnit && geomSpan > 0 && scale!.top !== scale!.bottom ? (Math.abs(scale!.top - scale!.bottom) * perUnit) / geomSpan : 1;
+    const volAt = (lv: number) => calib * volTo(lv);
+    const full = volAt(1);
+    const capacity = { unit: "mL", at: volAt, levelOf: (ml: number) => {
       let [a, b] = [0, 1];
-      for (let i = 0; i < 40; i++) { const m = (a + b) / 2; if (volTo(m) < ml) a = m; else b = m; }
+      for (let i = 0; i < 40; i++) { const m = (a + b) / 2; if (volAt(m) < ml) a = m; else b = m; }
       return clamp((a + b) / 2);
     } };
 
@@ -331,9 +339,19 @@ export const container: KindDef = {
       capacity: full > 0 ? capacity : undefined,
       notes: [
         ...(scale && !c.text ? [`${c.spec.label}: scale numbers are hidden until a text size is given`] : []),
+        ...(calib !== 1 ? [`${c.spec.label}: volumes follow its ${scale!.unit} scale (the drawn size alone would hold ${(volTo(1) / 1).toFixed(0)} mL, the scale says ${full.toFixed(0)} mL)`] : []),
         `${c.spec.label}: holds about ${full >= 1000 ? `${(full / 1000).toFixed(2)} L` : `${full.toFixed(full < 10 ? 2 : 0)} mL`} when full`,
       ],
     };
   },
 };
 const r1 = (v: number) => Math.round(v * 10) / 10;
+
+// Units of volume in mL: physical facts, so a scale in any of them calibrates the vessel.
+const VOLUME: Record<string, number> = { ml: 1, millilitre: 1, milliliter: 1, cl: 10, dl: 100, l: 1000, litre: 1000, liter: 1000, cm3: 1, cc: 1, m3: 1e6, mm3: 0.001, ul: 0.001, "µl": 0.001, "μl": 0.001, floz: 29.5735, cup: 236.588, pt: 473.176, pint: 473.176, qt: 946.353, gal: 3785.41, gallon: 3785.41, in3: 16.3871, ft3: 28316.8 };
+/** mL per unit of a scale's unit, or undefined when it is not a unit of volume. */
+export function volumeUnit(unit: string | undefined): number | undefined {
+  if (!unit) return undefined;
+  const k = unit.toLowerCase().replace(/[\s.]/g, "").replace(/³/g, "3").replace(/s$/, "");
+  return VOLUME[k];
+}

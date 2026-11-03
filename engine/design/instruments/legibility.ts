@@ -6,7 +6,7 @@
 // Basis: reading speed holds above a critical print size of about 0.2 degrees of x-height (Legge et al. 1985, Legge
 // 2007), and text read at a glance, as in a feed, needs more; WCAG 2 gives 3:1 for large text and 4.5:1 for body text.
 import type { Instrument, MeasureInput, Reading, Viewing } from "../types.ts";
-import { arcmin, area, framesOf, mean, meet, round, sampled, windowOf } from "./sample.ts";
+import { arcmin, area, pictureFrames, mean, meet, round, sampled, windowOf } from "./sample.ts";
 
 export type LegibilitySettings = {
   perSecond: number;
@@ -34,14 +34,12 @@ export function suggestLegibility(v: Viewing): LegibilitySettings {
 export const legibility: Instrument<LegibilitySettings> = {
   name: "legibility",
   describe:
-    "Every piece of text as the eye receives it: cap height as visual angle (arcminutes) from the frame's physical width and viewing distance, and WCAG contrast after fades against what is behind it. " +
-    "Values: chars (characters read, summed over sampled frames), minAngle and medianAngle (arcmin), shareBelow (share of characters under the `readable` angle), faintShare (share under `contrastLow`), minContrast, overPicture (share of characters over a picture, contrast unknown), cut (share cut by the frame edge), sizes (distinct text sizes on a frame, mean). " +
-    "Settings: readable, contrastLow, capHeight, minOpacity, perSecond.",
+    "Each text as the eye gets it, through the camera: cap height as visual angle, and WCAG contrast after fades against what is behind. Values: chars (characters, summed over frames), minAngle, medianAngle (arcmin), shareBelow (share of characters under readable), faintShare (share under contrastLow), minContrast (ratio), overPicture (share over a picture), cut (share cut by the frame), sizes (distinct sizes on a frame). Settings: readable (arcmin), contrastLow (ratio), capHeight (cap over font size), minOpacity, perSecond.",
   suggest: suggestLegibility,
   measure(input: MeasureInput, set: LegibilitySettings): Reading {
     const s = sampled(input.scene);
     const range = windowOf(input);
-    const frames = framesOf(s.fps, range, set.perSecond);
+    const frames = pictureFrames(s, range, set.perSecond);
     const frame = { x0: 0, y0: 0, x1: s.W, y1: s.H };
     let chars = 0;
     let below = 0;

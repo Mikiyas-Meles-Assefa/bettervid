@@ -102,8 +102,6 @@ test("evaluation composes each candidate into the video, measures its window and
   assert.ok(w[0] < w[1] && w[1] <= frames);
   const lr = layoutReading(comp, plan, 1);
   assert.ok((lr.values["area.anchor"] ?? 0) > 0);
-  assert.equal(lr.values.outMax, 0);
-  assert.ok(layoutReading(comp, plan, 1, { zoom: 3, at: [0, 0], move: "cut" }).values.outMax! > 0, "a close view off to one side pushes boxes out of the frame");
   const g = generate(1, { subjectScale: [0.3, 1] }, 6, { plan, design: d, words, theme, boxes: comp.boxes });
   const want = lr.values["area.anchor"]! * 1.3;
   const ev = evaluate(d, 1, g.candidates, [goal(1, { want: { min: want } }), goal(1, { id: "h", instrument: "legibility", value: "minAngle", want: { min: 1 }, weight: 0.2 })], c);

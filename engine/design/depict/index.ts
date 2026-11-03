@@ -7,7 +7,7 @@
 export * from "./drawn.ts";
 export type { ActResult, Change, DepictLook, Depiction, Part, Pt, StateDef, StateMap, StateValue, Timing, VerbDef, VerbSet } from "./types.ts";
 export { PROP_SPEC_SCHEMA, sizeCm, type PropSpec, type SpecVerb, type Unit } from "./spec.ts";
-export { changesToSteps, checkSpec, depictionFrom, suggestLook, transfer, type DepictOptions, type SpecProblem } from "./depict.ts";
+export { changesToSteps, checkSpec, depictionFrom, suggestLook, suggestMagnify, transfer, type DepictOptions, type SpecProblem } from "./depict.ts";
 export { DEPICTER_SYSTEM, depict, depicterTask, type DepictAnswer, type DepictRequest } from "./depicter.ts";
 export { KINDS } from "./kinds/index.ts";
 export { findVerb, POSE_STATES, POSE_VERBS, type KindDef } from "./make.ts";

@@ -203,16 +203,60 @@ export function changingIds(plan: IntentPlan, k: number): string[] {
   return [...new Set([...m.acts.flatMap((a) => [...a.ids, ...(a.to ? [a.to] : [])]), ...m.becomes.map((b) => b.id), ...(m.reveal ? [m.reveal] : [])])];
 }
 
-/** Packer variants: the anchor as large as the usable frame allows, and each arrangement the packer knows. */
-export function packerVariants(md: MomentDesign): { set: Partial<Record<Field, unknown>>; label: string; why: string }[] {
+/**
+ * Packer variants: the anchor as large as the usable frame allows, the content moved into the frame's empty room, and
+ * each arrangement the packer knows. With the current composition's boxes (ctx.boxes), "fill" scales the anchor by
+ * the ratio at which its own box reaches the usable frame's limiting side (subjectScale 1 is the room's size, which a
+ * stage whose content is wider or taller than the room never reaches), and the room variants center what is on screen
+ * in the usable frame, or set the anchor against its lower or upper edge, when the content leaves part of it empty
+ * (a tall frame's empty lower half). All geometry; which is good is the goals' call.
+ */
+export function packerVariants(md: MomentDesign, k?: number, ctx?: GenContext): { set: Partial<Record<Field, unknown>>; label: string; why: string }[] {
   const out: { set: Partial<Record<Field, unknown>>; label: string; why: string }[] = [];
-  const fill = md.subjectScale.value < 1;
-  if (fill) out.push({ set: { subjectScale: 1 }, label: "fill", why: "the anchor as large as the usable frame allows; the packer shrinks it until what must stay fits" });
+  const r3 = (x: number) => Math.round(x * 1000) / 1000;
+  const s0 = md.subjectScale.value;
+  const at0 = md.subjectAt.value;
+  let fillScale = s0 < 1 ? 1 : undefined;
+  const room: { set: Partial<Record<Field, unknown>>; label: string; why: string }[] = [];
+  const all = k !== undefined && ctx?.boxes ? ctx.boxes.find((b) => b.moment === k)?.boxes : undefined;
+  if (k !== undefined && ctx && all) {
+    const m = ctx.plan.moments[k]!;
+    const V = new Values(ctx.design, ctx.theme);
+    const v = ctx.design.viewing;
+    const { rect } = usableRect(v, V.px("frame.margin", k));
+    const U: Box = [rect.x0 / v.width, rect.y0 / v.height, rect.x1 / v.width, rect.y1 / v.height];
+    const [uw, uh] = [U[2] - U[0], U[3] - U[1]];
+    const a = idBox(ctx.boxes, k, m.reveal ?? m.show, ctx.plan) ?? (all.stage as Box | undefined);
+    if (a && a[2] > a[0] && a[3] > a[1]) {
+      const ratio = Math.min(uw / (a[2] - a[0]), uh / (a[3] - a[1]));
+      if (ratio > 1.001) fillScale = r3(s0 * ratio);
+    }
+    const content = union(Object.values(all) as Box[]);
+    if (content && a) {
+      const [ch, ah] = [content[3] - content[1], a[3] - a[1]];
+      // The anchor's center for content centered in the usable height, and for the anchor at its lower and upper edge.
+      const centered = (U[1] + (uh - ch) / 2 - content[1] + a[1] + ah / 2 - U[1]) / uh;
+      const opts: [number, string, string][] = [
+        [centered, "center", "what is on screen centered in the usable frame's height"],
+        [1, "low", "the anchor against the usable frame's lower edge, into the room below"],
+        [0, "high", "the anchor against the usable frame's upper edge"],
+      ];
+      const empty = uh - ch;
+      if (empty > 1e-3)
+        for (const [y, label, why] of opts) {
+          const yy = r3(Math.min(1, Math.max(0, y)));
+          if (Math.abs(yy - at0[1]) > 0.005) room.push({ set: { subjectAt: [at0[0], yy] }, label, why: `${why}; ${Math.round((empty / uh) * 100)}% of the usable height is empty now` });
+        }
+    }
+  }
+  if (fillScale !== undefined && Math.abs(fillScale - s0) > 0.005) out.push({ set: { subjectScale: fillScale }, label: "fill", why: `the anchor as large as the usable frame allows (subjectScale ${fillScale}); the packer shrinks it until what must stay fits` });
+  out.push(...room);
+  if (fillScale !== undefined && room[0]) out.push({ set: { ...room[0].set, subjectScale: fillScale }, label: `fill+${room[0].label}`, why: `as large as fits, ${room[0].why}` });
   for (const a of ARRANGEMENTS) {
     if (a === md.arrangement.value) continue;
     out.push({ set: { arrangement: a }, label: a, why: `the support packed as ${a}` });
   }
-  if (fill) for (const a of ARRANGEMENTS) if (a !== md.arrangement.value) out.push({ set: { arrangement: a, subjectScale: 1 }, label: `${a}+fill`, why: `the support packed as ${a}, the anchor as large as fits` });
+  if (fillScale !== undefined) for (const a of ARRANGEMENTS) if (a !== md.arrangement.value) out.push({ set: { arrangement: a, subjectScale: fillScale }, label: `${a}+fill`, why: `the support packed as ${a}, the anchor as large as fits` });
   return out;
 }
 
@@ -304,7 +348,7 @@ export function generate(k: number, space: SearchSpace | undefined, n: number, c
   };
   const sp = sampleSpace(md, space ?? {}, Math.max(0, n - 1), `${seed}.space`);
   notes.push(...sp.notes);
-  const gens = o.generators === false ? [] : [...packerVariants(md).map((g) => ({ ...g, source: "packer" as const })), ...cameraPlans(k, { ...ctx, design: { ...ctx.design, moments: ctx.design.moments.map((x) => (x.moment === k ? md : x)) } }).map((g) => ({ ...g, source: "camera" as const })), ...timingOptions(k, ctx).map((g) => ({ ...g, source: "timing" as const }))];
+  const gens = o.generators === false ? [] : [...packerVariants(md, k, { ...ctx, design: { ...ctx.design, moments: ctx.design.moments.map((x) => (x.moment === k ? md : x)) } }).map((g) => ({ ...g, source: "packer" as const })), ...cameraPlans(k, { ...ctx, design: { ...ctx.design, moments: ctx.design.moments.map((x) => (x.moment === k ? md : x)) } }).map((g) => ({ ...g, source: "camera" as const })), ...timingOptions(k, ctx).map((g) => ({ ...g, source: "timing" as const }))];
   // Generators by kind take turns too, so a small budget still tries a layout, a camera and a timing.
   const byKind = ["packer", "camera", "timing"].map((s) => gens.filter((g) => g.source === s));
   const genOrder: typeof gens = [];

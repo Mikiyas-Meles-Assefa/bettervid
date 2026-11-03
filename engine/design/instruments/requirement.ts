@@ -2,7 +2,7 @@
 // screen, how large it looks (visual angle of its shorter side), and for how long, clear of covers, the frame's edge and
 // UI zones. Values only: whether "on screen for 3 s" or "legible" is met is the agent's reading of the requirement.
 import type { Instrument, MeasureInput, PartCard, Reading, Requirement, Viewing } from "../types.ts";
-import { UI, arcmin, covers, framesOf, round, sampled, windowOf, type Item } from "./sample.ts";
+import { UI, arcmin, area, covers, meet, pictureFrames, round, sampled, windowOf, type Item } from "./sample.ts";
 import { standing, type VisibilitySettings } from "./visibility.ts";
 
 export type RequirementSettings = {
@@ -32,14 +32,12 @@ export function partOf(req: Requirement | undefined, card: PartCard | undefined)
 export const requirement: Instrument<RequirementSettings> = {
   name: "requirement",
   describe:
-    "For a requirement on the user's material: is the required piece on screen, how large it looks, for how long. The piece is the card's part (its box inside the picture) or the whole card, found through the ids map by the card's name or `target`. " +
-    "Values: seconds (clear on screen), share (of the window), angle (smallest visual angle of the piece's shorter side while shown, arcmin), meanAngle, covered, cut, ui (seconds), firstSeen (seconds from the window's start; -1 never). " +
-    "Settings: requirement, card, part, target, perSecond, visibility (what counts as covered, cut, in a UI zone).",
+    "A requirement on the user's material: is its piece (the card's part, or the whole card, found by ids) on screen through the camera, how large, how long. Values: seconds (clear), share (of the window), angle, meanAngle (its shorter side, arcmin), covered, cut, ui (s), firstSeen (s from the window's start; -1 never). Settings: requirement, card, part, target (scene ids), visibility (its settings), perSecond.",
   suggest: (v: Viewing) => ({ perSecond: 4, visibility: { perSecond: 4, covered: 0.5, cut: 0.04, ui: 0.25, backdrop: 0.8 }, why: `suggested for ${v.screen}; the requirement and card come from the material reader` }),
   measure(input: MeasureInput, set: RequirementSettings): Reading {
     const s = sampled(input.scene);
     const range = windowOf(input);
-    const frames = framesOf(s.fps, range, set.perSecond);
+    const frames = pictureFrames(s, range, set.perSecond);
     const dt = (range[1] - range[0]) / Math.max(1, frames.length) / s.fps;
     const card = set.card;
     const part = set.part ?? partOf(set.requirement, card);
@@ -58,8 +56,14 @@ export const requirement: Instrument<RequirementSettings> = {
       if (!mine.length) continue;
       // The part's box inside the picture, on the frame; or the target's own items.
       const pic = mine.find((it) => it.kind === "image");
-      const shown: Item[] = box && pic ? [{ ...pic, box: { x0: pic.box.x0 + box[0] * (pic.box.x1 - pic.box.x0), x1: pic.box.x0 + box[2] * (pic.box.x1 - pic.box.x0), y0: pic.box.y0 + box[1] * (pic.box.y1 - pic.box.y0), y1: pic.box.y0 + box[3] * (pic.box.y1 - pic.box.y0) } }] : mine;
+      // The part's box comes from the whole picture (before any crop); a crop that leaves part of it out cuts it as the frame would.
+      const whole = pic?.full;
+      const partBox = box && whole ? { x0: whole.x0 + box[0] * (whole.x1 - whole.x0), x1: whole.x0 + box[2] * (whole.x1 - whole.x0), y0: whole.y0 + box[1] * (whole.y1 - whole.y0), y1: whole.y0 + box[3] * (whole.y1 - whole.y0) } : undefined;
+      const seenPart = partBox ? meet(partBox, pic!.box) : undefined;
+      const cropped = !!partBox && 1 - area(seenPart!) / Math.max(1e-6, area(partBox)) > set.visibility.cut;
+      const shown: Item[] = partBox && pic ? [{ ...pic, box: area(seenPart!) > 0 ? seenPart! : partBox }] : mine;
       const st = standing(shown, all, s.W, s.H, zones, set.visibility);
+      if (cropped) st.cut = true;
       if (st.covered) cov++;
       if (st.cut) cut++;
       if (st.ui) ui++;

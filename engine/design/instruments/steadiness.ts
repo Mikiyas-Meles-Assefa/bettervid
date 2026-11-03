@@ -18,9 +18,7 @@ export type SteadinessSettings = {
 export const steadiness: Instrument<SteadinessSettings> = {
   name: "steadiness",
   describe:
-    "Things that stay across changes keep their place and size. Each thing is read where it rests (not changing); between rests while it stays on screen, a move or resize is a jump. " +
-    "Values: kept (things on screen at two or more rests), jumps (count), jumpers (things that jumped), maxShift (share of the shorter side), maxResize (relative), steadyShare (share of kept things that never jumped). " +
-    "Settings: shift, resize, camera (whether a camera move counts), perSecond.",
+    "Things that stay keep their place and size: between two rests on screen, a move or resize is a jump. Values: kept (things seen at two or more rests), jumps, jumpers (counts), maxShift (share of the shorter side), maxResize (relative), steadyShare (share of kept things that never jump). Settings: shift (share), resize (relative), camera (whether a camera move counts), backdrop, perSecond.",
   suggest: (v: Viewing) => ({ perSecond: 3, shift: 0.02, resize: 0.1, backdrop: 0.8, camera: false, why: `suggested for ${v.screen}: a move of 2% of the shorter side or a 10% resize is visible as a jump when the eye returns` }),
   measure(input: MeasureInput, set: SteadinessSettings): Reading {
     const s = sampled(input.scene);

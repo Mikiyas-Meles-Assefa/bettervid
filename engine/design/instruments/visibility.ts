@@ -2,7 +2,7 @@
 // the frame's edge, inside a UI zone (the platform's captions and buttons, or room the director keeps clear), or
 // withheld (never shown in the window). The bench's reveal and read measures asked parts of this; here it is one table.
 import type { Instrument, MeasureInput, Reading, Viewing } from "../types.ts";
-import { UI, area, covers, framesOf, meet, namesOf, round, sampled, windowOf, type Item, type Rect } from "./sample.ts";
+import { UI, area, covers, isBackdrop, meet, namesOf, pictureFrames, round, sampled, windowOf, type Item, type Rect } from "./sample.ts";
 
 export type VisibilitySettings = {
   perSecond: number;
@@ -24,7 +24,7 @@ export function standing(items: Item[], all: Item[], W: number, H: number, zones
   const top = Math.min(...items.map((t) => t.order));
   const units = new Set(items.map((t) => t.unit));
   // Opaque things painted later, from other units; their overlap with the box, capped at the box.
-  const over = all.filter((t) => t.order > top && !units.has(t.unit) && t.filled && t.opacity > 0.85 && area(t.box) < W * H * set.backdrop);
+  const over = all.filter((t) => t.order > top && !units.has(t.unit) && t.filled && t.opacity > 0.85 && area(meet(t.rest, frame)) < W * H * set.backdrop);
   let hidden = 0;
   for (const o of over) hidden += area(meet(o.box, box));
   const inFrame = area(meet(box, frame));
@@ -35,14 +35,12 @@ export function standing(items: Item[], all: Item[], W: number, H: number, zones
 export const visibility: Instrument<VisibilitySettings> = {
   name: "visibility",
   describe:
-    "For each named thing (or every thing, without an ids map): seconds on screen and clear, covered, cut by the frame, inside a UI zone, and whether it is withheld (never shown in the window). " +
-    "Values: seen.<name>, covered.<name>, cut.<name>, ui.<name> (seconds), withheld.<name> (1 when never shown), and over all things: coveredShare, cutShare, uiShare (shares of on-screen thing-seconds). " +
-    "Settings: covered, cut, ui (shares of a thing's box), perSecond.",
+    "Per named thing, through the camera and clips on each sampled frame (camera move ends included). Values: seen.<name> (s clear), covered.<name>, cut.<name> (s cut by the frame edge, a push included), ui.<name> (s in a UI zone), withheld.<name> (1 never shown), coveredShare, cutShare, uiShare (shares of thing-seconds). Settings: covered, cut, ui (share of a thing's box that counts), backdrop (share of the frame, camera at rest, above which a shape is a backdrop), perSecond.",
   suggest: (v: Viewing) => ({ perSecond: 4, covered: 0.5, cut: 0.04, ui: 0.25, backdrop: 0.8, why: `suggested for ${v.screen}: half covered hides a thing, 4% outside the frame shows as cut letters, a quarter inside a UI zone (${v.uiZones.map((z) => z.what).join(", ") || "none here"}) competes with it` }),
   measure(input: MeasureInput, set: VisibilitySettings): Reading {
     const s = sampled(input.scene);
     const range = windowOf(input);
-    const frames = framesOf(s.fps, range, set.perSecond);
+    const frames = pictureFrames(s, range, set.perSecond);
     const dt = (range[1] - range[0]) / Math.max(1, frames.length) / s.fps;
     const zones = UI(input.viewing, s.W, s.H);
     const names = namesOf(s, input);
@@ -62,7 +60,7 @@ export const visibility: Instrument<VisibilitySettings> = {
         uiN += +st.ui;
       }
       for (const [name, ids] of Object.entries(names)) {
-        const mine = all.filter((it) => ids.some((x) => covers(x, it)) && !(it.kind === "shape" && area(it.box) > s.W * s.H * set.backdrop));
+        const mine = all.filter((it) => ids.some((x) => covers(x, it)) && !isBackdrop(it, s.W, s.H, set.backdrop));
         if (!mine.length) continue;
         const r = rows.get(name)!;
         const st = standing(mine, all, s.W, s.H, zones, set);

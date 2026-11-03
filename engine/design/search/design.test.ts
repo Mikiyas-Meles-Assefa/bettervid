@@ -146,6 +146,6 @@ test("the designer's checks accept what the search offers: the layout reading an
   const p = parseIntent(`thing a "a"\n@0\n  show a\n  ask "Which one?"\n`);
   const g = (instrument: string, value: string) => ({ id: value, scope: "moment" as const, moment: 0, says: "x", instrument, value, want: { max: 0 }, weight: 1, why: "y" });
   const ctx = { viewing, names: planNames(p), holds: new Set<string>(), requirements: new Set<string>(), scope: "moment" as const, moment: 0 };
-  assert.deepEqual(checkGoals([g("layout", "area.anchor"), g("layout", "outMax"), g("layout", "w.a"), g("visibility", "cut.ask@0")], ctx, "goals"), []);
+  assert.deepEqual(checkGoals([g("layout", "area.anchor"), g("layout", "w.anchor"), g("layout", "w.a"), g("visibility", "cut.ask@0")], ctx, "goals"), []);
   assert.equal(checkGoals([g("layout", "w.nothing")], ctx, "goals").length, 1);
 });

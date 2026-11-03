@@ -5,12 +5,13 @@
 //
 // Besides the instruments, the search reports the composer's own boxes as a reading named "layout": per plan name, the
 // share of the frame its box covers on the moment's settled layout (area, w, h), and "anchor" for the moment's subject.
-// It is a measurement of the composition, never a judgment.
+// It is a measurement of the composition, never a judgment. What the camera crops is read by visibility on the drawn
+// frame (through the camera and clips at each sampled frame), not from these boxes.
 import { createHash } from "node:crypto";
 import { compose, type ComposeCtx, type Composition } from "../compose/compose.ts";
 import { instruments, settingsFor } from "../instruments/index.ts";
 import type { CameraPlan, Candidate, Design, Goal, IntentPlan, MeasureInput, MomentDesign, Reading, Viewing, Word } from "../types.ts";
-import { onScreen, type Generated, type Source } from "./generate.ts";
+import type { Generated, Source } from "./generate.ts";
 import { scoreGoal } from "./score.ts";
 
 export type Evaluated = Candidate & { label: string; source: Source; why: string; ms: number; window: [number, number]; notes: string[]; boxes?: Record<string, [number, number, number, number]> };
@@ -28,9 +29,7 @@ export const newCache = (limit = 40): EvalCache => ({ compositions: new Map(), r
 export const LAYOUT = {
   name: "layout",
   describe:
-    "The composer's own boxes on the moment's settled layout, as shares of the frame. Values: area.<plan name> (share of the frame's area its box covers), w.<plan name> (share of the frame's width), h.<plan name> (share of its height), " +
-    "area.anchor, w.anchor, h.anchor (the same for the moment's subject, or the stage that holds it), stage (present when a stage is on screen), " +
-    "out.<plan name> (share of the box's area outside the frame under the moment's camera at its closest, its zoom about its fixed point), outMax (the largest of those). Settings: none.",
+    "The composer's own boxes on the moment's settled layout, as shares of the frame (camera crops are visibility's cut.<name>). Values: area.<plan name>, w.<plan name>, h.<plan name>, area.anchor, w.anchor, h.anchor (the subject, or the stage that holds it), stage (1 when a stage is on screen). No settings.",
   suggested: {},
 };
 
@@ -67,7 +66,7 @@ export function holdsFrom(holds: { id: string; afterWord: number; seconds: numbe
 }
 
 /** The layout reading of moment k from a composition's boxes. */
-export function layoutReading(c: Composition, plan: IntentPlan, k: number, camera?: CameraPlan): Reading {
+export function layoutReading(c: Composition, plan: IntentPlan, k: number, _camera?: CameraPlan): Reading {
   const boxes = c.boxes.find((b) => b.moment === k)?.boxes ?? {};
   const values: Record<string, number> = {};
   const r = (x: number) => Math.round(x * 1000) / 1000;
@@ -87,21 +86,34 @@ export function layoutReading(c: Composition, plan: IntentPlan, k: number, camer
     notes.push(`the anchor (${subj && boxes[subj] ? subj : "the stage"}) covers ${Math.round(values["area.anchor"]! * 100)}% of the frame, ${Math.round(values["w.anchor"]! * 100)}% of its width and ${Math.round(values["h.anchor"]! * 100)}% of its height`);
   }
   if (boxes.stage) values.stage = 1;
-  if (camera && camera.zoom > 1) {
-    let outMax = 0;
-    for (const [id, b] of Object.entries(boxes)) {
-      const v = onScreen(b, camera);
-      const area = (v[2] - v[0]) * (v[3] - v[1]);
-      const inW = Math.max(0, Math.min(1, v[2]) - Math.max(0, v[0]));
-      const inH = Math.max(0, Math.min(1, v[3]) - Math.max(0, v[1]));
-      const out = area > 0 ? r(1 - (inW * inH) / area) : 0;
-      values[`out.${id}`] = out;
-      outMax = Math.max(outMax, out);
-    }
-    values.outMax = outMax;
-    if (outMax > 0) notes.push(`at zoom ${camera.zoom} about [${camera.at.join(", ")}], ${Object.keys(boxes).filter((id) => values[`out.${id}`]! > 0).join(", ")} reach outside the frame (up to ${Math.round(outMax * 100)}% of a box)`);
-  } else values.outMax = 0;
   return { instrument: "layout", values, notes };
+}
+
+/**
+ * Per plan name, the words of the moments that make it their subject or act on it (show, reveal, acts, becomes,
+ * compare), and for a composer's name tied to a moment (ask@<word>, reading@<word>) that moment's word: what timing
+ * uses as the thing's cue when the narration never says its name.
+ */
+export function cuesOf(plan: IntentPlan, names: string[] = []): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  const add = (id: string | undefined, w: number) => {
+    if (!id) return;
+    const list = (out[id] ??= []);
+    if (!list.includes(w)) list.push(w);
+  };
+  for (const m of plan.moments) {
+    add(m.show, m.word);
+    add(m.reveal, m.word);
+    for (const a of m.acts) [...a.ids, a.to].forEach((id) => add(id, m.word));
+    for (const b of m.becomes) add(b.id, m.word);
+    for (const id of m.compare ?? []) add(id, m.word);
+  }
+  for (const n of names) {
+    const at = /@(\d+)$/.exec(n);
+    if (at && plan.moments.some((m) => m.word === Number(at[1]))) add(n, Number(at[1]));
+  }
+  for (const l of Object.values(out)) l.sort((x, y) => x - y);
+  return out;
 }
 
 /** Goals grouped by instrument and settings: one measurement per group. */
@@ -123,7 +135,7 @@ export function measureGoals(c: Composition, plan: IntentPlan, k: number | undef
   const notes: string[] = [];
   const readings: Reading[] = [];
   const scores: Candidate["scores"] = [];
-  const full: MeasureInput = { ...input, scene: c.scene, ids: c.ids };
+  const full: MeasureInput = { ...input, scene: c.scene, ids: c.ids, cues: input.cues ?? cuesOf(plan, Object.keys(c.ids)) };
   for (const grp of groupsOf(goals).values()) {
     let reading: Reading | undefined;
     if (grp.instrument === "layout") reading = k === undefined ? undefined : layoutReading(c, plan, k, camera);

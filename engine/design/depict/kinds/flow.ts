@@ -19,6 +19,7 @@ export const flow: KindDef = {
     speed: "for particles and gas: centimetres per second along the path",
     width: "for stream: the stream's width in centimetres; for drops, particles and gas: their size in centimetres",
     count: "for particles: how many are on the path at once",
+    magnify: "how many times its true size each drop, particle or puff (or the stream's width) is drawn so a viewer sees it; 1 is true size. A design value set with a reason (suggestMagnify gives the viewing's suggestion); the motion stays physical",
   },
   colors: { stuff: "the color of what flows (a fact: water drops are clear, smoke is grey)" },
   required: ["path"],
@@ -45,7 +46,8 @@ export const flow: KindDef = {
       return path.at(-1)!;
     };
     const stuff = c.col("stuff") ?? "accent";
-    const size = Math.max(L * 1.2, (c.param<number>("width") ?? (form === "gas" ? 2 : 0.5)) * cmU);
+    const magnify = Math.max(1, c.param<number>("magnify") ?? 1);
+    const size = Math.max(L * 1.2, (c.param<number>("width") ?? (form === "gas" ? 2 : 0.5)) * cmU * magnify);
     const rate = c.param<number>("rate") ?? (form === "stream" ? 0 : 2);
     const speed = (c.param<number>("speed") ?? 20) * cmU; // units per second
     const nodes: NodeSpec[] = [];
