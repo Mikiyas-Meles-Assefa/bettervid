@@ -42,7 +42,7 @@ export type Input = {
   frame?: [number, number]; // the frame's width and height in pixels; 1080 by 1920 (9:16) when absent
   // Who writes the scene: "language" (each part in the scene language) or "intent" (an intent plan per part, which the
   // design brain composes). Absent: the scene stage's default (SCENE_AUTHOR_DEFAULT).
-  sceneAuthor?: "language" | "intent";
+  sceneAuthor?: "language" | "intent" | "toolbox"; // toolbox: the language with the design brain's abilities (path A)
   files?: InputFile[]; // the user's own files, stored in the project's material folder
 };
 

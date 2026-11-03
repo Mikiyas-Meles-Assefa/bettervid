@@ -7,7 +7,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DemoPhase, DirectionEvent, Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
+import type { DemoPhase, DirectionEvent, DirectionPlan, Project, SceneSection, ScenePlan } from "../../schemas/project.ts";
 import { when } from "../../engine/core/compile.ts";
 import { bundled } from "../../engine/render/bundle.ts";
 import { evaluate } from "../../engine/core/evaluate.ts";
@@ -25,7 +25,7 @@ import { parse, type Item, type State } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { better, decode, hide, inventory, issuesFrom, judgeSchema, keptAt, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
 import { json, text } from "../lib/meta.ts";
-import { asked, charge, checkBudget, dir, prompt, stage, topic } from "../lib/project.ts";
+import { asked, charge, checkBudget, dir, prompt, stage, style, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 import { designRunner, type DesignInputs } from "../lib/design-run.ts";
@@ -36,6 +36,8 @@ import { readProject, type MaterialFile } from "../../engine/design/material/ind
 import { suggestViewing, viewingFrom } from "../../engine/design/suggest.ts";
 import type { PartCard, Reasoner, Viewing } from "../../engine/design/types.ts";
 import { basename } from "node:path";
+import { emptyToolbox, prepareToolbox, toolboxKit, toolboxNotes, type Toolbox, type ToolboxMakers } from "../../engine/language/toolbox.ts";
+import { lookSchema } from "./direction.ts";
 
 const VERSION = 6; // bump when the way sections are written or checked changes, so cached sections are redone
 const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
@@ -347,7 +349,28 @@ export const SCENE_KITS: Kit[] = [...KITS, mathFormulas];
 export function sceneContext(p: Project, theme: Theme = themeFrom(p.input.style)): CompileContext {
   const words = p.narration!.words.map((w) => ({ text: w.text, start: w.start }));
   const [width, height] = p.input.frame ?? [WIDTH, HEIGHT];
-  return { fps: FPS, width, height, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: SCENE_KITS };
+  return { fps: FPS, width, height, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: usesToolbox(p) ? [...SCENE_KITS, toolboxKit(toolboxOf(p))] : SCENE_KITS };
+}
+
+// Path A: the writer keeps writing whole scenes, and the language also offers the design brain's abilities (depicted
+// things, staging, the motion vocabulary with the style's leanings, the director's look) and a review round of
+// instruments and stills. The depictions a project's scenes asked for are kept in scene/toolbox.json, so every build of
+// its scene (the stage, the join, the timeline, the scripts) draws the same things.
+export const usesToolbox = (p: Project) => (p.input.sceneAuthor ?? SCENE_AUTHOR_DEFAULT) === "toolbox";
+const TOOLBOXES = new Map<string, Toolbox>();
+const toolboxFile = (p: Project) => join(dir(p), "scene", "toolbox.json");
+export function toolboxOf(p: Project): Toolbox {
+  const file = toolboxFile(p);
+  let box = TOOLBOXES.get(file);
+  if (!box) {
+    box = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Toolbox) : emptyToolbox();
+    TOOLBOXES.set(file, box);
+  }
+  return box;
+}
+export function saveToolbox(p: Project) {
+  mkdirSync(join(dir(p), "scene"), { recursive: true });
+  writeFileSync(toolboxFile(p), JSON.stringify(toolboxOf(p), null, 1));
 }
 
 // Build options for this project's scene. `assets` maps asset names to an image source the renderer can load.
@@ -459,7 +482,7 @@ export async function wholeScene(p: Project, assets: Record<string, string>, fra
   return { scene: gateScenes(base, parts), problems: [], source };
 }
 
-export const kitKinds = () => SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph");
+export const kitKinds = () => [...SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {})).filter((k) => k !== "graph"), "depict"];
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Pictures: the director's images, offered to Spark by name.
@@ -570,6 +593,8 @@ export type Job = {
   folder: string;
   log: (line: string) => void;
   review?: boolean; // false: no review round after the look (reviewRound)
+  // Path A: what prepares the depictions a part asks for before each build, and the toolbox they are kept in.
+  toolbox?: { box: Toolbox; makers: ToolboxMakers; inflight: Map<string, Promise<void>>; save: () => void };
 };
 export type Written = { source: string; result: BuildResult; problems: string[]; warnings: string[]; usd: number; rounds: number };
 
@@ -579,6 +604,10 @@ export type Checked = { result: BuildResult; problems: string[]; warnings: strin
 
 export async function check(job: Job, written: string): Promise<Checked> {
   const kinds = kitKinds();
+  // Depicted things are drawn from the depicter's answers, so they are prepared before the part is built; what could
+  // not be prepared goes back to the writer with the build's own problems.
+  const unmade = job.toolbox ? (await prepareToolbox(plainMoments(written, job.opts), kinds, job.toolbox.box, job.toolbox.makers, job.toolbox.inflight)).problems : [];
+  if (job.toolbox) job.toolbox.save();
   const result = await build(written, job.opts);
   const source = plainMoments(written, job.opts);
   const built = result.problems.map((p) => (p.line ? `line ${p.line}: ${p.message}` : p.message));
@@ -592,7 +621,7 @@ export async function check(job: Job, written: string): Promise<Checked> {
   // computed steps played by the thing that computes them. Both go back for repair; a part that still misses a
   // demonstration is reported rather than failed, as a hand-off is.
   const direction = directed(source, job.p, job.range, kinds);
-  return { result, problems: [...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x)), ...direction.withholds, ...direction.truth], warnings: [...carry, ...handoff, ...direction.demos], notes: [...shape.filter(leftOut), ...needs(written)] };
+  return { result, problems: [...unmade, ...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x)), ...direction.withholds, ...direction.truth], warnings: [...carry, ...handoff, ...direction.demos], notes: [...shape.filter(leftOut), ...needs(written)] };
 }
 
 // Lines a writer leaves when a hold is too short for what the direction asks of it: `# needs h2 6s: why`. They go to
@@ -692,7 +721,9 @@ export function review(job: Job, written: string, result: BuildResult): string {
   const source = plainMoments(written, job.opts);
   const from = when({ word: job.range.firstWord }, job.opts.ctx);
   const extra = result.scene ? overPictures(source, result.scene, from, endFrame(job), kinds) : [];
-  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra });
+  // What each depicted thing can do, so the writer can use its states, verbs and parts.
+  const things = job.toolbox ? toolboxNotes(source, kinds, job.toolbox.box, job.opts.ctx.theme) : [];
+  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra: [...extra, ...things.map((x) => `Depicted: ${x}`)] });
 }
 
 // What goes back to the writer: a part with build problems, and a part that builds with what code can see about it.
@@ -1612,6 +1643,35 @@ function directionSummary(p: Project, ranges: Range[]): string {
   return `How the video is directed, event by event:\n${lines.join("\n")}${things.length ? `\n${things.join("\n")}` : ""}\n\n`;
 }
 
+// The director's look, as every path A writer reads it beside its own part.
+export const lookText = (p: Project) => {
+  const l = p.direction?.look;
+  return l ? `\n\nThe look of the whole video, from its director, for every part (art direction to carry out in your own way, not rules):\n- Emphasis: ${l.emphasis}\n- Scale: ${l.scale}\n- Motifs: ${l.motifs}\n- Texture: ${l.texture}\n` : "";
+};
+
+// A direction plan written before the look was part of it gets the look in one call of the director's own guide.
+async function ensureLook(p: Project) {
+  if (!p.direction || p.direction.look) return;
+  const user = [`Topic: ${topic(p)}`, `Visual style: ${p.input.style || "default"}`, `Goal: ${p.direction.goal}`, `Promise: ${p.direction.promise}`, `Arc: ${p.direction.arc}`, `Events:\n${p.direction.events.map((e) => `${e.id}: ${e.job}; eye on ${e.look}; feel ${e.feel}`).join("\n")}`, `The narration:\n${p.narration?.words.map((w) => w.text).join(" ") ?? ""}`].join("\n\n");
+  const r = await json<NonNullable<DirectionPlan["look"]>>({ system: `You are the director of this video and have planned it already. Now write its look.\n\n${prompt("art-direction")}`, user, schema: lookSchema, schemaName: "look", effort: "medium" });
+  p.direction.look = r.value;
+  charge(p, "scene", r.usd, "the director's look");
+  console.log(`  look: ${JSON.stringify(r.value).slice(0, 300)}`);
+}
+
+// What prepares path A's depictions: the depicter on Muse Spark, the style's art, and the makers of sprites and pictures.
+function toolboxFor(p: Project, spent: { usd: number }): NonNullable<Job["toolbox"]> {
+  const depicter = metaReasoner({ effort: { depicter: "medium" }, charge: (x, detail) => ((spent.usd += x), console.log(`  depicter ${detail}: $${x.toFixed(4)}`)), checkBudget: () => checkBudget(0.05) });
+  const s = style(p.input.style);
+  const makers: ToolboxMakers = { depicter, style: { name: s.name, art: s.art?.object ?? s.label }, purpose: [p.plan?.intent, topic(p)].filter(Boolean).join(": "), sprites: true, ...depictMakers(p, spent) };
+  return { box: toolboxOf(p), makers, inflight: new Map(), save: () => saveToolbox(p) };
+}
+
+// Sprite and picture makers for path A (pipeline/lib/depict-makers.ts), when this run has them.
+function depictMakers(_p: Project, _spent: { usd: number }): Partial<ToolboxMakers> {
+  return {};
+}
+
 // What every part's request starts with: the topic, why the viewer wants it, and what the user asked for on purpose.
 export const sceneHeader = (p: Project) => [
   `Topic: ${topic(p)}`,
@@ -1640,7 +1700,9 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
   const library = loadLibrary().map((x) => x.name);
   const done = new Set(doneTickets(p));
   const tickets = sceneTickets(p, ranges).filter((t) => !done.has(t.key));
-  const inputs = [VERSION, CHECKS, tickets.map((t) => t.key), words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? [], ...(author === "intent" ? [author, readFileSync(INTENT_GUIDE, "utf8")] : [])];
+  // Path A gives every writer the director's look; a plan written before the look existed gets one now, once.
+  if (author === "toolbox") await ensureLook(p);
+  const inputs = [VERSION, CHECKS, tickets.map((t) => t.key), words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? [], ...(author === "intent" ? [author, readFileSync(INTENT_GUIDE, "utf8")] : []), ...(author === "toolbox" ? [author, prompt("scene-review")] : [])];
   const estimate = 0.03 + ranges.length * 0.12;
   await stage(p, "scene", inputs, estimate, async () => {
     const root = join(dir(p), "scene");
@@ -1669,7 +1731,8 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
 
       const sections: SceneSection[] = new Array(ranges.length);
       const notes: string[][] = ranges.map(() => []);
-      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)), opts, folder: join(root, range.id), log: (l) => console.log(l) }));
+      const toolbox = author === "toolbox" ? toolboxFor(p, spent) : undefined;
+      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox, ...(toolbox ? { toolbox } : {}) }));
       // The intent path: the material read once into cards, and one plan request per part.
       let intent: { system: string; requests: string[]; cards: PartCard[]; requirements: PartCard["requirements"]; brief: string } | undefined;
       if (author === "intent") {
