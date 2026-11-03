@@ -188,3 +188,25 @@ test("see-through colors keep their alpha: blending keeps it, and distance from 
   const layers = paintPath({ ...node, stroke: "none", fill: clear }, "n", spec({ fill: { kind: "scribble", base: 0.8 } }), board, "#000000");
   for (const l of layers) for (const c of [l.fill, l.stroke]) if (c) assert.ok(c !== "#000000" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(c), `${c} is a color the renderer reads`);
 });
+
+test("the dry tooth is a seamless tile of fixed pixels, the same in every render, and more grain takes out more", async () => {
+  const { TILE, toothPixels, toothTile, grayPng } = await import("./texture.ts");
+  const a = toothPixels(0.7);
+  assert.deepEqual(a, toothPixels(0.7));
+  assert.equal(a.length, TILE * TILE);
+  const kept = (p: Uint8Array) => p.reduce((s, v) => s + v, 0) / p.length / 255;
+  assert.ok(kept(toothPixels(1)) < kept(toothPixels(0)), "more grain keeps less of the stroke");
+  assert.ok(kept(a) > 0.2 && kept(a) < 0.9, `a chalk stroke keeps much of itself, with specks out (${kept(a).toFixed(2)})`);
+  // Seamless: the step across the tile's edge is no bigger than the steps inside it.
+  const step = (x0: number, x1: number) => {
+    let s = 0;
+    for (let y = 0; y < TILE; y++) s += Math.abs(a[y * TILE + x0]! - a[y * TILE + x1]!);
+    return s / TILE;
+  };
+  let inside = 0;
+  for (let x = 0; x < TILE - 1; x++) inside = Math.max(inside, step(x, x + 1));
+  assert.ok(step(TILE - 1, 0) <= inside, "no seam where tiles meet");
+  assert.deepEqual([...grayPng(a, TILE, TILE).subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.match(toothTile(0.7), /^data:image\/png;base64,/);
+  assert.equal(toothTile(0.7), toothTile(0.7));
+});
