@@ -1132,6 +1132,33 @@ const toPhase = (x: RawDemoPhase): DemoPhase => ({
   why: x.why,
 });
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Tickets from watching the finished video. The critic files what it saw (the look of each part, and whether the picture
+// carried out the direction); a ticket of severity 2 or more that names one part, or a few, sends those parts back for
+// one repair round with its notes. A note about the whole video is no one part's to fix and is left to the reader.
+
+export type SceneTicket = { key: string; sections: string[]; text: string };
+const TICKETS_DONE = "tickets-done.json";
+
+export function sceneTickets(p: Project, ranges: Range[]): SceneTicket[] {
+  const events = p.direction?.events ?? [];
+  return (p.critic?.tickets ?? []).flatMap((t) => {
+    const m = /^(direction:scene|look):([a-z_]+):(\d)$/.exec(t.action);
+    if (!m || Number(m[3]) < 2) return [];
+    const ids = t.shotId.split(",").map((x) => x.trim()).filter(Boolean);
+    const named = m[1] === "look"
+      ? ranges.filter((r) => ids.includes(r.id))
+      : ranges.filter((r) => ids.some((id) => { const e = events.find((x) => x.id === id); return !!e && e.lastWord >= r.firstWord && e.firstWord <= r.lastWord; }));
+    if (!named.length || named.length > Math.max(2, Math.floor(ranges.length / 2))) return [];
+    return [{ key: hash(t.action, t.shotId, t.note), sections: named.map((r) => r.id), text: `${m[2]!.replace(/_/g, " ")} (${ids.join(", ")}): ${t.note}` }];
+  });
+}
+
+const doneTickets = (p: Project): string[] => {
+  const file = join(dir(p), "scene", TICKETS_DONE);
+  return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : [];
+};
+
 // The direction in short, for the first pass that plans what carries between parts.
 function directionSummary(p: Project, ranges: Range[]): string {
   if (!p.direction?.events?.length) return "";
@@ -1162,7 +1189,9 @@ export async function scene(p: Project, force = false) {
   ].filter(Boolean).join("\n\n") + "\n\n";
   const prompts = ["scene", "scene-cast", "scene-look", "scene-demo", "engine-language", "engine-repair"].map(prompt);
   const library = loadLibrary().map((x) => x.name);
-  const inputs = [VERSION, CHECKS, words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
+  const done = new Set(doneTickets(p));
+  const tickets = sceneTickets(p, ranges).filter((t) => !done.has(t.key));
+  const inputs = [VERSION, CHECKS, tickets.map((t) => t.key), words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
   const estimate = 0.03 + ranges.length * 0.12;
   await stage(p, "scene", inputs, estimate, async () => {
     const root = join(dir(p), "scene");
@@ -1222,6 +1251,28 @@ export async function scene(p: Project, force = false) {
       };
       await Promise.all(Array.from({ length: Math.min(PARALLEL, ranges.length) }, worker));
 
+      // Parts the critic's tickets name go back once, with what was seen in the finished video.
+      if (tickets.length) {
+        const byPart = new Map<number, string[]>();
+        for (const t of tickets) for (const id of t.sections) {
+          const i = ranges.findIndex((r) => r.id === id);
+          if (i >= 0) (byPart.get(i) ?? byPart.set(i, []).get(i)!).push(t.text);
+        }
+        console.log(`  ${tickets.length} tickets from watching the video send back ${[...byPart.keys()].map((i) => ranges[i]!.id).join(", ")}`);
+        await Promise.all([...byPart].map(async ([i, list]) => {
+          const job = jobs[i]!;
+          const ask = `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(sections[i]!.source)}\n\nThe finished video was rendered and watched. These problems were seen in your part (times in seconds of the video):\n${list.map((x) => `- ${x}`).join("\n")}\n\nChange your part so each of them is fixed, as the direction above asks, and keep everything else as it is. Return the whole part, with no commentary.`;
+          const w = await compose(job, undefined, ask, false);
+          spent.usd += w.usd;
+          const ok = !w.problems.length && !!w.result.scene;
+          job.log(`  ${job.range.id}: ${ok ? "repaired from the tickets" : `!!! the repair from the tickets does not build (${w.problems.slice(0, 2).join(" | ").slice(0, 200)}); kept as it was`}, $${w.usd.toFixed(3)}`);
+          if (!ok) return;
+          sections[i] = { ...sections[i]!, source: plainMoments(w.source, opts), rounds: sections[i]!.rounds + w.rounds, usd: +(sections[i]!.usd + w.usd).toFixed(4) };
+          writeFileSync(join(job.folder, "scene.txt"), w.source);
+          writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notes[i] }, null, 1));
+        }));
+        writeFileSync(join(root, TICKETS_DONE), JSON.stringify([...done, ...tickets.map((t) => t.key)], null, 1));
+      }
       p.scene = { sections, assets };
       // The parts join into one scene. Where the whole does not build, the problem goes back to the part whose lines it
       // names, with the error, and that part is repaired and joined again; there is no lesser scene to stand in.

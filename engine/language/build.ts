@@ -175,22 +175,28 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
 
   // Kit things by id, so a replay can take the very settings of the thing it repeats.
   const kitItems = new Map<string, Item>();
-  // A kit thing is made once, from its first line; a later line with the same id and a different input would silently
-  // show the first input, so it is refused. Place, size, role and `done` may differ.
+  // A thing that computes steps is made once, from its first line; a later line with the same id and a different input
+  // would silently play the first input's steps, so it is refused. Place, size, role and `done` may differ. (Other kits,
+  // such as a formula, may change in place.)
+  const computes = new Set(allKits.filter((k) => k.behaviors?.steps).flatMap((k) => Object.keys(k.kinds ?? {})));
   const OWN = new Set(["at", "into", "before", "after", "done", "w", "h", "role", "follow", "enter"]);
   const inputOf = (i: Item) => JSON.stringify(Object.entries(i.attrs).filter(([k]) => !OWN.has(k)).sort(([a], [b]) => a.localeCompare(b)));
   const findKits = (list: Item[]) => list.forEach((i) => {
     if (kinds[i.kind] && i.kind !== "graph") {
       const first = kitItems.get(i.id);
       if (!first) kitItems.set(i.id, i);
-      else if (first.kind !== i.kind || inputOf(first) !== inputOf(i)) report(i.line, `${i.id} is made at line ${first.line} with ${first.kind} ${inputOf(first)}, and this line makes it again with ${i.kind} ${inputOf(i)}. One id is one thing with one input: write the very same settings (only its place, size, role and done= may change), or give a different thing a new id.`);
+      else if (computes.has(i.kind) && (first.kind !== i.kind || inputOf(first) !== inputOf(i))) report(i.line, `${i.id} is made at line ${first.line} with ${first.kind} ${inputOf(first)}, and this line makes it again with ${i.kind} ${inputOf(i)}. One id is one thing with one input: write the very same settings (only its place, size, role and done= may change), or give a different thing a new id.`);
     }
     findKits(i.children);
   });
   doc.states.forEach((s) => findKits(s.items));
 
+  // A thing that computes steps is one input for the whole scene; any other kit thing (a formula) may change in place,
+  // so each input it takes is expanded and measured on its own, and the layout sizes it by the form it shows.
+  const made = new Map<string, NonNullable<ReturnType<typeof expansions.get>>>();
   const expandKit = (item: Item) => {
-    const known = expansions.get(item.id);
+    const key = computes.has(item.kind) ? item.id : `${item.id}\u0000${item.kind} ${inputOf(item)}`;
+    const known = made.get(key);
     if (known) {
       for (const e of known.errors) report(e.line, e.message);
       return known;
@@ -270,9 +276,10 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       }
     }
     const rest = { ...moments[0]!, y: moments.reduce((sum, m) => sum + m.y, 0) / moments.length };
-    const made = { nodes, box: bounds(nodes), rest, errors };
-    expansions.set(item.id, made);
-    return made;
+    const result = { nodes, box: bounds(nodes), rest, errors };
+    made.set(key, result);
+    expansions.set(item.id, result);
+    return result;
   };
 
   const env: Env = {
@@ -285,7 +292,10 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     natural: (item) => {
       if (item.kind === "run") return { w: number(item.attrs.w ?? "") ?? safe.w, h: number(item.attrs.h ?? "") ?? safe.w };
       const b = expandKit(item).box;
-      const fit = Math.min((number(item.attrs.w ?? "") ?? safe.w) / b.w, (number(item.attrs.h ?? "") ?? safe.w) / b.h);
+      // Type (a formula) keeps its own size beside words, unless the scene gives it room with w= or h=; it never runs
+      // wider than the frame. A drawing fills the room it is given.
+      const typeset = !!expandKit(item).nodes[0]?.props?.typeset && item.attrs.w === undefined && item.attrs.h === undefined;
+      const fit = typeset ? Math.min(1, safe.w / b.w) : Math.min((number(item.attrs.w ?? "") ?? safe.w) / b.w, (number(item.attrs.h ?? "") ?? safe.w) / b.h);
       const seen = expandKit(item).rest;
       return { w: b.w * fit, h: b.h * fit, rest: (seen.y - b.y) / b.h };
     },

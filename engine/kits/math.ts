@@ -101,7 +101,8 @@ export const mathKit: Kit = {
     math: (n: NodeSpec, ctx) => {
       const cast = layoutMath(n.id, n.data as MathData, ctx);
       register(ctx, n.id, castEntry(cast, "sym"));
-      return castNodes(cast, n);
+      // A formula is type: it is laid out at its own size, as words are, not stretched to fill its place.
+      return castNodes(cast, n).map((x, i) => (i === 0 && x.id === n.id ? { ...x, props: { ...x.props, typeset: 1 } } : x));
     },
   },
   behaviors: partBehaviors,

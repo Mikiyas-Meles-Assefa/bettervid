@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { build } from "../../engine/language/build.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { DirectionEvent, Project } from "../../schemas/project.ts";
-import { cleanCast, contract, demoFit, directed, directionText, joinSections, joinWithSpans, needs, truthPlan, overPictures, pieces, severeOf, sliceSource, splitSections, visibleAt } from "./scene.ts";
+import { cleanCast, contract, demoFit, sceneTickets, directed, directionText, joinSections, joinWithSpans, needs, truthPlan, overPictures, pieces, severeOf, sliceSource, splitSections, visibleAt } from "./scene.ts";
 
 // Invented narration: beats of given lengths, sentences of about eight words.
 function narration(beats: number[]) {
@@ -280,4 +280,19 @@ test("a phase whose words name values its steps never show does not fit", () => 
   const found = demoFit(q);
   assert.equal(found.length, 1);
   assert.match(found[0]!, /event e2b, phase 1: its words \(60 to 89\) name 4, 2/);
+});
+
+test("tickets from watching the video name the parts to send back, and a note on the whole video names none", () => {
+  const p = computedProject();
+  const ranges = [{ id: "s1", firstWord: 0, lastWord: 29 }, { id: "s2", firstWord: 30, lastWord: 59 }, { id: "s3", firstWord: 60, lastWord: 89 }, { id: "s4", firstWord: 90, lastWord: 119 }];
+  const q: Project = { ...p, critic: { verdict: "", tickets: [
+    { shotId: "e2b", action: "direction:scene:predict_answered:3", note: "the answer shows during the hold" },
+    { shotId: "s1", action: "look:cut_off:2", note: "a line runs off the edge" },
+    { shotId: "e1,e2,e2b,e3", action: "direction:scene:flat_rhythm:2", note: "the same rate all through" },
+    { shotId: "e3", action: "direction:scene:rhythm_mismatch:1", note: "a little quick" },
+    { shotId: "e2", action: "direction:voice:hold_short:2", note: "for the voice" },
+  ] } };
+  const t = sceneTickets(q, ranges);
+  assert.deepEqual(t.map((x) => x.sections), [["s3"], ["s1"]]);
+  assert.match(t[0]!.text, /predict answered \(e2b\): the answer shows/);
 });
