@@ -1,4 +1,5 @@
 // The teaching bench. Usage (from the repo root):
+//   node --experimental-strip-types bench/run.ts read <run> [case ...]      the user's material into part cards (cards.json)
 //   node --experimental-strip-types bench/run.ts prepare <run> [case ...]   prompts for the authors
 //   node --experimental-strip-types bench/run.ts submit <run> <case>        check an author's answer, write the next prompt
 //   node --experimental-strip-types bench/run.ts status <run>               where every author stands
@@ -7,6 +8,7 @@
 //   node --experimental-strip-types bench/run.ts render <run> [case ...]    small MP4, watch sheets, transcript, quiz
 //   node --experimental-strip-types bench/run.ts tasks <run> [case ...]     rewrite the watch tasks of rendered clips
 //   node --experimental-strip-types bench/run.ts grade <run>                grading requests for the watch tests
+//   node --experimental-strip-types bench/run.ts requirements <run>         the material's requirements on the built scenes
 //   node --experimental-strip-types bench/run.ts report <run>               the summary in bench/results/<run>/
 // `--voice` on prepare records the real narration with ElevenLabs instead of timing it from the text (it costs credits).
 // See bench/README.md for the whole protocol.
@@ -19,7 +21,7 @@ import { WORK, folderOf } from "./lib/paths.ts";
 const [cmd, run, ...rest] = process.argv.slice(2);
 const flags = new Set(rest.filter((x) => x.startsWith("--")));
 const named = rest.filter((x) => !x.startsWith("--"));
-if (!cmd || !run) throw new Error("usage: bench/run.ts <prepare|submit|status|map|measure|render|grade|report> <run> [case ...]");
+if (!cmd || !run) throw new Error("usage: bench/run.ts <read|prepare|submit|status|map|measure|render|tasks|grade|requirements|report> <run> [case ...]");
 const cases = () => (named.length ? named : listCases());
 
 if (cmd === "prepare") {

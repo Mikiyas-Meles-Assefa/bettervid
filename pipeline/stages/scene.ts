@@ -335,7 +335,8 @@ export const SCENE_KITS: Kit[] = [...KITS, mathFormulas];
 
 export function sceneContext(p: Project, theme: Theme = themeFrom(p.input.style)): CompileContext {
   const words = p.narration!.words.map((w) => ({ text: w.text, start: w.start }));
-  return { fps: FPS, width: WIDTH, height: HEIGHT, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: SCENE_KITS };
+  const [width, height] = p.input.frame ?? [WIDTH, HEIGHT];
+  return { fps: FPS, width, height, frames: Math.ceil((p.narration!.seconds + 0.5) * FPS), theme, words, kits: SCENE_KITS };
 }
 
 // Build options for this project's scene. `assets` maps asset names to an image source the renderer can load.

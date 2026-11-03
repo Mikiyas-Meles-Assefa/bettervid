@@ -33,6 +33,7 @@ export type Input = {
   persona: string; // a file in personas/: who narrates, in what voice; "auto" lets the writer choose
   mode: "explain" | "history" | "math" | "story";
   seconds: number; // target length; 0 means as long as the story needs
+  frame?: [number, number]; // the frame's width and height in pixels; 1080 by 1920 (9:16) when absent
 };
 
 // Stage 0: plan. What the user explicitly asked for in their message, sorted by which part of the work it concerns.

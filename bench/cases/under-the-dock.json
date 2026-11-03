@@ -1,0 +1,126 @@
+{
+ "id": "under-the-dock",
+ "use": "a horror beat whose subject stays hidden",
+ "request": "A 20 second beat for my campfire-stories channel: something is under the dock, and we never see it.",
+ "topic": "Something under the dock",
+ "intent": "Horror fans should feel dread from what is not shown; the thing under the water must never appear.",
+ "style": "ink",
+ "goal": "The viewer feels that something is holding the rope from below and never sees what it is.",
+ "promise": "A quiet lake, and a rope that should not move.",
+ "arc": "Still water and a girl at the dock's end, the rope snapping tight, rings on the water and a long silence, nothing surfacing.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "The lake was flat as glass. Mara sat at the end of the dock, feet over the water.",
+   "job": "Set the calm.",
+   "knows": "Mara at the end of the dock on a still lake.",
+   "waiting": "What will break the calm?",
+   "look": "Mara at the end of the dock, the water still",
+   "feel": "calm, slightly uneasy",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "Then the rope tied to the post went tight.",
+   "job": "The first wrong thing.",
+   "knows": "The rope from the post snapped taut.",
+   "waiting": "What pulled it?",
+   "look": "the rope from the post snapping taut down into the water",
+   "feel": "shock",
+   "rhythm": "short"
+  },
+  {
+   "id": "e3",
+   "text": "Something below had taken hold of it.",
+   "job": "Dread without showing it.",
+   "knows": "Something under the water holds the rope.",
+   "waiting": "What is it?",
+   "look": "the dark water where the rope goes in; nothing but rings",
+   "feel": "dread",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "of it.",
+     "seconds": 3.0,
+     "purpose": "look",
+     "does": "the rope trembles and rings spread from where it enters the water; nothing surfaces"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "She didn't move. Neither did whatever was holding on.",
+   "job": "Freeze.",
+   "knows": "Mara is frozen; the thing below holds still too.",
+   "waiting": "What happens next?",
+   "look": "Mara frozen, the rope taut and still",
+   "feel": "suspense",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h2",
+     "after": "holding on.",
+     "seconds": 2.0,
+     "purpose": "settle",
+     "does": "nothing moves; the last ring fades"
+    }
+   ]
+  }
+ ],
+ "measure": {
+  "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion. The thing under the water is meant to stay hidden, so the eye is not scored on it in e3, and the final hold is meant to be still.",
+  "context": {
+   "screen": "phone",
+   "frame": "9:16",
+   "distance": "arm's length",
+   "attention": "watching on purpose, in the dark",
+   "why": "a story channel watched at night"
+  },
+  "look": {
+   "hidden": [
+    "e3"
+   ]
+  },
+  "holds": {
+   "still": [
+    "h2"
+   ]
+  }
+ },
+ "quiz": [
+  {
+   "q": "Where was Mara sitting?",
+   "a": "At the end of the dock, feet over the water.",
+   "needs": "words"
+  },
+  {
+   "q": "What went tight?",
+   "a": "The rope tied to the post.",
+   "needs": "words"
+  },
+  {
+   "q": "What did Mara do once it went tight?",
+   "a": "She did not move.",
+   "needs": "words"
+  },
+  {
+   "q": "During the long silence, what spread across the water?",
+   "a": "Rings (ripples) from where the rope enters the water.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "During the long silence, what did the rope do?",
+   "a": "It trembled.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "In which direction does the taut rope run from the post: up, along the dock, or down into the water?",
+   "a": "Down into the water.",
+   "needs": "picture",
+   "hard": true
+  }
+ ]
+}
