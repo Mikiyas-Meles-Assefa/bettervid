@@ -12,7 +12,7 @@ const WORDS: Record<string, RegExp> = { text: /^[\s\S]{0,400}$/, anchor: /^(star
 const REFUSED = new Set(["src", "href", "font", "style", "constructor", "prototype", "toString", "valueOf"]);
 const MAX_POINTS = 40_000;
 
-export type Checked = { parts: { id: string; kind: "group" | "path" | "text"; parent: string; props: Props }[]; tracks: Track[]; events: { name: string; at: number; data?: Record<string, unknown> }[] };
+export type Checked = { parts: { id: string; kind: "group" | "path" | "text"; parent: string; props: Props }[]; tracks: Track[]; events: { name: string; at: number; data?: Record<string, unknown> }[]; measures: { name: string; at: number; value: number }[] };
 type Scope = { mount: string; on: string[]; offset: { x: number; y: number }; frames: number; colors: Set<string> };
 
 function checkValue(prop: string, v: unknown, colors: Set<string>): { value: Value } | { error: string } {
@@ -98,5 +98,13 @@ export function checkOutput(raw: RawOutput, scope: Scope): { errors: string[]; c
     if (!/^[\w.-]{1,60}$/.test(String(e?.name)) || !Number.isInteger(e?.at) || e.at < 0 || e.at > scope.frames) fail(`the event ${String(e?.name)} at frame ${String(e?.at)} is not valid`);
     else events.push({ name: e.name, at: e.at, ...(e.data && typeof e.data === "object" ? { data: JSON.parse(JSON.stringify(e.data)) as Record<string, unknown> } : {}) });
   }
-  return errors.length ? { errors } : { errors, checked: { parts, tracks, events } };
+  const measures: Checked["measures"] = [];
+  for (const m of raw.measures ?? []) {
+    if (!/^[\w.-]{1,60}$/.test(String(m?.name))) fail(`measure() got the name ${JSON.stringify(m?.name)?.slice(0, 60)}, which must be a short word`);
+    else if (!Number.isInteger(m?.at) || m.at < 0 || m.at > scope.frames) fail(`measure(${m.name}) at frame ${String(m?.at)} is outside the video, which has ${scope.frames} frames`);
+    else if (typeof m.value !== "number" || !Number.isFinite(m.value)) fail(`measure(${m.name}) at frame ${m.at} got ${String(m?.value)}, which is not a finite number`);
+    else measures.push({ name: m.name, at: m.at, value: m.value });
+  }
+  measures.sort((a, b) => a.at - b.at);
+  return errors.length ? { errors } : { errors, checked: { parts, tracks, events, measures } };
 }

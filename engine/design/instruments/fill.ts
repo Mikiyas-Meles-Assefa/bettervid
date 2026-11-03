@@ -20,7 +20,7 @@ export type FillSettings = {
 export const fill: Instrument<FillSettings> = {
   name: "fill",
   describe:
-    "Fill and balance of the usable frame (outside UI zones) on settled frames, through the camera. Values: filled (share of usable cells occupied), emptyBand (tallest empty run of rows, share of usable height), emptyColumn (widest, share of width), massX, massY (center of visual weight, 0 to 1), balanceX (right minus left, -1 to 1), balanceY (bottom minus top), frames (settled frames read). Series per frame. Settings: cells (along the shorter side), occupied (share of a cell), contrastWeight, pictureContrast, settled, busy (most changing things on a read frame), backdrop, perSecond.",
+    "Fill and balance of the usable frame (outside UI zones) on settled frames, through the camera. Values: filled (share of usable cells occupied), largest (share of the usable frame the biggest single thing covers), emptyBand (tallest empty run of rows, share of usable height), emptyColumn (widest, share of width), massX, massY (center of visual weight, 0 to 1), balanceX (right minus left, -1 to 1), balanceY (bottom minus top), frames (settled frames read). Series per frame. Settings: cells (along the shorter side), occupied (share of a cell), contrastWeight, pictureContrast, settled, busy (most changing things on a read frame), backdrop, perSecond.",
   suggest: (v: Viewing) => ({ perSecond: 2, cells: 9, occupied: 0.15, backdrop: 0.8, settled: true, busy: 2, contrastWeight: 0.7, pictureContrast: 0.6, why: `suggested for ${v.screen}: a 9-cell grid on the shorter side as the bench used, read on settled frames as a viewer sees a layout` }),
   measure(input: MeasureInput, set: FillSettings): Reading {
     const s = sampled(input.scene);
@@ -40,13 +40,18 @@ export const fill: Instrument<FillSettings> = {
     const usableCols = [...new Set(usable.map((c) => c.c))];
     const frames = pictureFrames(s, range, set.perSecond).filter((f) => !set.settled || s.act.filter((a) => a[f]).length <= set.busy);
     const series: Reading["series"] = [];
-    const acc = { filled: [] as number[], band: [] as number[], column: [] as number[], mx: [] as number[], my: [] as number[], bx: [] as number[], by: [] as number[] };
+    const usableArea = usable.reduce((t, c) => t + area(c), 0);
+    const usableBox = usable.length ? { x0: Math.min(...usable.map((c) => c.x0)), y0: Math.min(...usable.map((c) => c.y0)), x1: Math.max(...usable.map((c) => c.x1)), y1: Math.max(...usable.map((c) => c.y1)) } : { x0: 0, y0: 0, x1: s.W, y1: s.H };
+    const acc = { filled: [] as number[], largest: [] as number[], band: [] as number[], column: [] as number[], mx: [] as number[], my: [] as number[], bx: [] as number[], by: [] as number[] };
     for (const f of frames) {
       const things = s.things(f, set.backdrop);
       const items = things.flatMap((t) => t.items).filter((t) => t.opacity >= 0.15);
       const used = new Set(usable.filter((c) => items.some((t) => area(meet(t.box, c)) > area(c) * set.occupied)).map((c) => `${c.r},${c.c}`));
       const isUsed = (r: number, c: number) => used.has(`${r},${c}`);
       const filled = usable.length ? used.size / usable.length : 0;
+      // The biggest single thing, by the usable frame its box covers: a row of small numbers in a large empty frame reads
+      // as a small `largest` even when its items are spread out, which `filled` alone cannot tell from a full frame.
+      const largest = usableArea ? Math.min(1, Math.max(0, ...things.filter((t) => t.opacity >= 0.15).map((t) => area(meet(t.box, usableBox)) / usableArea))) : 0;
       let band = 0;
       for (let k = 0, run = 0; k < usableRows.length; k++) {
         run = usableCols.some((c) => isUsed(usableRows[k]!, c)) ? 0 : run + 1;
@@ -76,19 +81,20 @@ export const fill: Instrument<FillSettings> = {
       }
       const v = { filled, band: usableRows.length ? band / usableRows.length : 0, column: usableCols.length ? column / usableCols.length : 0, mx: w ? wx / w / s.W : 0.5, my: w ? wy / w / s.H : 0.5, bx: L + R ? (R - L) / (R + L) : 0, by: T + B ? (B - T) / (T + B) : 0 };
       acc.filled.push(v.filled);
+      acc.largest.push(largest);
       acc.band.push(v.band);
       acc.column.push(v.column);
       acc.mx.push(v.mx);
       acc.my.push(v.my);
       acc.bx.push(v.bx);
       acc.by.push(v.by);
-      series.push({ frame: f, values: { filled: round(v.filled), emptyBand: round(v.band), balanceX: round(v.bx), balanceY: round(v.by) } });
+      series.push({ frame: f, values: { filled: round(v.filled), largest: round(largest), emptyBand: round(v.band), balanceX: round(v.bx), balanceY: round(v.by) } });
     }
-    const values = { filled: round(mean(acc.filled)), emptyBand: round(mean(acc.band)), emptyColumn: round(mean(acc.column)), massX: round(mean(acc.mx)), massY: round(mean(acc.my)), balanceX: round(mean(acc.bx)), balanceY: round(mean(acc.by)), frames: frames.length };
+    const values = { filled: round(mean(acc.filled)), largest: round(mean(acc.largest)), emptyBand: round(mean(acc.band)), emptyColumn: round(mean(acc.column)), massX: round(mean(acc.mx)), massY: round(mean(acc.my)), balanceX: round(mean(acc.bx)), balanceY: round(mean(acc.by)), frames: frames.length };
     const notes: string[] = [];
     if (!frames.length) notes.push("no settled frame in this window");
     else {
-      notes.push(`${Math.round(values.filled * 100)}% of the usable frame holds something (${cols} by ${rows} cells${zones.length ? `, ${cells.length - usable.length} in UI zones left out` : ""}); tallest empty band ${Math.round(values.emptyBand * 100)}% of the height`);
+      notes.push(`${Math.round(values.filled * 100)}% of the usable frame holds something (${cols} by ${rows} cells${zones.length ? `, ${cells.length - usable.length} in UI zones left out` : ""}); tallest empty band ${Math.round(values.emptyBand * 100)}% of the height; the biggest single thing covers ${Math.round(values.largest * 100)}% of the usable frame`);
       notes.push(`weight sits at ${Math.round(values.massX * 100)}% across and ${Math.round(values.massY * 100)}% down`);
     }
     return { instrument: "fill", values, notes, series };

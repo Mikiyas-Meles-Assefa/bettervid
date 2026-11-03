@@ -17,11 +17,11 @@ import { mathKit } from "../../engine/kits/math.ts";
 import { STEPS_DOC, truthSteps } from "../../engine/kits/steps.ts";
 import { spokenNotShown, type PhaseSpan } from "../lib/demo.ts";
 import { languagePrompt, numbered, reviewText, truthKinds } from "../../engine/language/author.ts";
-import { build, formatProblems, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
+import { build, formatProblems, measureLines, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
 import { expandHolds, holdMoments, type HoldTime } from "../../engine/language/holds.ts";
 import { loadLibrary } from "../../engine/language/library.ts";
 import { fontMeasure } from "../../engine/language/measure.ts";
-import { parse, type Item, type State } from "../../engine/language/syntax.ts";
+import { parse, vocabulary, type Item, type State } from "../../engine/language/syntax.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { better, decode, hide, inventory, issuesFrom, judgeSchema, keptAt, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
 import { json, text } from "../lib/meta.ts";
@@ -40,7 +40,7 @@ import { emptyToolbox, prepareToolbox, toolboxKit, toolboxNotes, type Toolbox, t
 import { lookSchema } from "./direction.ts";
 import { metaDepictMakers, spriteStyle } from "../lib/depict-makers.ts";
 import { mend, unwrap } from "../lib/mend.ts";
-import { imageFile, tasteNotes, tasteReview, type TasteContext } from "../../engine/review/taste.ts";
+import { imageFile, tasteNotes, tasteReview, type TasteContext, type TasteVerdict } from "../../engine/review/taste.ts";
 import type { Ask } from "../../engine/review/model.ts";
 
 const VERSION = 6; // bump when the way sections are written or checked changes, so cached sections are redone
@@ -731,7 +731,9 @@ export function review(job: Job, written: string, result: BuildResult): string {
   const extra = result.scene ? overPictures(source, result.scene, from, endFrame(job), kinds) : [];
   // What each depicted thing can do, so the writer can use its states, verbs and parts.
   const things = job.toolbox ? toolboxNotes(source, kinds, job.toolbox.box, job.opts.ctx.theme) : [];
-  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra: [...extra, ...things.map((x) => `Depicted: ${x}`)] });
+  // What the part's programs measured against what they claim to prove: numbers for the writer to read, never a verdict.
+  const measures = measureLines(result, job.opts.ctx.fps);
+  return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra: [...extra, ...things.map((x) => `Depicted: ${x}`), ...measures] });
 }
 
 // What goes back to the writer: a part with build problems, and a part that builds with what code can see about it.
@@ -990,7 +992,7 @@ export type ReviewCalls = {
   gate: (before: string, after: Written, named: Issue[], label: string) => Promise<{ keep: boolean; usd: number; why: string }>;
 };
 
-const reviewPart = (name: "Review" | "Repair" | "Once") => (prompt("scene-review").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
+const reviewPart = (name: "Review" | "Repair" | "Once" | "Check") => (prompt("scene-review").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
 
 /** What the instruments read on a built part: its window of the video, the project's viewing, the words and silences. */
 export function measurePart(job: Job, scene: Scene): PartNotes {
@@ -1119,10 +1121,34 @@ export function tasteContext(job: Job): TasteContext {
     platform: `${v.screen}, ${v.width} by ${v.height}, ${v.watch}`,
   };
 }
-export async function tasteFor(job: Job, seen: Seen, ask: Ask): Promise<string[]> {
+// What the scene's writer can do about a frame, in the language's own words, so an art director's fix can name the
+// means it would use. Read from the language and the kits each time, never from a list kept here.
+export function meansOf(): string[] {
+  const v = vocabulary();
+  return [
+    `writing sizes: ${v.sizes.join(", ")}; role= gives a thing the style's own look for what it is (a title, a heading, a caption, a note, a key, a panel)`,
+    `arrangements: ${v.containers.join(", ")} (a stage puts things in one place at their true relative sizes); w= and h= set the room a shape, a picture or a computed thing takes; gap= the space between things`,
+    `camera: ${v.attrs.camera!.join(", ")} (camera ID zoom=N frames one thing larger, so small things fill the frame; zoom 1 shows the whole frame)`,
+    `emphasis and removal: ${v.commands.join(", ")} (light marks the thing the words are about, dim fades the rest, drop removes what the words have left behind)`,
+    ...SCENE_KITS.flatMap((k) => Object.entries(k.docs ?? {}).filter(([n]) => !!k.kinds && n in k.kinds).map(([n, d]) => `${n}, a computed thing: ${d}`)),
+  ];
+}
+/** The art director's verdict on a part's stills, with the instruments' readings beside each frame when there are any, and
+ * the fixes asked for before a repair when this is the check on that repair. */
+export async function tasteVerdictFor(job: Job, seen: Seen, ask: Ask, readings?: (k: number) => string, asked?: string[]): Promise<TasteVerdict> {
   const t0 = seen.moments[0]?.frame ?? 0;
-  const frames = seen.moments.map((m, k) => ({ at: (m.frame - t0) / FPS, image: imageFile(seen.files[k]!) }));
-  return tasteNotes(await tasteReview(ask, frames, tasteContext(job)));
+  const frames = seen.moments.map((m, k) => ({ at: (m.frame - t0) / FPS, image: imageFile(seen.files[k]!), ...(readings ? { readings: readings(k) } : {}) }));
+  return tasteReview(ask, frames, { ...tasteContext(job), means: meansOf(), ...(asked ? { asked } : {}) });
+}
+export async function tasteFor(job: Job, seen: Seen, ask: Ask): Promise<string[]> {
+  return tasteNotes(await tasteVerdictFor(job, seen, ask));
+}
+// Frames spread evenly over the part, numbered as frameContent numbers them (from 1), so a writer sees its part as a
+// viewer does and not only the frames an issue names.
+export function spreadOf(seen: Seen, n: number): number[] {
+  const total = seen.moments.length;
+  if (total <= n) return seen.moments.map((_, k) => k + 1);
+  return [...new Set(Array.from({ length: n }, (_, i) => 1 + Math.round((i * (total - 1)) / (n - 1))))];
 }
 // The taste review's calls on Spark, charged with the part's other calls.
 const sparkAsk = (pay: (usd: number) => void): Ask => async <T>(c: Parameters<Ask>[0]) => {
@@ -1131,60 +1157,113 @@ const sparkAsk = (pay: (usd: number) => void): Ask => async <T>(c: Parameters<As
   return r.value;
 };
 
-// One repair round (the project's `sceneRepair: "once"`): the writer writes, the part is built and mended in code, rendered
-// once and looked at, and every note goes back together in a single request: the build's problems and notes, what code
-// sees, the look's issues on the frames, and the instruments' readings when the part has them. The repair is kept if it
-// builds; only a repair that does not build is asked again, with its build problems.
+// One repair round (the project's `sceneRepair: "once"`). The writer writes; a draft that does not build gets its build
+// problems back first, so what follows always reads a part that exists. The built part is rendered once and looked at by
+// everything at the same time: the look review, the art director (with the writer's means named, so its fixes can be
+// acted on) and the design brain's instruments. Everything found goes back together in one request, with the frames
+// themselves spread over the part, so the writer sees what a viewer sees. The repair is kept if it builds; only a repair
+// that does not build is asked again, with its build problems. Then the check: when the art director had asked for a
+// revision, the repaired part is rendered again and shown to the same eye with the fixes it asked for. If the weakest
+// element still stands, the writer gets one last request with the repaired frames. Code decides nothing about the
+// scene here: it measures, renders and carries notes; the writer decides what changes.
 async function writeOnce(job: Job, draft: string): Promise<Written & { looks: string[]; repairs: number; fixed: string[] }> {
   job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing, one repair round`);
   let usd = 0;
   const fixed: string[] = [];
+  const log = (m: string) => job.log(`  ${job.range.id}: ${m}`);
   const ask = async (user: string | unknown[]): Promise<string> => {
     const r = await text({ system: job.system, user: user as string, effort: "medium", maxOutput: 32000 });
     usd += r.usd;
     return r.value;
   };
-  const first = await checkMended(job, await ask(draft ? `${job.request}\n\nA first draft of your part, made from the director's shots:\n${draft}` : job.request), fixed);
+  const taste = job.taste ?? sparkAsk((x) => (usd += x));
   const built = (c: Checked) => !c.problems.length && !!c.result.scene;
   const written = (source: string, c: Checked, rounds: number): Written => ({ source, result: c.result, problems: c.problems, warnings: [...c.warnings, ...c.notes], usd, rounds });
-  let request: string | unknown[];
-  let repairs = 1;
+  const buildProblems = (c: Checked) => c.problems.slice(0, 2).join(" | ").slice(0, 200);
   const looks: string[] = [];
-  if (built(first.c)) {
-    const w = written(first.source, first.c, 1);
-    const seen = await see(job, first.c.result.scene!, first.source, join(job.folder, "once"));
-    // The look and, on path A, the taste review read the same stills at the same time.
-    const [j, taste] = await Promise.all([judge(job, w, seen), job.toolbox ? tasteFor(job, seen, job.taste ?? sparkAsk((x) => (usd += x))).catch((e) => (job.log(`  ${job.range.id} taste review failed: ${(e as Error).message.slice(0, 160)}`), [] as string[])) : Promise.resolve([] as string[])]);
-    usd += j.usd;
-    const issues = issuesFrom(j.judged.issues, seen.measured);
-    const said = review(job, first.source, first.c.result);
-    const notes = job.toolbox ? measurePart(job, first.c.result.scene!) : undefined;
-    writeFileSync(join(job.folder, "once", "issues.json"), JSON.stringify({ design: j.judged.design, issues, said, warnings: first.c.warnings, instruments: notes?.lines ?? [], taste }, null, 1));
-    job.log(`  ${job.range.id} look: design ${j.judged.design}/5, ${issues.length} issues, ${first.c.warnings.length} build notes${notes ? `, ${notes.lines.length} instrument lines` : ""}${job.toolbox ? `, taste: ${taste.length ? `${taste.length} notes` : "ship"}` : ""}`);
-    if (!issues.length && !first.c.warnings.length && !said.trim() && !taste.length) return { ...w, usd, looks: ["fine"], repairs: 0, fixed };
-    const shown = new Set(issues.flatMap((x) => x.frames).filter((f) => f >= 1 && f <= seen.moments.length).slice(0, 4));
-    const parts = [
-      `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(first.source)}\n\n${reviewPart("Once")}`,
-      first.c.warnings.length ? `What the build reports:\n${first.c.warnings.map((x) => `- ${x}`).join("\n")}` : "",
-      said.trim() ? `What code sees:\n${said}` : "",
-      issues.length ? `Issues the reviewer saw on the frames:\n${issueText(issues)}` : "",
-      taste.length ? `An art director looked at the same frames:\n${taste.map((x) => `- ${x}`).join("\n")}` : "",
-      notes ? `${NOTES_HEAD}\n${notes.lines.join("\n")}` : "",
-      shown.size ? "The frames the issues name:" : "",
-    ].filter(Boolean).join("\n\n");
-    request = [{ type: "input_text", text: parts }, ...frameContent(seen, shown.size ? shown : new Set([1]), "Frame", notes ? readingsOn(job, first.c.result.scene!, seen) : undefined)];
-  } else request = repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings]);
-  let next = await checkMended(job, await ask(request), fixed);
+  let repairs = 0;
+
+  // 1. The draft, built. Every section gets its one look, even one whose first answer did not build.
+  let first = await checkMended(job, await ask(draft ? `${job.request}\n\nA first draft of your part, made from the director's shots:\n${draft}` : job.request), fixed);
+  for (let tries = 0; !built(first.c) && tries < 2; tries++) {
+    repairs++;
+    log(`the draft does not build (${buildProblems(first.c)}); asking with its build problems`);
+    first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings])), fixed);
+  }
+  if (!built(first.c)) {
+    looks.push("did not build");
+    return { ...written(first.source, first.c, 1 + repairs), usd, looks, repairs, fixed };
+  }
+
+  // 2. One look at the built part, by every eye at once, and one request back with everything found.
+  const w = written(first.source, first.c, 1 + repairs);
+  const scene = first.c.result.scene!;
+  const seen = await see(job, scene, first.source, join(job.folder, "once"));
+  const notes = measurePart(job, scene);
+  const readings = readingsOn(job, scene, seen);
+  const [j, verdict] = await Promise.all([
+    judge(job, w, seen),
+    tasteVerdictFor(job, seen, taste, readings).catch((e) => (log(`taste review failed: ${(e as Error).message.slice(0, 160)}`), undefined)),
+  ]);
+  usd += j.usd;
+  const issues = issuesFrom(j.judged.issues, seen.measured);
+  const said = review(job, first.source, first.c.result);
+  const tasteLines = verdict ? tasteNotes(verdict) : [];
+  writeFileSync(join(job.folder, "once", "issues.json"), JSON.stringify({ design: j.judged.design, issues, said, warnings: first.c.warnings, instruments: notes.lines, taste: tasteLines }, null, 1));
+  log(`look: design ${j.judged.design}/5, ${issues.length} issues, ${first.c.warnings.length} build notes, ${notes.lines.length} instrument lines, taste: ${verdict ? (verdict.verdict === "ship" ? "ship" : `revise (${verdict.weakest})`) : "no answer"}`);
+  if (!issues.length && !first.c.warnings.length && !said.trim() && !tasteLines.length) return { ...w, usd, looks: ["fine"], repairs, fixed };
+  const shown = new Set([...issues.flatMap((x) => x.frames).filter((f) => f >= 1 && f <= seen.moments.length).slice(0, 4), ...spreadOf(seen, 4)]);
+  const parts = [
+    `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(first.source)}\n\n${reviewPart("Once")}`,
+    first.c.warnings.length ? `What the build reports:\n${first.c.warnings.map((x) => `- ${x}`).join("\n")}` : "",
+    said.trim() ? `What code sees:\n${said}` : "",
+    issues.length ? `Issues the reviewer saw on the frames:\n${issueText(issues)}` : "",
+    tasteLines.length ? `An art director looked at the same frames:\n${tasteLines.map((x) => `- ${x}`).join("\n")}` : "",
+    `${NOTES_HEAD}\n${notes.lines.join("\n")}`,
+    "Your part as it renders, with what the instruments read on each frame:",
+  ].filter(Boolean).join("\n\n");
+  repairs++;
+  let next = await checkMended(job, await ask([{ type: "input_text", text: parts }, ...frameContent(seen, shown, "Frame", readings)]), fixed);
   if (!built(next.c)) {
     repairs++;
-    job.log(`  ${job.range.id}: the repair does not build (${next.c.problems.slice(0, 2).join(" | ").slice(0, 200)}); asking once more with its build problems`);
+    log(`the repair does not build (${buildProblems(next.c)}); asking once more with its build problems`);
     next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings])), fixed);
   }
-  if (built(next.c)) looks.push("repaired");
-  else if (built(first.c)) {
+  if (!built(next.c)) {
     looks.push("repair did not build, kept the first");
     return { ...written(first.source, first.c, 1 + repairs), usd, looks, repairs, fixed };
-  } else looks.push("did not build");
+  }
+  looks.push("repaired");
+
+  // 3. The check: did what the art director asked for land on screen? One last request if not.
+  if (verdict?.verdict === "revise") {
+    const folder = join(job.folder, "once", "check");
+    const scene2 = next.c.result.scene!;
+    const seen2 = await see(job, scene2, next.source, folder);
+    const readings2 = readingsOn(job, scene2, seen2);
+    const again = await tasteVerdictFor(job, seen2, taste, readings2, verdict.fixes).catch((e) => (log(`taste check failed: ${(e as Error).message.slice(0, 160)}`), undefined));
+    writeFileSync(join(folder, "check.json"), JSON.stringify({ asked: verdict.fixes, verdict: again ?? null }, null, 1));
+    if (again?.verdict === "revise") {
+      log(`check: the weakest element still stands (${again.weakest}); one last repair`);
+      const notes2 = measurePart(job, scene2);
+      const said2 = review(job, next.source, next.c.result);
+      const text2 = [
+        `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(next.source)}\n\n${reviewPart("Check")}`,
+        `What you were asked to fix:\n${verdict.fixes.map((x) => `- ${x}`).join("\n")}`,
+        `The art director looked at the repaired frames:\n${tasteNotes(again).map((x) => `- ${x}`).join("\n")}`,
+        next.c.warnings.length ? `What the build reports:\n${next.c.warnings.map((x) => `- ${x}`).join("\n")}` : "",
+        said2.trim() ? `What code sees:\n${said2}` : "",
+        `${NOTES_HEAD}\n${notes2.lines.join("\n")}`,
+        "The repaired frames, with what the instruments read on each:",
+      ].filter(Boolean).join("\n\n");
+      repairs++;
+      const third = await checkMended(job, await ask([{ type: "input_text", text: text2 }, ...frameContent(seen2, new Set(spreadOf(seen2, 5)), "Frame", readings2)]), fixed);
+      if (built(third.c)) {
+        next = third;
+        looks.push("repaired again after the check");
+      } else looks.push("the last repair did not build, kept the first repair");
+    } else looks.push(again ? `check: ${again.verdict}` : "check: no answer");
+  }
   return { ...written(next.source, next.c, 1 + repairs), usd, looks, repairs, fixed };
 }
 

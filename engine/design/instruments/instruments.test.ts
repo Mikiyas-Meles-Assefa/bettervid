@@ -217,3 +217,18 @@ test("load: a stream is the same stream whatever part of it a window starts on",
   assert.equal(late.values.streams, 1, late.notes.join("; "));
   assert.ok(late.values.peakNew! <= 1, `the stream's late drops are not new things: peakNew ${late.values.peakNew}`);
 });
+
+test("fill reads how big the biggest single thing is, apart from how much is on screen", () => {
+  const sceneOf = (adds: NodeSpec[]) => compile({ steps: [{ at: 0, enter: "none", add: adds }] }, ctxOf(1080, 1920, 60));
+  // One small row of numbers in the middle of a tall frame: little of the frame holds anything, and the biggest thing is small.
+  const small = sceneOf([shape("a", 400, 960, 40), shape("b", 500, 960, 40), shape("c", 600, 960, 40)]);
+  const si: MeasureInput = { scene: small, words: [], viewing: phone(), window: [0, 30] };
+  const s = instruments.fill!.measure(si, settingsFor("fill", si));
+  assert.ok(s.values.largest! < 0.05, `largest ${s.values.largest}`);
+  assert.match(s.notes[0]!, /biggest single thing covers \d+% of the usable frame/);
+  // The same three, each filling most of a third of the frame: the biggest thing is a large share.
+  const big = sceneOf([shape("a", 540, 300, 250), shape("b", 540, 850, 250), shape("c", 540, 1400, 250)]);
+  const bi: MeasureInput = { scene: big, words: [], viewing: phone(), window: [0, 30] };
+  const b = instruments.fill!.measure(bi, settingsFor("fill", bi));
+  assert.ok(b.values.largest! > 0.1, `largest ${b.values.largest}`);
+});

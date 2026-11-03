@@ -41,7 +41,7 @@ export type Command =
 // `cut`: everything changes at once, with no fades or moves, as a film cuts.
 // `relations`: where things of a stage are, written at the state's edge so a keep state can place what joins a stage.
 export type State = { line: number; at: Time; keep: boolean; cut: boolean; attrs: Attrs; items: Item[]; commands: Command[]; relations?: StageRelation[] };
-export type ProgramDef = { name: string; line: number; params: Attrs; doc?: string; source: string };
+export type ProgramDef = { name: string; line: number; params: Attrs; doc?: string; proves?: string; source: string };
 // `read` overrides the style's readability settings for this scene: text (smallest text, share of the frame) and dim.
 // `withholds`: things that must not be on screen before a moment (the answer before its reveal); none names nothing,
 // a declaration that this scene shows nothing of what is withheld.
@@ -84,6 +84,8 @@ const ATTRS: Record<string, string[]> = {
   withhold: ["until"],
 };
 const COMMANDS = ["arrow", "link", "mark", "tag", "light", "dim", "focus", "drop", "set", "do", "emit", "camera"];
+/** The language's own words, for anyone who must name what a writer can do (a reviewer naming the means of a fix). */
+export const vocabulary = () => ({ containers: [...CONTAINERS], sizes: [...SIZES], commands: [...COMMANDS], leaves: [...LEAVES], attrs: { ...ATTRS } });
 const LEAVES = ["text", "code", "image", "graph", "run", "space", ...SHAPES];
 const WORDS = [...CONTAINERS, ...SIZES, ...COMMANDS, ...LEAVES, "program", "bg", "read", "withhold"];
 // Every word that starts a line of the scene language (the intent language pins such lines inside a moment).
@@ -321,8 +323,8 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
         body.push(lines[n]!);
       }
       if (!closed) problems.push({ line: number, message: `The program ${name ?? ""} has no "end" line.` });
-      const { doc: about, ...params } = attrs;
-      doc.programs.push({ name: name ?? "", line: number, params, ...(about ? { doc: about } : {}), source: body.join("\n") });
+      const { doc: about, proves, ...params } = attrs;
+      doc.programs.push({ name: name ?? "", line: number, params, ...(about ? { doc: about } : {}), ...(proves ? { proves } : {}), source: body.join("\n") });
       continue;
     }
 

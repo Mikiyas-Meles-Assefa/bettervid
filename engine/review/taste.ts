@@ -12,9 +12,11 @@ export type TasteContext = {
   style: { name: string; palette?: string[]; fonts?: string[]; texture?: string };
   audience?: string; // age, level, culture, when known
   platform?: string; // where and how it is watched, e.g. "phone, vertical, sound on"
+  means?: string[]; // what the scene's writer can do, in the language's own words, so each fix can name its means
+  asked?: string[]; // the fixes asked for before a repair: the frames are then the repaired ones, and the question is whether the weakest element is fixed
 };
 
-export type TasteFrame = { at: number; image: Part }; // `at` in seconds from the moment's start
+export type TasteFrame = { at: number; image: Part; readings?: string }; // `at` in seconds from the moment's start; `readings`: what the instruments measured on it
 
 export type TasteVerdict = { verdict: "ship" | "revise"; weakest: string; fixes: string[]; reason: string };
 
@@ -46,9 +48,11 @@ export function tasteRequest(frames: TasteFrame[], c: TasteContext): Part[] {
     `Style: ${s.name}${s.palette?.length ? `; palette ${s.palette.join(", ")}` : ""}${s.fonts?.length ? `; fonts ${s.fonts.join(", ")}` : ""}${s.texture ? `; texture ${s.texture}` : ""}`,
     c.audience && `Audience: ${c.audience}`,
     c.platform && `Plays on: ${c.platform}`,
+    c.means?.length && `What the scene's writer can do, in its own words (name the means each fix would use):\n${c.means.map((m) => `- ${m}`).join("\n")}`,
+    c.asked?.length && `These fixes were asked for, and the writer repaired the part. The frames below are the repaired ones:\n${c.asked.map((m) => `- ${m}`).join("\n")}`,
     `Frames, in order (${frames.length}):`,
   ].filter(Boolean) as string[];
-  return [text(lines.join("\n")), ...frames.flatMap((f) => [text(`At ${f.at.toFixed(1)} s:`), f.image])];
+  return [text(lines.join("\n")), ...frames.flatMap((f) => [text(`At ${f.at.toFixed(1)} s:${f.readings ? `\nWhat the instruments read on this frame:\n${f.readings}` : ""}`), f.image])];
 }
 
 // One call. The model is the caller's choice: Spark by default (cheap on the Contributor tier), Wonder for a stronger eye.

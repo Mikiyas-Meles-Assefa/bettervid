@@ -362,7 +362,7 @@ A program is code you write for anything the language has no word for: a shape n
       }
     end
 
-Define programs before the first state. `doc` says in one line what it does, and every other name=value is a setting with its default. Then place it inside any state, where it takes space like anything else:
+Define programs before the first state. `doc` says in one line what it does, `proves="..."` says in one line what its measured numbers should show (what the words claim happens), and every other name=value is a setting with its default. Then place it inside any state, where it takes space like anything else:
 
     run spiral s1 n=60 w=800 h=800 until=@52
 
@@ -380,10 +380,11 @@ Inside a program, these names exist and nothing else from the outside world:
 - `key(id, prop, frame, value, ease)`: one keyframe. Eases: {{eases}}.
 - `anim(id, prop, from, to, fn, step)`: keyframes from `fn(t, frame)`, with t from 0 to 1, every `step` frames (default 2).
 - `emit(name, frame, data)`: an event at a frame.
+- `measure(name, frame, value)`: a number the program worked out at a frame, read back by code and shown to you and to the reviewers after the build. Measure the one to three numbers that would look different if the rules were wrong (a total that must stay, a count that must fall, a position that must meet another), about once a second or at the moments that matter.
 - `arc(cx, cy, r, a0, a1, n)`, `circle(cx, cy, r)`, `rect(x, y, w, h)`, `polygon(cx, cy, r, sides, turn)`, `curve(x0, x1, fn)`, each returning points.
 - `lerp(a, b, t)`, `clamp(v, lo, hi)`, `smooth(t)`, `TAU`, `Math`, `random()`: `random` and `Math.random` are seeded, so a run always repeats.
 
-A program can compute real results and show them: a `text` part's `text` can change with `key`, so a number on screen can be the number it really worked out. A part with no keys is visible for as long as its box is. There is no Date, no network, no files and no timers. A program stops after {{cpu}} ms and may make {{nodes}} parts.
+A program can compute real results and show them: a `text` part's `text` can change with `key`, so a number on screen can be the number it really worked out. When the words claim that something happens by rule (energy trades places, a count falls, waves cancel, a curve bends toward a line), write the rules and let what the viewer sees come out of them, rather than drawing the outcome by hand: a result is computed every frame from the same values you draw for its causes, never faded or scaled toward the answer you want. Then `measure` the numbers that show it and say in `proves` what they should show; they come back to you with the build, so you see whether the rules did what the words say before anyone watches. A part with no keys is visible for as long as its box is. There is no Date, no network, no files and no timers. A program stops after {{cpu}} ms and may make {{nodes}} parts.
 
 Library programs, already written and tested. Use them with `run NAME id`:
 {{programs}}

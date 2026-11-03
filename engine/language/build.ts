@@ -33,7 +33,36 @@ export type BuildOptions = {
 // `truth`: each thing a truth kit computed, with its numbered steps, so a writer can bind steps to the words that speak them.
 // `notes`: how states read, which is not an error but a writer may act on: a frame crowded with sentences, or one that
 // leaves most of the frame empty for a while.
-export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; truth?: { id: string; kind: string; steps: string[] }[]; notes?: string[]; stats: { states: number; parts: number; programs: number; programMs: number } };
+/** The measures as plain lines: what each program claims, and what its numbers did over time. Reports, never judges. */
+export function measureLines(result: Pick<BuildResult, "measures">, fps: number): string[] {
+  const sec = (f: number) => `${(f / fps).toFixed(1)} s`;
+  const num = (v: number) => (Number.isInteger(v) ? String(v) : Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(3).replace(/0+$/, "").replace(/\.$/, ""));
+  const out: string[] = [];
+  for (const m of result.measures ?? []) {
+    const who = `The program ${m.program} (run as ${m.id})`;
+    const claim = m.proves ? ` says it proves "${m.proves}"` : "";
+    if (!m.series.length) {
+      out.push(`${who}${claim} but measured nothing. Call measure(name, frame, value) for the one to three numbers that would look different if the rules were wrong, about once a second.`);
+      continue;
+    }
+    const names = [...new Set(m.series.map((x) => x.name))];
+    const parts = names.map((n) => {
+      const xs = m.series.filter((x) => x.name === n);
+      const lo = xs.reduce((a, b) => (b.value < a.value ? b : a));
+      const hi = xs.reduce((a, b) => (b.value > a.value ? b : a));
+      const first = xs[0]!;
+      const last = xs[xs.length - 1]!;
+      const sample = xs.length <= 6 ? xs.map((x) => `${num(x.value)} at ${sec(x.at)}`).join(", ") : `${num(first.value)} at ${sec(first.at)}, lowest ${num(lo.value)} at ${sec(lo.at)}, highest ${num(hi.value)} at ${sec(hi.at)}, ${num(last.value)} at ${sec(last.at)}`;
+      return `${n}: ${sample} (${xs.length} readings)`;
+    });
+    out.push(`${who}${claim}${claim ? "; it" : ""} measured ${parts.join("; ")}.${m.proves ? " Read the numbers against the claim: a result that does not follow from the rules, or a claim the numbers do not show, is a fault in the program or the claim." : " It does not say what these should show: add proves=\"...\" so the numbers can be read against a claim."}`);
+  }
+  return out;
+}
+
+// What a program measured while it ran: the numbers it chose to show that its rules did what it claims (`proves`).
+export type ProgramMeasures = { program: string; id: string; proves?: string; series: { name: string; at: number; value: number }[] };
+export type BuildResult = { problems: Problem[]; doc?: SceneDoc; scene?: Scene; truth?: { id: string; kind: string; steps: string[] }[]; measures?: ProgramMeasures[]; notes?: string[]; stats: { states: number; parts: number; programs: number; programMs: number } };
 type Live = { kind: string; parent?: string; props: Props; alive: boolean; line: number };
 
 const STATE_ENTERS = ["fade", "draw", "pop", "none"];
@@ -240,9 +269,10 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     return Math.max(0, when({ word: t.word, offset: t.offset }, ctx));
   };
 
-  const programs = new Map<string, { params: Attrs; source: string; line: number }>();
+  const programs = new Map<string, { params: Attrs; source: string; line: number; proves?: string }>();
   for (const e of opts.library ?? []) programs.set(e.name, { params: e.params, source: e.source, line: 0 });
-  for (const p of doc.programs) programs.set(p.name, { params: p.params, source: p.source, line: p.line });
+  for (const p of doc.programs) programs.set(p.name, { params: p.params, source: p.source, line: p.line, ...(p.proves ? { proves: p.proves } : {}) });
+  const measured: ProgramMeasures[] = [];
 
   // Readability: the style says how small text may get and how far dimming may go; a scene may say otherwise for itself.
   const readStyle = { ...READ_DEFAULT, ...ctx.theme.style?.read };
@@ -537,6 +567,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     for (const t of checked.tracks) motion.set(`${t.target}\u0000${t.prop}`, t.keys);
     for (const e of checked.events) steps.push({ at: e.at, emit: [{ name: e.name, ...(e.data ? { data: e.data } : {}) }] });
     if (checked.tracks.length) laterPlay.push({ behavior: `program.${slotItem.id}`, target: slotItem.id });
+    if (checked.measures.length || def.proves) measured.push({ program: slotItem.program!, id: slotItem.id, ...(def.proves ? { proves: def.proves } : {}), series: checked.measures });
   };
   // A program that failed has already been reported. Its parts being missing is not a second problem.
   const failed = new Set<string>();
@@ -2064,7 +2095,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
         return [];
       }
     });
-    return { problems: [], doc: sceneDoc, scene, ...(truth.length ? { truth } : {}), ...(notes.length ? { notes: [...new Set(notes)].slice(0, 6) } : {}), stats };
+    return { problems: [], doc: sceneDoc, scene, ...(truth.length ? { truth } : {}), ...(measured.length ? { measures: measured } : {}), ...(notes.length ? { notes: [...new Set(notes)].slice(0, 6) } : {}), stats };
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }

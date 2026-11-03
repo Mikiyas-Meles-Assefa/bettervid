@@ -145,3 +145,14 @@ test("the network is blocked at the OS level where that is available", async (t)
   const out = outside(`const s = require("node:net").connect(53, "1.1.1.1"); s.on("connect", () => { console.log("CONNECTED"); s.destroy(); }); s.on("error", (e) => console.log(e.code)); setTimeout(() => process.exit(), 2500);`);
   assert.doesNotMatch(out.stdout, /CONNECTED/);
 });
+
+test("measure() returns the numbers a program worked out, and refuses what is not a number", async () => {
+  const r = await run(`let e = 10; for (let f = T0; f <= T1; f += fps) { e *= 0.9; measure("energy", f, e); } text("t", { text: "x" });`);
+  assert.ok(r.ok, errorOf(r));
+  const out = (r as Extract<RunResult, { ok: true }>).output;
+  assert.equal(out.measures!.length, 4);
+  assert.equal(out.measures![0]!.name, "energy");
+  assert.ok(out.measures![3]!.value < out.measures![0]!.value);
+  const bad = await run(`measure("x", T0, "nine");`);
+  assert.match(errorOf(bad), /measure\(x\).*finite number/);
+});

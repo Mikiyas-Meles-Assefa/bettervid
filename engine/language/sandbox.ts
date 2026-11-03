@@ -28,17 +28,19 @@ export type RawNode = { id: string; kind: string; parent?: string; props: Record
 export type RawKey = { at: number; value: unknown; ease?: string };
 export type RawTrack = { target: string; prop: string; keys: RawKey[] };
 export type RawEvent = { name: string; at: number; data?: Record<string, unknown> };
-export type RawOutput = { nodes: RawNode[]; tracks: RawTrack[]; events: RawEvent[] };
+// A number the program worked out at a frame, read back by code: how a program shows that its rules did what it claims.
+export type RawMeasure = { name: string; at: number; value: number };
+export type RawOutput = { nodes: RawNode[]; tracks: RawTrack[]; events: RawEvent[]; measures?: RawMeasure[] };
 export type RunResult = { ok: true; output: RawOutput; ms: number } | { ok: false; error: string; line?: number; ms: number };
-export type Limits = { cpuMs: number; wallMs: number; heapMb: number; outputBytes: number; nodes: number; keys: number };
+export type Limits = { cpuMs: number; wallMs: number; heapMb: number; outputBytes: number; nodes: number; keys: number; measures: number };
 
-export const LIMITS: Limits = { cpuMs: 1500, wallMs: 4000, heapMb: 48, outputBytes: 6_000_000, nodes: 2500, keys: 150_000 };
+export const LIMITS: Limits = { cpuMs: 1500, wallMs: 4000, heapMb: 48, outputBytes: 6_000_000, nodes: 2500, keys: 150_000, measures: 2000 };
 
 // The only globals a program can see. Everything else, including every clock, is deleted before it runs.
 const ALLOWED = ["Object", "Array", "Number", "Boolean", "String", "Symbol", "BigInt", "Math", "JSON", "Map", "Set", "WeakMap", "WeakSet", "Error", "TypeError", "RangeError", "SyntaxError", "EvalError", "ReferenceError", "URIError", "AggregateError", "RegExp", "Reflect", "Proxy", "Promise", "parseInt", "parseFloat", "isNaN", "isFinite", "NaN", "Infinity", "undefined", "globalThis"];
 
 // Everything a program can call. Each name is in scope as a plain variable.
-export const API_NAMES = ["W", "H", "T0", "T1", "fps", "frames", "seed", "args", "on", "words", "colors", "random", "TAU", "group", "path", "text", "key", "anim", "emit", "arc", "circle", "rect", "polygon", "curve", "lerp", "clamp", "smooth"];
+export const API_NAMES = ["W", "H", "T0", "T1", "fps", "frames", "seed", "args", "on", "words", "colors", "random", "TAU", "group", "path", "text", "key", "anim", "emit", "measure", "arc", "circle", "rect", "polygon", "curve", "lerp", "clamp", "smooth"];
 
 // Runs inside the fresh context, before the program. This is the program's whole world.
 const prelude = (input: ProgramInput, limits: Limits) => `(function () {
@@ -59,7 +61,7 @@ const prelude = (input: ProgramInput, limits: Limits) => `(function () {
   Number.prototype.toLocaleString = Number.prototype.toString;
 
   const INPUT = JSON.parse(${JSON.stringify(JSON.stringify(input))});
-  const nodes = [], tracks = new Map(), events = [];
+  const nodes = [], tracks = new Map(), events = [], measures = [];
   let keyCount = 0;
   const num = (v, what) => { if (typeof v !== "number" || !Number.isFinite(v)) throw new TypeError(what + " must be a finite number, got " + String(v)); return v; };
   const addNode = (kind, id, props) => {
@@ -102,6 +104,10 @@ const prelude = (input: ProgramInput, limits: Limits) => `(function () {
     args: INPUT.args, on: INPUT.on, words: INPUT.words, colors: INPUT.colors, random, TAU,
     group: (id, p) => addNode("group", id, p), path: (id, p) => addNode("path", id, p), text: (id, p) => addNode("text", id, p),
     key, anim, emit: (name, at, data) => { events.push({ name: String(name), at: Math.round(num(at, "the frame given to emit()")), data }); },
+    measure: (name, at, value) => {
+      if (measures.length >= ${limits.measures}) throw new RangeError("too many measures: the limit is ${limits.measures}, so measure once a second or at the moments that matter");
+      measures.push({ name: String(name), at: Math.round(num(at, "the frame given to measure()")), value: num(value, "the value given to measure(" + String(name) + ")") });
+    },
     arc, circle, rect, polygon, curve, lerp, clamp, smooth,
   };
   const stringify = JSON.stringify, list = Array.from, message = (e) => {
@@ -116,7 +122,7 @@ const prelude = (input: ProgramInput, limits: Limits) => `(function () {
     delete globalThis.__run;
     try {
       main(api);
-      return stringify({ nodes, tracks: list(tracks.values()), events });
+      return stringify({ nodes, tracks: list(tracks.values()), events, measures });
     } catch (e) { return message(e); }
   };
 })();`;

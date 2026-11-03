@@ -10,6 +10,6 @@ Only these, in this order. No grading, no watch tests, no bench comparison.
 
 Rules: every agent on Opus; zero hardcoding; general fixes; keep tsc, test:engine and test:pipeline clean; plain commit messages with no attribution lines; no em dashes. Where things stand: docs/ROADMAP.md, "Wave 4 status".
 
-## Taste review (built Nov 3, not wired yet)
+## Taste review (built Nov 3, wired into the one-round loop on Nov 3 evening, with a check after the repair)
 `engine/review/taste.ts` with `prompts/taste-review.md`: a strict art-director review of a moment's stills, from the model's own eye and the moment's context (words, purpose, intent, style, audience, platform). Answers ship or revise with the weakest element and concrete fixes. Spark by default, Wonder optional. To wire into path A: run it in parallel with the look review on the same stills and add `tasteNotes()` to the one repair request. No extra rounds.
 Later, only if repairs turn out to make things worse: one comparison call after the repair (stills of the repaired scene vs the first draft, keep the better).

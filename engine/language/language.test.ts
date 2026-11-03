@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { evaluate } from "../core/evaluate.ts";
 import type { CompileContext, Resolved, Scene } from "../core/types.ts";
 import { author, languagePrompt } from "./author.ts";
-import { build, formatProblems } from "./build.ts";
+import { build, formatProblems, measureLines } from "./build.ts";
 import { harvest, loadLibrary, saveProgram, testProgram } from "./library.ts";
 import { parse, tokenize } from "./syntax.ts";
 
@@ -463,4 +463,25 @@ test("a saved program runs by name", async () => {
   const library = [{ name: "dots", doc: "A row of dots.", params: { n: "2" }, source: `for (let i = 0; i < args.n; i++) path("d" + i, { points: circle(i * 50, 20, 10), fill: "ink" });` }];
   const s = await ok(`@0\nrun dots d1 n=3 w=400 h=100\n`, { library });
   assert.ok(at(s, 40, "d1.d2"));
+});
+
+test("a program's measures come back with what it claims to prove, as plain lines", async () => {
+  const src = `program decay doc="A number falling by rule." proves="the value falls every second and never below zero"
+  let v = 100;
+  for (let f = T0; f <= T1; f += fps) { v = v * 0.5; measure("value", f, v); }
+  text("t", { x: W / 2, y: H / 2, text: String(Math.round(v)), size: 60, color: "ink" });
+end
+@0
+  run decay d w=600 h=600 until=@20`;
+  const r = await build(src, { ctx });
+  assert.deepEqual(r.problems, [], formatProblems(r.problems));
+  assert.equal(r.measures?.length, 1);
+  assert.equal(r.measures![0]!.proves, "the value falls every second and never below zero");
+  assert.ok(r.measures![0]!.series.length >= 5);
+  const lines = measureLines(r, ctx.fps);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0]!, /The program decay \(run as d\) says it proves "the value falls/);
+  assert.match(lines[0]!, /value: 50 at 0\.0 s, lowest/);
+  const silent = await build(src.replace(/measure\("value", f, v\);/, ""), { ctx });
+  assert.match(measureLines(silent, ctx.fps)[0]!, /measured nothing/);
 });

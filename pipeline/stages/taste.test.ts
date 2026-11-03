@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Project } from "../../schemas/project.ts";
 import type { AskCall } from "../../engine/review/model.ts";
-import { tasteContext, tasteFor, type Job, type Seen } from "./scene.ts";
+import { meansOf, spreadOf, tasteContext, tasteFor, tasteVerdictFor, type Job, type Seen } from "./scene.ts";
 
 const p = {
   id: "t",
@@ -34,4 +34,27 @@ test("the taste review sees the part's stills with its words, purpose, intent, s
   const ship = await tasteFor(job, seen, async <T>() => ({ verdict: "ship", weakest: "", fixes: [], reason: "" }) as T);
   assert.deepEqual(ship, []);
   assert.ok(tasteContext(job).style.fonts!.length);
+});
+
+test("the art director is told the writer's means, the instruments' readings per frame, and on a check the fixes asked for", async () => {
+  const calls: AskCall[] = [];
+  const ask = async <T>(c: AskCall): Promise<T> => (calls.push(c), { verdict: "ship", weakest: "", fixes: [], reason: "" } as T);
+  await tasteVerdictFor(job, seen, ask, (k) => `fill: largest 0.0${k + 1}`, ["make the pins fill the frame"]);
+  const parts = calls[0]!.user as { type: string; text?: string }[];
+  const head = parts[0]!.text!;
+  assert.match(head, /What the scene's writer can do/);
+  assert.match(head, /camera ID zoom=N/);
+  assert.match(head, /sort, a computed thing/);
+  assert.match(head, /These fixes were asked for[\s\S]*- make the pins fill the frame/);
+  assert.match(parts.find((x) => x.text?.startsWith("At 1.5"))!.text!, /What the instruments read on this frame:\nfill: largest 0.02/);
+  // The means come from the language and the kits, not from a list: every arrangement and command is named.
+  const means = meansOf().join("\n");
+  for (const word of ["stage", "board", "light", "dim", "drop", "huge", "note"]) assert.match(means, new RegExp(`\\b${word}\\b`));
+});
+
+test("frames spread over a part are evenly spaced, numbered from 1, and never repeat", () => {
+  const of = (n: number) => ({ moments: Array.from({ length: n }, (_, k) => ({ frame: k * 10, why: "", words: "" })) }) as unknown as Seen;
+  assert.deepEqual(spreadOf(of(3), 4), [1, 2, 3]);
+  assert.deepEqual(spreadOf(of(10), 4), [1, 4, 7, 10]);
+  assert.deepEqual(spreadOf(of(2), 5), [1, 2]);
 });
