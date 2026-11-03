@@ -1,0 +1,17 @@
+{
+  "number-tick": {
+    "text": "very soft short tick as a number box lands, clean and quiet",
+    "seconds": 0.5,
+    "gainDb": -20
+  },
+  "finger-tap": {
+    "text": "quiet fingertip tap for front-finger dots appearing",
+    "seconds": 0.6,
+    "gainDb": -20
+  },
+  "sorted-chime": {
+    "text": "bright warm small chime for Sorted reveal, no tail",
+    "seconds": 1.5,
+    "gainDb": -20
+  }
+}
