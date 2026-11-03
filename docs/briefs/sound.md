@@ -20,7 +20,7 @@ Today `pipeline/stages/mix.ts` places a few effects by shot type (`placeEffects`
 `engine/design/`, `bench/`, `app/`, and the early pipeline stages (plan, research, writer, direction): other sessions are changing them now. Limit changes to `pipeline/stages/mix.ts`, `pipeline/lib/kit.ts`, `audio/`, new files, and the smallest read-only hook in `pipeline/stages/timeline.ts` if needed.
 
 ## Rules
-- Work on a new branch (`git checkout -b sound` from main). Commit with plain messages and NO Co-Authored-By or "Generated with" lines, ever. Do not push; do not merge to main.
+- Work in a git worktree on a new branch, not in the main checkout, so other sessions working there are not disturbed: `git worktree add ../bettervid-sound -b sound main`, then work in `../bettervid-sound` (symlink `node_modules` from the main checkout if it is missing, and remove the link before committing). Commit with plain messages and NO Co-Authored-By or "Generated with" lines, ever. Do not push; do not merge to main.
 - No em dashes anywhere. Match the surrounding code style and comment density.
 - General, never tuned to one video or topic; repair over fallbacks.
 - Never commit `.env` or secrets. Do not create keys on dev.meta.ai.
