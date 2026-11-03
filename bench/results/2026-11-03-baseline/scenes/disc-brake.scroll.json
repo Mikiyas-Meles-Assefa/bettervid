@@ -1,0 +1,24 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "A blueprint-style grid with 'PEDAL' and 'WHEEL' labels. It looks like a technical diagram, so I'm curious but not hooked yet."},
+    {"sheet": 2, "watching": true, "noticed": "'The brake pedal' gets labeled, then '5 CM' appears next to the pedal. The small number gives me a reason to stay."},
+    {"sheet": 3, "watching": true, "noticed": "'So how does that stop a' asks a question over the same diagram. The question keeps me watching."},
+    {"sheet": 4, "watching": true, "noticed": "'TWO TONS' appears beside the wheel. Now the contrast with the 5 cm pedal makes me want the answer."},
+    {"sheet": 5, "watching": true, "noticed": "A piston and 'PUSH' arrows animate into the pedal. The motion helps, I'm still in."},
+    {"sheet": 6, "watching": true, "noticed": "'A cylinder full of brake fluid' with brake fluid labels stacking. Busy but it's building."},
+    {"sheet": 7, "watching": true, "noticed": "'Can't be squeezed' appears over the brake fluid. A clean idea, so I keep going."},
+    {"sheet": 8, "watching": true, "noticed": "'So the pressure travels' with the lines now labeled. Still following the chain."},
+    {"sheet": 9, "watching": true, "noticed": "'Brake line' and 'pressure' labels add to the stack. Getting dense, but it's still moving."},
+    {"sheet": 10, "watching": true, "noticed": "'Caliper' lights up at the bottom of the stack, then 'at the wheel'. The chain finally reaches the wheel."},
+    {"sheet": 11, "watching": false, "noticed": "The diagram freezes with the same labels for two seconds, 'that pressure pushes' is said over nothing new. I swipe away here."},
+    {"sheet": 12, "watching": false, "noticed": "Not watching. I swiped away at sheet 11."},
+    {"sheet": 13, "watching": false, "noticed": "Not watching. I swiped away at sheet 11."},
+    {"sheet": 14, "watching": false, "noticed": "Not watching. I swiped away at sheet 11."},
+    {"sheet": 15, "watching": false, "noticed": "Not watching. I swiped away at sheet 11."},
+    {"sheet": 16, "watching": false, "noticed": "Not watching. I swiped away at sheet 11."},
+    {"sheet": 17, "watching": false, "noticed": "Not watching. I swiped away at sheet 11."},
+    {"sheet": 18, "watching": false, "noticed": "Not watching. I swiped away at sheet 11."}
+  ],
+  "swiped_at": 11,
+  "remembers": "Pushing the brake pedal a few centimeters pushes a piston into brake fluid, which can't be squeezed, so the pressure travels to each wheel. I only heard up to the caliper before swiping."
+}

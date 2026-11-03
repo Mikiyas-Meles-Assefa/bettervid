@@ -1,0 +1,15 @@
+[
+{"sheet":1,"looking":"A cream page with the headline 'ALMOST EVERY SOLID SINKS' at the top","waiting":"The rest of the sentence and what the exception is","confusing":""},
+{"sheet":2,"looking":"A box labeled ICE slides up from the bottom and the headline jumps to 'ICE FLOATS.'","waiting":"An explanation of why ice floats","confusing":"The ice is a plain labeled box, not shown in any liquid, so I do not see it float"},
+{"sheet":3,"looking":"The headline becomes 'WHY DOES ICE FLOAT?', then a scatter of dots labeled LIQUID WATER","waiting":"What the dots are and how they compare to ice","confusing":"The ice box vanishes and the dots replace it; I assume the dots are water molecules but nothing says so"},
+{"sheet":4,"looking":"Dots jiggling around in the LIQUID WATER cloud","waiting":"What happens when the water freezes","confusing":"Nothing yet shows what the close together dots are to be compared against"},
+{"sheet":5,"looking":"The dots rearrange into a hexagon grid with orange bonds appearing; the title changes to AS WATER FREEZES","waiting":"The finished pattern and why it matters for floating","confusing":"The title and bonds change quickly; the term hydrogen bonds is new and the orange lines are not labeled"},
+{"sheet":6,"looking":"More orange bonds join the dots into linked hexagons, titled HYDROGEN BONDS","waiting":"The full lattice and the point about floating","confusing":"The narration says four neighbors, but the picture shows each dot with about three lines"},
+{"sheet":7,"looking":"A nearly complete honeycomb of dots and bonds","waiting":"How a hexagon pattern leads to floating","confusing":"The word open is not obvious yet; the lattice looks dense and full"},
+{"sheet":8,"looking":"The finished honeycomb sits still while the narration goes quiet","waiting":"The link to floating; this feels like a long still pause","confusing":"The caption is blank and the picture is static for about two seconds"},
+{"sheet":9,"looking":"A split screen with LIQUID WATER dots on the left and the ICE lattice on the right","waiting":"Which one takes up more room, and how the sizes compare","confusing":"The two sides are about the same size, so I cannot see ice taking more room"},
+{"sheet":10,"looking":"The liquid dots mill about next to the fixed lattice","waiting":"The conclusion that ice is less dense","confusing":"I cannot see the extra room that the narration describes"},
+{"sheet":11,"looking":"The red text 'ABOUT 9% LESS DENSE' appears under the two pictures","waiting":"The final point that this is why it floats","confusing":"Nothing in the picture shows the 9%; it is just stated"},
+{"sheet":12,"looking":"The same split screen with 9% LESS DENSE; the headline starts to change","waiting":"The wrap-up of the whole point","confusing":"The explanation reads as stated more than shown; no ice floating on water is ever drawn"},
+{"sheet":13,"looking":"The headline reads 'SO IT FLOATS.' over the unchanged split screen, then the clip ends","waiting":"Nothing","confusing":"The ending is abrupt, and there is still no picture of ice on water"}
+]

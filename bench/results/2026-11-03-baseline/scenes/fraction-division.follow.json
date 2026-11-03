@@ -1,0 +1,16 @@
+[
+{"sheet":1,"looking":"A blank chalkboard, then the question 'What is six divided by one half?' and '6 ÷ 1/2 = ? key' fading in","waiting":"The answer to the question","confusing":"The word 'key' sits after the question mark and I do not know what it means"},
+{"sheet":2,"looking":"The question and the equation, held still","waiting":"The answer, since the narrator just asked","confusing":"Nothing moves; the stray word 'key' is still there"},
+{"sheet":3,"looking":"The same still question; narrator starts 'It's' then a long pause","waiting":"The answer to be said","confusing":"A long dead stretch with a static screen"},
+{"sheet":4,"looking":"The equation changes to 6 ÷ 1/2 = 12, with a red 'not three' beneath it","waiting":"Why twelve and not three","confusing":"The word 'answer' now replaces 'key' at the end of the equation, which looks like a stray label"},
+{"sheet":5,"looking":"A yellow question appears: 'how many halves fit into six?'","waiting":"A demonstration of that question","confusing":""},
+{"sheet":6,"looking":"The yellow question held on screen","waiting":"The picture that shows it; narration says 'Cut'","confusing":"The screen is static while the narration moves on"},
+{"sheet":7,"looking":"Six empty dark circles in a grid, the first one being cut open; counter says '0 halves'","waiting":"The cuts to continue on the rest","confusing":"The circles look like holes, not wholes; the '0 halves' counter does not seem to change as the cut happens"},
+{"sheet":8,"looking":"The first circle split into two pieces; the other five untouched","waiting":"The other circles to be cut and the counter to count up","confusing":"The counter still says 0 even though one circle is cut; the first cut is slow"},
+{"sheet":9,"looking":"The first circle still split, nothing moving","waiting":"More cutting; narration says 'Every whole gives'","confusing":"Long stall with no change on screen while narration describes it"},
+{"sheet":10,"looking":"Circles being cut one after another, three done and a fourth starting","waiting":"All six to be cut and the counter to read twelve","confusing":"Counter still reads 0 halves while pieces pile up"},
+{"sheet":11,"looking":"All twelve half pieces shown, the grid fully cut","waiting":"The conclusion; the counter still reads 0 halves","confusing":"The counter never counted up to twelve, so the link from twelve pieces to the answer is left to me to count"},
+{"sheet":12,"looking":"The piece grid is replaced by a yellow line 'dividing by a half is multiplying by two' and '6 × 2 = 12'","waiting":"The narrator to finish the sentence","confusing":"The rule text is small and the layout jumped suddenly from the pictures"},
+{"sheet":13,"looking":"The same final screen: equation, yellow rule and 6 × 2 = 12","waiting":"The end of the sentence 'multiplying by'","confusing":""},
+{"sheet":14,"looking":"The same final screen held, ends on 'two'","waiting":"Nothing, it is over","confusing":""}
+]

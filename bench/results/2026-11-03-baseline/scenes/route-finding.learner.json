@@ -1,0 +1,7 @@
+[
+{"q":1,"answer":"8 minutes","from":"both"},
+{"q":2,"answer":"Home to park to cafe to work (home -> park -> cafe -> work)","from":"both"},
+{"q":3,"answer":"Going through the park is shorter than the direct road: home to park is 2 and park to cafe is 1 (the 1 edge between them), so 3, which is better than the direct 4.","from":"both"},
+{"q":4,"answer":"8 minutes (the road between park and work is labeled 8)","from":"picture"},
+{"q":5,"answer":"Home","from":"both"}
+]

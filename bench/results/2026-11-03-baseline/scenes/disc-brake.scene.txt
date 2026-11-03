@@ -1,0 +1,71 @@
+@0
+stack top gap=30 align=center
+  box pedal "pedal" role=key w=240 h=140
+  space gap h=60
+  circle wheel "wheel" role=key w=300 h=300
+
+@5 keep
+do pulse pedal
+
+@7 keep
+tag pedal "5 cm" side=right id=tp
+
+@15 keep
+tag wheel "two tons" side=right id=tt
+
+@18 keep
+drop gap
+drop tp
+drop tt
+
+@22 keep
+box piston "piston" role=key after=pedal w=220 h=120
+arrow pedal -> piston "push"
+
+@25 keep
+box fluid "brake fluid" role=key after=piston w=240 h=130
+arrow piston -> fluid "push"
+
+@31 keep
+tag fluid "can't be squeezed" side=right id=tf
+
+@40 keep
+drop tf
+box line "brake line" role=body after=fluid w=200 h=100
+arrow fluid -> line "pressure"
+do flow arrow.fluid.line color=accent frames=30
+
+@43 keep
+box caliper "caliper" role=key after=line w=240 h=130
+arrow line -> caliper "pressure"
+do flow arrow.line.caliper color=accent frames=40
+
+@43+12 keep
+light caliper
+
+@52 keep
+tag caliper "pistons" side=right id=tc
+
+@56 keep
+drop tc
+row pads gap=120 align=center after=caliper
+  box padL "pad" role=key w=140 h=200
+  box padR "pad" role=key w=140 h=200
+
+@57 keep
+do pulse padL
+do pulse padR
+
+@61 keep
+circle wheel "disc" role=key w=300 h=300
+
+@62 keep
+do pulse wheel
+
+@65 keep
+tag wheel "car's motion" side=right id=tmo
+
+@68 keep move=30 ease=smooth
+drop tmo
+set wheel fill=red
+text heat "heat" role=answer after=wheel

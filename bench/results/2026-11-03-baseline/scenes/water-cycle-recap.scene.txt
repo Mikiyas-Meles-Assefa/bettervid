@@ -1,0 +1,44 @@
+@0
+text head "The whole loop, one more time" role=title
+ring loop arrows=1
+  pill ev "Evaporation" role=muted
+  pill co "Condensation" role=muted
+  pill pr "Precipitation" role=muted
+  pill cl "Collection" role=muted
+@7 keep move=10 ease=out
+text head "Evaporation" role=title
+text cap "Vapor rises from the ocean" role=body
+pill ev "Evaporation" role=key
+@17 keep move=10 ease=out
+text head "Condensation" role=title
+text cap "High up, vapor cools into clouds" role=body
+pill ev "Evaporation" role=muted
+pill co "Condensation" role=key
+@23 keep move=10 ease=out
+text head "Precipitation" role=title
+text cap "Clouds drop it as rain or snow" role=body
+pill co "Condensation" role=muted
+pill pr "Precipitation" role=key
+@30 keep move=10 ease=out
+text head "Collection" role=title
+text cap "It runs back to the sea" role=body
+pill pr "Precipitation" role=muted
+pill cl "Collection" role=key
+@37 keep move=10 ease=out
+text head "One endless loop" role=title
+drop cap
+pill ev "Evaporation" role=body
+pill co "Condensation" role=body
+pill pr "Precipitation" role=body
+pill cl "Collection" role=body
+light loop
+@45+11 keep
+light ev
+@45+29 keep
+light co
+@45+47 keep
+light pr
+@45+65 keep
+light cl
+@45+79 keep
+light loop

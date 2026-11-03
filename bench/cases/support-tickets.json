@@ -1,0 +1,115 @@
+{
+ "id": "support-tickets",
+ "use": "a meeting slide turned into a clip",
+ "request": "Turn this slide from my team meeting into a 20 second clip for the all-hands. The point: login problems are most of our tickets.",
+ "material": [
+  {
+   "kind": "image",
+   "name": "slide",
+   "about": "the user's meeting slide: a bar chart titled 'Q3 support tickets by cause', total 840; login/password 412, billing 268, shipping 97, other 63",
+   "file": "support-tickets-slide.png",
+   "size": [
+    1280,
+    720
+   ]
+  }
+ ],
+ "topic": "Q3 support tickets by cause",
+ "intent": "A team lead wants the whole company to see that login problems dominate support.",
+ "style": "flat",
+ "goal": "The viewer remembers that login problems are almost half of all tickets and that fixing them halves the queue.",
+ "promise": "Where our support tickets really come from.",
+ "arc": "The total, the login bar alone, the others small beside it, the takeaway.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Last quarter we got 840 support tickets.",
+   "job": "Set the total.",
+   "knows": "840 tickets in Q3.",
+   "waiting": "Where did they come from?",
+   "look": "the total, 840",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Login problems alone were 412, almost half.",
+   "job": "The big bar.",
+   "knows": "Login: 412, almost half.",
+   "waiting": "",
+   "look": "the login bar, 412",
+   "feel": "",
+   "rhythm": "long",
+   "reveal": {
+    "at": "412,",
+    "what": "the login bar"
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Billing came next with 268. Shipping and everything else together? Just 160.",
+   "job": "The rest, small beside it.",
+   "knows": "Billing 268; the rest 160.",
+   "waiting": "",
+   "look": "billing, then shipping and other, small next to login",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "together?",
+     "seconds": 1.5,
+     "purpose": "predict",
+     "does": "shipping and other bars wait, unlabeled",
+     "shows": "Shipping + other = ?"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "Fix login, and half the queue goes away.",
+   "job": "The takeaway.",
+   "knows": "Fixing login halves the queue.",
+   "waiting": "",
+   "look": "the login bar, half of the whole",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h2",
+     "after": "away.",
+     "seconds": 2.0,
+     "purpose": "settle",
+     "does": "the login share stays lit as half of all tickets"
+    }
+   ]
+  }
+ ],
+ "quiz": [
+  {
+   "q": "How many support tickets were there last quarter?",
+   "a": "840.",
+   "needs": "words"
+  },
+  {
+   "q": "How many were login problems?",
+   "a": "412, almost half.",
+   "needs": "words"
+  },
+  {
+   "q": "Which cause came second, and how many?",
+   "a": "Billing, 268.",
+   "needs": "words"
+  },
+  {
+   "q": "How many were shipping and everything else together?",
+   "a": "160.",
+   "needs": "words"
+  },
+  {
+   "q": "Which cause had the longest bar?",
+   "a": "Login (password) problems.",
+   "needs": "picture"
+  }
+ ]
+}

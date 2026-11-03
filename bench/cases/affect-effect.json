@@ -1,0 +1,103 @@
+{
+ "id": "affect-effect",
+ "use": "a language tip for social media",
+ "request": "Make a 15 second 'affect vs effect' tip for Instagram.",
+ "topic": "Affect versus effect",
+ "intent": "Social media viewers want a trick they can use today.",
+ "style": "neon",
+ "goal": "The viewer can pick the right word in a new sentence.",
+ "promise": "Two confusing words and one trick.",
+ "arc": "Both words, A for action, E for end, a blank to fill, the answer.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Affect or effect? Here's the trick.",
+   "job": "Hook.",
+   "knows": "",
+   "waiting": "What's the trick?",
+   "look": "the two words",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Affect is the action. A for action.",
+   "job": "First half of the trick.",
+   "knows": "Affect: action.",
+   "waiting": "",
+   "look": "the A of affect linked to action",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e3",
+   "text": "Effect is the end result. E for end.",
+   "job": "Second half.",
+   "knows": "Effect: end result.",
+   "waiting": "",
+   "look": "the E of effect linked to end",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e4",
+   "text": "Try it: the noise blank my sleep.",
+   "job": "A sentence to fill.",
+   "knows": "",
+   "waiting": "Which word fits?",
+   "look": "the sentence with a blank",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "sleep.",
+     "seconds": 2.5,
+     "purpose": "predict",
+     "does": "the sentence waits with its blank",
+     "shows": "The noise ___ my sleep"
+    }
+   ],
+   "withhold": {
+    "what": "the word that fills the blank",
+    "until": "e5"
+   }
+  },
+  {
+   "id": "e5",
+   "text": "Affected. It's the action.",
+   "job": "Answer.",
+   "knows": "Affected.",
+   "waiting": "",
+   "look": "affected in the blank",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "Affected.",
+    "what": "the answer in the blank"
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "Which word is the action?",
+   "a": "Affect.",
+   "needs": "words"
+  },
+  {
+   "q": "What is the memory trick?",
+   "a": "A for action (affect), E for end result (effect).",
+   "needs": "words"
+  },
+  {
+   "q": "What fills the blank in 'the noise ___ my sleep'?",
+   "a": "Affected.",
+   "needs": "both"
+  },
+  {
+   "q": "What sentence was on screen during the pause?",
+   "a": "The noise ___ my sleep.",
+   "needs": "picture"
+  }
+ ]
+}

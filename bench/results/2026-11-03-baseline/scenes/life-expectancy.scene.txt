@@ -1,0 +1,42 @@
+program s1_curve doc="The line of life expectancy climbing from 1900 to today."
+  const data = [1900, 32, 1920, 36, 1940, 42, 1950, 47, 1960, 52, 1980, 61, 2000, 66, 2021, 72];
+  const x0 = W * 0.12, x1 = W * 0.88, yb = H * 0.86, yt = H * 0.12;
+  const px = (yr) => x0 + (yr - 1900) / 121 * (x1 - x0);
+  const py = (v) => yb - (v - 20) / 60 * (yb - yt);
+  const pts = [];
+  for (let i = 0; i < data.length; i += 2) pts.push(px(data[i]), py(data[i + 1]));
+  const line = path("line", { x: 0, y: 0, points: pts, stroke: "accent", strokeWidth: 10, drawn: 0 });
+  key(line, "drawn", T0, 0);
+  key(line, "drawn", T1, 1, "smooth");
+  path("first", { x: px(1900), y: py(32), points: circle(0, 0, 14), fill: "ink" });
+  const last = path("last", { x: px(2021), y: py(72), points: circle(0, 0, 14), fill: "accent", opacity: 0 });
+  key(last, "opacity", T0, 0);
+  key(last, "opacity", T1, 1, "smooth");
+  text("lab0", { x: px(1900), y: yb + 50, text: "1900", size: 44, color: "ink" });
+  text("lab1", { x: px(2021), y: yb + 50, text: "today", size: 44, color: "ink" });
+end
+
+@0
+text y0 "1900" size=big role=title
+text c0 "a newborn could expect to live" size=normal role=body
+@9 keep
+text a0 "32 years" size=huge role=key
+@14
+text why "That average was dragged down by children" size=big role=body
+@21
+text mt "more than one in three" size=normal role=body
+big sh: { a=1 / b=3 } role=key
+text died "children died before age five" size=normal role=body
+@30
+text v1 "vaccines, clean water, antibiotics" size=normal role=key
+run s1_curve s1_chart w=900 h=1100 until=@36
+@37 keep
+drop v1
+@39 keep
+tag s1_chart.last "over 70" role=key
+@40+13 keep
+tag s1_chart.first "32" role=muted
+do pulse s1_chart.last
+@41 keep
+text more "more than doubled" size=big role=answer
+text cent "in a little over a century" size=normal role=muted

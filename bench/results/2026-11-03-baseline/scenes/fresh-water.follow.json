@@ -1,0 +1,18 @@
+[
+{"sheet":1,"looking":"A grid of glowing cyan dots filling in under the title 'All Earth's water: 100 glasses'","waiting":"What the dots are for and what happens to them","confusing":"The dots are called glasses but look like plain circles, not glasses"},
+{"sheet":2,"looking":"The full 10 by 10 grid of cyan dots, unchanged","waiting":"The next fact; something to happen to the grid","confusing":""},
+{"sheet":3,"looking":"The grid turns pink from the top down, leaving three cyan dots at the bottom right","waiting":"What the three cyan ones are","confusing":"Colour changed before I knew what pink stood for; the caption 'salty ocean' explains it a moment later"},
+{"sheet":4,"looking":"Nearly all pink with three cyan dots; the yellow line says '97 of 100 are salty ocean'","waiting":"What the three remaining glasses mean","confusing":""},
+{"sheet":5,"looking":"The three dots turn yellow, with the label '3 are fresh'","waiting":"The question about how much is drinkable","confusing":"Some seconds with nothing changing on screen"},
+{"sheet":6,"looking":"Same picture, '3 are fresh' in yellow, caption building the question","waiting":"The answer to the drinkable question","confusing":"Screen is static while the question is asked"},
+{"sheet":7,"looking":"Unchanged grid with the three yellow dots","waiting":"Where the answer is; narration says lakes and rivers","confusing":"Nothing marks which of the three is a lake or river"},
+{"sheet":8,"looking":"Yellow text 'How much is lakes and rivers?' replaces the earlier label; the grid is unchanged","waiting":"The answer; narration has gone silent","confusing":"Two silent seconds with nothing happening"},
+{"sheet":9,"looking":"Two of the three yellow dots go dark; the label changes to '2 of the 3 are ice'","waiting":"What is in the last yellow glass","confusing":"The dark dots don't read as ice; I only know from the words"},
+{"sheet":10,"looking":"The same '2 of the 3 are ice' label with two dark dots and one yellow","waiting":"What happens to the remaining glass","confusing":"Nothing visible changes for two seconds"},
+{"sheet":11,"looking":"The last dot becomes partly filled with blue; label 'Most of the last one is underground'","waiting":"How much is left for lakes and rivers","confusing":"The tiny dot is hard to see, so I can't tell how much is filled or what the filled part means"},
+{"sheet":12,"looking":"Label 'Lakes and rivers' replaces the underground text","waiting":"The amount the narration is about to give","confusing":"The blue part of the dot is tiny, so I can't connect 'lakes and rivers' to anything visible"},
+{"sheet":13,"looking":"'Lakes and rivers' in yellow; the grid is unchanged","waiting":"The number","confusing":""},
+{"sheet":14,"looking":"The label becomes 'Less than 1% of one glass'","waiting":"Nothing else maybe; a last point or a wrap-up","confusing":"The glass with a little blue is too small to see how small 1% is; I take it on trust"},
+{"sheet":15,"looking":"Same final picture, no narration","waiting":"Whether more comes","confusing":"Static for about two seconds"},
+{"sheet":16,"looking":"One last frame of the same picture","waiting":"Nothing","confusing":"No closing statement of what it means for us"}
+]

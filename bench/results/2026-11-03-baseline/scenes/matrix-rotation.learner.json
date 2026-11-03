@@ -1,0 +1,6 @@
+[
+{"q":1,"answer":"It turns (rotates) a point a quarter turn; the picture shows (3,1) swinging along an arc to (-1,3).","from":"both"},
+{"q":2,"answer":"Top row 0 and -1, bottom row 1 and 0: [[0,-1],[1,0]].","from":"both"},
+{"q":3,"answer":"Top row times the vector: 0 x 3 + (-1) x 1 = -1.","from":"both"},
+{"q":4,"answer":"It lands on (-1, 3).","from":"both"}
+]

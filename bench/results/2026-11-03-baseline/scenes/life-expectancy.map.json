@@ -1,0 +1,9 @@
+{
+  "promise": ["s1_chart", "tag.s1_chart.first", "tag.s1_chart.last", "more", "cent"],
+  "events": [
+    {"id": "e1", "look": ["y0", "a0"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["a", "b", "bar.a", "mt", "died"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e3", "look": ["s1_chart"], "lookNone": "", "withhold": [], "demo": ["s1_chart"], "holds": []},
+    {"id": "e4", "look": ["s1_chart", "tag.s1_chart.last"], "lookNone": "", "withhold": [], "demo": [], "holds": [{"hold": "h1", "does": ["s1_chart", "tag.s1_chart.last", "tag.s1_chart.first"], "answer": "", "ids": []}]}
+  ]
+}

@@ -1,0 +1,23 @@
+@0
+text q "Same light" size=huge role=title
+row pair gap=80 align=center
+  circle oldb "old bulb" w=420 h=420 role=key
+  circle ledb "LED" w=420 h=420 role=key
+@11 keep enter=fade move=20
+drop pair
+row cmp gap=120 align=bottom
+  row oldbar gap=0 align=bottom
+    box heat "heat" w=900 h=220 role=key
+    box lt w=100 h=220 role=muted
+tag oldbar "old bulb" side=top
+@16 keep
+tag heat "ninety percent" role=answer
+@25 keep enter=fade
+box ledbar "LED" w=250 h=220 role=key into=cmp after=oldbar
+@34 keep
+tag ledbar "a quarter" role=answer
+@44+13 keep
+mark box heat role=pointer
+@45 keep enter=fade
+light oldbar ledbar
+text q "A quarter of the energy" size=big role=answer

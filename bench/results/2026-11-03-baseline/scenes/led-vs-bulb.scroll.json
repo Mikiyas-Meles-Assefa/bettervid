@@ -1,0 +1,18 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "Two blue circles, 'old bulb' and 'LED', under 'Same light'. A quick comparison hook."},
+    {"sheet": 2, "watching": false, "noticed": "The circles just sit there while the words change. Nothing moves, so I swipe."},
+    {"sheet": 3, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 4, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 5, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 6, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 7, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 8, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 9, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 10, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 11, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 12, "watching": false, "noticed": "Not watching; I had already swiped away."}
+  ],
+  "swiped_at": 2,
+  "remembers": "An old incandescent bulb and an LED give the same light. The bulb turns about 90 percent of its power into heat, while the LED uses about a quarter of the power and lasts far longer."
+}

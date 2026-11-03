@@ -1,0 +1,55 @@
+@0
+text lead "Last quarter we got" size=big role=muted
+@4 keep
+text total "840" size=huge role=key
+@5 keep
+text tk "support tickets" size=big role=heading
+@7 keep
+drop lead
+text login_hd "Login problems" size=huge role=heading
+@11 keep
+drop login_hd
+row chart gap=50 align=bottom
+  stack c_login gap=16 align=center
+    box login "412" w=260 h=412 role=key
+    text login_name "Login" size=normal role=label
+@12 keep
+tag login "almost half" side=right id=half_tag
+@14 keep
+drop half_tag
+row chart gap=50 align=bottom
+  stack c_login gap=16 align=center
+    box login "412" w=260 h=412 role=key
+    text login_name "Login" size=normal role=label
+  stack c_bill gap=16 align=center
+    box billing "268" w=260 h=268
+    text billing_name "Billing" size=normal role=label
+withhold ship,other until=@23+57
+@23+12 keep
+text q2 "Shipping + other = ?" size=big role=title
+@23+57 keep
+drop q2
+row chart gap=50 align=bottom
+  stack c_login gap=16 align=center
+    box login "412" w=260 h=412 role=key
+    text login_name "Login" size=normal role=label
+  stack c_bill gap=16 align=center
+    box billing "268" w=260 h=268
+    text billing_name "Billing" size=normal role=label
+  stack c_ship gap=16 align=center
+    box ship "97" w=260 h=97
+    text ship_name "Shipping" size=normal role=label
+  stack c_other gap=16 align=center
+    box other "63" w=260 h=63
+    text other_name "Other" size=normal role=label
+@25 keep
+mark brace ship,other "160" id=rest_brace
+@26 keep
+light login
+text take "Fix login" size=big role=answer
+@29 keep
+light login
+text take "Fix login: half the queue goes away" size=big role=answer
+tag login "half of all tickets" side=right id=half_tag
+@33+10 keep
+light login

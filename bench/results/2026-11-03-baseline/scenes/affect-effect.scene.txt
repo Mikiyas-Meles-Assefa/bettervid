@@ -1,0 +1,48 @@
+withhold ans until=@28
+
+@0
+row pair gap=60
+  text aff "Affect" size=huge role=key
+  text eff "Effect" size=huge role=key
+
+@3 keep
+text trick "Here's the trick." role=heading
+
+@6
+row pair gap=60
+  text aff "Affect" size=huge role=key
+
+@9 keep
+text act "action" size=huge role=answer into=pair
+
+@10 keep
+arrow aff -> act "A for action" role=pointer
+
+@13
+row pair gap=60
+  text eff "Effect" size=huge role=key
+
+@16 keep
+text res "end result" size=huge role=answer into=pair
+
+@18 keep
+arrow eff -> res "E for end" role=pointer
+
+@21
+text try "Try it:" role=heading
+row sent gap=30
+  text pre "The noise" size=big
+  math blank latex="\underline{\qquad\qquad}" role=key
+  text post "my sleep" size=big
+
+@27+11 keep
+text q "Which word fits?" role=heading
+light blank
+
+@28 keep
+drop blank
+drop q
+text ans "affected" size=big role=answer after=pre
+
+@29 keep
+tag ans "the action" side=bottom role=pointer

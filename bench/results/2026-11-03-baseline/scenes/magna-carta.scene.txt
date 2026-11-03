@@ -1,0 +1,56 @@
+withhold s1_cl until=@29
+
+@0
+text s1_when "June 1215" size=huge role=title
+
+@2 keep
+text s1_who "Rebel barons force King John" size=huge role=body
+
+@8 keep enter=pop
+stack s1_charter role=panel gap=14
+  text s1_ct "Charter" role=heading
+  circle s1_seal "seal" role=key
+
+@12 keep
+text s1_where "Runnymede" size=big role=heading
+
+@13 keep
+drop s1_when
+drop s1_who
+stack s1_lines into=s1_charter gap=12
+  box s1_l1 w=900 h=34 role=muted
+  box s1_l2 w=900 h=34 role=muted
+  box s1_l3 w=900 h=34 role=muted
+  box s1_l4 w=900 h=34 role=muted
+  box s1_l5 w=900 h=34 role=muted
+  box s1_l6 w=900 h=34 role=muted
+  box s1_l7 w=900 h=34 role=muted
+  box s1_bar w=900 h=40 role=muted
+  box s1_l8 w=900 h=34 role=muted
+  box s1_l9 w=900 h=34 role=muted
+  box s1_l10 w=900 h=34 role=muted
+  box s1_l11 w=900 h=34 role=muted
+  box s1_l12 w=900 h=34 role=muted
+  box s1_l13 w=900 h=34 role=muted
+
+@17 keep
+drop s1_where
+
+@28+11 keep
+light s1_bar
+camera s1_bar zoom=1.1 frames=45 ease=smooth
+
+@29 cut
+stack s1_cl gap=16
+  text s1_c1 "No free man shall be imprisoned" size=big role=body
+  text s1_c2 "except by the lawful judgment of his peers" size=normal role=body
+  text s1_c3 "or the law of the land." size=big role=key
+
+@45 keep
+light s1_c3
+
+@49 keep
+text s1_king "A king, in writing" size=big role=answer
+
+@54 keep
+arrow s1_king -> s1_cl "under the law" id=s1_up

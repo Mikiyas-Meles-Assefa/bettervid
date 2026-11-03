@@ -1,0 +1,105 @@
+{
+ "id": "rule-of-72",
+ "use": "a quick money rule with a guess, from personal notes",
+ "request": "My personal finance notes say this. Make a quick clip teaching the rule of 72 with one example and one for the viewer to try.",
+ "material": [
+  {
+   "kind": "notes",
+   "name": "finance-notes.md",
+   "about": "the user's own notes",
+   "text": "Rule of 72: years to double = 72 / annual rate (%).\n6% -> 12 years. 8% -> 9 years.\nOnly an estimate; works best for rates around 6-10%."
+  }
+ ],
+ "topic": "The rule of 72",
+ "intent": "Someone wants a quick mental trick for how long money takes to double.",
+ "style": "custom/sticky-notes-on-a-37bb",
+ "goal": "The viewer can use the rule of 72 on a new rate.",
+ "promise": "A one-line trick for doubling time.",
+ "arc": "The rule, a worked example, a guess with a pause, the answer.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Want to know how long money takes to double? Divide seventy-two by the yearly interest rate.",
+   "job": "State the rule.",
+   "knows": "Years to double = 72 ÷ rate.",
+   "waiting": "Does it work?",
+   "look": "72 divided by the rate",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "At six percent, seventy-two divided by six is twelve. Twelve years to double.",
+   "job": "Work an example.",
+   "knows": "At 6%: 12 years.",
+   "waiting": "",
+   "look": "72 ÷ 6 = 12",
+   "feel": "",
+   "rhythm": "long",
+   "reveal": {
+    "at": "is twelve.",
+    "what": "12"
+   }
+  },
+  {
+   "id": "e3",
+   "text": "At eight percent?",
+   "job": "The viewer tries one.",
+   "knows": "",
+   "waiting": "What is 72 ÷ 8?",
+   "look": "72 ÷ 8 = ?",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "percent?",
+     "seconds": 2.5,
+     "purpose": "predict",
+     "does": "the question waits with no answer shown",
+     "shows": "72 ÷ 8 = ?"
+    }
+   ],
+   "withhold": {
+    "what": "the answer 9",
+    "until": "e4"
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Nine years. It's an estimate, but it's close for everyday rates.",
+   "job": "The answer, and its limit.",
+   "knows": "At 8%: 9 years; it's an estimate.",
+   "waiting": "",
+   "look": "the answer 9",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "Nine years.",
+    "what": "9"
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What is the rule of 72?",
+   "a": "Divide 72 by the yearly interest rate to get the years money takes to double.",
+   "needs": "words"
+  },
+  {
+   "q": "How long does money take to double at 6 percent?",
+   "a": "12 years.",
+   "needs": "words"
+  },
+  {
+   "q": "How long at 8 percent?",
+   "a": "9 years.",
+   "needs": "words"
+  },
+  {
+   "q": "What was on screen during the pause?",
+   "a": "The question 72 ÷ 8 = ? with no answer.",
+   "needs": "picture"
+  }
+ ]
+}

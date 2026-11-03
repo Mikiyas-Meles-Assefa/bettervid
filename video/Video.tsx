@@ -8,16 +8,16 @@ import { SHOTS } from "./shots.tsx";
 
 // How captions look. Over photos: white with a black outline. Over an engine scene: the style's own ink and font, with
 // an outline in the surface color, so a caption reads like part of the board and never like a sticker on it.
-type Look = { font: string; weight: number; size: number; upper: boolean; color: string; highlight: string; outline: string; stroke: number };
+export type Look = { font: string; weight: number; size: number; upper: boolean; color: string; highlight: string; outline: string; stroke: number };
 
 const photoLook = (t: Timeline): Look => ({ font: t.style.fonts.caption, weight: 900, size: 58, upper: true, color: "white", highlight: t.style.palette.highlight, outline: "black", stroke: 10 });
 
-function sceneLook(theme: Theme): Look {
+export function sceneLook(theme: Theme): Look {
   const c = theme.colors;
   return { font: theme.fonts.body, weight: theme.style?.type.bold ?? 700, size: 50, upper: theme.style?.type.case === "upper", color: c.ink!, highlight: c.accent!, outline: c.paper!, stroke: 9 };
 }
 
-const Caption: React.FC<{ words: { text: string; highlight: boolean }[]; look: Look }> = ({ words, look }) => {
+export const Caption: React.FC<{ words: { text: string; highlight: boolean }[]; look: Look }> = ({ words, look }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const pop = spring({ frame, fps, config: { damping: 12, stiffness: 240 } });

@@ -1,0 +1,20 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "Four cards reading 4, 1, 3, 2 on cream with a title. Plain but clear."},
+    {"sheet": 2, "watching": true, "noticed": "A 'SORTED' label appears over the first card. It is starting to move."},
+    {"sheet": 3, "watching": false, "noticed": "The same row of cards for two seconds with nothing new. I swipe."},
+    {"sheet": 4, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 5, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 6, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 7, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 8, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 9, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 10, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 11, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 12, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 13, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 14, "watching": false, "noticed": "Not watching; I had already swiped away."}
+  ],
+  "swiped_at": 3,
+  "remembers": "Insertion sort builds a sorted list one item at a time, like sorting cards in your hand. Each new card is compared only with the cards already sorted."
+}

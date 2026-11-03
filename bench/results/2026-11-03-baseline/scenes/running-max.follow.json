@@ -1,0 +1,15 @@
+[
+{"sheet":1,"looking":"Glowing title Finding the biggest number and five lines of code","waiting":"What the code does","confusing":"Small code text, and faint 'variables' and 'output' labels with nothing under them"},
+{"sheet":2,"looking":"The same static code and title; a pink bracket starts to draw under 'variables' at the end","waiting":"What the pink mark is for","confusing":""},
+{"sheet":3,"looking":"An empty pink box under 'variables'","waiting":"What goes in the box (the variable called best)","confusing":"An empty box with nothing in it yet"},
+{"sheet":4,"looking":"Line 1 'let best = 0' highlighted in gold, the pink box still empty","waiting":"The box to show best = 0","confusing":""},
+{"sheet":5,"looking":"The highlight moving to the for line and best = 0 appearing in the pink box","waiting":"The loop to start taking numbers","confusing":"The for line is not explained; I guess it steps through 3, 7, 2"},
+{"sheet":6,"looking":"Line 3 highlighted and x = 3 appearing under best","waiting":"best to change to 3","confusing":"x appears without explanation; I assume it is the current number"},
+{"sheet":7,"looking":"Line 3 highlighted, best = 0 and x = 3 held; the yellow question 'Next is 7. What happens to best?' appears","waiting":"The answer","confusing":"best still reads 0 though the narration said it becomes three, so the change was not shown; the silence is long"},
+{"sheet":8,"looking":"The yellow question still on screen, then best turns to 3 and the highlight goes back to the for line","waiting":"x to become 7 and best to update","confusing":"best only changes to 3 here, late; the question text vanished suddenly"},
+{"sheet":9,"looking":"Line 3 highlighted with best = 3 and x = 7, then best turning to 7","waiting":"The last number, 2","confusing":""},
+{"sheet":10,"looking":"x = 2 with line 3 highlighted, best staying 7","waiting":"The end of the loop and the printed result","confusing":""},
+{"sheet":11,"looking":"The highlight moving to line 5 console.log(best)","waiting":"The output to appear","confusing":""},
+{"sheet":12,"looking":"The number 7 appearing under 'output'","waiting":"Nothing much","confusing":""},
+{"sheet":13,"looking":"Final frame with best = 7 and output 7 circled","waiting":"Nothing","confusing":""}
+]

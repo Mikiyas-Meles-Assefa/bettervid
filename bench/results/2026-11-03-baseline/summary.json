@@ -1,0 +1,4324 @@
+{
+ "run": "2026-11-03-baseline",
+ "overall": {
+  "cases": 28,
+  "built": 26,
+  "passed": 25,
+  "overall": 0.751,
+  "eye": 0.682,
+  "lag": 0.76,
+  "pace": 0.639,
+  "load": 0.904,
+  "holds": 0.72,
+  "reveal": 0.904,
+  "read": 0.808,
+  "learner": 0.954,
+  "wordsOnly": 0.807,
+  "gain": 0.147,
+  "pictureQuestions": 0.833,
+  "pictureQuestionsWordsOnly": 0.175,
+  "followOnLook": 0.848,
+  "followWaiting": 0.861,
+  "followConfused": 0.761,
+  "designer": 3.923,
+  "scrollKept": 0.589,
+  "scrollRemembers": 0.827,
+  "materialCases": 10,
+  "learnerMaterial": 0.978,
+  "learnerPrompt": 0.941
+ },
+ "cases": [
+  {
+   "id": "affect-effect",
+   "use": "a language tip for social media",
+   "style": "neon",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.792,
+   "scores": {
+    "lag": 0.962,
+    "pace": 1,
+    "load": 1,
+    "read": 0.35,
+    "eye": 0.734,
+    "holds": 0.5,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.875,
+   "gain": 0.125,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0.5,
+   "follow": {
+    "onLook": 1,
+    "waiting": 0.7777777777777778,
+    "confused": 0.6666666666666666
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 4,
+    "motion": 4,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheet 05-08: the practice sentence (The noise ___ my sleep) is never answered visually and the blank is held with no countdown or choice cues; the sentence sits in the top third, then the lower 50% of the frame is empty for the whole quiz.",
+     "Sheet 07: 'Which word fits?' appears and then sits for a long silent beat (12.0 to 13.7 s) with nothing moving, so the pause reads as dead air rather than think time; no timer or two options (affect / effect) shown.",
+     "Sheet 01-06: the key words and mnemonics ('A FOR ACTION', 'E FOR END') are tiny, around 10 px caps, above the headline and unreadable on a phone; the pink arrow glyph is a few pixels wide and overlaps text on sheet 04."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "competing: During e4 (8.8 to 13.8 s) the eye should be on \"the sentence with a blank\" (pre, blank, post), but only 36% of the change on screen is there; 2 other things pull at it: try (\"TRY IT:\") for 0.3 s, q (\"WHICH WORD FITS?\") for 0.2 s.",
+    "hold_competing: During hold h1 (11.2 to 13.7 s, \"the sentence waits with its blank\") the change is mostly away from the event's look (pre, blank, post): q (\"WHICH WORD FITS?\") for 0.2 s."
+   ],
+   "raw": {
+    "seconds": 15.8,
+    "things": 14,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.5,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.81,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 0.36,
+      "competing": 2
+     },
+     {
+      "event": "e5",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 13,
+     "in_time": 11,
+     "late": 0,
+     "already": 2,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e5",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e5",
+      "what": "reveal",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.28,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.71
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 1.03
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.97
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.4
+      },
+      {
+       "event": "e5",
+       "rhythm": "short",
+       "rate": 0.78
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 16,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 5,
+     "peakPull": 3,
+     "newPerSecond": 0.92
+    },
+    "read": {
+     "frames": 32,
+     "severe": 18,
+     "mild": 7,
+     "kinds": {
+      "empty": 25
+     },
+     "examples": [
+      "empty at 1.5 s: 17% of the usable frame has anything in it; the largest empty band is 63% of its height"
+     ]
+    }
+   }
+  },
+  {
+   "id": "ball-drop",
+   "use": "predict, then reveal",
+   "style": "chalkboard",
+   "built": true,
+   "passed": true,
+   "rounds": 3,
+   "reviewed": "nothing to say",
+   "overall": 0.614,
+   "scores": {
+    "lag": 0.662,
+    "pace": 0.941,
+    "load": 1,
+    "read": 0.457,
+    "eye": 0.236,
+    "holds": 0,
+    "reveal": 1
+   },
+   "learner": 0.875,
+   "wordsOnly": 0.75,
+   "gain": 0.125,
+   "pictureQuestions": 0.5,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.7916666666666666,
+    "waiting": 0.5833333333333334,
+    "confused": 1
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 2,
+    "hierarchy": 3,
+    "consistency": 4,
+    "issues": [
+     "Sheet 05-06: the prediction moment is dead; for 4 seconds the screen shows 'Which lands first?' with two static circles, no countdown, no drop, no options for students to commit to, and then 'They land together' is only a small caption while the balls never actually fall.",
+     "Sheet 06: the reveal (balls landing together) is never shown; the balls are labelled circles that drift upward on sheets 07-09 instead of dropping, so the motion contradicts the physics being taught and the key payoff is missing.",
+     "Sheet 07-09: the headline 'Gravity speeds every object...' is oversized, cropped off both edges of the frame (letters cut at 'avity speeds eve'), and shown with a tiny yellow subtitle 'mass up alike' that does not match the narration."
+    ]
+   },
+   "scroller": {
+    "kept": 0.3333333333333333,
+    "remembers": 0
+   },
+   "material": false,
+   "tickets": [
+    "withheld_early: The plan withholds \"the balls falling and which lands first\" until e3 (10.7 s), but also asks e2 (\"Ask for a prediction.\") to show bowl, tennis, which the scene does from 0.4 s. One of the two has to change.",
+    "hold_frozen: Hold h1 (predict, 3.0 s after word 18) should show: \"both balls hang at the top; nothing moves toward the answer\". Nothing on screen changes from 7.6 to 10.6 s: a frozen frame.",
+    "look_absent: The eye should be on \"air resistance, small\", but nothing in the scene shows it (Nothing on screen shows air resistance; the question text still reads the gravity line beside the two balls.) during e4 (17.0 to 23.1 s, \"Name the one exception.\")."
+   ],
+   "raw": {
+    "seconds": 22.6,
+    "things": 3,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.5,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.44,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 17,
+     "in_time": 11,
+     "late": 3,
+     "already": 3,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": null
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 1.2
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": 1.2
+     }
+    ],
+    "tempo": {
+     "cv": 0.35,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.16
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.47
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.32
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.33
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.33,
+      "beats": 1,
+      "settled": 0.57
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 23,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 2,
+     "newPerSecond": 0.13
+    },
+    "read": {
+     "frames": 46,
+     "severe": 17,
+     "mild": 20,
+     "kinds": {
+      "empty": 30,
+      "off_frame": 6,
+      "overlap": 6
+     },
+     "examples": [
+      "off_frame at 13.0 s: cut by the frame edge: \"Gravity speeds every\" (22% outside)",
+      "empty at 16.5 s: 30% of the usable frame has anything in it; the largest empty band is 50% of its height",
+      "overlap at 18.0 s: writing on top of writing: \"can split\" and \"bowling\" (100% of the smaller); \"can split\" and \"tennis\" (86% of the smaller)"
+     ]
+    }
+   }
+  },
+  {
+   "id": "death-zone",
+   "use": "a suspense beat",
+   "style": "ink",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.892,
+   "scores": {
+    "lag": 0.842,
+    "pace": 0.523,
+    "load": 1,
+    "read": 1,
+    "eye": 0.879,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.75,
+   "wordsOnly": 0.625,
+   "gain": 0.125,
+   "pictureQuestions": 0,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.6818181818181818,
+    "waiting": 0.5,
+    "confused": 0.6363636363636364
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 6,
+    "issues": [
+     "Sheet 01-11: the visual is one static mountain diagram for 20 seconds; the climber dot moves only a few pixels along the slope and then stops at the red line, so there is no sense of rising danger, thinning air, fatigue or tension; the brief was a tense moment and nothing escalates.",
+     "Sheet 07: from 12.0 to 14.0 s the frame is the same diagram with no text and no change, a dead 2 s hold that reads as a glitch instead of a deliberate beat of silence.",
+     "Sheet 03-06: the bottom caption (small, 12 px bold serif) duplicates the red headline above it, so two lines say nearly the same thing and the viewer's eye is pulled between them; the red headline sits tight under the diagram while the caption floats far lower."
+    ]
+   },
+   "scroller": {
+    "kept": 0.45454545454545453,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "seconds": 20,
+    "things": 6,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 0.64,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 13,
+     "in_time": 10,
+     "late": 3,
+     "already": 0,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 3.97
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": -0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.21,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.3
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.39
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.5
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 20,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 3,
+     "newPerSecond": 0.29
+    },
+    "read": {
+     "frames": 40,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "disc-brake",
+   "use": "a mechanism, one link at a time",
+   "style": "blueprint",
+   "built": true,
+   "passed": true,
+   "rounds": 4,
+   "reviewed": "nothing to say",
+   "overall": 0.876,
+   "scores": {
+    "lag": 0.72,
+    "pace": 0.618,
+    "load": 1,
+    "read": 1,
+    "eye": 0.796,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.9,
+   "wordsOnly": 0.8,
+   "gain": 0.09999999999999998,
+   "pictureQuestions": 0.5,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.8055555555555556,
+    "waiting": 0.6666666666666666,
+    "confused": 0.9444444444444444
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 2,
+    "hierarchy": 3,
+    "consistency": 4,
+    "issues": [
+     "Sheets 7-8, 12-13: a floating caption 'CAN'T BE SQUEEZED' is reused as a second text line mid-frame; it duplicates the bottom caption, has no visual (no compressing fluid, no pressure demo) and sits dead under the stack.",
+     "Sheets 6-11: the stack is a column of tiny labeled boxes crammed into the top 20 percent of the frame; the bottom 55 percent holds only a small WHEEL circle and empty grid, so the frame is badly used and nothing is physically drawn (no pedal, cylinder, line, caliper or disc).",
+     "Sheets 6-9: 'BRAKE FLUID' text overflows its box and overlaps the PUSH/PRESSURE labels and arrows; boxes touch each other so the stack reads cramped and sloppy."
+    ]
+   },
+   "scroller": {
+    "kept": 0.5555555555555556,
+    "remembers": 0.5
+   },
+   "material": false,
+   "tickets": [
+    "flat_rhythm: The picture changes at nearly the same rate all through (e1 0.67, e2 0.67, e3 0.51, e4 0.53 steps a second; spread 0.13). The plan mixes long and short events, but the scene does not.",
+    "competing: During e3 (19.5 to 27.3 s) the eye should be on \"the two pads closing on the spinning disc from both sides\" (padL, padR, wheel), but only 38% of the change on screen is there; 2 other things pull at it: tc (\"PISTONS\") for 0.7 s, caliper (\"CALIPER\") for 0.5 s."
+   ],
+   "raw": {
+    "seconds": 34.4,
+    "things": 18,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 0.81,
+      "competing": 2
+     },
+     {
+      "event": "e3",
+      "share": 0.38,
+      "competing": 2
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 25,
+     "in_time": 13,
+     "late": 1,
+     "already": 8,
+     "missing": 3,
+     "missed": [
+      "pushes (word 2)",
+      "brake (word 4)",
+      "car? (word 17)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 1.5
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 5.3
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": -0.2
+     },
+     {
+      "event": "e4",
+      "what": "reveal",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.13,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.67
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.67
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.51
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.53
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 12,
+      "beats": 8,
+      "settled": 0.57
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 34,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 4,
+     "peakPull": 3,
+     "newPerSecond": 0.52
+    },
+    "read": {
+     "frames": 69,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "fraction-division",
+   "use": "a worked math step",
+   "style": "chalkboard",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "kept",
+   "overall": 0.664,
+   "scores": {
+    "lag": 0.833,
+    "pace": 0.667,
+    "load": 0.741,
+    "read": 0.844,
+    "eye": 0.565,
+    "holds": 0,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.8,
+   "gain": 0.19999999999999996,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.9642857142857143,
+    "waiting": 0.8928571428571429,
+    "confused": 0.7857142857142857
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 4,
+    "issues": [
+     "Sheets 12-21: the counter reads '0 halves' for the entire cutting sequence while the viewer watches 12 halves appear; the one number meant to carry the idea never counts up, so the 'counting halves' payoff is lost.",
+     "Sheets 1-6 and 7-11: stray label words 'key' and 'answer' are rendered as chalk text next to the equation ('6 / 1/2 = ? key', '= 12 answer'); they look like leaked data-field names and read as bugs.",
+     "Sheets 2-5: about 4 seconds of nothing but a static question and equation (6 s of static text before any visual), while the narration says 'It's twelve' with no payoff image; the hook is weak and slow."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "hold_frozen: Hold h1 (predict, 3.0 s after word 6) should show: \"the question stays alone on screen; nothing hints at the answer\". Nothing on screen changes from 2.7 to 5.7 s: a frozen frame.",
+    "competing: During e2 (5.8 to 12.0 s) the eye should be on \"the answer 12 beside the reworded question\" (s1_ans, s1_rq), but only 32% of the change on screen is there; 3 other things pull at it: s1_nt (\"not three\") for 1.2 s, s1_six, s1_div, s1_half, s1_eq together for 0.7 s, role (\"key answer\") for 0.6 s.",
+    "demo_rushed: Phase 1 of e3's demo (slow, 12.0 to 17.3 s) should go one step at a time, but the picture steps every 0.83 s (4 changes, the closest 0.20 s apart). A slow step needs about 1.0 s to be seen.",
+    "hold_frozen: Hold h2 (settle, 2.0 s after word 39) should show: \"the twelve halves stay counted, the total 12 lit\". Nothing on screen changes from 19.6 to 21.6 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 26.9,
+    "things": 24,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.49,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.32,
+      "competing": 3
+     },
+     {
+      "event": "e3",
+      "share": 0.96,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.5,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 18,
+     "in_time": 8,
+     "late": 2,
+     "already": 6,
+     "missing": 2,
+     "missed": [
+      "one (word 5)",
+      "three. (word 10)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "reveal",
+      "lag": 0.23
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.66,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.17
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.97
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 1.33
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.35
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 5.37,
+      "beats": 4
+     },
+     {
+      "event": "e3",
+      "phase": 2,
+      "pace": "fast",
+      "seconds": 4.4,
+      "beats": 8,
+      "settled": 2.47
+     }
+    ],
+    "slowThenFaster": 1,
+    "load": {
+     "seconds": 27,
+     "overNew": 4,
+     "overPull": 3,
+     "peakNew": 8,
+     "peakPull": 5,
+     "newPerSecond": 0.88
+    },
+    "read": {
+     "frames": 54,
+     "severe": 0,
+     "mild": 21,
+     "kinds": {
+      "empty": 21
+     },
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "fresh-water",
+   "use": "a chart reveal of a surprising number",
+   "style": "neon",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.755,
+   "scores": {
+    "lag": 0.787,
+    "pace": 0.639,
+    "load": 1,
+    "read": 1,
+    "eye": 0.862,
+    "holds": 0,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.8,
+   "gain": 0.19999999999999996,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.78125,
+    "waiting": 0.90625,
+    "confused": 0.8125
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 5,
+    "type": 5,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheets 4-15: the key payoff is three small dots in the bottom-right corner of a 10 by 10 grid; at phone size they are hard to find, and nothing zooms, isolates or enlarges the fresh glasses, so the fresh-water story is buried in the least prominent part of the frame.",
+     "Sheets 8 and 14-15 (about 4 s of narration silence in sheet 8, 2 s in 15) and sheets 5-14: the picture holds fully static for 10 s plus; nothing moves while the narrator asks 'how much can we drink' so the pacing drags.",
+     "Sheet 16-20: the ice step is only two dots turning from yellow to black and 'underground' is a half-filled tiny dot (sheets 20-22); these meanings are too small and cryptic, with no color legend, no ice or ground visual and no labeling by glass."
+    ]
+   },
+   "scroller": {
+    "kept": 0.4375,
+    "remembers": 0.5
+   },
+   "material": false,
+   "tickets": [
+    "withheld_early: The plan withholds \"the size of the lakes and rivers share\" until e5 (22.9 s), but also asks e2 (\"The first big split.\") to show s1_gl, s1_cap, which the scene does from 4.4 s. One of the two has to change.",
+    "predict_answered: Hold h1 asks the viewer to predict (\"How much is lakes and rivers?\"), but the answer (a tiny sliver) is already on screen at 13.9 s, during the hold (13.9 to 16.4 s): s1_gl.",
+    "hold_frozen: Hold h2 (settle, 2.0 s after word 60) should show: \"the sliver stays lit against all one hundred glasses\". Nothing on screen changes from 27.5 to 29.5 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 29.7,
+    "things": 3,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e5",
+      "share": 0.31,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 24,
+     "in_time": 9,
+     "late": 8,
+     "already": 7,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e2",
+      "what": "reveal",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e5",
+      "what": "look",
+      "lag": 2.1
+     },
+     {
+      "event": "e5",
+      "what": "reveal",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.31,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.23
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.37
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.21
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.47
+      },
+      {
+       "event": "e5",
+       "rhythm": "long",
+       "rate": 0.27
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 30,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 2,
+     "newPerSecond": 0.1
+    },
+    "read": {
+     "frames": 60,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "frostline-ad",
+   "use": "an ad hook for a product",
+   "style": "custom/late-night-synthwave-arcade-dfd9",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.909,
+   "scores": {
+    "lag": 0.733,
+    "pace": 1,
+    "load": 1,
+    "read": 1,
+    "eye": 0.629,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.9,
+   "wordsOnly": 0.8,
+   "gain": 0.09999999999999998,
+   "pictureQuestions": 0.5,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.9444444444444444,
+    "waiting": 0.6666666666666666,
+    "confused": 0.6666666666666666
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 3,
+    "consistency": 4,
+    "issues": [
+     "Sheet 03-08: the product is a placeholder box labeled BOTTLE with a car box around it labeled nothing; the hero of the ad is never shown, so the 'hot car' idea is not visible at all.",
+     "Sheet 03-07: the frame sits static for about 5 seconds (bottle box and HOT CAR) while the voice runs; no motion carries meaning, no heat or sun, no ice melting.",
+     "Sheet 08-09: stray small captions 'ALL DAY.' and a '0' with '24 HOURS LATER?' pop in and duplicate the bottom captions; the '0' is meaningless and the text is tiny and cyan on dark purple."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "seconds": 16.2,
+    "things": 11,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.63,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.68,
+      "competing": 2
+     },
+     {
+      "event": "e3",
+      "share": 0.71,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.5,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 15,
+     "in_time": 8,
+     "late": 0,
+     "already": 4,
+     "missing": 3,
+     "missed": [
+      "ice (word 12)",
+      "Frostline (word 15)",
+      "later, (word 25)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 1.27
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 1.5
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.28,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.73
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.76
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 1.18
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.58
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 16,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 2,
+     "newPerSecond": 0.66
+    },
+    "read": {
+     "frames": 33,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "ice-floats",
+   "use": "why something happens, at the scale of molecules",
+   "style": "custom/a-1970s-science-c503",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.804,
+   "scores": {
+    "lag": 0.917,
+    "pace": 0.937,
+    "load": 1,
+    "read": 1,
+    "eye": 0.774,
+    "holds": 0,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "follow": {
+    "onLook": 0.8076923076923077,
+    "waiting": 0.9230769230769231,
+    "confused": 0.9230769230769231
+   },
+   "designer": {
+    "overall": 5,
+    "composition": 5,
+    "type": 5,
+    "motion": 5,
+    "hierarchy": 5,
+    "consistency": 6,
+    "issues": [
+     "Sheet 08-09: the hexagon lattice is shown for about 8 seconds but is never labeled as open space, and the frame has no empty-space cue; the key point (gaps) is carried by narration only.",
+     "Sheet 09-12: the liquid vs ice comparison puts equal numbers of dots in a tiny cramped panel, small and clipped at the left edge, with the 'LIQUID WATER' label overlapping dots (sheet 10-11); it does not show same-count molecules taking more or less volume, so the density claim is not visible.",
+     "Sheet 09-12: both panels sit in the top third and the lower half is empty except the caption; the ice lattice is thumb-sized and the labels LIQUID WATER and ICE are tiny for a phone."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "hold_frozen: Hold h1 (look, 2.0 s after word 33) should show: \"the lattice holds still, its open middle visible\". Nothing on screen changes from 14.6 to 16.6 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 24.5,
+    "things": 10,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.46,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.86,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.96,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.82,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 21,
+     "in_time": 14,
+     "late": 1,
+     "already": 6,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.17
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0
+     }
+    ],
+    "tempo": {
+     "cv": 0.35,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.8
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.61
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.35
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.36
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 8.47,
+      "beats": 1,
+      "settled": 2.97
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 25,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 4,
+     "peakPull": 3,
+     "newPerSecond": 0.4
+    },
+    "read": {
+     "frames": 49,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "insertion-sort",
+   "use": "an algorithm's first instance slow, then faster",
+   "style": "flat",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.887,
+   "scores": {
+    "lag": 0.925,
+    "pace": 0.486,
+    "load": 1,
+    "read": 0.962,
+    "eye": 0.837,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.8,
+   "wordsOnly": 0.3,
+   "gain": 0.5,
+   "pictureQuestions": 0.6666666666666666,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.75,
+    "waiting": 0.8928571428571429,
+    "confused": 0.7142857142857143
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheet 04-06: the 'slowly shown first insert' (1 into the 4) takes about 1 second of movement at 6.7 to 7.7 s, then is a static array for about 4 seconds; the slow demonstration is not slow and the narration lags the action, so the one step the viewer must learn is the quickest.",
+     "Sheet 07-09: the 3 sliding past the 4 and the 2's move are cut off from the narration: the 3 moves at 13.4 s but 'it passes the four' is said after, and the final 2 move at 20.7 s while the caption says 'and the hand' (sheet 10); sync is loose.",
+     "Sheet 01-14: the cards are tiny in the upper third of a 9:16 frame and the lower 55% is empty; the title 'Insertion sort' repeats the whole time and takes more room than the idea itself."
+    ]
+   },
+   "scroller": {
+    "kept": 0.14285714285714285,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "demo_rushed: Phase 1 of e2's demo (slow, steps 1 to 1, 6.5 to 13.2 s) should go one step at a time, but 1 steps get 6.67 s each (4 changes, the closest 0.30 s apart). A slow step needs about 1.0 s to be seen."
+   ],
+   "raw": {
+    "seconds": 26.1,
+    "things": 6,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.68,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 0.67,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 10,
+     "in_time": 7,
+     "late": 0,
+     "already": 3,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.32,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.31
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.6
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.82
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.59
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.67,
+      "beats": 4,
+      "steps": 1,
+      "settled": 1.07
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "normal",
+      "seconds": 4.87,
+      "beats": 4,
+      "steps": 2,
+      "settled": 2.03
+     },
+     {
+      "event": "e4",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 8.5,
+      "beats": 5,
+      "steps": 3,
+      "settled": 0.97
+     }
+    ],
+    "slowThenFaster": 0,
+    "load": {
+     "seconds": 26,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 2,
+     "newPerSecond": 0.23
+    },
+    "read": {
+     "frames": 53,
+     "severe": 2,
+     "mild": 0,
+     "kinds": {
+      "overlap": 2
+     },
+     "examples": [
+      "overlap at 7.0 s: writing on top of writing: \"4\" and \"1\" (40% of the smaller)"
+     ]
+    }
+   }
+  },
+  {
+   "id": "led-vs-bulb",
+   "use": "a comparison of two options",
+   "style": "whiteboard",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.847,
+   "scores": {
+    "lag": 0.859,
+    "pace": 0.454,
+    "load": 1,
+    "read": 0.975,
+    "eye": 0.642,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.875,
+   "gain": 0.125,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0.5,
+   "follow": {
+    "onLook": 0.9166666666666666,
+    "waiting": 0.9583333333333334,
+    "confused": 0.8333333333333334
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 3,
+    "consistency": 4,
+    "issues": [
+     "Sheet 04-05: the bar labelled 'heat' is a bare outline with no fill, so 90 percent heat versus 10 percent light is never shown as a proportion; the grey stub at the right is unexplained.",
+     "Sheet 06-09: the LED is a small box with no size or bar, so 'a quarter of the power' has no visual comparison against the old bulb's bar; the two are not on a shared scale.",
+     "Sheet 05-09: the whole composition hugs the left edge (bar starts at the frame edge, LED crowded at the right) and the lower half of the frame stays empty for 20 seconds."
+    ]
+   },
+   "scroller": {
+    "kept": 0.08333333333333333,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "seconds": 23.6,
+    "things": 10,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.5,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.67,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 0.39,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 16,
+     "in_time": 7,
+     "late": 0,
+     "already": 9,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.13
+     }
+    ],
+    "tempo": {
+     "cv": 0.36,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.21
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.52
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.31
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.27
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 24,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 2,
+     "newPerSecond": 0.41
+    },
+    "read": {
+     "frames": 48,
+     "severe": 0,
+     "mild": 3,
+     "kinds": {
+      "empty": 3
+     },
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "life-expectancy",
+   "use": "a data story from a pasted CSV",
+   "style": "ink",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.749,
+   "scores": {
+    "lag": 0.764,
+    "pace": 0.917,
+    "load": 1,
+    "read": 0.958,
+    "eye": 0.603,
+    "holds": 1,
+    "reveal": 0
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "follow": {
+    "onLook": 0.9166666666666666,
+    "waiting": 0.9166666666666666,
+    "confused": 0.4166666666666667
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 4,
+    "hierarchy": 5,
+    "consistency": 6,
+    "issues": [
+     "Sheet 05: the stray word 'key' sits next to the 1/3 fraction (glyph/label leak), reading as a bug; the fraction itself is small and not visualised (no one-in-three people icons).",
+     "Sheet 07-12: the chart has no value axis, no gridlines and the 32 label only appears at 17.5 s, so the line is unquantified and the starting value is unseen while the narration names it; the chart occupies only the top 60 percent with little at the bottom.",
+     "Sheet 01: the 1900 header and text 'a newborn could expect to live' are on screen long before the number; the first 4 s are mostly empty and the reveal of '32 years' is slow, and the 32 years is faded pink while it appears."
+    ]
+   },
+   "scroller": {
+    "kept": 0.25,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "promise_missing: The opening should confirm \"A line that more than doubles in a century.\" (s1_chart, tag.s1_chart.first, tag.s1_chart.last, more, cent), but none of it is on screen in the first 3 s.",
+    "competing: During e2 (6.1 to 12.4 s) the eye should be on \"the share of children who died young\" (a, b, bar.a, mt, died), but only 29% of the change on screen is there; 2 other things pull at it: why (\"That average was dragged down by\") for 0.5 s, role (\"key\") for 0.4 s."
+   ],
+   "raw": {
+    "seconds": 23.6,
+    "things": 16,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.67,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.29,
+      "competing": 2
+     },
+     {
+      "event": "e3",
+      "share": 0.85,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.61,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 24,
+     "in_time": 9,
+     "late": 10,
+     "already": 5,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 2.97
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.93
+     },
+     {
+      "event": "e4",
+      "what": "reveal",
+      "lag": 0.23
+     }
+    ],
+    "tempo": {
+     "cv": 0.41,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.33
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.31
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.59
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.84
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 3.37,
+      "beats": 2,
+      "settled": 1.17
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 24,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 6,
+     "peakPull": 3,
+     "newPerSecond": 0.66
+    },
+    "read": {
+     "frames": 48,
+     "severe": 0,
+     "mild": 5,
+     "kinds": {
+      "empty": 5
+     },
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "magna-carta",
+   "use": "a history turning point, from a teacher's notes",
+   "style": "collage",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.912,
+   "scores": {
+    "lag": 0.875,
+    "pace": 0.9,
+    "load": 0.923,
+    "read": 1,
+    "eye": 0.683,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.8,
+   "gain": 0.19999999999999996,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.9230769230769231,
+    "waiting": 0.8846153846153846,
+    "confused": 0.8461538461538461
+   },
+   "designer": {
+    "overall": 6,
+    "composition": 6,
+    "type": 7,
+    "motion": 5,
+    "hierarchy": 6,
+    "consistency": 7,
+    "issues": [
+     "Sheet 10-11: the highlighted phrase 'or the law of the land' is blacked out with a heavy black bar for about 1.5 s while the narrator is saying exactly those words, so the key phrase is hidden at the moment it is spoken; it then pops back with no ease.",
+     "Sheet 07-08: the whole clause text is on screen from 14 s, so the viewer reads the full sentence before it is spoken; nothing is revealed in time with the words, and the 'No free man' text and yellow highlight sit on the wrong word from the start (the highlight lands on the last phrase rather than the idea).",
+     "Sheet 12-13: the final message 'A king, in writing' is small thin red serif, with a long red arrow and tiny 'UNDER THE LAW' label that point from the wrong direction (the arrow goes up into the clause, not down), so the king under the law idea reads as confusing and the payoff is weak."
+    ]
+   },
+   "scroller": {
+    "kept": 0.23076923076923078,
+    "remembers": 0.5
+   },
+   "material": true,
+   "tickets": [],
+   "raw": {
+    "seconds": 25.7,
+    "things": 25,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.6,
+      "competing": 2
+     },
+     {
+      "event": "e2",
+      "share": 0.43,
+      "competing": 3
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 0.7,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 22,
+     "in_time": 11,
+     "late": 0,
+     "already": 11,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": 0
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.36,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.69
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.37
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.26
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.45
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 26,
+     "overNew": 2,
+     "overPull": 0,
+     "peakNew": 15,
+     "peakPull": 3,
+     "newPerSecond": 0.96
+    },
+    "read": {
+     "frames": 52,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "matrix-rotation",
+   "use": "a worked step: a matrix acting on a vector",
+   "style": "chalkboard",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.859,
+   "scores": {
+    "lag": 0.833,
+    "pace": 0.525,
+    "load": 1,
+    "read": 1,
+    "eye": 0.652,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 1,
+   "follow": {
+    "onLook": 0.8846153846153846,
+    "waiting": 0.9615384615384616,
+    "confused": 0.7692307692307693
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 6,
+    "issues": [
+     "Sheets 01-02: the first 2 s are an empty board then a fade-in, and the title and matrix stay static for the first 4 s while the narration says 'rotates any point a quarter turn'; nothing shows rotation.",
+     "Sheets 02-12: the whole composition is pinned to the top 20 percent of the frame and the lower 55 percent is dead blank board for 19 s. Nothing uses the vertical frame; the graph only appears at 19.5 s and the caption sits far below.",
+     "Sheets 18-25 (11-13): the payoff, the quarter-turn on the plane, arrives only at 19.5 s and the actual turn at 23.7 s; the viewer waits 19 s of algebra before seeing the point move. The graph is small, thin-lined and low contrast, and the labels '(3, 1)' and '(-1, 3)' are tiny and unreadable on a phone."
+    ]
+   },
+   "scroller": {
+    "kept": 0.15384615384615385,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "demo_rushed: Phase 1 of e2's demo (slow, steps 1 to 1, 6.0 to 12.9 s) should go one step at a time, but 1 steps get 6.93 s each (3 changes, the closest 0.37 s apart). A slow step needs about 1.0 s to be seen."
+   ],
+   "raw": {
+    "seconds": 25.3,
+    "things": 4,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.7,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.57,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.63,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.7,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 15,
+     "in_time": 5,
+     "late": 5,
+     "already": 5,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.23
+     }
+    ],
+    "tempo": {
+     "cv": 0.26,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.34
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.58
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.48
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.3
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.93,
+      "beats": 3,
+      "steps": 1,
+      "settled": 5.73
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "normal",
+      "seconds": 6.27,
+      "beats": 3,
+      "steps": 1,
+      "settled": 1.23
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 25,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 2,
+     "newPerSecond": 0.15
+    },
+    "read": {
+     "frames": 51,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "monarch-migration",
+   "use": "a map journey",
+   "style": "collage",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.91,
+   "scores": {
+    "lag": 0.686,
+    "pace": 0.875,
+    "load": 1,
+    "read": 1,
+    "eye": 0.808,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "follow": {
+    "onLook": 0.85,
+    "waiting": 0.95,
+    "confused": 1
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 3,
+    "consistency": 3,
+    "issues": [
+     "Sheets 01-10: the map is a cropped, distorted black blob that bleeds off the left edge, with Canada cut off and Mexico squashed at the bottom. It does not read as a map of North America, and the lower 45 percent of the frame is empty.",
+     "Sheets 02-10: the labels point to the wrong places. 'SOUTHERN CANADA' sits at the tip of Mexico's peninsula, the 'UP TO 4,000 KM' leader line runs through the Gulf, and 'CENTRAL MEXICO' is placed above the map at the top, with a long red line crossing the title and the whole continent. The geography is wrong and the route cannot be traced.",
+     "Sheets 02-06: the straight red line from southern Canada to the south and the curved route line are two separate, conflicting paths. The route draws as a thin red line on a near-black land mass with very low contrast, so it is almost invisible on a phone, and it ends partway, short of Mexico."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "seconds": 19.1,
+    "things": 7,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.81,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 0.61,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 11,
+     "in_time": 6,
+     "late": 1,
+     "already": 4,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 2.63
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": 2.63
+     }
+    ],
+    "tempo": {
+     "cv": 0.43,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.44
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.44
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 1.01
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "normal",
+      "seconds": 9.1,
+      "beats": 4,
+      "settled": 1.77
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 19,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 3,
+     "newPerSecond": 0.36
+    },
+    "read": {
+     "frames": 39,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "octopus-hearts",
+   "use": "a social-media fact",
+   "style": "custom/late-night-synthwave-arcade-dfd9",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.86,
+   "scores": {
+    "lag": 0.839,
+    "pace": 0.83,
+    "load": 0.933,
+    "read": 0.968,
+    "eye": 0.592,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "follow": {
+    "onLook": 0.9375,
+    "waiting": 1,
+    "confused": 0.75
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 4,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheets 02-08: all three circles are labeled just 'HEART' with no octopus, no body, no anatomy, and no visual link to gills or the body. The labels 'GILLS' and 'BODY' are tiny floating words above the circles, so what each heart does is not carried by pictures. The key lesson is only text on circles.",
+     "Sheets 04-05: the narration says 'two pump blood through the gills' but the gill labels fade at 5.2 s and the third heart's 'BODY' label appears, while the two gill hearts are never shown pumping together; a pulse on hearts 1 and 2 at 2.5 s is brief, then everything is static for seconds (sheets 03, 04, 06, 07). No heartbeat animation is shown, so 'pump' has no motion.",
+     "Sheets 05-08: the headline 'AN OCTOPUS HAS THREE HEARTS.' stays at full size and brightness the whole video and competes with everything below it, so after 2 s the top third of the frame is wasted on a setup line. The three circles live in a thin band in the middle and the bottom 40 percent is empty."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "competing: During e1 (0.0 to 2.4 s) the eye should be on \"the octopus with three hearts\" (g1, g2, b1), but only 25% of the change on screen is there; 3 other things pull at it: hook (\"AN OCTOPUS HAS\") for 0.3 s, three (\"THREE\") for 0.3 s, hearts (\"HEARTS.\") for 0.3 s."
+   ],
+   "raw": {
+    "seconds": 15.2,
+    "things": 12,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.25,
+      "competing": 3
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 0.53,
+      "competing": 3
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 8,
+     "in_time": 7,
+     "late": 0,
+     "already": 1,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 1.57
+     },
+     {
+      "event": "e1",
+      "what": "reveal",
+      "lag": 0.47
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 2.73
+     },
+     {
+      "event": "e3",
+      "what": "reveal",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.33,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 1.27
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.79
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.57
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 15,
+     "overNew": 1,
+     "overPull": 0,
+     "peakNew": 7,
+     "peakPull": 3,
+     "newPerSecond": 0.76
+    },
+    "read": {
+     "frames": 31,
+     "severe": 1,
+     "mild": 0,
+     "kinds": {
+      "overlap": 1
+     },
+     "examples": [
+      "overlap at 11.5 s: writing on top of writing: \"HEART\" and \"BODY\" (46% of the smaller)"
+     ]
+    }
+   }
+  },
+  {
+   "id": "off-by-one",
+   "use": "a bug fix explained, from a code file",
+   "style": "neon",
+   "built": false,
+   "passed": false,
+   "rounds": 4,
+   "reviewed": "",
+   "overall": 0,
+   "scores": {
+    "lag": 0,
+    "pace": 0,
+    "load": 0,
+    "read": 0
+   },
+   "material": true,
+   "tickets": [],
+   "raw": {
+    "why": "line 2: \"Sum from 1 to n\" (title) comes out only 57 pixels tall, because this state is shrunk to fit; a title carries the moment and needs at least 58 to read at arm's length on a phone. Put fewer things side by side (a stack instead of a row), shorten the lines, or give the rest of the state its own moment."
+   }
+  },
+  {
+   "id": "offside",
+   "use": "a sports rule, explained in space",
+   "style": "whiteboard",
+   "built": false,
+   "passed": false,
+   "rounds": 4,
+   "reviewed": "",
+   "overall": 0,
+   "scores": {
+    "lag": 0,
+    "pace": 0,
+    "load": 0,
+    "read": 0
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "why": "line 6: Text here comes out only 29 pixels tall; the smallest readable is 32. This state holds too much to fit at a readable size: put less on screen at once, use shorter lines, or use a bigger size for this text."
+   }
+  },
+  {
+   "id": "route-finding",
+   "use": "a worked algorithm on a graph",
+   "style": "blueprint",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.792,
+   "scores": {
+    "lag": 0.833,
+    "pace": 0.833,
+    "load": 1,
+    "read": 0,
+    "eye": 0.875,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.8,
+   "gain": 0.19999999999999996,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.84375,
+    "waiting": 0.78125,
+    "confused": 0.5625
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 4,
+    "motion": 5,
+    "hierarchy": 4,
+    "consistency": 6,
+    "issues": [
+     "Sheet 14-15: the route line 'HOME -> PARK -> CAFE -> WORK = 8' is wider than the frame and clipped at both edges, so the key answer is cut off ('= 8' loses its unit).",
+     "Sheet 13-15: the '8 MINUTES' label sits on top of the 5-minute edge and its number, hiding the cafe-to-work weight; the route line and caption also stack as three competing text lines at the bottom.",
+     "Sheets 1-9: the graph is set small in the upper half, with a large empty lower third holding only a tiny caption; the layout wastes the vertical frame and node labels and edge weights are tiny for a phone."
+    ]
+   },
+   "scroller": {
+    "kept": 0.3125,
+    "remembers": 0.5
+   },
+   "material": false,
+   "tickets": [
+    "demo_rushed: Phase 1 of e2's demo (slow, steps 1 to 4, 8.8 to 13.9 s) should go one step at a time, but 4 steps get 1.27 s each (8 changes, the closest 0.30 s apart). A slow step needs about 1.0 s to be seen."
+   ],
+   "raw": {
+    "seconds": 29.8,
+    "things": 3,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.5,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 21,
+     "in_time": 9,
+     "late": 2,
+     "already": 8,
+     "missing": 2,
+     "missed": [
+      "minutes (word 19)",
+      "minutes (word 29)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0
+     },
+     {
+      "event": "e4",
+      "what": "reveal",
+      "lag": -0.5
+     }
+    ],
+    "tempo": {
+     "cv": 0.68,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.11
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 1.58
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.51
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 1.05
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 5.07,
+      "beats": 8,
+      "steps": 4,
+      "settled": 0.87
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 7.87,
+      "beats": 4,
+      "steps": 2,
+      "settled": 1.07
+     },
+     {
+      "event": "e4",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 8.6,
+      "beats": 9,
+      "steps": 5,
+      "settled": 3.5
+     }
+    ],
+    "slowThenFaster": 1,
+    "load": {
+     "seconds": 30,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 1,
+     "newPerSecond": 0.1
+    },
+    "read": {
+     "frames": 60,
+     "severe": 60,
+     "mild": 0,
+     "kinds": {
+      "off_frame": 60
+     },
+     "examples": [
+      "off_frame at 0.5 s: cut by the frame edge: \"FASTEST WAY HOME TO\" (20% outside)"
+     ]
+    }
+   }
+  },
+  {
+   "id": "rule-of-72",
+   "use": "a quick money rule with a guess, from personal notes",
+   "style": "custom/sticky-notes-on-a-37bb",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.644,
+   "scores": {
+    "lag": 0.817,
+    "pace": 0.626,
+    "load": 1,
+    "read": 0.6,
+    "eye": 0.466,
+    "holds": 0.5,
+    "reveal": 0.5
+   },
+   "learner": 1,
+   "wordsOnly": 0.75,
+   "gain": 0.25,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.7727272727272727,
+    "waiting": 0.7727272727272727,
+    "confused": 0.45454545454545453
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 4,
+    "issues": [
+     "Sheets 7-8: the scene change to 'at 8%' shows the old title 'How long does money take to double?' and the old equation sliding off-frame, overlapping the new text as an unreadable collision. It lasts about 3 seconds, through the whole 'at eight percent' question, so the viewer sees a glitch instead of the setup.",
+     "Sheet 7-8: the 'try it yourself' beat has no prompt and no pause. 'At 8%?' is up for under a second, the silence shows only a broken overlap, and the answer 9 arrives right away, so the viewer cannot try it.",
+     "Sheet 1-11: the captions at the bottom are tiny, thin handwriting at around 12 px equivalent, low contrast on pale grey, and they shrink and grow between frames, so they are hard to read on a phone."
+    ]
+   },
+   "scroller": {
+    "kept": 0.5454545454545454,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "competing: During e1 (0.0 to 6.6 s) the eye should be on \"72 divided by the rate\" (a72, dv, rt), but only 30% of the change on screen is there; 2 other things pull at it: q (\"How long does money take to doub\") for 0.5 s, lbl (\"years to double\") for 0.4 s.",
+    "promise_missing: The opening should confirm \"A one-line trick for doubling time.\" (lbl, a72, dv, rt), but none of it is on screen in the first 3 s.",
+    "competing: During e3 (12.0 to 15.7 s) the eye should be on \"72 ÷ 8 = ?\" (t72, tdiv, t8, teq), but only 24% of the change on screen is there; 2 other things pull at it: q (\"How long does money take to doub\") for 0.9 s, pct (\"at 8%\") for 0.4 s.",
+    "hold_competing: During hold h1 (13.1 to 15.6 s, \"the question waits with no answer shown\") the change is mostly away from the event's look (t72, tdiv, t8, teq): q (\"How long does money take to doub\") for 0.5 s."
+   ],
+   "raw": {
+    "seconds": 20.4,
+    "things": 16,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.3,
+      "competing": 2
+     },
+     {
+      "event": "e2",
+      "share": 0.89,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.24,
+      "competing": 2
+     },
+     {
+      "event": "e4",
+      "share": 0.44,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 15,
+     "in_time": 9,
+     "late": 2,
+     "already": 3,
+     "missing": 1,
+     "missed": [
+      "years. (word 33)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 3.47
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.3
+     },
+     {
+      "event": "e2",
+      "what": "reveal",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "reveal",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.33,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.3
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.73
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.55
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.38
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 20,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 6,
+     "peakPull": 3,
+     "newPerSecond": 0.81
+    },
+    "read": {
+     "frames": 41,
+     "severe": 8,
+     "mild": 21,
+     "kinds": {
+      "empty": 26,
+      "overlap": 8,
+      "off_frame": 7
+     },
+     "examples": [
+      "overlap at 7.0 s: writing on top of writing: \"÷\" and \"rate\" (80% of the smaller)",
+      "off_frame at 12.5 s: cut by the frame edge: \"How long does\" (33% outside), \"money take to\" (32% outside), \"double?\" (20% outside)"
+     ]
+    }
+   }
+  },
+  {
+   "id": "running-max",
+   "use": "a line of code changing state, from a code file",
+   "style": "neon",
+   "built": true,
+   "passed": false,
+   "rounds": 4,
+   "reviewed": "",
+   "overall": 0.908,
+   "scores": {
+    "lag": 0.883,
+    "pace": 0.611,
+    "load": 1,
+    "read": 1,
+    "eye": 0.859,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.6,
+   "gain": 0.4,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0.5,
+   "follow": {
+    "onLook": 0.8461538461538461,
+    "waiting": 0.9230769230769231,
+    "confused": 0.46153846153846156
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 3,
+    "type": 4,
+    "motion": 5,
+    "hierarchy": 5,
+    "consistency": 7,
+    "issues": [
+     "Sheets 4-12: the value of best, the thing the viewer is meant to follow, is tiny and its last digit is overlapped and half hidden by the right edge of the pink pill ('best = 0', 'best = 7' read as smudges), so the state change is hard to read on a phone.",
+     "Sheet 6-7: the narration says 'best becomes three' at 11 s, but the pill still shows best = 0 through 14.5 s; the update to 3 appears only at 14.7 s (sheet 8), so for about 3 s the picture contradicts the words; the 12 to 14 s silence is filled by a question that holds with no change.",
+     "Sheets 1-13: all content is packed into the top 40 percent of the frame (code, variables and output in a small cluster); the lower half is empty except the caption, and code, variable and output text are about 11-14 px equivalent, too small for a phone."
+    ]
+   },
+   "scroller": {
+    "kept": 0.6923076923076923,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "demo_unsettled: Phase 1 of e2's demo (slow, steps 1 to 4, 5.9 to 14.5 s) should end on the finished state, but \"the program running\" is still changing at 14.5 s, 0.00 s before it ends; it never rests on the result.",
+    "demo_unsettled: Phase 1 of e3's demo (fast, steps 5 to 10, 14.5 to 20.4 s) should end on the finished state, but \"the program running\" is still changing at 20.4 s, 0.00 s before it ends; it never rests on the result."
+   ],
+   "raw": {
+    "seconds": 24.2,
+    "things": 5,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.75,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.85,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.83,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 15,
+     "in_time": 8,
+     "late": 1,
+     "already": 6,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": -0.03
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": -0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.47,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.34
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.82
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 1.19
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.47
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 8.57,
+      "beats": 6,
+      "steps": 4,
+      "settled": 0
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 5.9,
+      "beats": 6,
+      "steps": 6,
+      "settled": 0
+     },
+     {
+      "event": "e4",
+      "phase": 1,
+      "pace": "normal",
+      "seconds": 4.27,
+      "beats": 2,
+      "steps": 2,
+      "settled": 0.73
+     }
+    ],
+    "slowThenFaster": 1,
+    "load": {
+     "seconds": 24,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 2,
+     "newPerSecond": 0.2
+    },
+    "read": {
+     "frames": 49,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "rust",
+   "use": "a chemistry process",
+   "style": "custom/a-1970s-science-c503",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.795,
+   "scores": {
+    "lag": 0.771,
+    "pace": 0.875,
+    "load": 0.963,
+    "read": 0.981,
+    "eye": 0.975,
+    "holds": 0,
+    "reveal": 1
+   },
+   "learner": 0.9,
+   "wordsOnly": 0.8,
+   "gain": 0.09999999999999998,
+   "follow": {
+    "onLook": 0.75,
+    "waiting": 0.8571428571428571,
+    "confused": 0.8571428571428571
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 4,
+    "type": 5,
+    "motion": 4,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheet 03 to 14: the core chemistry is a dark blob with tiny faint dots and tiny FE circles; nothing is legible as water, iron ions or electrons, so the visual carries almost no meaning on a phone",
+     "Sheet 02 to 14: the graphic is a small strip in the middle of a tall frame with large empty areas above and below; frame is badly under-used",
+     "Sheet 07 to 09: electron dots are tiny, low contrast and drift without clear direction; the O2 pairs at top are static and never visibly take the electrons"
+    ]
+   },
+   "scroller": {
+    "kept": 0.2857142857142857,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "hold_frozen: Hold h1 (look, 2.0 s after word 45) should show: \"rust builds up at the edge of the drop\". Nothing on screen changes from 19.1 to 21.1 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 27,
+    "things": 10,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.9,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 18,
+     "in_time": 8,
+     "late": 3,
+     "already": 5,
+     "missing": 2,
+     "missed": [
+      "water, (word 40)",
+      "rust: (word 43)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 1.87
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.74,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 1.02
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.14
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.91
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.16
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 7.37,
+      "beats": 1,
+      "settled": 1.2
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 27,
+     "overNew": 0,
+     "overPull": 1,
+     "peakNew": 3,
+     "peakPull": 4,
+     "newPerSecond": 0.36
+    },
+    "read": {
+     "frames": 54,
+     "severe": 1,
+     "mild": 0,
+     "kinds": {
+      "empty": 1
+     },
+     "examples": [
+      "empty at 2.0 s: 22% of the usable frame has anything in it; the largest empty band is 50% of its height"
+     ]
+    }
+   }
+  },
+  {
+   "id": "square-knot",
+   "use": "a how-to step",
+   "style": "flat",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.924,
+   "scores": {
+    "lag": 0.906,
+    "pace": 0.657,
+    "load": 1,
+    "read": 0.991,
+    "eye": 0.911,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.875,
+   "wordsOnly": 0.75,
+   "gain": 0.125,
+   "pictureQuestions": 0.5,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.75,
+    "waiting": 1,
+    "confused": 1
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 3,
+    "type": 4,
+    "motion": 3,
+    "hierarchy": 3,
+    "consistency": 4,
+    "issues": [
+     "Sheet 02 to 11: the knot is drawn as abstract crossing sticks (two identical X shapes) that do not show a rope, an over or under, or a tuck; a viewer could not learn to tie from it",
+     "Sheet 03 to 11: in-diagram labels such as 'TUCK UNDER', 'SAME WAY' and 'GRANNY KNOT' sit on top of the strokes and are illegible at this size",
+     "Sheet 08 to 11: the second drawing on the right is a ghost that darkens during the video; it is never explained, so it is unclear which drawing is the square knot and which is the granny knot"
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": false,
+   "tickets": [
+    "flat_rhythm: The picture changes at nearly the same rate all through (e1 1.08, e2 0.83, e3 1.16, e4 0.96 steps a second; spread 0.13). The plan mixes long and short events, but the scene does not."
+   ],
+   "raw": {
+    "seconds": 22,
+    "things": 14,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.73,
+      "competing": 2
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 0.92,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 24,
+     "in_time": 18,
+     "late": 3,
+     "already": 0,
+     "missing": 3,
+     "missed": [
+      "left, (word 9)",
+      "right, (word 19)",
+      "ends. (word 25)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.13,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 1.08
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.83
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 1.16
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.96
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 6.03,
+      "beats": 5,
+      "settled": 0.6
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "normal",
+      "seconds": 4.3,
+      "beats": 5,
+      "settled": 0.5
+     }
+    ],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 22,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 3,
+     "newPerSecond": 0.62
+    },
+    "read": {
+     "frames": 44,
+     "severe": 0,
+     "mild": 1,
+     "kinds": {
+      "dimmed": 1
+     },
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "support-tickets",
+   "use": "a meeting slide turned into a clip",
+   "style": "flat",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.74,
+   "scores": {
+    "lag": 0.863,
+    "pace": 0.463,
+    "load": 0.944,
+    "read": 1,
+    "eye": 0.409,
+    "holds": 0.5,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 1,
+   "follow": {
+    "onLook": 0.8888888888888888,
+    "waiting": 1,
+    "confused": 0.4444444444444444
+   },
+   "designer": {
+    "overall": 5,
+    "composition": 5,
+    "type": 6,
+    "motion": 5,
+    "hierarchy": 6,
+    "consistency": 6,
+    "issues": [
+     "Sheet 05 to 09: the Login, Billing, Shipping and Other bars are tiny boxes bunched in the left half and all about the same height, so 412 of 840 does not read as almost half; the shape does not carry the message",
+     "Sheet 09: the 'Shipping + other = ?' text is replaced at 11.7 s by the small 97 and 63 boxes, and the 160 label floats unlabelled above a strikethrough that crosses the names",
+     "Sheet 07 to 09: strikethrough on SHIPPING and OTHER crosses the labels and makes them hard to read; the 160 figure is a very small orange label"
+    ]
+   },
+   "scroller": {
+    "kept": 0.8888888888888888,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "competing: During e1 (0.0 to 2.9 s) the eye should be on \"the total, 840\" (total), but only 33% of the change on screen is there; 2 other things pull at it: lead (\"Last quarter we got\") for 0.4 s, tk (\"SUPPORT TICKETS\") for 0.4 s.",
+    "hold_frozen: Hold h2 (settle, 2.0 s after word 33) should show: \"the login share stays lit as half of all tickets\". Nothing on screen changes from 15.3 to 17.3 s: a frozen frame."
+   ],
+   "raw": {
+    "seconds": 17.5,
+    "things": 16,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.33,
+      "competing": 2
+     },
+     {
+      "event": "e2",
+      "share": 0.4,
+      "competing": 2
+     },
+     {
+      "event": "e3",
+      "share": 0.53,
+      "competing": 2
+     },
+     {
+      "event": "e4",
+      "share": 0.38,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 20,
+     "in_time": 17,
+     "late": 1,
+     "already": 2,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 1.47
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 1.67
+     },
+     {
+      "event": "e2",
+      "what": "reveal",
+      "lag": 0.13
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.37,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 1.02
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 1
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.61
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.36
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 18,
+     "overNew": 0,
+     "overPull": 1,
+     "peakNew": 6,
+     "peakPull": 4,
+     "newPerSecond": 0.94
+    },
+    "read": {
+     "frames": 36,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "titration-lab",
+   "use": "a lab procedure step, from a handout",
+   "style": "chalkboard",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.884,
+   "scores": {
+    "lag": 0.838,
+    "pace": 1,
+    "load": 1,
+    "read": 0.992,
+    "eye": 0.36,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 1,
+   "gain": 0,
+   "follow": {
+    "onLook": 0.8076923076923077,
+    "waiting": 0.8846153846153846,
+    "confused": 1
+   },
+   "designer": {
+    "overall": 3,
+    "composition": 4,
+    "type": 5,
+    "motion": 3,
+    "hierarchy": 4,
+    "consistency": 5,
+    "issues": [
+     "Sheets 1-13: the whole video is the same static burette box and acid box on a mostly empty lower half of the frame; no visual ever shows liquid, color, swirling or a pink that lingers, so the lesson is told only by text.",
+     "Sheet 9-10: the key idea (faint pink) is a tiny gold label in a box that replaces the acid box; there is no pink color anywhere, so the viewer never sees what the endpoint looks like.",
+     "Sheet 11-12: a stray gold '0' appears out of nowhere at about 21.9 s and sits there with no label; it presumably stands for the 30-second hold but is unreadable and meaningless, and it never counts."
+    ]
+   },
+   "scroller": {
+    "kept": 0.5384615384615384,
+    "remembers": 0.5
+   },
+   "material": true,
+   "tickets": [
+    "competing: During e2 (6.5 to 13.4 s) the eye should be on \"pink flashing and fading in the flask\" (flask, ptag), but only 18% of the change on screen is there; 2 other things pull at it: s1_fast for 5.3 s, cap (\"Sodium hydroxide, from the buret\") for 0.2 s."
+   ],
+   "raw": {
+    "seconds": 25.3,
+    "things": 8,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.23,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.18,
+      "competing": 2
+     },
+     {
+      "event": "e3",
+      "share": 0.63,
+      "competing": 2
+     },
+     {
+      "event": "e4",
+      "share": 0.41,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 28,
+     "in_time": 21,
+     "late": 6,
+     "already": 1,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 2.8
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.23
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.26,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.77
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 1.6
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 1.06
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 1.16
+      }
+     ]
+    },
+    "demo": [
+     {
+      "event": "e2",
+      "phase": 1,
+      "pace": "fast",
+      "seconds": 6.87,
+      "beats": 5,
+      "settled": 0.77
+     },
+     {
+      "event": "e3",
+      "phase": 1,
+      "pace": "slow",
+      "seconds": 4.7,
+      "beats": 2,
+      "settled": 0.83
+     }
+    ],
+    "slowThenFaster": 1,
+    "load": {
+     "seconds": 25,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 3,
+     "newPerSecond": 0.31
+    },
+    "read": {
+     "frames": 51,
+     "severe": 0,
+     "mild": 1,
+     "kinds": {
+      "overlap": 1
+     },
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "trail-directions",
+   "use": "directions from a hand-drawn sketch",
+   "style": "whiteboard",
+   "built": true,
+   "passed": true,
+   "rounds": 2,
+   "reviewed": "nothing to say",
+   "overall": 0.734,
+   "scores": {
+    "lag": 0.829,
+    "pace": 0.287,
+    "load": 1,
+    "read": 1,
+    "eye": 0.521,
+    "holds": 0.5,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.8333333333333334,
+   "gain": 0.16666666666666663,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.9615384615384616,
+    "waiting": 1,
+    "confused": 0.7692307692307693
+   },
+   "designer": {
+    "overall": 5,
+    "composition": 5,
+    "type": 5,
+    "motion": 6,
+    "hierarchy": 5,
+    "consistency": 5,
+    "issues": [
+     "Sheets 1-13: the sketch is a small, low-res photo of a handwritten map with tiny labels (4.0 km, KEEP LEFT, wrong way) that are unreadable on a phone; the frame has a big empty white band at the bottom and the map sits in the upper-middle at about 60% width.",
+     "Sheets 6-13: the red route line is drawn through the middle of the sketch's own text, and the red circle, red X, blue keep-left stroke and the original red ink overlap in one cluttered junction; at the key moment the keep-left route is hard to tell from the wrong fork.",
+     "Sheet 7-8: 'Where people go wrong' stays as the blue sub-heading from 11.7 s to the end, even after the viewer has been told to keep left, so the stale label contradicts the story; labels also stack (Keep left in blue under it) with no hierarchy."
+    ]
+   },
+   "scroller": {
+    "kept": 0.8461538461538461,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "flat_rhythm: The picture changes at nearly the same rate all through (e1 0.75, e2 0.51, e3 0.62, e4 0.40 steps a second; spread 0.23). The plan mixes long and short events, but the scene does not.",
+    "hold_competing: During hold h1 (13.5 to 15.0 s, \"the left fork lights while the right fork is crossed out\") the change is mostly away from the event's look (leg, kl): sk (\"trailhead cross on the stones\") for 0.6 s.",
+    "competing: During e4 (18.6 to 26.2 s) the eye should be on \"the summit at 5.6 km\" (sm), but only 11% of the change on screen is there; 2 other things pull at it: sk (\"trailhead cross on the stones\") for 2.3 s, kl (\"Keep left Right fork: back to th\") for 0.7 s."
+   ],
+   "raw": {
+    "seconds": 25.7,
+    "things": 5,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.61,
+      "competing": 2
+     },
+     {
+      "event": "e2",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e3",
+      "share": 0.37,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.11,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 21,
+     "in_time": 15,
+     "late": 2,
+     "already": 4,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.63
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 1
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 5.43
+     }
+    ],
+    "tempo": {
+     "cv": 0.23,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "long",
+       "rate": 0.75
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.51
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.62
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.4
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 26,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 3,
+     "peakPull": 3,
+     "newPerSecond": 0.19
+    },
+    "read": {
+     "frames": 52,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "two-factor",
+   "use": "how a safeguard works, from a company notice",
+   "style": "blueprint",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "kept",
+   "overall": 0.785,
+   "scores": {
+    "lag": 0.734,
+    "pace": 0.5,
+    "load": 1,
+    "read": 0.646,
+    "eye": 0.617,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 0.8,
+   "wordsOnly": 0.6,
+   "gain": 0.20000000000000007,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.8214285714285714,
+    "waiting": 0.9285714285714286,
+    "confused": 0.6428571428571429
+   },
+   "designer": {
+    "overall": 4,
+    "composition": 5,
+    "type": 6,
+    "motion": 4,
+    "hierarchy": 4,
+    "consistency": 6,
+    "issues": [
+     "Sheets 1-6: the first 8 seconds are only big headline text on blue with no visual at all (no thief, no lock, no login); text-only opening is slow and unengaging for a phone viewer.",
+     "Sheets 7-10: after the diagram appears, the layout is cramped into the top and middle: PASSWORD and PHONE boxes are small top-left, the PHONE box is clipped at the right edge, and the lower half is mostly empty.",
+     "Sheets 7-10: the story is hard to follow; 'THIEF' and 'THE SITE' are bare words with thin arrows pointing at the PASSWORD box and up toward PHONE; no icons, the arrow from THIEF to password does not show stealing, and the 'CODE' label is tiny and floats beside the phone box."
+    ]
+   },
+   "scroller": {
+    "kept": 1,
+    "remembers": 1
+   },
+   "material": true,
+   "tickets": [
+    "competing: During e4 (22.3 to 26.3 s) the eye should be on \"the lock staying shut\" (lock), but only 30% of the change on screen is there; 2 other things pull at it: ph (\"PHONE\") for 0.5 s, land (\"THEY'D NEED BOTH.\") for 0.4 s."
+   ],
+   "raw": {
+    "seconds": 25.7,
+    "things": 13,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e2",
+      "share": 0.67,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.51,
+      "competing": 4
+     },
+     {
+      "event": "e4",
+      "share": 0.3,
+      "competing": 2
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 19,
+     "in_time": 14,
+     "late": 2,
+     "already": 3,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 2.33
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 3.43
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.1
+     }
+    ],
+    "tempo": {
+     "cv": 0.27,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.47
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.42
+      },
+      {
+       "event": "e3",
+       "rhythm": "long",
+       "rate": 0.8
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.5
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 26,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 3,
+     "newPerSecond": 0.49
+    },
+    "read": {
+     "frames": 52,
+     "severe": 18,
+     "mild": 1,
+     "kinds": {
+      "off_frame": 18,
+      "empty": 1
+     },
+     "examples": [
+      "off_frame at 0.5 s: cut by the frame edge: \"SOMEONE STEALS\" (11% outside), \"YOUR PASSWORD.\" (10% outside)"
+     ]
+    }
+   }
+  },
+  {
+   "id": "vaccine-memory",
+   "use": "a biology process, from a class handout",
+   "style": "flat",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.664,
+   "scores": {
+    "lag": 0.701,
+    "pace": 0.229,
+    "load": 1,
+    "read": 0.898,
+    "eye": 0.818,
+    "holds": 1,
+    "reveal": 0
+   },
+   "learner": 1,
+   "wordsOnly": 0.8,
+   "gain": 0.19999999999999996,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.7307692307692307,
+    "waiting": 0.8076923076923077,
+    "confused": 0.9230769230769231
+   },
+   "designer": {
+    "overall": 5,
+    "composition": 5,
+    "type": 6,
+    "motion": 5,
+    "hierarchy": 5,
+    "consistency": 6,
+    "issues": [
+     "Sheets 4-12: the B-cell grid is a block of near-identical dots with a faint orange column; the multiplying is shown as small orange dots above and below the column, so 'multiplying' barely reads and the viewer cannot tell cells from antibodies from copies.",
+     "Sheets 5-8: the explanatory line 'only the few whose shape fits respond' is tiny gray text that is unreadable on a phone and is not an on-screen element the viewer is guided to.",
+     "Sheets 7-12: at least 4 text layers compete at the top (B CELLS, MATCHING, MEMORY CELL) crammed against the grid with 'MEMORY CELL' set beside the grid edge in cramped caps; the memory cells are dark dots in the same column as the gray rest and are easy to miss."
+    ]
+   },
+   "scroller": {
+    "kept": 0.38461538461538464,
+    "remembers": 0.5
+   },
+   "material": true,
+   "tickets": [
+    "competing: During e1 (0.0 to 5.0 s) the eye should be on \"the harmless piece of the germ\" (s1_piece), but only 33% of the change on screen is there; 2 other things pull at it: s1_title (\"A vaccine\") for 0.4 s, s1_sub (\"shows your immune system\") for 0.4 s.",
+    "flat_rhythm: The picture changes at nearly the same rate all through (e1 0.60, e2 0.73, e3 0.58, e4 0.91 steps a second; spread 0.18). The plan mixes long and short events, but the scene does not.",
+    "promise_missing: The opening should confirm \"Training for a fight before the fight.\" (s1_field, tag.s1_field.s1_k4_0), but none of it is on screen in the first 3 s."
+   ],
+   "raw": {
+    "seconds": 25.3,
+    "things": 10,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.33,
+      "competing": 2
+     },
+     {
+      "event": "e2",
+      "share": 0.94,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 1,
+      "competing": 0
+     },
+     {
+      "event": "e4",
+      "share": 1,
+      "competing": 0
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 22,
+     "in_time": 13,
+     "late": 1,
+     "already": 5,
+     "missing": 3,
+     "missed": [
+      "germ. (word 11)",
+      "piece (word 22)",
+      "shows (word 41)"
+     ]
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 2.8
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.1
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": -0.5
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 1.4
+     }
+    ],
+    "tempo": {
+     "cv": 0.18,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.6
+      },
+      {
+       "event": "e2",
+       "rhythm": "long",
+       "rate": 0.73
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.58
+      },
+      {
+       "event": "e4",
+       "rhythm": "long",
+       "rate": 0.91
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 25,
+     "overNew": 0,
+     "overPull": 0,
+     "peakNew": 2,
+     "peakPull": 3,
+     "newPerSecond": 0.39
+    },
+    "read": {
+     "frames": 51,
+     "severe": 0,
+     "mild": 13,
+     "kinds": {
+      "empty": 5,
+      "dimmed": 8
+     },
+     "examples": []
+    }
+   }
+  },
+  {
+   "id": "water-cycle-recap",
+   "use": "a recap of something built in pieces",
+   "style": "custom/sticky-notes-on-a-37bb",
+   "built": true,
+   "passed": true,
+   "rounds": 1,
+   "reviewed": "nothing to say",
+   "overall": 0.832,
+   "scores": {
+    "lag": 0.875,
+    "pace": 0.5,
+    "load": 0.818,
+    "read": 1,
+    "eye": 0.631,
+    "holds": 1,
+    "reveal": 1
+   },
+   "learner": 1,
+   "wordsOnly": 0.625,
+   "gain": 0.375,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0,
+   "follow": {
+    "onLook": 0.9090909090909091,
+    "waiting": 0.9545454545454546,
+    "confused": 0.9090909090909091
+   },
+   "designer": {
+    "overall": 5,
+    "composition": 5,
+    "type": 4,
+    "motion": 5,
+    "hierarchy": 6,
+    "consistency": 7,
+    "issues": [
+     "Sheets 1-11: the diagram is a small diamond of tiny boxes with small labels (about 10 pt equivalent) in the upper middle; the stage names are hard to read on a phone and the bottom 40% of the frame is empty.",
+     "Sheets 3-13: no water, sun, cloud, rain or sea imagery anywhere; the loop is abstract boxes and arrows, so 'the sun heats the ocean' and 'rain or snow' are never shown, only labeled.",
+     "Sheets 3-7: the extra line under the diagram ('Vapor rises from the ocean', 'High up, vapor cools into clouds') is tiny thin script, nearly unreadable, and stacks above the caption which says nearly the same thing; two competing small text lines."
+    ]
+   },
+   "scroller": {
+    "kept": 0.18181818181818182,
+    "remembers": 0.5
+   },
+   "material": false,
+   "tickets": [],
+   "raw": {
+    "seconds": 21.7,
+    "things": 10,
+    "eye": [
+     {
+      "event": "e1",
+      "share": 0.69,
+      "competing": 1
+     },
+     {
+      "event": "e2",
+      "share": 0.5,
+      "competing": 1
+     },
+     {
+      "event": "e3",
+      "share": 0.54,
+      "competing": 1
+     },
+     {
+      "event": "e4",
+      "share": 0.54,
+      "competing": 1
+     },
+     {
+      "event": "e5",
+      "share": 0.54,
+      "competing": 1
+     },
+     {
+      "event": "e6",
+      "share": 0.97,
+      "competing": 1
+     }
+    ],
+    "unmapped": [],
+    "mentions": {
+     "total": 16,
+     "in_time": 8,
+     "late": 7,
+     "already": 1,
+     "missing": 0,
+     "missed": []
+    },
+    "onsets": [
+     {
+      "event": "e1",
+      "what": "look",
+      "lag": 0.13
+     },
+     {
+      "event": "e2",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e3",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e4",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e5",
+      "what": "look",
+      "lag": 0.03
+     },
+     {
+      "event": "e6",
+      "what": "look",
+      "lag": 0.03
+     }
+    ],
+    "tempo": {
+     "cv": 0.42,
+     "rates": [
+      {
+       "event": "e1",
+       "rhythm": "short",
+       "rate": 0.31
+      },
+      {
+       "event": "e2",
+       "rhythm": "short",
+       "rate": 0.25
+      },
+      {
+       "event": "e3",
+       "rhythm": "short",
+       "rate": 0.77
+      },
+      {
+       "event": "e4",
+       "rhythm": "short",
+       "rate": 0.73
+      },
+      {
+       "event": "e5",
+       "rhythm": "short",
+       "rate": 0.75
+      },
+      {
+       "event": "e6",
+       "rhythm": "long",
+       "rate": 1
+      }
+     ]
+    },
+    "demo": [],
+    "slowThenFaster": null,
+    "load": {
+     "seconds": 22,
+     "overNew": 2,
+     "overPull": 2,
+     "peakNew": 9,
+     "peakPull": 4,
+     "newPerSecond": 0.45
+    },
+    "read": {
+     "frames": 44,
+     "severe": 0,
+     "mild": 0,
+     "kinds": {},
+     "examples": []
+    }
+   }
+  }
+ ]
+}

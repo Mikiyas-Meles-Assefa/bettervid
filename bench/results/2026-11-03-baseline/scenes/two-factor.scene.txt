@@ -1,0 +1,56 @@
+@0
+text hook "Someone steals your password." size=huge role=title
+
+@4 keep
+text hook "With two-factor login, they still can't get in." size=huge role=title
+
+@12 keep
+text hook "Here's why." size=huge role=title
+
+@14 keep
+drop hook
+text fac "Logging in asks for two things" size=huge role=title
+
+@20 keep
+drop fac
+row keys gap=60 align=center
+  box pw "password" w=440 h=280 role=key
+tag pw "something you know" side=top
+
+@26 keep
+row keys gap=60 align=center
+  box pw "password" w=440 h=280 role=key
+  box ph "phone" w=440 h=280 role=key
+tag ph "something you have" side=top
+
+@31 keep
+row actors gap=120 align=center after=keys
+  text thief "thief" size=big role=label
+
+@33 keep
+arrow thief -> pw role=key
+
+@36 keep
+row actors gap=120 align=center after=keys
+  text thief "thief" size=big role=label
+  text site "the site" size=big role=label
+
+@40 keep
+arrow site -> ph "code" id=codepath role=key
+
+@44 keep
+do flow codepath color=accent frames=24
+
+@48+10 keep
+light ph
+box login "thief's login" role=wrong after=actors
+do shake login size=10
+
+@49 keep
+drop actors
+drop login
+drop codepath
+box lock "still locked" role=answer after=keys
+
+@54 keep
+text land "They'd need both." size=huge role=title

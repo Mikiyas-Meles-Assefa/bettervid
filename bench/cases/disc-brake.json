@@ -1,0 +1,103 @@
+{
+ "id": "disc-brake",
+ "use": "a mechanism, one link at a time",
+ "request": "Make a short explaining how car brakes actually stop the wheel. I always wondered what happens between my foot and the wheel.",
+ "topic": "How a car's disc brake stops a wheel",
+ "intent": "A curious driver wants the chain of cause from the pedal to the wheel.",
+ "style": "blueprint",
+ "goal": "The viewer can trace the push from the pedal to the pads, link by link, and knows where the motion goes.",
+ "promise": "A small push of the foot stops a heavy car, and you will see each link that carries it.",
+ "arc": "Pedal and wheel far apart, then the links appear one at a time in causal order, ending on a hot disc.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Your foot pushes the brake pedal maybe five centimeters. So how does that stop a two ton car?",
+   "job": "Open the gap between a tiny push and a heavy car.",
+   "knows": "The push is small and the car is heavy.",
+   "waiting": "What carries the push to the wheel?",
+   "look": "the pedal, small, and the car's wheel far from it",
+   "feel": "puzzled curiosity",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "The pedal pushes a piston into a cylinder full of brake fluid. Fluid can't be squeezed, so the pressure travels down the lines to every wheel.",
+   "job": "First links: pedal to piston, piston to fluid, fluid pressure along the lines.",
+   "knows": "Pressure in the fluid carries the push to every wheel.",
+   "waiting": "What does the pressure do at the wheel?",
+   "look": "the piston entering the fluid, then the pressure moving along the line",
+   "feel": "clear and steady",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "every wheel.",
+     "seconds": 1.5,
+     "purpose": "look",
+     "does": "the pressure arrives at the wheel end of the line, where the caliper waits"
+    }
+   ],
+   "demo": {
+    "what": "the push traveling from the pedal through the fluid to the wheel",
+    "phases": [
+     {
+      "at": "The pedal pushes",
+      "pace": "slow",
+      "why": "one link at a time, in the order the push travels"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "At the wheel, that pressure pushes the caliper's pistons, which squeeze two pads against a spinning metal disc.",
+   "job": "Last links: caliper pistons push the pads onto the disc.",
+   "knows": "The pads clamp the disc from both sides.",
+   "waiting": "Where does the car's motion go?",
+   "look": "the two pads closing on the spinning disc from both sides",
+   "feel": "tight, mechanical",
+   "rhythm": "long"
+  },
+  {
+   "id": "e4",
+   "text": "Friction turns the car's motion into heat. That's why the discs can glow after a hard stop.",
+   "job": "Close the chain: motion becomes heat.",
+   "knows": "Braking turns motion into heat.",
+   "waiting": "",
+   "look": "the disc turning hot",
+   "feel": "a small payoff",
+   "rhythm": "short",
+   "reveal": {
+    "at": "heat.",
+    "what": "the disc heating as the car's motion becomes heat"
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "In what order does the push travel from the foot to the wheel?",
+   "a": "Pedal, piston in a cylinder of brake fluid, pressure through the lines, the caliper's pistons, the pads squeezing the disc.",
+   "needs": "both"
+  },
+  {
+   "q": "Why can the brake fluid pass the push along?",
+   "a": "Because fluid can't be squeezed (compressed), so the pressure travels through it.",
+   "needs": "words"
+  },
+  {
+   "q": "What do the pads press against?",
+   "a": "A spinning metal disc at the wheel.",
+   "needs": "both"
+  },
+  {
+   "q": "How were the pads placed around the disc when they squeezed it?",
+   "a": "One on each side of the disc, clamping it from both sides.",
+   "needs": "picture"
+  },
+  {
+   "q": "Where does the car's motion go when it stops?",
+   "a": "It becomes heat through friction.",
+   "needs": "words"
+  }
+ ]
+}

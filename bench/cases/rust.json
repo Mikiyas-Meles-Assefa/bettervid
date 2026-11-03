@@ -1,0 +1,99 @@
+{
+ "id": "rust",
+ "use": "a chemistry process",
+ "request": "How does rust actually form? Show me the chemistry, not just 'iron gets wet'.",
+ "topic": "How rust forms",
+ "intent": "A curious adult wants the actual chemistry of rusting.",
+ "style": "custom/a-1970s-science-c503",
+ "goal": "The viewer knows rust needs iron, water and oxygen, that iron gives electrons to oxygen, and why rust keeps spreading.",
+ "promise": "The three ingredients of rust and what happens between them.",
+ "arc": "Three ingredients, a drop on iron, electrons moving to oxygen, rust forming and cracking open.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Rust needs three things: iron, water, and oxygen.",
+   "job": "Name the ingredients.",
+   "knows": "The three ingredients.",
+   "waiting": "",
+   "look": "iron, water and oxygen side by side",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "A drop of water sits on the iron. Iron atoms under it give up electrons and become iron ions.",
+   "job": "First half of the reaction.",
+   "knows": "Iron atoms give up electrons under the water.",
+   "waiting": "Where do the electrons go?",
+   "look": "iron atoms under the drop losing electrons",
+   "feel": "",
+   "rhythm": "long",
+   "demo": {
+    "what": "iron giving up electrons under a water drop",
+    "phases": [
+     {
+      "at": "A drop",
+      "pace": "slow",
+      "why": "the drop first, then atoms losing electrons one at a time"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Oxygen from the air takes those electrons. The ions join with oxygen and water, and become rust: iron oxide.",
+   "job": "Second half: oxygen takes the electrons, rust forms.",
+   "knows": "Oxygen takes the electrons; ions become iron oxide.",
+   "waiting": "",
+   "look": "electrons moving to oxygen, and rust forming",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "oxide.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "rust builds up at the edge of the drop"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "Rust is flaky and porous, so water gets through, and the rusting keeps going.",
+   "job": "Why it spreads.",
+   "knows": "Porous rust lets water reach more iron.",
+   "waiting": "",
+   "look": "the rust cracking and water seeping to fresh iron",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What three things does rust need?",
+   "a": "Iron, water and oxygen.",
+   "needs": "words"
+  },
+  {
+   "q": "What do the iron atoms give up?",
+   "a": "Electrons.",
+   "needs": "words"
+  },
+  {
+   "q": "What takes the electrons?",
+   "a": "Oxygen from the air.",
+   "needs": "words"
+  },
+  {
+   "q": "Where did the electrons go in the picture?",
+   "a": "From the iron under the drop to the oxygen.",
+   "needs": "both"
+  },
+  {
+   "q": "Why does rusting keep going?",
+   "a": "Rust is flaky and porous, so water gets through to fresh iron.",
+   "needs": "words"
+  }
+ ]
+}

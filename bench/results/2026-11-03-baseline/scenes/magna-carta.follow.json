@@ -1,0 +1,15 @@
+[
+{"sheet":1,"looking":"The words 'June 1215' on a cream page, then 'Rebel barons force King John' appears","waiting":"What the barons force him to do","confusing":""},
+{"sheet":2,"looking":"The headline 'Rebel barons force King John' with blank space beneath, then a paper labelled CHARTER with a gold seal","waiting":"What the charter says","confusing":"The paper appears abruptly at the end of this stretch"},
+{"sheet":3,"looking":"The charter paper with seal; a red 'RUNNYMEDE' label appears under it","waiting":"What is in the charter","confusing":"Runnymede is just a red word; I don't know whether it is a place or a person"},
+{"sheet":4,"looking":"Charter now filled with rows of lines, the headline fades out and the page moves up","waiting":"What 'most of it' is about","confusing":"The rows are blank bars with no readable content"},
+{"sheet":5,"looking":"The charter full of identical lines, no new text on screen","waiting":"The one important clause that was promised","confusing":"Nothing on screen says what 'feudal fees and forests' means; it is only in the captions"},
+{"sheet":6,"looking":"The same charter page, still","waiting":"Which clause it is","confusing":"No visual change as 'one clause' is said, so I wait with nothing to look at"},
+{"sheet":7,"looking":"One bar on the charter gets a dark outline and the page zooms in on it, then big text 'No free man shall be imprisoned...' fills the screen","waiting":"The rest of the sentence","confusing":"The sudden cut from the zoom to the plain quote is quick; the highlighted line was not readable"},
+{"sheet":8,"looking":"The quote on screen with a yellow banner 'or the law of the land.'","waiting":"What it means","confusing":"The whole quote is shown at once while the narrator has only said 'No free man', so I read ahead of the voice"},
+{"sheet":9,"looking":"The same quote, still","waiting":"The narrator to reach 'law of the land'","confusing":"Nothing changes for two seconds"},
+{"sheet":10,"looking":"The quote, still, with the yellow banner","waiting":"The meaning of 'law of the land'","confusing":"Nothing changes; I'm reading the screen text and listening"},
+{"sheet":11,"looking":"The yellow banner goes black, then returns in yellow, and the red text 'A king, in writing' appears below","waiting":"What the king in writing has to do with it","confusing":"The black box flash looks like a glitch; I don't know why it blacks out"},
+{"sheet":12,"looking":"'A king, in writing' in red under the yellow banner","waiting":"What happened to the king","confusing":""},
+{"sheet":13,"looking":"A red arrow and 'UNDER THE LAW' label link the king text up to the banner","waiting":"Nothing; it seems to be the conclusion","confusing":"The arrow is small and thin so the idea of the king under the law is mostly carried by the words"}
+]

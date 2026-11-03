@@ -1,0 +1,117 @@
+{
+ "id": "titration-lab",
+ "use": "a lab procedure step, from a handout",
+ "request": "Make a 30 second refresher from my lab handout on how to find the titration endpoint, for students before lab.",
+ "material": [
+  {
+   "kind": "doc",
+   "name": "lab-handout.txt",
+   "about": "a chemistry lab handout excerpt",
+   "text": "Titration of HCl with NaOH. Fill the burette with 0.10 M NaOH. Add 3 drops phenolphthalein to 25.0 mL HCl in the flask. Add NaOH quickly at first while swirling; pink appears where it lands and fades. When the pink begins to persist, add dropwise. Endpoint: the first faint pink that persists for 30 s. Record the final burette volume to 0.01 mL."
+  }
+ ],
+ "topic": "Finding a titration endpoint",
+ "intent": "Chemistry students need to do the endpoint step right in lab today.",
+ "style": "chalkboard",
+ "goal": "The viewer knows to add base drop by drop near the end and to stop at a faint pink that lasts 30 seconds.",
+ "promise": "Stopping at exactly the right drop.",
+ "arc": "The burette over the flask, fast at first, then drop by drop, the flash of pink that fades, the pink that stays, the reading.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Sodium hydroxide drips from the burette into the acid, with a few drops of phenolphthalein.",
+   "job": "Set up the apparatus.",
+   "knows": "Base from the burette into acid with indicator.",
+   "waiting": "When do you stop?",
+   "look": "the burette over the flask",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "At first you can add it quickly. Pink flashes where it lands, then fades as you swirl.",
+   "job": "Early: quick additions, pink fades.",
+   "knows": "Early pink fades when swirled.",
+   "waiting": "",
+   "look": "pink flashing and fading in the flask",
+   "feel": "",
+   "rhythm": "long",
+   "demo": {
+    "what": "additions into the flask",
+    "phases": [
+     {
+      "at": "At first",
+      "pace": "fast",
+      "why": "quick additions while the pink keeps fading"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "When the pink starts to linger, slow down. Drop by drop.",
+   "job": "Near the end: slow.",
+   "knows": "Near the endpoint, add drop by drop.",
+   "waiting": "",
+   "look": "single drops falling",
+   "feel": "careful",
+   "rhythm": "long",
+   "demo": {
+    "what": "additions into the flask",
+    "phases": [
+     {
+      "at": "When the pink",
+      "pace": "slow",
+      "why": "one drop at a time"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Stop at a faint pink that lasts thirty seconds. Then read the volume.",
+   "job": "The endpoint and the reading.",
+   "knows": "Endpoint: faint pink lasting 30 s; record the volume.",
+   "waiting": "",
+   "look": "the faint lasting pink, then the burette reading",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "thirty seconds.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the faint pink holds in the flask while a timer runs"
+    }
+   ]
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What goes in the burette, and what is in the flask?",
+   "a": "Sodium hydroxide in the burette; the acid with phenolphthalein in the flask.",
+   "needs": "words"
+  },
+  {
+   "q": "What happens to the pink early on?",
+   "a": "It flashes where the base lands, then fades when swirled.",
+   "needs": "words"
+  },
+  {
+   "q": "When should you slow to drop by drop?",
+   "a": "When the pink starts to linger.",
+   "needs": "words"
+  },
+  {
+   "q": "What is the endpoint?",
+   "a": "A faint pink that lasts thirty seconds.",
+   "needs": "words"
+  },
+  {
+   "q": "What do you do at the endpoint?",
+   "a": "Read (record) the volume.",
+   "needs": "words"
+  }
+ ]
+}

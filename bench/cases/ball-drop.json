@@ -1,0 +1,103 @@
+{
+ "id": "ball-drop",
+ "use": "predict, then reveal",
+ "request": "Do the heavy versus light ball drop as a prediction moment for my physics students.",
+ "topic": "Do heavier objects fall faster?",
+ "intent": "Physics students should commit to a prediction before seeing the answer.",
+ "style": "chalkboard",
+ "goal": "The viewer predicts, sees both balls land together, and knows why.",
+ "promise": "Two very different balls, one question, and a guess before the answer.",
+ "arc": "Two balls held at the top, a long pause to guess, the drop side by side, the reason.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "A bowling ball and a tennis ball, dropped from the same height, at the same moment.",
+   "job": "Set up the experiment.",
+   "knows": "Same height, same moment.",
+   "waiting": "Which lands first?",
+   "look": "the two balls side by side at the same height",
+   "feel": "",
+   "rhythm": "long",
+   "withhold": {
+    "what": "the balls falling and which lands first",
+    "until": "e3"
+   }
+  },
+  {
+   "id": "e2",
+   "text": "Which lands first?",
+   "job": "Ask for a prediction.",
+   "knows": "",
+   "waiting": "Which lands first?",
+   "look": "the two balls held at the top",
+   "feel": "a dare",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "first?",
+     "seconds": 3.0,
+     "purpose": "predict",
+     "does": "both balls hang at the top; nothing moves toward the answer",
+     "shows": "Which lands first?"
+    }
+   ]
+  },
+  {
+   "id": "e3",
+   "text": "They land together. Gravity speeds up every object at the same rate, whatever its mass.",
+   "job": "Show and explain.",
+   "knows": "They land together; gravity accelerates every mass equally.",
+   "waiting": "",
+   "look": "the two balls falling level with each other",
+   "feel": "",
+   "rhythm": "long",
+   "reveal": {
+    "at": "They land together.",
+    "what": "the two balls landing together"
+   },
+   "demo": {
+    "what": "both balls falling side by side",
+    "phases": [
+     {
+      "at": "They land",
+      "pace": "slow",
+      "why": "a fall slow enough to see they stay level the whole way"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Only air resistance can split them. And for these two, it barely matters.",
+   "job": "Name the one exception.",
+   "knows": "Air resistance is the only thing that can separate them.",
+   "waiting": "",
+   "look": "air resistance, small",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "Which ball lands first?",
+   "a": "Neither: they land together.",
+   "needs": "both"
+  },
+  {
+   "q": "Why do they land together?",
+   "a": "Gravity speeds up every object at the same rate, whatever its mass.",
+   "needs": "words"
+  },
+  {
+   "q": "What can make them land at different times?",
+   "a": "Air resistance.",
+   "needs": "words"
+  },
+  {
+   "q": "Where were the balls during the pause before the answer?",
+   "a": "Held at the top, side by side, not yet falling.",
+   "needs": "picture"
+  }
+ ]
+}

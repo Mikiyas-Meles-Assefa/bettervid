@@ -1,0 +1,53 @@
+@0
+text title "The trail to the summit" role=title
+image sk asset=sketch w=900 h=1200
+tag sk "trailhead" at=0.50,0.95 id=tstart role=label
+mark path sk id=route at=0.50,0.93,0.42,0.74,0.46,0.60,0.46,0.46,0.38,0.40,0.46,0.22,0.52,0.08 role=pointer
+mark path sk id=rfork at=0.46,0.46,0.62,0.42,0.70,0.36 role=wrong
+set route drawn=0
+set rfork drawn=0
+
+@1 keep move=100 ease=smooth
+set route drawn=0.22
+
+@2 keep
+text leg "2.1 km to the creek" role=heading
+
+@11 keep
+tag sk "cross on the stones" at=0.42,0.74 id=ctag role=label
+
+@15 keep move=80 ease=smooth
+drop ctag
+text leg "4 km: ridge junction" role=heading
+set route drawn=0.525
+
+@22 keep
+mark ring sk at=0.40,0.41,0.52,0.51 id=jring role=pointer
+
+@24 keep move=30 ease=smooth
+text leg "Where people go wrong" role=heading
+set rfork drawn=1
+
+@29 keep
+text kl "Keep left" role=key
+
+@30+11 keep move=20 ease=smooth
+mark path sk id=lfork at=0.46,0.46,0.38,0.40,0.46,0.22 role=key
+light lfork
+mark cross sk at=0.58,0.34,0.72,0.44 id=rx role=wrong
+
+@31 keep
+text kl "Right fork: back to the road" role=wrong
+
+@40 keep
+drop rfork
+drop rx
+text kl "Keep left" role=key
+
+@41 keep move=110 ease=smooth
+set route drawn=1
+
+@54 keep
+drop kl
+text sm "Summit: 5.6 km" role=answer
+mark ring sk at=0.44,0.04,0.60,0.14 id=sring role=answer

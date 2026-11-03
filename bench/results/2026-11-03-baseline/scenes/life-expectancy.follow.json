@@ -1,0 +1,14 @@
+[
+{"sheet":1,"looking":"The year 1900 and the phrase 'a newborn could expect to live' fading in on a plain cream page","waiting":"What a newborn could expect to live to: a number of years","confusing":""},
+{"sheet":2,"looking":"The same text, 1900 and 'a newborn could expect to live', sitting still while the caption speaks; a faint '32 years' appears at the end","waiting":"The number of years","confusing":"The screen is static and mostly empty for a couple of seconds"},
+{"sheet":3,"looking":"A big red '32 years' under the sentence","waiting":"Why it was so low, or what comes next","confusing":""},
+{"sheet":4,"looking":"New text, 'That average was dragged down by children', centered","waiting":"How children dragged it down","confusing":"The 32 years figure vanished and I can't see what 'that average' is attached to anymore"},
+{"sheet":5,"looking":"The same sentence, then it fades and a new line 'more than one in three' replaces it","waiting":"More than one in three what; the number or a picture","confusing":""},
+{"sheet":6,"looking":"'more than one in three', a fraction 1/3 followed by the word 'key', and 'children died before age five'","waiting":"What happened next, a change or a fix","confusing":"The word 'key' beside the 1/3 makes no sense to me; it looks like a leftover label or a glitch. Otherwise the 1/3 is just text, no picture of children"},
+{"sheet":7,"looking":"A red heading 'vaccines, clean water, antibiotics' and a small line starting to climb from a dot at 1900 toward 'today'","waiting":"Where the line ends up","confusing":"The graph has no vertical scale at first, so I don't know what the line measures until later"},
+{"sheet":8,"looking":"The red line rising to a dot at 'today' while the heading stays on top","waiting":"The value it reaches, the 'over seventy'","confusing":""},
+{"sheet":9,"looking":"The heading fades and 'over 70' appears at the top end of the line, with '32' at the start","waiting":"What the rise means, a summary","confusing":"Caption is blank for the last half second while the label shows, fine"},
+{"sheet":10,"looking":"The finished line chart, 32 at the left and over 70 at the right; then 'more than doubled' fading in below","waiting":"The conclusion","confusing":"A silent moment of about a second with only the chart showing"},
+{"sheet":11,"looking":"'more than doubled' and 'in a little over a century' under the chart","waiting":"Nothing much, it feels like the end","confusing":""},
+{"sheet":12,"looking":"The same final chart and statement, held still","waiting":"Nothing","confusing":""}
+]

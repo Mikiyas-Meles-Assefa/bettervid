@@ -1,0 +1,97 @@
+{
+ "id": "vaccine-memory",
+ "use": "a biology process, from a class handout",
+ "request": "Use this handout from our health class to make a short on how vaccines train the immune system.",
+ "material": [
+  {
+   "kind": "doc",
+   "name": "handout.txt",
+   "about": "a health class handout",
+   "text": "A vaccine contains a harmless piece of a germ (an antigen), or instructions to make one. Among millions of B cells, only the few whose receptors fit that antigen are activated. They multiply and make antibodies. Some become long-lived memory cells. If the real germ arrives later, memory cells respond within days instead of the one to two weeks a first response takes."
+  }
+ ],
+ "topic": "How a vaccine trains the immune system",
+ "intent": "Students in a health class need the basic mechanism.",
+ "style": "flat",
+ "goal": "The viewer knows a vaccine shows a harmless piece, the matching B cells multiply, and memory cells make the next response fast.",
+ "promise": "Training for a fight before the fight.",
+ "arc": "A harmless piece, many B cells and the few that fit it, memory cells left waiting, then a fast strike.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "A vaccine shows your immune system a harmless piece of a germ.",
+   "job": "Introduce the harmless piece.",
+   "knows": "A vaccine is a harmless piece.",
+   "waiting": "What does the body do with it?",
+   "look": "the harmless piece of the germ",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Among your B cells, the few whose shape fits that piece start multiplying and making antibodies.",
+   "job": "Selection: only matching cells respond.",
+   "knows": "Only the matching B cells multiply and make antibodies.",
+   "waiting": "",
+   "look": "the few matching B cells among many, multiplying",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e3",
+   "text": "Some of them stay behind as memory cells.",
+   "job": "Memory.",
+   "knows": "Memory cells remain.",
+   "waiting": "",
+   "look": "memory cells staying behind",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "cells.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the memory cells stay, waiting quietly while the rest fade"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "So when the real germ shows up, the matching cells are already waiting, and they strike in days, not weeks.",
+   "job": "The payoff.",
+   "knows": "The response is fast because matching cells are ready.",
+   "waiting": "",
+   "look": "the real germ meeting waiting memory cells",
+   "feel": "relief",
+   "rhythm": "long"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What does a vaccine show the immune system?",
+   "a": "A harmless piece of a germ.",
+   "needs": "words"
+  },
+  {
+   "q": "Which cells respond to it?",
+   "a": "The few B cells whose shape fits that piece.",
+   "needs": "words"
+  },
+  {
+   "q": "What stays behind afterwards?",
+   "a": "Memory cells.",
+   "needs": "words"
+  },
+  {
+   "q": "Why is the response to the real germ faster?",
+   "a": "Matching cells are already waiting, so they strike in days, not weeks.",
+   "needs": "words"
+  },
+  {
+   "q": "In the picture, how many B cells matched the piece compared with all those shown?",
+   "a": "Only a few out of many.",
+   "needs": "picture"
+  }
+ ]
+}

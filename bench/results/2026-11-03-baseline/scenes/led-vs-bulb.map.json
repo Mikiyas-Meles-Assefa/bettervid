@@ -1,0 +1,9 @@
+{
+  "promise": ["q", "oldb", "ledb", "heat"],
+  "events": [
+    {"id": "e1", "look": ["oldb", "ledb"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["lt", "heat"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e3", "look": ["ledbar", "heat"], "lookNone": "", "withhold": [], "demo": [], "holds": [{"hold": "h1", "does": ["ledbar", "heat", "mark.box.heat"], "answer": "", "ids": []}]},
+    {"id": "e4", "look": ["heat", "ledbar"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

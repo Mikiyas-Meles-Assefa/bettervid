@@ -1,0 +1,106 @@
+{
+ "id": "trail-directions",
+ "use": "directions from a hand-drawn sketch",
+ "request": "Make a short for our hiking club from my trail sketch: how to get to the summit, and the one turn people miss.",
+ "material": [
+  {
+   "kind": "image",
+   "name": "sketch",
+   "about": "the user's hand-drawn trail sketch on lined paper: trailhead (car park) at the bottom, creek crossing with stones at 2.1 km, ridge junction at 4.0 km marked KEEP LEFT, a right fork to the road (wrong way), summit at 5.6 km at the top",
+   "file": "trail-sketch.png",
+   "size": [
+    900,
+    1200
+   ]
+  }
+ ],
+ "topic": "The trail to the summit",
+ "intent": "Hiking club members need to know the route and not take the wrong fork.",
+ "style": "whiteboard",
+ "goal": "The viewer can describe the route and knows to keep left at the ridge junction.",
+ "promise": "The one turn that sends hikers the wrong way.",
+ "arc": "The sketch, the route followed point by point, the junction picked out, the wrong fork shown, the summit.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "From the trailhead, it's about two kilometers to the creek crossing. Cross on the stones.",
+   "job": "First leg.",
+   "knows": "2.1 km to the creek; cross on the stones.",
+   "waiting": "What comes next?",
+   "look": "the trailhead and the creek crossing on the sketch",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "Then climb to the ridge junction, at four kilometers.",
+   "job": "Second leg.",
+   "knows": "The junction is at 4 km.",
+   "waiting": "",
+   "look": "the route climbing to the junction",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e3",
+   "text": "Here's where people go wrong. Keep left. The right fork drops back down to the road.",
+   "job": "The turn people miss.",
+   "knows": "Keep left; the right fork goes to the road.",
+   "waiting": "",
+   "look": "the junction, with the left fork lit and the right fork marked wrong",
+   "feel": "warning",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "Keep left.",
+     "seconds": 1.5,
+     "purpose": "look",
+     "does": "the left fork lights while the right fork is crossed out"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "Keep left, and the summit is just over a kilometer and a half further, at five point six.",
+   "job": "The finish.",
+   "knows": "The summit is at 5.6 km.",
+   "waiting": "",
+   "look": "the summit at 5.6 km",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "How far is the creek crossing from the trailhead?",
+   "a": "About two kilometers (2.1 km).",
+   "needs": "words"
+  },
+  {
+   "q": "How do you cross the creek?",
+   "a": "On the stones.",
+   "needs": "words"
+  },
+  {
+   "q": "Which way do you go at the ridge junction?",
+   "a": "Keep left.",
+   "needs": "words"
+  },
+  {
+   "q": "Where does the right fork go?",
+   "a": "Back down to the road.",
+   "needs": "words"
+  },
+  {
+   "q": "How far is the summit from the trailhead?",
+   "a": "5.6 km.",
+   "needs": "words"
+  },
+  {
+   "q": "On the sketch, which fork from the junction leads up to the summit?",
+   "a": "The left one (going up); the other goes down and right to the road.",
+   "needs": "picture"
+  }
+ ]
+}
