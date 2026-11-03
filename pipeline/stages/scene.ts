@@ -38,6 +38,7 @@ import type { PartCard, Reasoner, Viewing } from "../../engine/design/types.ts";
 import { basename } from "node:path";
 import { emptyToolbox, prepareToolbox, toolboxKit, toolboxNotes, type Toolbox, type ToolboxMakers } from "../../engine/language/toolbox.ts";
 import { lookSchema } from "./direction.ts";
+import { metaDepictMakers, spriteStyle } from "../lib/depict-makers.ts";
 
 const VERSION = 6; // bump when the way sections are written or checked changes, so cached sections are redone
 const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
@@ -1663,13 +1664,24 @@ async function ensureLook(p: Project) {
 function toolboxFor(p: Project, spent: { usd: number }): NonNullable<Job["toolbox"]> {
   const depicter = metaReasoner({ effort: { depicter: "medium" }, charge: (x, detail) => ((spent.usd += x), console.log(`  depicter ${detail}: $${x.toFixed(4)}`)), checkBudget: () => checkBudget(0.05) });
   const s = style(p.input.style);
-  const makers: ToolboxMakers = { depicter, style: { name: s.name, art: s.art?.object ?? s.label }, purpose: [p.plan?.intent, topic(p)].filter(Boolean).join(": "), sprites: true, ...depictMakers(p, spent) };
+  const makers: ToolboxMakers = { depicter, style: spriteStyle(s), purpose: [p.plan?.intent, topic(p)].filter(Boolean).join(": "), sprites: true, ...depictMakers(p, spent) };
   return { box: toolboxOf(p), makers, inflight: new Map(), save: () => saveToolbox(p) };
 }
 
 // Sprite and picture makers for path A (pipeline/lib/depict-makers.ts), when this run has them.
-function depictMakers(_p: Project, _spent: { usd: number }): Partial<ToolboxMakers> {
-  return {};
+function depictMakers(p: Project, spent: { usd: number }): Partial<ToolboxMakers> {
+  const pay = (x: number, detail: string) => ((spent.usd += x), console.log(`  ${detail}: $${x.toFixed(4)}`));
+  const reasoner = metaReasoner({ effort: { reader: "medium" }, charge: pay, checkBudget: () => checkBudget(0.05) });
+  const made = metaDepictMakers({ reasoner, charge: pay, checkBudget: (x) => checkBudget(x ?? 0.05) });
+  const paths = Object.fromEntries(pictures(p).map((x) => [x.name, join(dir(p), x.path)]));
+  return {
+    sprite: made.sprite,
+    picture: async ({ desc, asset, parts }) => {
+      if (asset !== undefined && !paths[asset]) throw new Error(`there is no picture called ${asset}; the pictures are ${Object.keys(paths).join(", ") || "none"}`);
+      const r = await made.picture!(desc, asset !== undefined ? paths[asset] : undefined, parts.map((name) => ({ name, phrase: name, mask: true })));
+      return { card: r.card, src: r.src, ...(r.masks ? { masks: r.masks } : {}), tier: r.tier };
+    },
+  };
 }
 
 // What every part's request starts with: the topic, why the viewer wants it, and what the user asked for on purpose.

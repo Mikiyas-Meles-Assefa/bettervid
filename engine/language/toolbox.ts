@@ -17,6 +17,16 @@ import { POSE_VERBS } from "../design/depict/make.ts";
 import { pointOf } from "../design/depict/points.ts";
 import type { PartCard, Reasoner } from "../design/types.ts";
 import { parse, type Item } from "./syntax.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { extname, isAbsolute } from "node:path";
+
+// Pictures on disk (a sprite, its masks, a picture with parts) go into the scene as data the renderer can load anywhere.
+const DATA = new Map<string, string>();
+const loadable = (src: unknown): unknown => {
+  if (typeof src !== "string" || !isAbsolute(src) || !existsSync(src)) return src;
+  const type = extname(src).toLowerCase() === ".png" ? "image/png" : "image/jpeg";
+  return DATA.get(src) ?? DATA.set(src, `data:${type};base64,${readFileSync(src).toString("base64")}`).get(src)!;
+};
 
 export type ToolboxEntry = {
   id: string;
@@ -131,7 +141,8 @@ export function toolboxKit(box: Toolbox): Kit {
     const real = sizeCm(e.spec);
     const root = d.nodes.find((n) => n.id === d.id);
     const props = { ...root?.props, ...(real ? { realW: real.w, realH: real.h } : {}), points01: JSON.stringify(fractions(d)) };
-    return [{ ...(root ?? { id: d.id, kind: "group" }), props }, ...d.nodes.filter((n) => n.id !== d.id)];
+    const rest = d.nodes.filter((n) => n.id !== d.id).map((n) => (n.props?.src !== undefined ? { ...n, props: { ...n.props, src: loadable(n.props.src) as string } } : n));
+    return [{ ...(root ?? { id: d.id, kind: "group" }), props }, ...rest];
   };
   const tracksOf = (changes: { id: string; prop: string; value: Value; at: number; frames: number; ease: string }[], start: number, tools: Parameters<Behavior>[0]["tools"]): Track[] =>
     changes.map((c) => {
