@@ -328,7 +328,17 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   };
   // Things partly in the frame, or in it but under the captions: they would be seen cut. Those in `must` count as cut
   // wherever they are not wholly in view, even out of it: words a state lays out as it arrives are there to be read.
-  const cutFrom = (v: View, list: Seen[], must?: Set<string>) => {
+  const cutFrom = (v: View, list: Seen[], must?: Set<string>): Seen[] => {
+    const cut = cutLines(v, list, must);
+    // The lines of one text are read together: one line in view while another is out leaves half a sentence.
+    const a = allowedIn(v);
+    const whole = (w: Seen) => w.box.x - w.box.w / 2 >= a.x - a.w / 2 - 1 && w.box.x + w.box.w / 2 <= a.x + a.w / 2 + 1 && w.box.y - w.box.h / 2 >= a.y - a.h / 2 - 1 && w.box.y + w.box.h / 2 <= a.y + a.h / 2 + 1;
+    const items = new Map<string, Seen[]>();
+    for (const w of list) if (w.item) (items.get(w.item) ?? items.set(w.item, []).get(w.item)!).push(w);
+    for (const lines of items.values()) if (lines.length > 1 && lines.some(whole) && lines.some((w) => !whole(w))) for (const w of lines) if (!whole(w) && !cut.includes(w)) cut.push(w);
+    return cut;
+  };
+  const cutLines = (v: View, list: Seen[], must?: Set<string>) => {
     const f = frameIn(v);
     const a = allowedIn(v);
     return list.filter((w) => {
@@ -1737,7 +1747,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   // moves while the scene has moved the camera itself, and stops where the scene moves it next. Any view it takes holds
   // every tag on screen whole and every line of words whole or wholly out of view; where that cannot be, it goes wider.
   const sceneShots = shots.map((x) => x.at);
-  const FOLLOW_SPAN: Record<string, number> = { slow: 0, normal: 1.2, fast: 1.8 };
+  // A fast stretch is about the pattern, so one view holds all it works on; slower ones are followed step by step.
+  const FOLLOW_SPAN: Record<string, number> = { slow: 0, normal: 1.2, fast: Infinity };
   const autoShots: typeof shots = [];
   const lead = Math.round(ctx.fps * 0.15);
   const glide = Math.max(ctx.theme.moveFrames, Math.round(ctx.fps * 0.5));
@@ -1762,7 +1773,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => !pinnable(x, target) && w.tags.has(x.id) && x.slot !== target).map((x) => x.box))]);
     // The kit's own words where its steps put them, too: a value half out of view is as unreadable as a cut line.
     const cuts = (v: View) => [...seen.flatMap((w) => cutFrom(v, w.words.filter((x) => !pinnable(x, target)), w.tags)), ...cutFrom(v, own)];
-    const values = [...own, ...seen.flatMap((w) => w.words.filter((x) => x.slot === target || x.id.startsWith(`${target}.`)))].map((x) => x.box);
+    const values = [...own, ...seen.flatMap((w) => w.words.filter((x) => x.slot === target || x.id.startsWith(`${target}.`) || (!pinnable(x, target) && w.tags.has(x.id))))].map((x) => x.box);
     const onGlass = (b: Box, v: View): Box => ({ x: (b.x - v.panX) * v.zoom + ctx.width / 2, y: (b.y - v.panY) * v.zoom + ctx.height / 2, w: b.w * v.zoom, h: b.h * v.zoom });
     const pad = (b: Box): Box => ({ ...b, w: b.w + 24, h: b.h + 24 });
     const clear = (v: View) => !values.some((b) => pinned.some((q) => hits(onGlass(b, v), pad(q)) > 0));
