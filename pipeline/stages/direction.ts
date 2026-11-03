@@ -9,6 +9,7 @@ import { truthSteps } from "../../engine/kits/steps.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { Beat, DemoPhase, DirectionEvent, DirectionPlan, Hold, HoldPurpose, Project, Script } from "../../schemas/project.ts";
 import { abilities, truthKindNames } from "../lib/abilities.ts";
+import { spokenNotShown, type PhaseSpan } from "../lib/demo.ts";
 import { json } from "../lib/meta.ts";
 import { asked, charge, persona, prompt, seconds, stage, topic } from "../lib/project.ts";
 import { viewer } from "./plan.ts";
@@ -376,6 +377,30 @@ export function numberedScript(s: Script): string {
 
 const brief = (e: DirectionEvent) => [e.job, e.holds?.length ? `${e.holds.length} hold${e.holds.length > 1 ? "s" : ""} (${e.holds.map((h) => `${h.purpose} ${h.seconds}s`).join(", ")})` : "", e.demo ? `demo ${e.demo.phases.map((p) => p.pace).join(">")}` : "", e.withhold ? "withholds" : ""].filter(Boolean).join("; ");
 
+// Phases whose steps are not the ones their words are about: the words name values of the computed thing that the
+// steps never show, as when the thing's settings put its steps in another order than the script tells them.
+export function unspoken(raw: RawPlan, words: string[], steps: Map<string, string[]>): string[] {
+  const holdWord = new Map(raw.events.flatMap((e) => e.holds.map((h) => [h.id, h.afterWord] as const)));
+  const start = (pt: Point, e: RawEvent) => (pt.word >= 0 ? pt.word : holdWord.has(pt.hold) ? holdWord.get(pt.hold)! + 1 : e.firstWord);
+  return raw.events.flatMap((e) => {
+    const real = hasTruth(e) ? steps.get(truthKey(e.demo)) : undefined;
+    if (!real) return [];
+    let data: unknown;
+    try {
+      data = JSON.parse(e.demo.truth.data);
+    } catch {
+      return [];
+    }
+    const spans: PhaseSpan[] = e.demo.phases.flatMap((ph, index, all) => {
+      if (ph.from < 1) return [];
+      const first = Math.max(e.firstWord, start(ph.at, e));
+      const end = ph.until.word >= 0 ? ph.until.word : holdWord.has(ph.until.hold) ? holdWord.get(ph.until.hold)! : all[index + 1] ? start(all[index + 1]!.at, e) - 1 : e.lastWord;
+      return [{ event: e.id, index, from: ph.from, to: ph.to, first, last: Math.max(first, Math.min(e.lastWord, end)) }];
+    });
+    return spokenNotShown(spans, words, data, real);
+  });
+}
+
 export async function direction(p: Project, force = false) {
   const base = stripCues(p.script!);
   const words = scriptWords(base);
@@ -404,7 +429,7 @@ export async function direction(p: Project, force = false) {
       const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: "high" });
       const raw = r.value;
       const { steps, problems: refused } = demoSteps(raw, ctx, kinds);
-      const found = [...refused, ...problems(raw, words, steps)];
+      const found = [...refused, ...problems(raw, words, steps), ...unspoken(raw, words, steps)];
       const unseen = [...steps.entries()].filter(([k]) => !shown.has(k));
       charge(p, "direction", r.usd, `round ${round}: ${raw.events.length} events, ${raw.cues.length} cues, ${found.length} problems${unseen.length ? `, ${unseen.length} step lists to show` : ""}`);
       console.log(`  round ${round}: ${raw.events.length} events, ${raw.events.reduce((s, e) => s + e.holds.length, 0)} holds, ${raw.cues.length} cues, ${found.length} problems`);

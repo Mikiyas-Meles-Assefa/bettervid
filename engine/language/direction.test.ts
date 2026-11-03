@@ -117,3 +117,38 @@ test("merge sort shows its cuts and a finger on the front of each run", async ()
   assert.ok(xs.every((v, i) => i === 0 || v > xs[i - 1]!), "10 27 38 43 left to right");
   assert.ok(Math.abs(xs[1]! - xs[0]! - (xs[3]! - xs[2]!)) < 1, "evenly spaced again");
 });
+
+test("a thing made done=K shows its state after step K and plays on from K + 1", async () => {
+  const s = await ok(`@0\nsort s data=[38,27,43,10] algo=merge order=levels show=bars done=7\n@4 keep\ndo steps s from=8 to=11 until=@9\n`);
+  // After step 7 (the first pair merged) 27 stands left of 38.
+  assert.ok(Number(at(s, 2, sortPart.item("s", 2))?.x) < Number(at(s, 2, sortPart.item("s", 1))?.x));
+  assert.match(await bad(`@0\nsort s data=[38,27,43,10] algo=merge order=levels show=bars done=7\n@4 keep\ndo steps s from=5 to=9 until=@9\n`), /line 4: s has already played steps 1 to 7 .*done=7.*from=8/);
+  assert.match(await bad(`@0\nsort s data=[3,1] algo=bubble done=40\n`), /done= is how many/);
+});
+
+test("steps played twice are refused on their own line, and one id cannot take two inputs", async () => {
+  assert.match(await bad(`@0\nsort s data=[5,2,8,1] algo=insertion show=boxes\ndo steps s from=1 to=3 until=@4\n@6 keep\ndo steps s from=2 to=4 until=@9\n`), /line 5: s has already played steps 1 to 3 before this line/);
+  assert.match(await bad(`@0\nsort s data=[5,2,8,1] algo=merge show=boxes\n@6\nsort s data=[5,2,8,1] algo=merge order=levels show=boxes\n`), /line 4: s is made at line 2 .* makes it again/);
+  await ok(`@0\nsort s data=[5,2,8,1] algo=merge show=boxes\n@6\nsort s data=[5,2,8,1] algo=merge show=boxes done=3\n`);
+});
+
+test("words a state puts up must be in view under the scene's camera", async () => {
+  const err = await bad(`@0\nsort s data=[5,2,8,1,9,3,7,4] algo=merge show=boxes\ntext cap "a caption below the work" role=caption\n@4 keep\ncamera s.item.1 zoom=2.5\ntext cap "the caption now says something new" role=caption\n`);
+  assert.match(err, /the caption now says something new/);
+});
+
+test("a text that grows a second line shows it, also when an earlier text had one", async () => {
+  const long = "a sentence long enough to need a second line on a phone screen at this size";
+  const s = await ok(`@0\ntext t "${long}" size=big\n@4 keep\ntext t "short" size=big\n@8 keep\ntext t "${long} too" size=big\n`);
+  assert.ok(Number(at(s, 8 * 15 + 30, "t.l2")?.opacity) > 0.9, "the second line is back");
+});
+
+test("values a step carries out of a close view the scene set are refused", async () => {
+  const err = await bad(`@0\nsort s data=[5,1,7,3,6,2,8,4] algo=merge order=levels show=boxes done=7\n@4 keep\ncamera s zoom=1.4\ndo steps s from=8 to=10 pace=slow until=@30\n`);
+  assert.match(err, /step \d+ of s .* to the edge of the view/);
+});
+
+test("a tag riding a moving part onto the values is refused", async () => {
+  const err = await bad(`@0\nsort s data=[5,1,7,3,6,2,8,4] algo=merge show=boxes form=row\n@4 keep\ndo steps s from=1 to=3 until=@8\n@10 keep\ntag s.finger.a "finger" side=left\ndo steps s from=4 to=7 until=@30\n`);
+  assert.match(err, /"finger" is tagged on s\.finger\.a, which moves .* onto the value/);
+});

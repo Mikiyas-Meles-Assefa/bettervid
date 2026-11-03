@@ -107,3 +107,17 @@ export function textSize(nodes: NodeSpec[]): number | undefined {
   const sizes = nodes.filter((n) => n.kind === "text").map((n) => Number(n.props?.size ?? 0)).filter((v) => v > 0).sort((a, b) => a - b);
   return sizes.length ? sizes[Math.floor(sizes.length / 2)] : undefined;
 }
+
+// Where a part of a kit sits once a step is done (step 0: before any), in the kit's coordinates.
+export function partAt(board: Board, nodes: NodeSpec[], id: string, step: number): { x: number; y: number } | undefined {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const root = nodes[0]?.id;
+  if (!byId.has(id)) return undefined;
+  const s: State = step > 0 ? board.steps[step - 1]?.after ?? new Map() : new Map();
+  let [x, y] = [0, 0];
+  for (let a = byId.get(id); a && a.id !== root; a = a.parent ? byId.get(a.parent) : undefined) {
+    x += Number(s.get(key(a.id, "x")) ?? a.props?.x ?? 0);
+    y += Number(s.get(key(a.id, "y")) ?? a.props?.y ?? 0);
+  }
+  return { x, y };
+}

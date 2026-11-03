@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { build } from "../../engine/language/build.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { DirectionEvent, Project } from "../../schemas/project.ts";
-import { cleanCast, contract, directed, directionText, joinSections, needs, overPictures, pieces, severeOf, sliceSource, splitSections, visibleAt } from "./scene.ts";
+import { cleanCast, contract, demoFit, directed, directionText, joinSections, joinWithSpans, needs, truthPlan, overPictures, pieces, severeOf, sliceSource, splitSections, visibleAt } from "./scene.ts";
 
 // Invented narration: beats of given lengths, sentences of about eight words.
 function narration(beats: number[]) {
@@ -222,11 +222,62 @@ test("a part must declare what it withholds and play a demonstration with the ki
   assert.equal(hand.demos.length, 1);
   assert.match(hand.demos[0]!, /`sort`/);
   const kit = directed(`withhold none until=@90\n@30\nsort s data=[3,1,4,2] algo=merge\ndo steps s from=1 to=2 pace=slow until=@h1\n`, p, range);
-  assert.deepEqual(kit, { withholds: [], demos: [] });
+  assert.deepEqual(kit, { withholds: [], demos: [], truth: [] });
 });
 
 test("hold moments split into states, and a hold too short is noted for the direction", () => {
   const p = pieces(`@30\ntext a "x"\n@h1 keep\ntext b "y"\n@h1.end keep\ndrop b\n`);
   assert.deepEqual(p.states.map((x) => x.word), [30, 30, 30]);
   assert.deepEqual(needs(`@0\n# needs h1 6s: four slow steps\ntext a "x"\n`), ["hold h1 too short: needs 6 s, four slow steps"]);
+});
+
+// The same project with its demonstration computed, played across three parts.
+function computedProject(): Project {
+  const p = directedProject();
+  const steps = Array.from({ length: 17 }, (_, i) => `step ${i + 1} on 3 and 1`);
+  const truth = { kind: "sort", data: { data: [3, 1, 4, 2], algo: "merge", show: "boxes" }, steps };
+  const events = p.direction!.events.map((e) => (e.id === "e2" ? { ...e, lastWord: 59, demo: { ...e.demo!, truth, phases: [{ steps: [1, 4] as [number, number], pace: "slow" as const, at: { word: 30 }, why: "first" }] } } : e));
+  events.splice(2, 0, { ...events[1]!, id: "e2b", firstWord: 60, lastWord: 89, holds: [], demo: { what: "the rest", truth, phases: [{ steps: [5, 17], pace: "fast", at: { word: 60 }, why: "known" }] } });
+  return { ...p, direction: { ...p.direction!, events } };
+}
+
+test("each part is told the steps it plays and where the demonstration stands as it begins", () => {
+  const p = computedProject();
+  const first = truthPlan(p, { id: "s2", firstWord: 30, lastWord: 59 })[0]!;
+  assert.equal(first.line, "sort demo1 data=[3,1,4,2] algo=merge show=boxes");
+  assert.deepEqual([first.done, first.plays.map((x) => [x.from, x.to])], [0, [[1, 4]]]);
+  const second = truthPlan(p, { id: "s3", firstWord: 60, lastWord: 89 })[0]!;
+  assert.deepEqual([second.done, second.plays.map((x) => [x.from, x.to])], [4, [[5, 17]]]);
+  assert.match(directionText(p, { id: "s3", firstWord: 60, lastWord: 89 }), /`sort demo1 data=\[3,1,4,2\] algo=merge show=boxes done=4`.*plays exactly steps 5 to 17/s);
+});
+
+test("a part that plays another part's steps, starts in the wrong state or changes the thing is sent back", () => {
+  const p = computedProject();
+  const range = { id: "s3", firstWord: 60, lastWord: 89 };
+  const good = directed(`withhold none until=@90\n@60\nsort demo1 data=[3,1,4,2] algo=merge show=boxes done=4\ndo steps demo1 from=5 to=17 pace=fast until=@89\n`, p, range);
+  assert.deepEqual(good.truth, []);
+  const twice = directed(`withhold none until=@90\n@60\nsort demo1 data=[3,1,4,2] algo=merge show=boxes\ndo steps demo1 from=3 to=17 until=@89\n`, p, range).truth.join("\n");
+  assert.match(twice, /stands after step 4.*done=4/);
+  assert.match(twice, /plays 3, 4, which another part plays/);
+  const other = directed(`withhold none until=@90\n@60\nsort demo1 data=[3,1,4,2] algo=merge order=levels show=boxes done=4\ndo steps demo1 from=5 to=17 until=@89\n`, p, range).truth.join("\n");
+  assert.match(other, /must be the very thing the other parts show/);
+});
+
+test("joined lines map back to the part that wrote them", () => {
+  const { text, spans } = joinWithSpans([{ id: "s1", firstWord: 0, source: A }, { id: "s2", firstWord: 6, source: B }]);
+  const lines = text.split("\n");
+  const s2 = spans.find((x) => x.id === "s2")!;
+  assert.equal(lines[s2.from - 1], "@6");
+  assert.match(lines[s2.to - 1]!, /drop s2_d/);
+  assert.equal(lines[spans[0]!.from - 1], "@0");
+});
+
+test("a phase whose words name values its steps never show does not fit", () => {
+  const p = computedProject();
+  const words = p.narration!.words.map((w, i) => (i >= 60 && i < 64 ? { ...w, text: ["4", "and", "2,", "merge."][i - 60]! } : w));
+  const steps = Array.from({ length: 17 }, (_, i) => (i < 4 ? "split 3 1 4 2" : "merge 3 with 1"));
+  const q: Project = { ...p, narration: { ...p.narration!, words }, direction: { ...p.direction!, events: p.direction!.events.map((e) => (e.demo?.truth ? { ...e, demo: { ...e.demo, truth: { ...e.demo.truth, steps } } } : e)) } };
+  const found = demoFit(q);
+  assert.equal(found.length, 1);
+  assert.match(found[0]!, /event e2b, phase 1: its words \(60 to 89\) name 4, 2/);
 });

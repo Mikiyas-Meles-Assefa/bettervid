@@ -12,7 +12,8 @@ import { evaluate } from "../../engine/core/evaluate.ts";
 import type { CompileContext, Kit, Resolved, Scene, Theme } from "../../engine/core/types.ts";
 import { KITS } from "../../engine/kits/index.ts";
 import { mathKit } from "../../engine/kits/math.ts";
-import { STEPS_DOC } from "../../engine/kits/steps.ts";
+import { STEPS_DOC, truthSteps } from "../../engine/kits/steps.ts";
+import { spokenNotShown, type PhaseSpan } from "../lib/demo.ts";
 import { languagePrompt, numbered, reviewText, truthKinds } from "../../engine/language/author.ts";
 import { build, formatProblems, type BuildOptions, type BuildResult } from "../../engine/language/build.ts";
 import { expandHolds, holdMoments, type HoldTime } from "../../engine/language/holds.ts";
@@ -26,7 +27,8 @@ import { asked, charge, dir, prompt, stage, topic } from "../lib/project.ts";
 import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 
-const VERSION = 4; // bump when the way sections are written or checked changes, so cached sections are redone
+const VERSION = 5; // bump when the way sections are written or checked changes, so cached sections are redone
+const CHECKS = 2; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
@@ -36,6 +38,7 @@ const LOOK_FRAMES = 10; // each state settled, and changes while they happen
 const LOOK_SCALE = 0.6; // frames Spark sees: 648 by 1152, near full size
 const PARALLEL = 6;
 const MAX_PROBLEMS = 25;
+const JOIN_ROUNDS = 2; // repairs of the parts a joined scene that does not build names
 
 export type Range = { id: string; firstWord: number; lastWord: number };
 // A thing one section hands to the next: what it is, the ids of its pieces (so they stay the same things on screen rather
@@ -152,9 +155,14 @@ const rename = (text: string, from: string, to: string) => text.replace(new RegE
 // Joins sections into one document: the first background, every program once (a name two sections define differently
 // is renamed in the later one), then every section's states in order.
 export function joinSections(sections: { id: string; firstWord: number; source: string }[]): string {
+  return joinWithSpans(sections).text;
+}
+
+// The joined document with the lines each section's states fill in it, so a problem in the whole goes back to its part.
+export function joinWithSpans(sections: { id: string; firstWord: number; source: string }[]): { text: string; spans: { id: string; from: number; to: number }[] } {
   let bg: string | undefined;
   const programs = new Map<string, string>();
-  const bodies: string[] = [];
+  const bodies: { id: string; body: string }[] = [];
   for (const s of [...sections].sort((a, b) => a.firstWord - b.firstWord)) {
     const p = pieces(s.source);
     bg ??= p.bg;
@@ -170,9 +178,16 @@ export function joinSections(sections: { id: string; firstWord: number; source: 
       programs.set(name, prog.text.replace(/^program\s+[A-Za-z][\w-]*/, `program ${name}`));
       body = rename(body, prog.name, name);
     }
-    bodies.push(body);
+    bodies.push({ id: s.id, body });
   }
-  return [...(bg ? [`bg ${bg}`] : []), ...programs.values(), ...bodies].join("\n\n") + "\n";
+  const head = [...(bg ? [`bg ${bg}`] : []), ...programs.values()];
+  let line = head.length ? head.join("\n\n").split("\n").length + 2 : 1;
+  const spans = bodies.map(({ id, body }) => {
+    const span = { id, from: line, to: line + body.split("\n").length - 1 };
+    line = span.to + 2;
+    return span;
+  });
+  return { text: [...head, ...bodies.map((b) => b.body)].join("\n\n") + "\n", spans };
 }
 
 // Cuts a whole-video draft (global word numbers) into one draft per section, by the word each state starts on. Each
@@ -477,7 +492,7 @@ async function check(job: Job, written: string): Promise<Checked> {
   // computed steps played by the thing that computes them. Both go back for repair; a part that still misses a
   // demonstration is reported rather than failed, as a hand-off is.
   const direction = directed(source, job.p, job.range, kinds);
-  return { result, problems: [...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x)), ...direction.withholds], warnings: [...carry, ...handoff, ...direction.demos], notes: [...shape.filter(leftOut), ...needs(written)] };
+  return { result, problems: [...built, ...shape.filter((x) => !leftOut(x) && !carry.includes(x)), ...direction.withholds, ...direction.truth], warnings: [...carry, ...handoff, ...direction.demos], notes: [...shape.filter(leftOut), ...needs(written)] };
 }
 
 // Lines a writer leaves when a hold is too short for what the direction asks of it: `# needs h2 6s: why`. They go to
@@ -498,9 +513,68 @@ export function withholdsIn(p: Project, range: Range): { event: DirectionEvent; 
   });
 }
 
+// The computed things the direction demonstrates, each one thing for the whole video with one id and one input. For a
+// range: the line that makes it, how many of its steps are done as the range begins, and exactly the steps it plays.
+// Parts are written at the same time, so this is how each knows where the demonstration stands.
+export type TruthPart = { id: string; kind: string; line: string; steps: string[]; total: number; done: number; plays: { from: number; to: number; pace: string; event: string }[] };
+const setting = (k: string, v: unknown) => `${k}=${typeof v === "string" ? (/\s/.test(v) ? JSON.stringify(v) : v) : JSON.stringify(v)}`;
+export function truthPlan(p: Project, range: Range): TruthPart[] {
+  const events = p.direction?.events ?? [];
+  const holdWord = new Map(events.flatMap((e) => (e.holds ?? []).map((h) => [h.id, h.afterWord] as const)));
+  const startOf = (ph: DemoPhase, e: DirectionEvent) => ("word" in ph.at ? ph.at.word : holdWord.get(ph.at.hold) ?? e.firstWord);
+  const things = new Map<string, TruthPart & { phases: { from: number; to: number; pace: string; event: string; word: number }[] }>();
+  for (const e of events) {
+    const t = e.demo?.truth;
+    if (!t) continue;
+    const key = `${t.kind} ${JSON.stringify(t.data)}`;
+    if (!things.has(key)) {
+      const id = `demo${things.size + 1}`;
+      things.set(key, { id, kind: t.kind, line: `${t.kind} ${id} ${Object.entries(t.data).map(([k, v]) => setting(k, v)).join(" ")}`, steps: t.steps, total: t.steps.length, done: 0, plays: [], phases: [] });
+    }
+    for (const ph of e.demo!.phases) if (ph.steps) things.get(key)!.phases.push({ from: ph.steps[0], to: ph.steps[1], pace: ph.pace, event: e.id, word: startOf(ph, e) });
+  }
+  return [...things.values()].map(({ phases, ...t }) => ({
+    ...t,
+    done: Math.max(0, ...phases.filter((ph) => ph.word < range.firstWord).map((ph) => ph.to)),
+    plays: phases.filter((ph) => ph.word >= range.firstWord && ph.word <= range.lastWord).map(({ word: _w, ...ph }) => ph),
+  }));
+}
+
+// Checks a part's computed things against the truth plan: the very same thing, standing where the parts before left it,
+// playing exactly its own steps. A demonstration split across parts written at once only joins when each part does.
+export function truthChecked(doc: ReturnType<typeof parse>["doc"], plan: TruthPart[]): string[] {
+  const out: string[] = [];
+  const items = new Map<string, Item>();
+  const index = (list: Item[]) => list.forEach((i) => (items.has(i.id) || items.set(i.id, i), index(i.children)));
+  doc.states.forEach((st) => index(st.items));
+  const OWN = new Set(["at", "into", "before", "after", "done", "w", "h", "role", "follow", "enter"]);
+  const input = (attrs: Record<string, string>) => Object.entries(attrs).filter(([k]) => !OWN.has(k)).map(([k, v]) => `${k}=${v}`).sort().join(" ");
+  for (const t of plan) {
+    const wanted = `${t.line}${t.done ? ` done=${t.done}` : ""}`;
+    const expected = input(Object.fromEntries(t.line.split(/\s+/).slice(2).map((x) => [x.slice(0, x.indexOf("=")), x.slice(x.indexOf("=") + 1).replace(/^"(.*)"$/, "$1")])));
+    const item = items.get(t.id);
+    const others = [...items.values()].filter((i) => i.kind === t.kind && i.id !== t.id && input(i.attrs) === expected);
+    for (const o of others) out.push(`line ${o.line}: ${o.id} is the computed thing the direction demonstrates, which is ${t.id} in every part of the video. Write it as \`${wanted}\`.`);
+    const plays = doc.states.flatMap((st) => st.commands.flatMap((c) => (c.do === "play" && c.behavior === "steps" && c.targets.includes(t.id) ? [{ line: c.line, from: Number(c.attrs.from ?? 1), to: Number(c.attrs.to ?? t.total) }] : [])));
+    const mine = t.plays.map((x) => `${x.from} to ${x.to} (${x.pace}, event ${x.event})`).join(", ");
+    if (!item) {
+      if (t.plays.length) out.push(`The direction plays steps ${mine} of ${t.id} in your part, but your part does not show it. Make it as \`${wanted}\` and play those steps with \`do steps ${t.id}\`.`);
+      continue;
+    }
+    if (input(item.attrs) !== expected) out.push(`line ${item.line}: ${t.id} must be the very thing the other parts show, made with exactly \`${wanted}\` (you may add a place, a size, a role); other settings would make a different computation.`);
+    if (Number(item.attrs.done ?? 0) !== t.done) out.push(`line ${item.line}: as your part begins, ${t.id} stands after step ${t.done}, which the parts before yours played. Write done=${t.done} on it${t.done ? "" : " or leave done= out"}, so it shows that state from your first frame.`);
+    const want = new Set(t.plays.flatMap((x) => Array.from({ length: x.to - x.from + 1 }, (_, k) => x.from + k)));
+    const got = new Set(plays.flatMap((x) => Array.from({ length: Math.max(0, x.to - x.from + 1) }, (_, k) => x.from + k)));
+    const extra = [...got].filter((k) => !want.has(k));
+    const missing = [...want].filter((k) => !got.has(k));
+    if (extra.length || missing.length) out.push(`${plays.length ? `line ${plays[0]!.line}: ` : ""}your part must play exactly ${t.plays.length ? `steps ${mine}` : `no steps of ${t.id} (the parts around yours play them)`} of ${t.id}, one \`do steps ${t.id} from= to=\` per phase.${extra.length ? ` It plays ${extra.join(", ")}, which another part plays.` : ""}${missing.length ? ` It leaves out ${missing.join(", ")}.` : ""}`);
+  }
+  return out;
+}
+
 // Checks a part against its direction, from its source alone.
-export function directed(source: string, p: Project, range: Range, kitKindList: string[] = kitKinds()): { withholds: string[]; demos: string[] } {
-  if (!p.direction?.events?.length) return { withholds: [], demos: [] };
+export function directed(source: string, p: Project, range: Range, kitKindList: string[] = kitKinds()): { withholds: string[]; demos: string[]; truth: string[] } {
+  if (!p.direction?.events?.length) return { withholds: [], demos: [], truth: [] };
   const { doc } = parse(source, kitKindList);
   const withholds = withholdsIn(p, range).flatMap((w) => doc.withholds.some((d) => d.until.word >= w.word) ? [] : [`The direction withholds ${w.what} until event ${w.until}, at word ${w.word}, and your part comes before it. Name the ids in your part that show it with \`withhold IDS until=@${w.word}\`, so the engine keeps them off screen until then; if nothing in your part shows it, write \`withhold none until=@${w.word}\`.`]);
   const truth = new Set(truthKinds(SCENE_KITS));
@@ -509,7 +583,7 @@ export function directed(source: string, p: Project, range: Range, kitKindList: 
   doc.states.forEach((s) => index(s.items));
   const played = doc.states.some((s) => s.commands.some((c) => c.do === "play" && c.behavior === "steps" && c.targets.some((t) => truth.has(kinds.get(t) ?? ""))));
   const demos = eventsIn(p, range).flatMap((e) => (e.demo?.phases.some((ph) => ph.steps) && !played ? [`The direction demonstrates ${e.demo.what} in event ${e.id} as phases of computed steps, but your part plays no steps of a truth thing. Show it with the kit that computes it (${[...truth].map((k) => `\`${k}\``).join(", ")}) and one \`do steps\` per phase, so every step and every label is right; draw it by hand only if no kit computes what the words describe.`] : []));
-  return { withholds, demos };
+  return { withholds, demos, truth: truthChecked(doc, truthPlan(p, range)) };
 }
 
 // What code can see about a built part beyond errors: computed steps to bind, and craft notes the writer weighs.
@@ -931,18 +1005,145 @@ export function directionText(p: Project, range: Range, fps = FPS): string {
     return out.join("\n");
   };
   const held = withholdsIn(p, range).map((w) => `- ${w.what} (set in event ${w.event.id}), until event ${w.until} at ${quote(w.word)}: write \`withhold IDS until=@${w.word}\` with the ids that show it, or \`withhold none until=@${w.word}\`.`);
-  return `\nHow your part is directed. The direction walked the video as its viewer and wrote what each moment is for; your picture carries it out:\n${d.goal ? `The video is for: ${d.goal}\n` : ""}\n${events.map(block).join("\n\n")}${held.length ? `\n\nWithheld while your part plays, so nothing of it may be seen before its moment:\n${held.join("\n")}` : ""}\n`;
+  const truth = truthPlan(p, range).filter((t) => t.plays.length).map((t) => `- \`${t.line}${t.done ? ` done=${t.done}` : ""}\`: the same computed thing, with the same id and settings, in every part of the video. ${t.done ? `The parts before yours played steps 1 to ${t.done}, so as your part begins it stands after step ${t.done} (done=${t.done} shows that from your first frame). ` : ""}Your part plays exactly steps ${t.plays.map((x) => `${x.from} to ${x.to} (${x.pace}, event ${x.event})`).join(", ")}, one \`do steps ${t.id} from= to=\` per phase, and no others: the parts after yours play the rest. Its steps, numbered:\n${t.steps.map((x, i) => `    ${i + 1} ${x}`).filter((_, i) => t.plays.some((pl) => i + 1 >= pl.from - 1 && i + 1 <= pl.to)).join("\n")}`);
+  return `\nHow your part is directed. The direction walked the video as its viewer and wrote what each moment is for; your picture carries it out:\n${d.goal ? `The video is for: ${d.goal}\n` : ""}\n${events.map(block).join("\n\n")}${held.length ? `\n\nWithheld while your part plays, so nothing of it may be seen before its moment:\n${held.join("\n")}` : ""}${truth.length ? `\n\nThe computed demonstration in your part:\n${truth.join("\n")}` : ""}\n`;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Demonstrations that fit their words. Each phase plays computed steps under a stretch of narration; where those steps
+// are not the ones the words are about, the plan's demonstration is repaired by Spark before any part is written, since
+// every part's step numbers come from it.
+
+const DEMO_ROUNDS = 3;
+type Truth = NonNullable<NonNullable<DirectionEvent["demo"]>["truth"]>;
+
+// Each computed thing the direction demonstrates, with the word span of every phase that plays its steps.
+export function demoSpans(p: Project): { truth: Truth; events: DirectionEvent[]; spans: PhaseSpan[] }[] {
+  const events = p.direction?.events ?? [];
+  const holdWord = new Map(events.flatMap((e) => (e.holds ?? []).map((h) => [h.id, h.afterWord] as const)));
+  const groups = new Map<string, { truth: Truth; events: DirectionEvent[]; spans: PhaseSpan[] }>();
+  for (const e of events) {
+    const t = e.demo?.truth;
+    if (!t) continue;
+    const key = `${t.kind} ${JSON.stringify(t.data)}`;
+    const g = groups.get(key) ?? groups.set(key, { truth: t, events: [], spans: [] }).get(key)!;
+    g.events.push(e);
+    const start = (m: DemoPhase["at"]) => ("word" in m ? m.word : (holdWord.get(m.hold) ?? e.firstWord) + 1);
+    e.demo!.phases.forEach((ph, index, all) => {
+      if (!ph.steps) return;
+      const first = Math.max(e.firstWord, start(ph.at));
+      const last = ph.until ? ("word" in ph.until ? ph.until.word : holdWord.get(ph.until.hold) ?? e.lastWord) : all[index + 1] ? start(all[index + 1]!.at) - 1 : e.lastWord;
+      g.spans.push({ event: e.id, index, from: ph.steps[0], to: ph.steps[1], first, last: Math.max(first, Math.min(e.lastWord, last)) });
+    });
+  }
+  return [...groups.values()];
+}
+
+export const demoFit = (p: Project): string[] => demoSpans(p).flatMap((g) => spokenNotShown(g.spans, p.narration!.words.map((w) => w.text), g.truth.data, g.truth.steps));
+
+type RawDemoPhase = { event: string; from: number; to: number; pace: DemoPhase["pace"]; atWord: number; atHold: string; untilWord: number; untilHold: string; why: string };
+const demoSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["data", "phases"],
+  properties: {
+    data: { type: "string" },
+    phases: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["event", "from", "to", "pace", "atWord", "atHold", "untilWord", "untilHold", "why"],
+        properties: { event: { type: "string" }, from: { type: "integer" }, to: { type: "integer" }, pace: { type: "string", enum: ["slow", "normal", "fast"] }, atWord: { type: "integer" }, atHold: { type: "string" }, untilWord: { type: "integer" }, untilHold: { type: "string" }, why: { type: "string" } },
+      },
+    },
+  },
+} as const;
+
+// Repairs every demonstration whose phases do not show their words, in place on p.direction. A demonstration that
+// still does not fit after the rounds is reported loudly; the parts are then written to the plan as it stands.
+async function fitDemos(p: Project): Promise<number> {
+  const words = p.narration!.words.map((w) => w.text);
+  const ctx = sceneContext(p);
+  let usd = 0;
+  for (const g of demoSpans(p)) {
+    let problems = spokenNotShown(g.spans, words, g.truth.data, g.truth.steps);
+    if (!problems.length) continue;
+    const kind = g.truth.kind;
+    const guide = SCENE_KITS.find((k) => k.kinds?.[kind])?.docs?.[kind] ?? kind;
+    const holds = new Map(g.events.flatMap((e) => (e.holds ?? []).map((h) => [h.id, h] as const)));
+    const eventText = g.events.map((e) => `Event ${e.id} (words ${e.firstWord} to ${e.lastWord}): ${e.job}${e.holds?.length ? `; holds ${e.holds.map((h) => `${h.id} after word ${h.afterWord}`).join(", ")}` : ""}\n${words.slice(e.firstWord, e.lastWord + 1).map((w, k) => `${e.firstWord + k} ${w}`).join(" ")}`).join("\n\n");
+    let data = g.truth.data;
+    let steps = g.truth.steps;
+    let raw: RawDemoPhase[] = g.events.flatMap((e) => e.demo!.phases.map((ph) => ({ event: e.id, from: ph.steps?.[0] ?? 0, to: ph.steps?.[1] ?? 0, pace: ph.pace, atWord: "word" in ph.at ? ph.at.word : -1, atHold: "hold" in ph.at ? ph.at.hold : "", untilWord: ph.until && "word" in ph.until ? ph.until.word : -1, untilHold: ph.until && "hold" in ph.until ? ph.until.hold : "", why: ph.why })));
+    let fitted: { data: Record<string, unknown>; steps: string[]; phases: RawDemoPhase[] } | undefined;
+    for (let round = 1; round <= DEMO_ROUNDS && !fitted; round++) {
+      const user = `Topic: ${topic(p)}\n\nThe computed thing: ${kind}. Its guide line: ${guide}\n\nThe events that demonstrate it, with their words numbered:\n${eventText}\n\nIts settings now: ${JSON.stringify(data)}\nIts steps with these settings:\n${steps.map((x, i) => `${i + 1} ${x}`).join("\n")}\n\nThe phases now:\n${JSON.stringify(raw)}\n\nWhat does not fit:\n${problems.map((x) => `- ${x}`).join("\n")}`;
+      const r = await json<{ data: string; phases: RawDemoPhase[] }>({ system: prompt("scene-demo"), user, schema: demoSchema, schemaName: "demo", effort: "medium" });
+      usd += r.usd;
+      const found: string[] = [];
+      let next: Record<string, unknown> = data;
+      try {
+        next = JSON.parse(r.value.data);
+        steps = truthSteps(kind, "demo", next, ctx);
+        data = next;
+      } catch (e) {
+        found.push(`the settings ${r.value.data} are refused: ${(e as Error).message}`);
+      }
+      raw = r.value.phases;
+      let last = 0;
+      for (const ph of [...raw].sort((a, b) => (a.atWord >= 0 ? a.atWord : holds.get(a.atHold)?.afterWord ?? 0) - (b.atWord >= 0 ? b.atWord : holds.get(b.atHold)?.afterWord ?? 0))) {
+        const e = g.events.find((x) => x.id === ph.event);
+        if (!e) found.push(`phase names event ${ph.event}, which is not one of ${g.events.map((x) => x.id).join(", ")}`);
+        if (ph.from < 1 || ph.to > steps.length || ph.from > ph.to) found.push(`event ${ph.event}: steps ${ph.from} to ${ph.to} are not steps 1 to ${steps.length}`);
+        if (ph.from <= last) found.push(`event ${ph.event}: steps ${ph.from} to ${ph.to} start before step ${last + 1}, but each step plays once, in order`);
+        last = Math.max(last, ph.to);
+        if (ph.atWord < 0 && !holds.has(ph.atHold)) found.push(`event ${ph.event}: a phase starts at no word and no hold of its demonstration`);
+        if (e && ph.atWord >= 0 && (ph.atWord < e.firstWord || ph.atWord > e.lastWord)) found.push(`event ${ph.event}: a phase starts at word ${ph.atWord}, outside the event's words ${e.firstWord} to ${e.lastWord}`);
+      }
+      if (!found.length) {
+        const trial: Project = { ...p, direction: { ...p.direction!, events: p.direction!.events.map((e) => (g.events.some((x) => x.id === e.id) ? { ...e, demo: { ...e.demo!, truth: { kind, data, steps }, phases: raw.filter((x) => x.event === e.id).map(toPhase) } } : e)) } };
+        found.push(...demoFit(trial).filter((x) => g.events.some((e) => x.startsWith(`event ${e.id},`))));
+      }
+      console.log(`  demonstration of ${kind}, round ${round}: ${found.length ? `${found.length} problems` : "fits its words"}`);
+      for (const x of found.slice(0, 4)) console.log(`    ${x.slice(0, 200)}`);
+      if (!found.length) fitted = { data, steps, phases: raw };
+      problems = found;
+    }
+    if (!fitted) {
+      console.log(`  !!! the demonstration of ${kind} still does not fit its words after ${DEMO_ROUNDS} rounds; the parts are written to the plan as it stands`);
+      continue;
+    }
+    for (const e of p.direction!.events) {
+      if (!g.events.some((x) => x.id === e.id)) continue;
+      e.demo = { ...e.demo!, truth: { kind, data: fitted.data, steps: fitted.steps }, phases: fitted.phases.filter((x) => x.event === e.id).map(toPhase) };
+    }
+    console.log(`  demonstration of ${kind} now: ${JSON.stringify(fitted.data)}; ${fitted.phases.map((x) => `${x.event} ${x.from}-${x.to} ${x.pace}`).join(", ")}`);
+  }
+  if (usd) charge(p, "scene", usd, "fitting demonstrations to their words");
+  return usd;
+}
+
+const toPhase = (x: RawDemoPhase): DemoPhase => ({
+  steps: [x.from, x.to],
+  pace: x.pace,
+  at: x.atWord >= 0 ? { word: x.atWord } : { hold: x.atHold },
+  ...(x.untilWord >= 0 ? { until: { word: x.untilWord } } : x.untilHold ? { until: { hold: x.untilHold } } : {}),
+  why: x.why,
+});
 
 // The direction in short, for the first pass that plans what carries between parts.
 function directionSummary(p: Project, ranges: Range[]): string {
   if (!p.direction?.events?.length) return "";
   const lines = ranges.map((r, i) => `Part ${i + 1}: ${eventsIn(p, r).map((e) => `${e.id} (words ${e.firstWord} to ${e.lastWord}) ${e.job}; eye on ${e.look}${e.demo ? `; demonstrates ${e.demo.what} in ${e.demo.phases.length} phases` : ""}${e.withhold ? `; withholds ${e.withhold.what} until ${e.withhold.until}` : ""}`).join(" | ")}`);
-  return `How the video is directed, event by event:\n${lines.join("\n")}\n\n`;
+  const things = truthPlan(p, ranges[0] ?? { id: "", firstWord: 0, lastWord: -1 }).map((t) => `- \`${t.line}\` is one computed thing for the whole video, with the id ${t.id} in every part; carry it with that id where a part hands it on.`);
+  return `How the video is directed, event by event:\n${lines.join("\n")}${things.length ? `\n${things.join("\n")}` : ""}\n\n`;
 }
 
 export async function scene(p: Project, force = false) {
   const words = p.narration!.words;
+  // Every part's step numbers come from the plan's demonstrations, so they must show their words before any is written.
+  if (demoFit(p).length) await fitDemos(p);
   const ranges = sectionsOf(p);
   // Where the director made shots with pictures, each section starts from its part of them.
   let draft: { source: string; assets: Record<string, string> } | undefined;
@@ -959,9 +1160,9 @@ export async function scene(p: Project, force = false) {
     p.plan?.intent ? `Why the viewer wants this: ${p.plan.intent}` : "",
     asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])]),
   ].filter(Boolean).join("\n\n") + "\n\n";
-  const prompts = ["scene", "scene-cast", "scene-look", "engine-language", "engine-repair"].map(prompt);
+  const prompts = ["scene", "scene-cast", "scene-look", "scene-demo", "engine-language", "engine-repair"].map(prompt);
   const library = loadLibrary().map((x) => x.name);
-  const inputs = [VERSION, words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
+  const inputs = [VERSION, CHECKS, words, p.script?.beats, p.plan, p.input.style, header, pics, draft?.source ?? "", prompts, kitKinds(), library, p.direction ?? null, p.narration?.holds ?? []];
   const estimate = 0.03 + ranges.length * 0.12;
   await stage(p, "scene", inputs, estimate, async () => {
     const root = join(dir(p), "scene");
@@ -990,14 +1191,13 @@ export async function scene(p: Project, force = false) {
 
       const sections: SceneSection[] = new Array(ranges.length);
       const notes: string[][] = ranges.map(() => []);
+      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)), opts, folder: join(root, range.id), log: (l) => console.log(l) }));
+      const keys = jobs.map((job, i) => hash(VERSION, job.request, drafts[i], job.carry, job.handoff, system));
       let nextJob = 0;
       const worker = async () => {
         for (let i = nextJob++; i < ranges.length; i = nextJob++) {
           const range = ranges[i]!;
-          const request = requestFor(p, ranges, i, cast, header, (describe(pics) + drawings(p)));
-          const carry = i ? cast[i - 1]!.handoff : [];
-          const handoff = cast[i]!.handoff;
-          const key = hash(VERSION, request, drafts[i], carry, handoff, system);
+          const key = keys[i]!;
           const file = join(root, range.id, "section.json");
           const cached = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : undefined;
           if (!force && cached?.key === key && cached.section.ok) {
@@ -1006,7 +1206,7 @@ export async function scene(p: Project, force = false) {
             continue;
           }
           const folder = join(root, range.id);
-          const job: Job = { p, range, next: ranges[i + 1], carry, handoff, system, request, opts, folder, log: (l) => console.log(l) };
+          const job = jobs[i]!;
           const w = await writeSection(job, drafts[i]!);
           spent.usd += w.usd;
           const ok = !w.problems.length && !!w.result.scene;
@@ -1023,9 +1223,37 @@ export async function scene(p: Project, force = false) {
       await Promise.all(Array.from({ length: Math.min(PARALLEL, ranges.length) }, worker));
 
       p.scene = { sections, assets };
-      const joined = joinScene(p.scene);
-      writeFileSync(join(root, "scene.txt"), joined);
-      const whole = await build(joined, opts);
+      // The parts join into one scene. Where the whole does not build, the problem goes back to the part whose lines it
+      // names, with the error, and that part is repaired and joined again; there is no lesser scene to stand in.
+      let joined = joinWithSpans(sections);
+      let whole = await build(joined.text, opts);
+      for (let round = 1; round <= JOIN_ROUNDS && whole.problems.length; round++) {
+        const lines = joined.text.split("\n");
+        const byPart = new Map<number, string[]>();
+        for (const x of whole.problems) {
+          const k = joined.spans.findIndex((sp) => x.line >= sp.from && x.line <= sp.to);
+          if (k < 0) continue;
+          const i = sections.findIndex((sec) => sec.id === joined.spans[k]!.id);
+          (byPart.get(i) ?? byPart.set(i, []).get(i)!).push(`${x.message} (the line in your part reads: ${lines[x.line - 1]?.trim().slice(0, 140)})`);
+        }
+        console.log(`  !!! the joined scene does not build (round ${round}): ${whole.problems.length} problems, in ${[...byPart.keys()].map((i) => sections[i]!.id).join(", ") || "no one part"}`);
+        for (const x of whole.problems.slice(0, 4)) console.log(`      ${formatProblems([x]).slice(0, 220)}`);
+        if (!byPart.size) break;
+        await Promise.all([...byPart].map(async ([i, list]) => {
+          const job = jobs[i]!;
+          const ask = `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(sections[i]!.source)}\n\nYour part builds on its own, but the whole video, joined from every part, does not, because of these lines of your part:\n${list.slice(0, MAX_PROBLEMS).join("\n")}\n\n${prompt("engine-repair")}`;
+          const w = await compose(job, undefined, ask, false);
+          spent.usd += w.usd;
+          job.log(`  ${job.range.id}: repaired for the joined scene: ${w.problems.length ? `still ${w.problems.length} problems` : "builds"}, $${w.usd.toFixed(3)}`);
+          if (w.problems.length || !w.result.scene) return;
+          sections[i] = { ...sections[i]!, source: plainMoments(w.source, opts), rounds: sections[i]!.rounds + w.rounds, usd: +(sections[i]!.usd + w.usd).toFixed(4) };
+          writeFileSync(join(job.folder, "scene.txt"), w.source);
+          writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notes[i] }, null, 1));
+        }));
+        joined = joinWithSpans(sections);
+        whole = await build(joined.text, opts);
+      }
+      writeFileSync(join(root, "scene.txt"), joined.text);
       const failed = sections.filter((s) => !s.ok);
       charge(p, "scene", spent.usd, `${sections.length} sections, ${failed.length} failed, ${whole.stats.states} states`);
       spent.usd = 0;

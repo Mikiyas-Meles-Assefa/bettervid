@@ -8,7 +8,7 @@ import { evaluate, sample } from "../core/evaluate.ts";
 import type { Resolved } from "../core/types.ts";
 import { graphKit } from "../kits/graph.ts";
 import { stepSchedule, storyOf, truthSteps } from "../kits/steps.ts";
-import { stepAreas, textSize, wordsAfter, type Area } from "./follow.ts";
+import { partAt, stepAreas, textSize, wordsAfter, type Area } from "./follow.ts";
 import { estimate, graphPositions, layout, TEXT_SIZE, MIN_CONTRAST, readableOn, rect, roundedBox, safeArea, type Box, type Env, type Laid, type Measure, type Part } from "./layout.ts";
 import { bestOn, colorOf, isRole, readability, roleLook, styleHas } from "../core/roles.ts";
 import { contrast } from "../style/color.ts";
@@ -175,8 +175,16 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
 
   // Kit things by id, so a replay can take the very settings of the thing it repeats.
   const kitItems = new Map<string, Item>();
+  // A kit thing is made once, from its first line; a later line with the same id and a different input would silently
+  // show the first input, so it is refused. Place, size, role and `done` may differ.
+  const OWN = new Set(["at", "into", "before", "after", "done", "w", "h", "role", "follow", "enter"]);
+  const inputOf = (i: Item) => JSON.stringify(Object.entries(i.attrs).filter(([k]) => !OWN.has(k)).sort(([a], [b]) => a.localeCompare(b)));
   const findKits = (list: Item[]) => list.forEach((i) => {
-    if (kinds[i.kind] && i.kind !== "graph" && !kitItems.has(i.id)) kitItems.set(i.id, i);
+    if (kinds[i.kind] && i.kind !== "graph") {
+      const first = kitItems.get(i.id);
+      if (!first) kitItems.set(i.id, i);
+      else if (first.kind !== i.kind || inputOf(first) !== inputOf(i)) report(i.line, `${i.id} is made at line ${first.line} with ${first.kind} ${inputOf(first)}, and this line makes it again with ${i.kind} ${inputOf(i)}. One id is one thing with one input: write the very same settings (only its place, size, role and done= may change), or give a different thing a new id.`);
+    }
     findKits(i.children);
   });
   doc.states.forEach((s) => findKits(s.items));
@@ -497,12 +505,13 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   // What was on screen in the state before, for leaving things that would cross entering ones, and the words and marks
   // of every state, for the camera's drift.
   let before = new Map<string, Box>();
+  const saidBefore = new Map<string, string>(); // what each line of words said in the state before
   // Where each tag and mark label sat in the state before, and whether it was a callout, so it can stay there.
   const labelsBefore = new Map<string, { box: Box; away: boolean; near?: Box }>();
   const seenAt: { at: number; list: Seen[] }[] = [];
   const heldAt: NonNullable<Scene["held"]> = [];
   // For the camera that follows computed work: every `do steps` play, and the words and tags on screen in each state.
-  const follows: { at: number; target: string; args: Record<string, Value>; still: boolean; root: Props; line: number }[] = [];
+  const follows: { at: number; target: string; args: Record<string, Value>; still: boolean; root: Props; line: number; tags: { c: Command; box?: Box }[] }[] = [];
   const stateWords: { at: number; words: Seen[]; tags: Set<string> }[] = [];
 
   for (let index = 0; index < doc.states.length; index++) {
@@ -1208,7 +1217,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     const keyWords = [...laidWords, ...slotWords, ...drawnWords].filter((w) => Number(parts.get(w.id)?.props.opacity ?? 1) > 0.05);
     // Words of a thing that arrives in this state, none of which were on screen before.
     const stayed = new Set(laidWords.filter((w) => before.has(w.id)).map((w) => w.item));
-    const newWords = new Set(laidWords.filter((w) => !stayed.has(w.item)).map((w) => w.id));
+    // Words that change what they say are new too: they are there to be read.
+    const newWords = new Set([...laidWords.filter((w) => !stayed.has(w.item) || saidBefore.get(w.id) !== w.text), ...drawnWords.filter((w) => !saidBefore.has(w.id))].map((w) => w.id));
     const cutBy = (v: View, list: Seen[]) => cutFrom(v, list, newWords);
     let cut = cutBy(view, keyWords);
     // Words tagged at a point slide along, as far as they must, to sit whole inside the view.
@@ -1253,7 +1263,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
         const both = union([holding, ...cut.map((w) => w.box)]);
         for (let k = 0.95; k >= 0.3; k -= 0.05) {
           const zoom = Math.max(1, v.zoom * k);
-          const tries = [clampView({ ...v, zoom }), clampView({ panX: both.x, panY: both.y - (safe.y - ctx.height / 2) / zoom, zoom })];
+          // At no zoom, the whole frame as laid out is a view too.
+          const tries = [clampView({ ...v, zoom }), clampView({ panX: both.x, panY: both.y - (safe.y - ctx.height / 2) / zoom, zoom }), ...(zoom === 1 ? [REST] : [])];
           const hit = tries.find((x) => !cutBy(x, keyWords).length);
           if (hit) {
             v = hit;
@@ -1271,8 +1282,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     }
     // What is still cut is reported with exactly what to change: the camera line and a zoom that holds the words, or how
     // far they run over and how many characters fit.
-    // Words left wholly out of view after that are not reported: a camera may frame something else on purpose.
-    cut = cutFrom(view, cut);
+    // Words that stayed from before and are wholly out of view are not reported: a camera may frame something else on
+    // purpose. Words this state puts on screen or changes are there to be read, so they must be in view.
+    cut = cutFrom(view, cut, newWords);
     for (const w of cut) {
       const f = frameIn(view);
       const a = allowedIn(view);
@@ -1575,7 +1587,9 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
         // Back on the board: it moves while unseen, then appears.
         for (const [k, v] of Object.entries(props)) if (!same(was.props[k], v) && k !== "opacity") (preset[id] ??= {})[k] = v;
         for (const [k, v] of Object.entries(was.props)) if (props[k] === undefined && typeof v === "number" && k !== "opacity" && k !== "drawn" && AT_REST[k] !== undefined && v !== AT_REST[k]) (preset[id] ??= {})[k] = AT_REST[k]!;
-        if (!part.parent) (comeBack[id] ??= {}).opacity = typeof props.opacity === "number" ? props.opacity : 1;
+        // A part that left on its own (a text's second line, gone while its text was one line) comes back on its own too;
+        // one that left with its parent comes back with it.
+        if (!part.parent || !returning.has(part.parent)) (comeBack[id] ??= {}).opacity = typeof props.opacity === "number" ? props.opacity : 1;
         returning.add(id);
         was.props = props;
         was.alive = true;
@@ -1632,6 +1646,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     const delay = crossing ? Math.max(1, Math.round(leave / 3)) : 0;
     const enterAt = at + delay;
     before = now;
+    saidBefore.clear();
+    for (const w of [...laidWords, ...drawnWords]) if (w.text !== undefined) saidBefore.set(w.id, w.text);
     labelsBefore.clear();
     for (const [k, v] of labelsNow) labelsBefore.set(k, v);
 
@@ -1672,13 +1688,36 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     if (emit.length) acts.emit = emit;
     if (acts.play || acts.emit) steps.push(acts);
     // A scene that moves the camera itself, or keeps it moved, keeps it: the camera only follows from rest.
-    for (const p of play) if (p.behavior === "steps" && typeof parts.get(p.target)?.props.truth === "string") follows.push({ at: enterAt, target: p.target, args: p.args ?? {}, still: !!cam || view !== REST, root: parts.get(p.target)!.props, line: s.line });
+    for (const p of play) if (p.behavior === "steps" && typeof parts.get(p.target)?.props.truth === "string") follows.push({ at: enterAt, target: p.target, args: p.args ?? {}, still: !!cam || view !== REST, root: parts.get(p.target)!.props, line: s.line, tags: attached.filter((c) => c.do === "tag" && c.target.startsWith(`${p.target}.`)).map((c) => ({ c, box: wordsById.get(attachedId(c))?.box })) });
     // Tags, and words that arrive in this state (a question put during a hold), must stay in view whatever it follows.
     stateWords.push({ at, words: keyWords, tags: new Set([...drawnWords.map((w) => w.id), ...newWords]) });
     if (laterPlay.length) steps.push({ at: enterAt, play: laterPlay });
     laterPlay = [];
   }
 
+  // A truth thing plays each step once, in order, across the whole scene: a play that starts at a step already played
+  // is refused on its own line, so a scene joined from parts says which part to change.
+  const playedTo = new Map<string, number>();
+  for (const st of doc.states) {
+    for (const c of st.commands) {
+      if (c.do !== "play" || c.behavior !== "steps") continue;
+      for (const t of c.targets) {
+        const root = expansions.get(t)?.nodes.find((x) => x.id === t);
+        if (typeof root?.props?.truth !== "string" || typeof root.props.spec !== "string") continue;
+        let n: number;
+        try {
+          n = storyOf(root.props.truth, t, root.props.spec, kitCtx).steps.length;
+        } catch {
+          continue;
+        }
+        const done = playedTo.get(t) ?? Number(root.props.played ?? 0);
+        const from = number(c.attrs.from ?? "") ?? 1;
+        const to = number(c.attrs.to ?? "") ?? n;
+        if (from <= done) report(c.line, `${t} has already played steps 1 to ${done} before this line${playedTo.has(t) ? "" : ` (it is made with done=${done})`}, and a step never plays twice, so this play must start at from=${done + 1}${done < n ? "" : ", but no steps are left"}. Play only the steps this stretch is about.`);
+        playedTo.set(t, Math.max(done, to));
+      }
+    }
+  }
   if (problems.length) return { problems: dedupe(problems), stats };
 
   // The camera follows computed work that would read small. A demonstration whose values come out smaller than about a
@@ -1702,9 +1741,11 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   };
   // The closest view, up to `most`, that shows the region whole, with the tags and the words just arrived, and leaves
   // every other line of words whole or wholly out of view: centered on them, or moved just enough to clear a cut line.
-  const viewOn = (area: Box, most: number, from: number, to: number, own: Seen[] = []): View | undefined => {
+  // Every line of words beside the followed thing (a heading, a caption, a question) is what the viewer reads as its
+  // steps play, so the view keeps them all in, and goes only as close as they allow.
+  const viewOn = (area: Box, most: number, from: number, to: number, own: Seen[] = [], target = ""): View | undefined => {
     const seen = stateWords.filter((w, i) => w.at < to && (stateWords[i + 1]?.at ?? Infinity) > from);
-    const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => w.tags.has(x.id)).map((x) => x.box))]);
+    const r = union([area, ...seen.flatMap((w) => w.words.filter((x) => x.slot !== target && !x.id.startsWith(`${target}.`)).map((x) => x.box))]);
     // The kit's own words where its steps put them, too: a value half out of view is as unreadable as a cut line.
     const cuts = (v: View) => [...seen.flatMap((w) => cutFrom(v, w.words, w.tags)), ...cutFrom(v, own)];
     for (let z = Math.min(most, 0.94 * Math.min(safe.w / Math.max(1, r.w), safe.h / Math.max(1, r.h))); z >= 1.12; z *= 0.93) {
@@ -1718,6 +1759,49 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       if (v) return v;
     }
   };
+  // Words tagged on a part of a computed thing travel with that part as its steps play. Where that carries them onto the
+  // thing's values, both stop reading, so it is refused with the step it happens at.
+  for (const f of follows) {
+    const made = expansions.get(f.target);
+    if (!made || typeof f.root.truth !== "string" || typeof f.root.spec !== "string") continue;
+    let board: ReturnType<typeof storyOf>;
+    try {
+      board = storyOf(f.root.truth, f.target, f.root.spec, kitCtx);
+    } catch {
+      continue;
+    }
+    const plan = stepSchedule(f.args, f.at, board.steps.length, ctx);
+    const k = Number(f.root.scaleX ?? 1);
+    const inScene = (b: Area): Box => ({ x: Number(f.root.x ?? 0) + b.x * k, y: Number(f.root.y ?? 0) + b.y * k, w: b.w * k, h: b.h * k });
+    // Under a camera the scene set itself, the values its steps move must stay whole in view: a value the steps carry
+    // to the edge of a close view is cut there. (The camera that follows keeps them whole on its own.)
+    if (f.still) {
+      for (let j = 0; j < plan.times.length; j++) {
+        const step = plan.from + j;
+        const shot = shots.filter((x) => x.at <= plan.times[j]!).at(-1);
+        if (!shot || shot.view.zoom <= 1.0001) continue;
+        const values: Seen[] = wordsAfter(board, made.nodes, step).map((w) => ({ id: w.id, box: inScene(w.box), line: f.line, what: "text", text: w.text, laid: false }));
+        const cut = cutFrom(shot.view, values);
+        if (!cut.length) continue;
+        report(shot.line, `With the camera on line ${shot.line} (zoom ${shot.view.zoom.toFixed(2)}), step ${step} of ${f.target} (${board.steps[step - 1]!.say}) carries ${cut.map((w) => `"${w.text}"`).slice(0, 3).join(", ")} to the edge of the view, where ${cut.length > 1 ? "they are" : "it is"} cut. Frame what the steps move: a lower zoom, the whole of ${f.target}, or no camera line, so the camera follows the work itself.`);
+        break;
+      }
+    }
+    if (!f.tags.length) continue;
+    for (const { c, box } of f.tags) {
+      if (c.do !== "tag" || !box) continue;
+      const start = partAt(board, made.nodes, c.target, plan.from - 1);
+      for (let step = plan.from; step <= plan.to && start; step++) {
+        const now = partAt(board, made.nodes, c.target, step)!;
+        const moved = { ...box, x: box.x + (now.x - start.x) * k, y: box.y + (now.y - start.y) * k };
+        const under = wordsAfter(board, made.nodes, step).filter((w) => !w.id.startsWith(`${c.target}.`)).map((w) => ({ ...w, box: inScene(w.box) })).find((w) => hits(moved, w.box) > 0.2 * Math.min(moved.w * moved.h, w.box.w * w.box.h));
+        if (!under) continue;
+        report(c.line, `"${c.text}" is tagged on ${c.target}, which moves as ${f.target} plays, and at step ${step} (${board.steps[step - 1]!.say}) it carries the words onto the value "${under.text}", so neither reads. Tag something that stays clear of the values, put the words beside ${f.target} as a whole, or leave the moving part to speak for itself.`);
+        break;
+      }
+    }
+  }
+
   for (let i = 0; i < follows.length; i++) {
     const f = follows[i]!;
     const item = kitItems.get(f.target);
@@ -1756,7 +1840,7 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       const at = plan.times[g[0]!]!;
       const until = groups[n + 1] ? plan.times[groups[n + 1]![0]!]! : end;
       const own = [plan.from + g[0]! - 1, ...g.map((j) => plan.from + j)].flatMap((step) => wordsAfter(board, made.nodes, step)).map((w): Seen => ({ id: w.id, box: toScene(w.box), line: f.line, what: "text", text: w.text, laid: false, slot: f.target }));
-      const v = list.length ? viewOn(union(list), most, at, until, own) : undefined;
+      const v = list.length ? viewOn(union(list), most, at, until, own, f.target) : undefined;
       views.push({ at: Math.max(f.at, at - lead), view: v ?? REST, until });
     });
     if (!views.some((v) => v.view !== REST)) continue;
