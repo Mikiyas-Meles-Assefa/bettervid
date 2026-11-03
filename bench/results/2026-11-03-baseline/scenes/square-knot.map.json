@@ -1,0 +1,9 @@
+{
+  "promise": ["k1", "title", "sub"],
+  "events": [
+    {"id": "e1", "look": ["k1"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["k1", "tOver", "tUnder"], "lookNone": "", "withhold": [], "demo": ["k1"], "holds": [{"hold": "h1", "does": ["k1"], "answer": "", "ids": []}]},
+    {"id": "e3", "look": ["k1", "tOver2", "tUnder2"], "lookNone": "", "withhold": [], "demo": ["k1"], "holds": []},
+    {"id": "e4", "look": ["k1", "tGranny"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

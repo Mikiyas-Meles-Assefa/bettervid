@@ -1,0 +1,11 @@
+[
+{"sheet":1,"looking":"Big glowing yellow words 'Affect Effect' at the top, then a pink 'HERE'S THE TRICK.' appearing","waiting":"For the trick that tells the two words apart","confusing":"The first half second is an empty screen"},
+{"sheet":2,"looking":"The word 'Affect' sliding left and alone while 'Effect' and the pink line fade, then 'action' appearing next to it","waiting":"For what the word means and the rule for it","confusing":""},
+{"sheet":3,"looking":"'Affect' with 'action' beside it and a small arrow, labeled 'A FOR ACTION'","waiting":"For the matching rule for 'Effect'","confusing":""},
+{"sheet":4,"looking":"'Effect' then 'end result' beside it, with an 'E FOR END' label starting to show","waiting":"For the example the narrator promised","confusing":"The arrow between the words is tiny and hard to see"},
+{"sheet":5,"looking":"'Effect' and 'end result' held, then a new screen: 'Try it:' and a sentence 'The noise ___ my sleep'","waiting":"For the answer to what fills the blank","confusing":"The sentence changes to a quiz with no pause, and the words first look dim"},
+{"sheet":6,"looking":"The sentence with the blank line, plus a pink 'WHICH WORD FITS?' prompt","waiting":"For the answer, affected or effected","confusing":"The spoken 'blank' matches the gap. The long silent wait has no motion"},
+{"sheet":7,"looking":"The same sentence with the blank sitting still under 'Which word fits?'","waiting":"For the answer, since it stays blank a long time","confusing":"Nothing moves for about 1.5 seconds, so I wonder if it stalled"},
+{"sheet":8,"looking":"'affected' filling the blank in yellow, then 'THE ACTION' appearing under it","waiting":"For a wrap-up","confusing":""},
+{"sheet":9,"looking":"The finished sentence 'The noise affected my sleep' with 'THE ACTION' under it","waiting":"Nothing, it seems to be the end","confusing":"The clip stops without a closing line"}
+]

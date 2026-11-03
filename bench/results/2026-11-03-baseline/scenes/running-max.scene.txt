@@ -1,0 +1,16 @@
+@0
+text title "Finding the biggest number" role=title
+trace demo1 code=["let best = 0","for (const x of [3, 7, 2]) {","  if (x > best) best = x","}","console.log(best)"] w=900 h=1100
+@9 keep
+mark ring demo1.var.best
+@14 keep
+do steps demo1 from=1 to=4 pace=slow until=@28
+@28+10 keep
+text ask "Next is 7. What happens to best?" role=key
+@29 keep
+drop ask
+do steps demo1 from=5 to=10 pace=fast until=@42
+@43 keep
+do steps demo1 from=11 to=12 pace=normal until=@51
+@51 keep
+mark ring demo1.out.1

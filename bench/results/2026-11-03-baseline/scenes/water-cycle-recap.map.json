@@ -1,0 +1,11 @@
+{
+  "promise": ["head", "ev", "co", "pr", "cl", "link.ev.co", "link.co.pr", "link.pr.cl", "link.cl.ev"],
+  "events": [
+    {"id": "e1", "look": ["ev", "co", "pr", "cl"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["ev", "cap"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e3", "look": ["co", "cap"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e4", "look": ["pr", "cap"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e5", "look": ["cl", "cap"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e6", "look": ["ev", "co", "pr", "cl", "link.ev.co", "link.co.pr", "link.pr.cl", "link.cl.ev"], "lookNone": "", "withhold": [], "demo": [], "holds": [{"hold": "h1", "does": ["ev", "co", "pr", "cl"], "answer": "", "ids": []}]}
+  ]
+}

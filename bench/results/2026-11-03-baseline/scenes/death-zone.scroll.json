@@ -1,0 +1,17 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "A cream page with a mountain profile, '8,000 m' in big serif type, and a red line across it. The look is distinctive and the number pulls me in."},
+    {"sheet": 2, "watching": true, "noticed": "A climber dot creeps along the slope as 'every breath holds' is said. The motion keeps me watching."},
+    {"sheet": 3, "watching": true, "noticed": "'A third of the oxygen' appears in red under the mountain and the dot sits near the red line. The point is clear."},
+    {"sheet": 4, "watching": true, "noticed": "'Your body can't adapt' in bold red. It's a bit dramatic, but the stakes make me stay."},
+    {"sheet": 5, "watching": true, "noticed": "'It is slowly dying, hour by hour' in red, with 'adapt up here' underneath. Grim, and I want to know why."},
+    {"sheet": 6, "watching": false, "noticed": "The same frame, the dot has barely moved, and 'it is slowly dying, hour by hour' is repeated. Nothing new, so I swipe away here."},
+    {"sheet": 7, "watching": false, "noticed": "Not watching. I swiped away at sheet 6."},
+    {"sheet": 8, "watching": false, "noticed": "Not watching. I swiped away at sheet 6."},
+    {"sheet": 9, "watching": false, "noticed": "Not watching. I swiped away at sheet 6."},
+    {"sheet": 10, "watching": false, "noticed": "Not watching. I swiped away at sheet 6."},
+    {"sheet": 11, "watching": false, "noticed": "Not watching. I swiped away at sheet 6."}
+  ],
+  "swiped_at": 6,
+  "remembers": "Above 8,000 meters every breath holds about a third of the oxygen at sea level, and the body can't adapt, so it is slowly dying hour by hour. Climbers call it the death zone."
+}

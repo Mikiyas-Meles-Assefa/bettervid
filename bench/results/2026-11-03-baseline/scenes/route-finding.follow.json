@@ -1,0 +1,18 @@
+[
+{"sheet":1,"looking":"Title FASTEST WAY HOME TO WORK over a diagram of four circles joined by lines with numbers","waiting":"What the diagram means","confusing":""},
+{"sheet":2,"looking":"The diagram of HOME, CAFE, PARK, WORK with numbers on the lines","waiting":"What the numbers mean","confusing":"The numbers are not explained yet"},
+{"sheet":3,"looking":"Same static diagram","waiting":"The narration to explain the numbers","confusing":"Nothing is moving, so I have nothing to follow"},
+{"sheet":4,"looking":"Same static diagram, caption HERE ARE FOUR","waiting":"Explanation of the places and numbers","confusing":""},
+{"sheet":5,"looking":"Same diagram, caption about minutes between them","waiting":"Where this starts; the numbers are now minutes","confusing":"Still static; the line weights look like they could be distances"},
+{"sheet":6,"looking":"A yellow 0 above HOME, with a ring around it, and infinity signs above the other places","waiting":"What the infinity signs and the 0 mean","confusing":"Infinity next to every other place is not explained"},
+{"sheet":7,"looking":"HOME filled yellow and a yellow spark moving down the line to PARK, which gets a 2","waiting":"Next places getting their numbers","confusing":""},
+{"sheet":8,"looking":"A spark moving to CAFE, which changes from infinity to 4","waiting":"What happens with the numbers next","confusing":"I take it the numbers are minutes from home"},
+{"sheet":9,"looking":"PARK filling yellow, then CAFE and PARK held","waiting":"What 'settle' means for a place and what comes after","confusing":"Why PARK was chosen over CAFE is only implied by its smaller number"},
+{"sheet":10,"looking":"A spark going from PARK to CAFE, and CAFE changing from 4 to 3","waiting":"Whether the shorter number sticks","confusing":""},
+{"sheet":11,"looking":"The PARK to CAFE line turning yellow and a spark moving toward WORK, which gets a 10","waiting":"The rule being repeated for the rest","confusing":"The 10 appears quickly with little time to see where it came from"},
+{"sheet":12,"looking":"CAFE filling yellow and the spark traveling to WORK","waiting":"WORK's final number","confusing":""},
+{"sheet":13,"looking":"WORK dropping from 10 to 8 and filling yellow, then a route line showing up at the bottom","waiting":"The final route and total","confusing":"The route text at the bottom is cut off at both edges"},
+{"sheet":14,"looking":"Yellow route HOME to PARK to CAFE to WORK, with 8 MINUTES","waiting":"The end of the narration","confusing":"The route text is cut off at the right so the total shows as '8' only; the unused lines are very faint"},
+{"sheet":15,"looking":"The finished route and 8 MINUTES, unchanged","waiting":"Nothing","confusing":"Nothing is moving; the cut-off route text remains"},
+{"sheet":16,"looking":"Final frame, the same finished route","waiting":"Nothing","confusing":""}
+]

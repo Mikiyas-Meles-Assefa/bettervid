@@ -1,0 +1,15 @@
+[
+{"sheet":1,"looking":"Bold title 'A vaccine' appearing, then 'shows your immune system' below it","waiting":"What a vaccine shows the immune system","confusing":"The first moment is blank; the caption at the bottom repeats the title text"},
+{"sheet":2,"looking":"Yellow circle labeled 'harmless piece' appearing under the text","waiting":"A piece of what; how it connects to the immune system","confusing":""},
+{"sheet":3,"looking":"The yellow 'harmless piece' circle, then a sudden switch to rows of dots labeled B CELLS with one orange dot","waiting":"What the orange dot means and how it relates to the piece","confusing":"Hard cut: the title, text and circle vanish and dots appear; narration 'a germ' is shown while the circle says only 'harmless piece'"},
+{"sheet":4,"looking":"Grid of dark dots with a column of orange dots running through it","waiting":"What the orange ones do","confusing":"Orange column is mostly faint and the small caption is hard to read"},
+{"sheet":5,"looking":"Orange dots in the column glowing and swelling, with a MATCHING label","waiting":"What the matching dots do next","confusing":"Not clear what the orange dots are matching to (the piece is gone from view)"},
+{"sheet":6,"looking":"The grid fading to grey while orange dots stay bright","waiting":"The antibodies mentioned","confusing":"No visible antibodies; the orange dots above and below the column are unexplained"},
+{"sheet":7,"looking":"Grey grid with faint orange dots fading out in the column","waiting":"Which ones stay behind","confusing":"Orange dots near the center are fading away, which seems opposite to multiplying"},
+{"sheet":8,"looking":"A 'MEMORY CELL' label appears and the top orange dots turn dark navy","waiting":"What the memory cells do","confusing":"The dark dots are small and few; the orange dots below them disappear without explanation"},
+{"sheet":9,"looking":"Three dark navy dots labeled MEMORY CELL, nothing moving","waiting":"The point of the setup; narration is silent then 'So when the'","confusing":"Static for a couple of seconds"},
+{"sheet":10,"looking":"A big yellow 'real germ' circle pops in and the navy dots turn orange","waiting":"What the cells do against the germ","confusing":"The germ circle looks the same as the earlier 'harmless piece' with only the label changed"},
+{"sheet":11,"looking":"Dots going back to navy with the 'real germ' circle sitting below","waiting":"The strike; the dots do not react to the germ yet","confusing":"Dots flip back to navy as if waiting, with no link drawn to the germ"},
+{"sheet":12,"looking":"Memory dots turning orange and growing next to the germ circle, then a sudden cut to huge 'days, not weeks'","waiting":"What happens to the germ; why days versus weeks","confusing":"The germ is never attacked or shrunk; the cut to the big text comes before the strike shows"},
+{"sheet":13,"looking":"Big rust-coloured 'days, not weeks' holding still","waiting":"Nothing","confusing":"The days-versus-weeks comparison is only stated, not shown"}
+]

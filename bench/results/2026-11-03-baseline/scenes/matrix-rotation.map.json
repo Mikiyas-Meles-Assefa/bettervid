@@ -1,0 +1,9 @@
+{
+  "promise": ["t0", "demo1", "s1_plane_run"],
+  "events": [
+    {"id": "e1", "look": ["demo1", "s1_vb"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["demo1", "s1_vb"], "lookNone": "", "withhold": [], "demo": ["demo1"], "holds": []},
+    {"id": "e3", "look": ["demo1"], "lookNone": "", "withhold": [], "demo": ["demo1"], "holds": [{"hold": "h1", "does": ["demo1"], "answer": "", "ids": []}]},
+    {"id": "e4", "look": ["s1_plane_run"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

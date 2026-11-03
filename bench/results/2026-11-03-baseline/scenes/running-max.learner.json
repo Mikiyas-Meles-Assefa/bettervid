@@ -1,0 +1,7 @@
+[
+{"q":1,"answer":"Zero (best starts at 0)","from":"both"},
+{"q":2,"answer":"The list [3, 7, 2]","from":"both"},
+{"q":3,"answer":"When x is 2, it does not beat best (which is 7), so nothing changes and best stays 7","from":"both"},
+{"q":4,"answer":"Line 3: if (x > best) best = x","from":"picture"},
+{"q":5,"answer":"7","from":"both"}
+]

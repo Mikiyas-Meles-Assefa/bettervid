@@ -1,0 +1,24 @@
+withhold none until=@19
+
+@0
+text q "Same height, same moment" role=title
+row stage gap=160 align=center
+  circle bowl "bowling" w=300
+  circle tennis "tennis" w=170
+
+@16 keep
+text q "Which lands first?" role=title
+
+@19 keep move=171 ease=in
+text q "They land together" role=answer
+set bowl y=600
+set tennis y=600
+
+@22 keep
+text q "Gravity speeds every mass up alike" role=answer
+
+@34 keep
+text q "Only air resistance can split them" role=title
+
+@40 keep
+text q "Air barely matters for these two" role=key

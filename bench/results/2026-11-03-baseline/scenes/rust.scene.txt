@@ -1,0 +1,98 @@
+program s1_iron_drop a=0 b=0 doc="A water drop on iron; each iron atom gives up electrons in turn."
+  const cols = 6, base = H * 0.72, gx = W / (cols + 1);
+  path("s1_id_drop", { x: W / 2, y: base - 150, points: circle(0, 0, 260), closed: 1, fill: "soft", stroke: "accent", strokeWidth: 6, scaleX: 1.2, scaleY: 0.55, opacity: 0 });
+  key("s1_id_drop", "opacity", T0, 0);
+  key("s1_id_drop", "opacity", args.a, 1, "smooth");
+  for (let i = 0; i < cols; i++) {
+    const x = gx * (i + 1), st = args.a + (args.b - args.a) * (0.15 + 0.12 * i), id = "s1_id_el" + i;
+    path("s1_id_fe" + i, { x: x, y: base, points: circle(0, 0, 46), closed: 1, fill: "plate", stroke: "ink", strokeWidth: 4 });
+    text("s1_id_fl" + i, { x: x, y: base, text: "Fe", size: 36, color: "ink", weight: 700 });
+    path(id, { x: x + 10, y: base - 70, points: circle(0, 0, 14), closed: 1, fill: "accent", opacity: 0 });
+    key(id, "opacity", T0, 0);
+    key(id, "opacity", st, 1, "smooth");
+    key(id, "opacity", st + 40, 0, "smooth");
+    anim(id, "x", st, st + 30, (t) => x + 10 + smooth(t) * 120, 2);
+    anim(id, "y", st, st + 30, (t) => base - 70 - smooth(t) * 200, 2);
+  }
+end
+
+program s1_rust_build doc="Oxygen arrives and takes electrons from the iron; rust builds at the drop's edge."
+  const cols = 6, base = H * 0.72, gx = W / (cols + 1), cx = W / 2, cy = base - 150, F = (f) => lerp(T0, T1, f);
+  path("s1_rb_drop", { x: cx, y: cy, points: circle(0, 0, 260), closed: 1, fill: "soft", stroke: "accent", strokeWidth: 6, scaleX: 1.2, scaleY: 0.55 });
+  for (let i = 0; i < cols; i++) {
+    const x = gx * (i + 1);
+    path("s1_rb_fe" + i, { x: x, y: base, points: circle(0, 0, 46), closed: 1, fill: "plate", stroke: "ink", strokeWidth: 4 });
+    text("s1_rb_fl" + i, { x: x, y: base, text: "Fe", size: 36, color: "ink", weight: 700 });
+  }
+  for (let j = 0; j < 3; j++) {
+    const ox = W * (0.25 + 0.25 * j), oy = base - 330, a = "s1_rb_oa" + j, b = "s1_rb_ob" + j;
+    path(a, { x: ox - 16, y: H * 0.1, points: circle(0, 0, 22), closed: 1, fill: "soft", stroke: "accent", strokeWidth: 4, opacity: 0 });
+    path(b, { x: ox + 16, y: H * 0.1, points: circle(0, 0, 22), closed: 1, fill: "soft", stroke: "accent", strokeWidth: 4, opacity: 0 });
+    key(a, "opacity", F(0.02), 1, "smooth");
+    key(b, "opacity", F(0.02), 1, "smooth");
+    anim(a, "y", F(0.02), F(0.35), (t) => H * 0.1 + smooth(t) * (oy - H * 0.1), 2);
+    anim(b, "y", F(0.02), F(0.35), (t) => H * 0.1 + smooth(t) * (oy - H * 0.1), 2);
+  }
+  for (let i = 0; i < cols; i++) {
+    const x = gx * (i + 1), j = i % 3, ox = W * (0.25 + 0.25 * j), oy = base - 330, st = F(0.07 + 0.035 * i), id = "s1_rb_el" + i;
+    path(id, { x: x + 10, y: base - 70, points: circle(0, 0, 14), closed: 1, fill: "accent", opacity: 0 });
+    key(id, "opacity", T0, 0);
+    key(id, "opacity", st, 1, "smooth");
+    key(id, "opacity", st + 45, 0, "smooth");
+    anim(id, "x", st, st + 30, (t) => x + 10 + smooth(t) * (ox - x - 10), 2);
+    anim(id, "y", st, st + 30, (t) => base - 70 + smooth(t) * (oy - base + 70), 2);
+  }
+  for (let k = 0; k < 8; k++) {
+    const a = Math.PI * (0.12 + 0.76 * k / 7), x = cx + Math.cos(a) * 290, y = cy + Math.sin(a) * 130, id = "s1_rb_r" + k, st = F(0.42 + 0.05 * k);
+    path(id, { x: x, y: y, points: circle(0, 0, 26), closed: 1, fill: "umber", scaleX: 0.01, scaleY: 0.01 });
+    key(id, "scaleX", st, 1, "smooth");
+    key(id, "scaleY", st, 1, "smooth");
+  }
+end
+
+program s1_rust_crack doc="Cracks open in the rust and water seeps down to fresh iron."
+  const cols = 6, base = H * 0.72, gx = W / (cols + 1), cx = W / 2, cy = base - 150, F = (f) => lerp(T0, T1, f);
+  path("s1_rc_drop", { x: cx, y: cy, points: circle(0, 0, 260), closed: 1, fill: "soft", stroke: "accent", strokeWidth: 6, scaleX: 1.2, scaleY: 0.55 });
+  for (let i = 0; i < cols; i++) {
+    const x = gx * (i + 1);
+    path("s1_rc_fe" + i, { x: x, y: base, points: circle(0, 0, 46), closed: 1, fill: "plate", stroke: "ink", strokeWidth: 4 });
+    text("s1_rc_fl" + i, { x: x, y: base, text: "Fe", size: 36, color: "ink", weight: 700 });
+  }
+  for (let k = 0; k < 8; k++) {
+    const a = Math.PI * (0.12 + 0.76 * k / 7), x = cx + Math.cos(a) * 290, y = cy + Math.sin(a) * 130;
+    path("s1_rc_r" + k, { x: x, y: y, points: circle(0, 0, 26), closed: 1, fill: "umber" });
+  }
+  for (let k = 0; k < 4; k++) {
+    const a = Math.PI * (0.3 + 0.14 * k), x = cx + Math.cos(a) * 290, y = cy + Math.sin(a) * 130, bottom = base - 60, st = F(0.1 + 0.15 * k), cid = "s1_rc_c" + k, wid = "s1_rc_w" + k;
+    path(cid, { points: [x, y, x + 12, y + (bottom - y) * 0.33, x - 10, y + (bottom - y) * 0.66, x + 6, bottom], stroke: "ink", strokeWidth: 5, drawn: 0 });
+    key(cid, "drawn", st, 1, "smooth");
+    path(wid, { x: x, y: y, points: circle(0, 0, 10), closed: 1, fill: "accent", opacity: 0 });
+    key(wid, "opacity", T0, 0);
+    key(wid, "opacity", st, 1, "smooth");
+    key(wid, "opacity", F(0.95), 0, "smooth");
+    anim(wid, "y", st, st + 60, (t) => y + smooth(t) * (bottom - y), 2);
+  }
+end
+
+@0
+text t0 "Rust needs three things" size=huge role=title
+@4 keep enter=pop
+row trio gap=40
+  box iron "iron" role=key w=300 h=220
+  box water "water" role=key w=300 h=220
+  box oxygen "oxygen" role=key w=300 h=220
+@5 keep
+light iron
+@6 keep
+light water
+@7 keep
+light oxygen
+@8
+text h8 "Water on iron" size=normal role=heading
+run s1_iron_drop s1_iron a=@8 b=@26 w=900 h=900 until=@26
+@27
+text h27 "Oxygen takes the electrons" size=normal role=heading
+run s1_rust_build s1_rust until=@45+72 w=900 h=900
+@46
+text h46 "Porous rust lets water reach more iron" size=normal role=heading
+run s1_rust_crack s1_crack until=@59 w=900 h=900

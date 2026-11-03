@@ -11,7 +11,8 @@
     "test:engine": "node --experimental-strip-types --test engine/core/*.test.ts engine/truth/*.test.ts engine/kits/*.test.ts engine/layout/*.test.ts engine/style/*.test.ts engine/review/*.test.ts engine/language/*.test.ts",
     "test:pipeline": "node --experimental-strip-types --test pipeline/stages/*.test.ts",
     "pipeline":"node --env-file=.env --experimental-strip-types pipeline/run.ts",
-    "app": "node --env-file=.env --experimental-strip-types app/server.ts"
+    "app": "node --env-file=.env --experimental-strip-types app/server.ts",
+    "bench": "node --experimental-strip-types bench/run.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

@@ -1,0 +1,11 @@
+[
+{"sheet":1,"looking":"A blank cream screen, then the text 'Last quarter we got' fades in at the top and a yellow 840 box appears","waiting":"What 840 counts","confusing":"Nothing yet, though the caption text at the bottom is small and cut into phrases"},
+{"sheet":2,"looking":"The 840 box with 'SUPPORT TICKETS' under it, then 'LOGIN PROBLEMS' appears","waiting":"How many of the 840 are login problems","confusing":""},
+{"sheet":3,"looking":"A yellow 412 card labelled LOGIN slides to the left, with a small 'ALMOST HALF' label above it","waiting":"The other categories to appear beside it","confusing":"The 'ALMOST HALF' label is tiny and sits right under SUPPORT TICKETS, so it is easy to miss"},
+{"sheet":4,"looking":"A second, plain 268 card labelled BILLING appears next to the yellow 412 login card","waiting":"What comes after billing","confusing":""},
+{"sheet":5,"looking":"The same two cards (412 login, 268 billing) sitting still while the narration talks","waiting":"The numbers for shipping and the rest","confusing":"Nothing changes on screen for a couple of seconds while the question is asked, so it feels slow"},
+{"sheet":6,"looking":"A 'Shipping + other = ?' prompt, then two small cards appear, 97 SHIPPING and 63 OTHER","waiting":"The total of those two, which the narration says is 160","confusing":"The small cards are hard to read at first and the 160 is not shown yet"},
+{"sheet":7,"looking":"A small orange 160 above the shipping and other cards, which are crossed out, then 'Fix login' appears below","waiting":"What fixing login does","confusing":"The crossed-out SHIPPING and OTHER labels are a bit cluttered, and it is not obvious at once that 160 is the sum of 97 and 63"},
+{"sheet":8,"looking":"'Fix login: half the queue goes away' in orange, with 'HALF OF ALL TICKETS' over the login card","waiting":"Nothing, it looks like the conclusion","confusing":"Nothing major"},
+{"sheet":9,"looking":"The same final screen held still: 840, the four cards and the 'Fix login' line","waiting":"Nothing","confusing":""}
+]

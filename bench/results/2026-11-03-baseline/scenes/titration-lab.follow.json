@@ -1,0 +1,15 @@
+[
+{"sheet":1,"looking":"A chalkboard with a headline 'Sodium hydroxide, from the burette', a tall box marked NaOH and a smaller box 'acid + phenolphthalein'","waiting":"Something to drip from the tall box into the lower one","confusing":"The tall box is drawn as a plain rectangle, so it is not obvious it is a burette"},
+{"sheet":2,"looking":"The same two boxes and the headline, which then fades","waiting":"The drip to start","confusing":"Nothing is moving yet"},
+{"sheet":3,"looking":"The headline changes to 'Into the acid', then 'With a few drops of indicator'","waiting":"A drop to fall","confusing":"The word 'phenolphthalein' is only in the small box label and the narration, so I am not sure what it does"},
+{"sheet":4,"looking":"The headline 'With a few drops of indicator', then a tiny drop appears at the bottom of the NaOH box","waiting":"The drop falling into the acid","confusing":"The drop is very tiny and easy to miss"},
+{"sheet":5,"looking":"A tiny yellow drop at the tip of the NaOH box, then the acid box pulses bigger and a small 'pink' label appears beside it","waiting":"The liquid to turn pink","confusing":"Pink is only a word at the side of the box, not an actual color, so I do not see the flash the narration describes"},
+{"sheet":6,"looking":"The 'pink' label sits beside the acid box while the headline says 'Pink flashes where it lands'","waiting":"The fading that was mentioned","confusing":"Still no actual pink, just the word"},
+{"sheet":7,"looking":"The headline 'Then it fades as you swirl' and the word 'pink' next to the box fading out","waiting":"What happens when the pink stays","confusing":"There is no swirling shown, only a faint word fading"},
+{"sheet":8,"looking":"The headline 'When the pink lingers, slow down' and tiny drops falling from the NaOH box","waiting":"The drops to slow","confusing":"I cannot see the drops getting slower, the picture looks the same as before"},
+{"sheet":9,"looking":"The headline 'Drop by drop', then the acid box shrinks and a new word 'pink' appears in the headline","waiting":"What the endpoint looks like","confusing":"The acid box shrinks and its label is cut off to 'acid +', which is abrupt"},
+{"sheet":10,"looking":"A small yellow box labelled 'faint pink' under the NaOH box, with the headline 'Stop at a faint pink'","waiting":"How long it must last, as the narration says","confusing":"The box says faint pink in yellow chalk, so I still do not see any pink"},
+{"sheet":11,"looking":"The 'faint pink' box, then a yellow 0 appears below it","waiting":"The 0 to count up to thirty seconds","confusing":"The 0 has no label or unit, so I do not know what it counts"},
+{"sheet":12,"looking":"The 0 sits still under the faint pink box while the NaOH box outline gets thicker","waiting":"The reading of the volume","confusing":"The 0 never counts up, so the thirty seconds is not shown, and then the 0 fades"},
+{"sheet":13,"looking":"The headline 'Then read the volume' with a thick NaOH box over the faint pink box","waiting":"Nothing, but I expect to see a number read off the tube","confusing":"No volume reading or scale appears, so it ends without showing what to read"}
+]

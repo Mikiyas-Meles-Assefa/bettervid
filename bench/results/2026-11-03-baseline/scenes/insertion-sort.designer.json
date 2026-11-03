@@ -1,0 +1,10 @@
+{"composition": 4, "type": 5, "motion": 3, "hierarchy": 4, "consistency": 5, "overall": 4,
+"issues": [
+"Sheet 04-06: the 'slowly shown first insert' (1 into the 4) takes about 1 second of movement at 6.7 to 7.7 s, then is a static array for about 4 seconds; the slow demonstration is not slow and the narration lags the action, so the one step the viewer must learn is the quickest.",
+"Sheet 07-09: the 3 sliding past the 4 and the 2's move are cut off from the narration: the 3 moves at 13.4 s but 'it passes the four' is said after, and the final 2 move at 20.7 s while the caption says 'and the hand' (sheet 10); sync is loose.",
+"Sheet 01-14: the cards are tiny in the upper third of a 9:16 frame and the lower 55% is empty; the title 'Insertion sort' repeats the whole time and takes more room than the idea itself.",
+"Sheet 08-09: the active card is not clearly marked: orange outlines show both the moving card and the one it passes with no arrow, no gap or lift, so a viewer cannot tell which card is being inserted or what it is compared to.",
+"Sheet 07, 10-11: 'SORTED' bracket label appears and disappears (11.7 s, 12.2 s), is missing during the 3 and 2 insertions, and the brackets are small orange text on cream; the sorted-region idea is dropped just when it matters (sheet 09-10).",
+"Sheet 12-14: the closing claim is shown with all cards flashing yellow with low contrast on cream (23.2 s) and a stray 'sorted' label at 25.5 s, which does not illustrate 'compared only with cards already sorted'.",
+"Sheet 06-14: captions are two to three words at a time in small type, split mid-phrase ('Take the one', 'The four is', 'bigger'), so they are hard to read as sentences; the first insertion has no comparison shown ('4 is bigger')."
+]}

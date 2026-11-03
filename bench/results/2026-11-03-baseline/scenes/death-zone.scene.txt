@@ -1,0 +1,38 @@
+program s1_ridge_prog doc="A mountain ridge with the altitude line; a climber slows on it as the oxygen drains, then a path to the summit draws."
+  const ridge = [0, H * 0.96, W * 0.2, H * 0.8, W * 0.35, H * 0.7, W * 0.5, H * 0.6, W * 0.62, H * 0.45, W * 0.72, H * 0.3, W * 0.8, H * 0.08, W * 0.9, H * 0.3, W, H * 0.5, W, H, 0, H];
+  path("s1_ridge", { x: 0, y: 0, points: ridge, closed: 1, fill: "wash", stroke: "ink", strokeWidth: 6 });
+  path("s1_alt", { x: 0, y: 0, points: [0, H * 0.6, W, H * 0.6], stroke: "accent", strokeWidth: 8 });
+  path("s1_way", { x: 0, y: 0, points: [W * 0.52, H * 0.6, W * 0.8, H * 0.08], stroke: "accent", strokeWidth: 6 });
+  key("s1_way", "opacity", T0, 0);
+  key("s1_way", "opacity", lerp(T0, T1, 0.95), 0);
+  key("s1_way", "opacity", lerp(T0, T1, 0.97), 1, "smooth");
+  const c = path("s1_climber", { x: W * 0.2, y: H * 0.8, points: circle(0, 0, 22), fill: "ink" });
+  const px = (t) => t < 0.32 ? W * (0.2 + 0.3 * t / 0.32) : t < 0.6 ? W * (0.5 + 0.02 * (1 - (1 - (t - 0.32) / 0.28) ** 2)) : W * (0.52 + 0.005 * clamp((t - 0.6) / 0.12, 0, 1));
+  const py = (t) => t < 0.32 ? H * (0.8 - 0.2 * t / 0.32) : H * 0.6;
+  anim(c, "x", T0, T1, px);
+  anim(c, "y", T0, T1, py);
+end
+
+@0
+text s1_top "8,000 m" size=huge role=title
+run s1_ridge_prog s1_mount until=@41
+
+@7 keep
+text s1_third "a third of the oxygen" size=big role=key
+
+@16 keep
+drop s1_third
+text s1_body "Your body can't adapt" size=big role=key
+
+@22 keep
+drop s1_body
+text s1_dying "It is slowly dying, hour by hour" size=big role=key
+
+@28+10 keep
+drop s1_dying
+
+@33 keep
+text s1_top "the death zone" size=huge role=title
+
+@39 keep
+text s1_far "the summit is still hours away" size=big role=answer

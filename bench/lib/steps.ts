@@ -243,7 +243,7 @@ export const report: Step = async (run, ids) => {
     for (const f of ["scene.txt", "map.json", "learner.json", "words.json", "follow.json", "designer.json", "scroll.json"]) if (existsSync(join(folder, f))) copyFileSync(join(folder, f), join(out, "scenes", `${id}.${f}`));
     const author = existsSync(join(folder, "author.json")) ? json<{ round: number; reviewed?: string; ok?: boolean }>(join(folder, "author.json")) : undefined;
     return {
-      id, use: c.use, style: c.style, built: m?.built ?? false, rounds: author?.round ?? 0, reviewed: author?.reviewed ?? "",
+      id, use: c.use, style: c.style, built: m?.built ?? false, passed: author?.ok ?? false, rounds: author?.round ?? 0, reviewed: author?.reviewed ?? "",
       overall: m?.overall ?? 0, scores: m?.scores ?? {},
       learner, wordsOnly, gain: learner !== undefined && wordsOnly !== undefined ? learner - wordsOnly : undefined,
       pictureQuestions: byNeeds(g.video, "picture"), pictureQuestionsWordsOnly: byNeeds(g.words, "picture"),
@@ -263,6 +263,7 @@ export const report: Step = async (run, ids) => {
   const overall = {
     cases: rows.length,
     built: rows.filter((r) => r.built).length,
+    passed: rows.filter((r) => r.passed).length,
     overall: avg((r) => r.overall),
     ...Object.fromEntries(keys.map((k) => [k, avg((r) => (r.scores as Record<string, number>)[k])])),
     learner: avg((r) => r.learner), wordsOnly: avg((r) => r.wordsOnly), gain: avg((r) => r.gain),
@@ -276,7 +277,7 @@ export const report: Step = async (run, ids) => {
   const table = [
     `| case | use | style | built | free | eye | lag | pace | load | holds | reveal | read | quiz (video) | quiz (words) | picture Qs | follow on look | confused | designer /10 | scroll kept | scroll remembers |`,
     `|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|`,
-    ...rows.map((r) => `| ${r.id} | ${r.use} | ${r.style.replace(/^custom\//, "").replace(/-[0-9a-f]{4}$/, "")} | ${r.built ? `yes (${r.rounds})` : "NO"} | ${f2(r.overall)} | ${keys.map((k) => f2((r.scores as Record<string, number>)[k])).join(" | ")} | ${f2(r.learner)} | ${f2(r.wordsOnly)} | ${f2(r.pictureQuestions)} | ${f2(r.follow?.onLook)} | ${f2(r.follow?.confused)} | ${r.designer ? r.designer.overall : "-"} | ${f2(r.scroller?.kept)} | ${f2(r.scroller?.remembers)} |`),
+    ...rows.map((r) => `| ${r.id} | ${r.use} | ${r.style.replace(/^custom\//, "").replace(/-[0-9a-f]{4}$/, "")} | ${r.built ? `yes (${r.rounds}${r.passed ? "" : ", checks fail"})` : "NO"} | ${f2(r.overall)} | ${keys.map((k) => f2((r.scores as Record<string, number>)[k])).join(" | ")} | ${f2(r.learner)} | ${f2(r.wordsOnly)} | ${f2(r.pictureQuestions)} | ${f2(r.follow?.onLook)} | ${f2(r.follow?.confused)} | ${r.designer ? r.designer.overall : "-"} | ${f2(r.scroller?.kept)} | ${f2(r.scroller?.remembers)} |`),
     `| **all** | | | ${overall.built}/${overall.cases} | ${f2(overall.overall)} | ${keys.map((k) => f2((overall as Record<string, number | null>)[k])).join(" | ")} | ${f2(overall.learner)} | ${f2(overall.wordsOnly)} | ${f2(overall.pictureQuestions)} | ${f2(overall.followOnLook)} | ${f2(overall.followConfused)} | ${f2(overall.designer)} | ${f2(overall.scrollKept)} | ${f2(overall.scrollRemembers)} |`,
   ];
   const notes = rows.filter((r) => r.tickets.length).map((r) => `- **${r.id}**: ${r.tickets.slice(0, 3).join(" / ").slice(0, 600)}`);

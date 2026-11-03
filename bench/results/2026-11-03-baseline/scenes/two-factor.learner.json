@@ -1,0 +1,7 @@
+[
+{"q":1,"answer":"Something you know (your password) and something you have (your phone).","from":"both"},
+{"q":2,"answer":"To your phone.","from":"both"},
+{"q":3,"answer":"The thief has the password but not the phone, so does not get the code the site sends to the phone. One stolen key is not enough; they would need both.","from":"both"},
+{"q":4,"answer":"A box labelled 'Thief's login' appeared under the thief and the site, then a 'Still locked' box replaced it: the login did not get in and stayed locked.","from":"picture"},
+{"q":5,"answer":"No notice was shown in the clip. (The narration and a 'code' label said the site sends a code to your phone.)","from":"not in the clip"}
+]

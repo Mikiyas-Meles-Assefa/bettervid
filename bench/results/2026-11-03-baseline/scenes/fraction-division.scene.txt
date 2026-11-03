@@ -1,0 +1,68 @@
+withhold s1_ans until=@7
+
+@0
+text s1_q "What is six divided by one half?" role=title
+huge s1_eqn: s1_six=6 s1_div=÷ s1_half=½ s1_eq== s1_ask=? role=key
+
+@7 keep
+drop s1_q
+huge s1_eqn: s1_six=6 s1_div=÷ s1_half=½ s1_eq== s1_ans=12 role=answer
+
+@9 keep
+text s1_nt "not three" size=big role=wrong
+
+@12 keep
+drop s1_nt
+
+@14 keep
+text s1_rq "how many halves fit into six?" size=big role=heading
+
+@21 keep
+drop s1_rq
+stack s1_wholes gap=40
+  row s1_wr1 gap=40
+    circle s1_w1 w=260
+    circle s1_w2 w=260
+    circle s1_w3 w=260
+  row s1_wr2 gap=40
+    circle s1_w4 w=260
+    circle s1_w5 w=260
+    circle s1_w6 w=260
+row s1_tally gap=20
+  text s1_cnt "0" size=big role=key
+  text s1_lbl "halves" size=big role=label
+
+@22 keep
+do split s1_w1.shape parts=2 spread=30 turn=10 seed=1 frames=60 ease=smooth
+
+@32 keep
+do count s1_cnt from=0 to=2 frames=20
+
+@34 keep
+do split s1_w2.shape parts=2 spread=30 turn=10 seed=2 frames=14
+do count s1_cnt from=2 to=4 frames=14
+
+@35 keep
+do split s1_w3.shape parts=2 spread=30 turn=10 seed=3 frames=14
+do count s1_cnt from=4 to=6 frames=14
+
+@36 keep
+do split s1_w4.shape parts=2 spread=30 turn=10 seed=4 frames=14
+do count s1_cnt from=6 to=8 frames=14
+
+@37 keep
+do split s1_w5.shape parts=2 spread=30 turn=10 seed=5 frames=14
+do count s1_cnt from=8 to=10 frames=14
+
+@38 keep
+do split s1_w6.shape parts=2 spread=30 turn=10 seed=6 frames=14
+do count s1_cnt from=10 to=12 frames=14
+
+@39+12 keep
+light s1_cnt
+
+@40 keep
+drop s1_wholes
+drop s1_tally
+text s1_rw "dividing by a half is multiplying by two" role=heading
+big s1_rule: s1_six2=6 s1_times=× s1_two=2 s1_eq5== s1_ans2=12

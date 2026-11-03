@@ -1,0 +1,13 @@
+[
+{"sheet":1,"looking":"A title 'The whole loop, one more time' with a four-box cycle diagram appearing (Evaporation, Condensation, Precipitation, Collection)","waiting":"To be walked around the loop, though I don't yet know what is cycling","confusing":"The title doesn't say what the loop is about; I don't know it is water"},
+{"sheet":2,"looking":"The diagram of four boxes joined by red arrows, held still, then Evaporation turning red at the end","waiting":"The sun heating something; the narrator says 'the sun heats' but nothing shows it","confusing":"Nothing moves for most of the 2 seconds. The small caption and the big spoken caption are two lines of near-identical text"},
+{"sheet":3,"looking":"Evaporation highlighted, title 'Evaporation', small line 'Vapor rises from the ocean'","waiting":"What happens to the vapor","confusing":"Nothing visual shows rising or the ocean; it's only labels and a highlight"},
+{"sheet":4,"looking":"Highlight moves to 'Condensation' on the right; title changes to 'Condensation'","waiting":"What happens after the clouds form","confusing":"No picture of clouds or cooling, so I'm taking the words on trust"},
+{"sheet":5,"looking":"Condensation highlighted, then the highlight jumps to 'Precipitation' at the bottom","waiting":"Where the rain goes","confusing":"The highlight switched while the title still said Condensation for a moment"},
+{"sheet":6,"looking":"Precipitation highlighted and held, caption 'Clouds drop it as rain or snow'","waiting":"The last stage and how it links back to the start","confusing":"Rain and snow are only words, nothing is drawn falling"},
+{"sheet":7,"looking":"Highlight jumps to 'Collection' on the left; title 'Collection', caption 'It runs back to the sea'","waiting":"Whether it returns to Evaporation, closing the loop","confusing":"'Collection' is a vague box name until the caption says the sea"},
+{"sheet":8,"looking":"All four boxes light up red and the title becomes 'One endless loop'","waiting":"A closing line","confusing":""},
+{"sheet":9,"looking":"The whole diagram all red, held still while 'around and around' is said","waiting":"The point of it all, maybe an ending","confusing":"It's static; 'around and around' isn't shown by any motion"},
+{"sheet":10,"looking":"The boxes go dark and a highlight begins hopping between them; narration ends with 'of years'","waiting":"Whether this is the end","confusing":"The flicker is jumpy and its order isn't clear"},
+{"sheet":11,"looking":"The highlight keeps hopping around the loop, then all boxes end red, with no narration","waiting":"Nothing, it seems finished","confusing":"A silent tail that adds nothing new, so I'm unsure whether the video is over"}
+]

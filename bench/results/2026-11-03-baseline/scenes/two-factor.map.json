@@ -1,0 +1,9 @@
+{
+  "promise": ["hook", "lock"],
+  "events": [
+    {"id": "e1", "look": ["hook"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["pw", "ph"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e3", "look": ["codepath", "ph"], "lookNone": "", "withhold": [], "demo": [], "holds": [{"hold": "h1", "does": ["codepath", "ph", "login"], "answer": "", "ids": []}]},
+    {"id": "e4", "look": ["lock"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

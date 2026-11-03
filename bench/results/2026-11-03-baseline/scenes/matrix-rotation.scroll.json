@@ -1,0 +1,19 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "A chalkboard with a matrix multiplication. The look is nice, so I glance."},
+    {"sheet": 2, "watching": true, "noticed": "A yellow annotation 'point three, one' appears under the matrix. A small reveal."},
+    {"sheet": 3, "watching": false, "noticed": "The same board with the annotation and a few words, no new action. I swipe."},
+    {"sheet": 4, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 5, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 6, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 7, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 8, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 9, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 10, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 11, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 12, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 13, "watching": false, "noticed": "Not watching; I had already swiped away."}
+  ],
+  "swiped_at": 3,
+  "remembers": "A 2 by 2 matrix can turn a point a quarter turn. Multiply the point (3, 1) by the matrix and you get (-1, 3), the same point turned."
+}

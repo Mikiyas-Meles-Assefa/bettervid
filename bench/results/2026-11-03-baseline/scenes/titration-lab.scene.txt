@@ -1,0 +1,59 @@
+program drops n=12 fall=12 doc="Drops leave the burette and fall into the flask, one after another."
+  for (let i = 0; i < args.n; i++) {
+    const s = lerp(T0, T1, i / args.n);
+    const bx = on.buret.x, by = on.buret.y + on.buret.h / 2, fy = on.flask.y;
+    const id = path("d" + i, { x: bx, y: by, points: circle(0, 0, 9), fill: "accent", opacity: 0 });
+    key(id, "opacity", T0, 0);
+    key(id, "opacity", s, 1);
+    anim(id, "y", s, s + args.fall, (t) => by + (fy - by) * t * t, 1);
+    key(id, "opacity", s + args.fall, 0);
+  }
+end
+
+@0
+text cap "Sodium hydroxide, from the burette" size=big role=title
+stack app gap=50 align=center
+  box buret "NaOH" w=140 h=420 role=key
+  box flask "acid + phenolphthalein" w=420 h=280 role=body
+
+@6 keep
+text cap "Into the acid" size=big role=title
+
+@9 keep
+text cap "With a few drops of indicator" size=big role=title
+
+@15 keep
+text cap "At first, add it quickly" size=big role=title
+run drops s1_fast n=12 fall=12 on=buret,flask until=@31
+
+@22 keep
+text cap "Pink flashes where it lands" size=big role=title
+tag flask "pink" id=ptag
+do pulse flask
+
+@28 keep
+text cap "Then it fades as you swirl" size=big role=title
+
+@32 keep
+drop ptag
+text cap "When the pink lingers, slow down" size=big role=title
+run drops s1_slow n=5 fall=22 on=buret,flask until=@42
+
+@40 keep
+text cap "Drop by drop" size=big role=title
+
+@43 keep
+text cap "Stop at a faint pink" size=big role=title
+box flask "faint pink" role=key
+
+@50 keep
+text cap "It lasts thirty seconds" size=big role=title
+
+@51+13 keep
+text clock "0" size=big role=key
+do count clock to=30 from=0 frames=60 decimals=0 suffix=" s"
+
+@52 keep
+drop clock
+text cap "Then read the volume" size=big role=title
+mark ring buret

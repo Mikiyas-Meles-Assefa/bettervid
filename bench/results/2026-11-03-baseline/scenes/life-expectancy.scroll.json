@@ -1,0 +1,18 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "'In 1900 a newborn could expect to live' in a quiet serif. I want the number."},
+    {"sheet": 2, "watching": true, "noticed": "'1900' with '32 years' appearing. A surprising number, so I stay."},
+    {"sheet": 3, "watching": true, "noticed": "The red '32 years' sits big on screen. Still curious why it is so low."},
+    {"sheet": 4, "watching": false, "noticed": "Text only, 'That average was dragged down by children', nothing moving. I swipe."},
+    {"sheet": 5, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 6, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 7, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 8, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 9, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 10, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 11, "watching": false, "noticed": "Not watching; I had already swiped away."},
+    {"sheet": 12, "watching": false, "noticed": "Not watching; I had already swiped away."}
+  ],
+  "swiped_at": 4,
+  "remembers": "Average life expectancy worldwide was about 32 years in 1900, dragged down by child deaths. Vaccines, clean water and antibiotics pushed it past 70 today."
+}

@@ -1,0 +1,11 @@
+[
+{"sheet":1,"looking":"A dark purple grid; the words '3 P.M.' appear at the top, then 'ICED COFFEE'","waiting":"What the scene is about; some picture to go with the words","confusing":"Only text so far, no image of anything"},
+{"sheet":2,"looking":"'ICED COFFEE' turns pink and changes to 'WARM COFFEE'","waiting":"What this is selling or why the coffee warmed","confusing":""},
+{"sheet":3,"looking":"'HOT CAR' in cyan above a box labeled 'BOTTLE'","waiting":"Where the ice comes in and what happens to the bottle","confusing":"The bottle is only a labeled placeholder box, not a real bottle; the narration says Frostline but nothing on screen names it yet"},
+{"sheet":4,"looking":"The same hot car box with the BOTTLE card, unchanged","waiting":"Something to happen to the bottle in the heat","confusing":"Nothing moves for two seconds; no sign of heat or ice"},
+{"sheet":5,"looking":"Small 'ALL DAY.' appears under the box, then a '0' with '24 HOURS LATER?'","waiting":"What the 0 means and how the number will change","confusing":"What the 0 counts (hours? ice?); a question mark appears where the narration states it as fact"},
+{"sheet":6,"looking":"The 0 and 24 HOURS LATER fade out, leaving the bottle box alone","waiting":"The result of the 24 hours: is the ice still there?","confusing":"The 0 was shown and then dropped without a payoff; the box is empty with no ice"},
+{"sheet":7,"looking":"An ICE circle pops into the box under the bottle, then 'FROSTLINE' appears","waiting":"The wrap-up and the brand pitch","confusing":"The ice is just a labeled circle, not clearly ice; it only now appears that the bottle is a Frostline one"},
+{"sheet":8,"looking":"FROSTLINE with the cyan tagline 'COLD THAT KEEPS ITS PROMISE.'","waiting":"Nothing much, it feels like the end","confusing":""},
+{"sheet":9,"looking":"The final held frame: bottle with ice, FROSTLINE and the tagline","waiting":"Nothing","confusing":""}
+]

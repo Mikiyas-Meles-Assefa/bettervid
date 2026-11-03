@@ -1,0 +1,15 @@
+@0
+text title "Fastest way home to work" size=big role=title
+dijkstra demo1 edges=Home-Park:2,Home-Cafe:4,Park-Cafe:1,Cafe-Work:5,Park-Work:8 from=Home to=Work
+@22 keep
+light demo1.node.Home
+do steps demo1 from=1 to=4 pace=slow until=@33
+@34 keep
+do steps demo1 from=5 to=6 pace=slow until=@48
+@48+10 keep
+light demo1.dist.Cafe demo1.edge.ParkCafe
+@49 keep
+do steps demo1 from=7 to=11 pace=fast at=@49,@52,@55,@57,@59
+@60 keep
+light demo1.node.Home demo1.node.Park demo1.node.Cafe demo1.node.Work demo1.edge.HomePark demo1.edge.ParkCafe demo1.edge.CafeWork
+tag demo1.dist.Work "8 minutes" role=answer side=right

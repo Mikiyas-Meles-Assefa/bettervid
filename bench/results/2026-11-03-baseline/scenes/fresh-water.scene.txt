@@ -1,0 +1,78 @@
+program s1_glasses ocean=0 fresh=0 ice=0 under=0 sl=0 doc="One hundred glasses: ninety-seven turn to ocean, three stay fresh, a sliver of one is lit."
+  const R = Math.min(W, H) / 10 * 0.42;
+  const cell = (i) => ({ x: (i % 10 + 0.5) * W / 10, y: (Math.floor(i / 10) + 0.5) * H / 10 });
+  for (let i = 0; i < 100; i++) {
+    const c = cell(i);
+    const base = path("s1_b" + i, { x: c.x, y: c.y, points: circle(0, 0, R), fill: "soft", opacity: 0 });
+    key(base, "opacity", T0, 0);
+    key(base, "opacity", Math.round(T0 + (args.ocean - T0) * 0.8 * i / 100) + 1, 1, "smooth");
+  }
+  for (let i = 0; i < 97; i++) {
+    const c = cell(i);
+    const o = path("s1_o" + i, { x: c.x, y: c.y, points: circle(0, 0, R), fill: "accent", opacity: 0 });
+    key(o, "opacity", args.ocean, 0);
+    key(o, "opacity", Math.round(args.ocean + 2 + i * 0.25), 1, "smooth");
+  }
+  for (let i = 97; i < 100; i++) {
+    const c = cell(i);
+    const f = path("s1_f" + i, { x: c.x, y: c.y, points: circle(0, 0, R), fill: "highlight", opacity: 0 });
+    key(f, "opacity", args.fresh, 0);
+    key(f, "opacity", Math.round(args.fresh + 4), 1, "smooth");
+  }
+  for (let i = 97; i < 99; i++) {
+    const c = cell(i);
+    const k = path("s1_ice" + i, { x: c.x, y: c.y, points: circle(0, 0, R), fill: "glass", opacity: 0 });
+    key(k, "opacity", args.ice, 0);
+    key(k, "opacity", Math.round(args.ice + 6), 1, "smooth");
+  }
+  {
+    const c = cell(99);
+    const t1 = Math.asin(-0.3), t2 = Math.PI - t1;
+    const pts = [];
+    for (let k = 0; k <= 40; k++) {
+      const a = t1 + (t2 - t1) * k / 40;
+      pts.push(Math.cos(a) * R, Math.sin(a) * R);
+    }
+    const u = path("s1_under", { x: c.x, y: c.y, points: pts, closed: 1, fill: "tubeLow", opacity: 0 });
+    key(u, "opacity", args.under, 0);
+    key(u, "opacity", Math.round(args.under + 6), 1, "smooth");
+  }
+  {
+    const c = cell(99);
+    const sl = path("s1_sl", { x: c.x, y: c.y - 0.55 * R, points: circle(0, 0, 0.09 * R), fill: "accent", opacity: 0 });
+    key(sl, "opacity", args.sl, 0);
+    key(sl, "opacity", Math.round(args.sl + 4), 1, "smooth");
+  }
+end
+
+withhold s1_gl.s1_sl until=@49
+
+@0
+text s1_title "All Earth's water: 100 glasses" size=big role=title
+run s1_glasses s1_gl w=1000 h=1000 until=@60 ocean=@10 fresh=@16 ice=@33 under=@42 sl=@54
+
+@10 keep
+text s1_cap "97 of 100 are salty ocean" role=answer
+
+@16 keep
+text s1_cap "3 are fresh" role=key
+
+@32+12 keep
+text s1_cap "How much is lakes and rivers?" role=key
+light s1_gl.s1_f97 s1_gl.s1_f98 s1_gl.s1_f99
+
+@33 keep
+text s1_cap "2 of the 3 are ice" role=body
+
+@42 keep
+text s1_cap "Most of the last one is underground" role=body
+
+@49 keep
+text s1_cap "Lakes and rivers" role=key
+
+@54 keep
+text s1_cap "Less than 1% of one glass" role=answer
+light s1_gl.s1_sl
+
+@60+11 keep
+light s1_gl.s1_sl
