@@ -79,6 +79,8 @@ const ATTRS: Record<string, string[]> = {
 const COMMANDS = ["arrow", "link", "mark", "tag", "light", "dim", "focus", "drop", "set", "do", "emit", "camera"];
 const LEAVES = ["text", "code", "image", "graph", "run", "space", ...SHAPES];
 const WORDS = [...CONTAINERS, ...SIZES, ...COMMANDS, ...LEAVES, "program", "bg", "read", "withhold"];
+// Every word that starts a line of the scene language (the intent language pins such lines inside a moment).
+export const SCENE_WORDS: readonly string[] = WORDS;
 export const ID = /^[A-Za-z0-9][\w-]*(\.[\w-]+)*$/;
 const BAD_IDS = new Set(["constructor", "prototype"]);
 
@@ -130,6 +132,33 @@ const pair = (tok: string) => {
   const at = tok.indexOf("=");
   return at > 0 && !tok.startsWith('"') ? [tok.slice(0, at), unquote(tok.slice(at + 1))] as const : null;
 };
+
+// Settings written after the colon of a line of atoms (`big: a=1 b=2 role=key`) belong to the line, not to its pieces:
+// trailing `name=value` tokens whose name is a setting of the line and whose value that setting accepts are taken off
+// the pieces and read as settings. A piece that only shares a setting's name keeps its place when its value is not one
+// the setting accepts (`weight=70kg` stays a piece) or when pieces follow it.
+const NUMBER = /^-?\d*\.?\d+$/;
+const ACCEPTS: Record<string, (v: string) => boolean> = {
+  role: (v) => (ROLES as readonly string[]).includes(v),
+  enter: (v) => ENTERS.includes(v),
+  gap: (v) => NUMBER.test(v) || SIZES.includes(v),
+  opacity: (v) => NUMBER.test(v),
+  rotate: (v) => NUMBER.test(v),
+  strokeWidth: (v) => NUMBER.test(v),
+  weight: (v) => NUMBER.test(v),
+  color: (v) => /^#[0-9a-f]{3,8}$/i.test(v) || /^[a-z]+$/.test(v),
+  fill: (v) => /^#[0-9a-f]{3,8}$/i.test(v) || /^[a-z]+$/.test(v),
+  stroke: (v) => /^#[0-9a-f]{3,8}$/i.test(v) || /^[a-z]+$/.test(v),
+};
+function trailingSettings(rest: string[]): string[] {
+  const out: string[] = [];
+  while (rest.length > 1) {
+    const p = pair(rest.at(-1)!);
+    if (!p || !ACCEPTS[p[0]]?.(p[1])) break;
+    out.unshift(rest.pop()!);
+  }
+  return out;
+}
 
 // Parses a moment such as @12, @12+5 or @12-3.
 export function parseTime(tok: string): Time | null {
@@ -329,7 +358,7 @@ export function parse(source: string, kitKinds: Iterable<string> = []): ParseRes
     const atoms = /^(huge|big|normal|small|note)(?:\s+([^\s:]+))?((?:\s+\w+=[^\s:]+)*)\s*:\s*(.*)$/.exec(line);
     if (atoms) {
       const rest = tokenize(atoms[4]!)!;
-      const { attrs } = split(tokenize(atoms[3]!.trim()) ?? [], ATTRS.atoms!, "A line of atoms", fail);
+      const { attrs } = split([...(tokenize(atoms[3]!.trim()) ?? []), ...trailingSettings(rest)], ATTRS.atoms!, "A line of atoms", fail);
       const id = atoms[2] ?? `${state.keep ? `k${doc.states.length}-` : ""}line${++auto}`;
       if (atoms[2]) checkId(id, fail);
       const parts = parseAtoms(rest, id, fail);
