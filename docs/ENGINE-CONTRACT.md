@@ -170,6 +170,15 @@ Many values cannot all be large at once on a phone (eight values by level give 7
 
 Measured on merge-w2scene s8 written again with sixteen values (`do steps` fast and slow, with the predict card): the slow and fast spans of the merges are framed at up to three times, so a box reads at about 110 px instead of 38, and the camera returns to the whole between phases; eight values are followed at about 1.5 times (a box about 115 px). Weak: a span whose region cannot be framed without cutting a value shows the whole for that span, so a fast stretch may go close, wide and close again; and tags placed for the whole view grow with the zoom (they are kept whole, not resized).
 
+### After the first directed run (Nov 3)
+
+- **One computed thing, many parts.** Sections are written at the same time, so the scene step gives each one the truth plan from the direction (`truthPlan` in `pipeline/stages/scene.ts`): the computed thing's exact line, with the id `demo1` (`demo2`...) in every part, how many steps the parts before it played, and exactly the steps its own phases play. A kit thing may start part way with `done=K` (it shows how it stands after step K and plays on from K + 1). Each part is checked before joining: the same id and input, `done=` matching where the demonstration stands, and its own steps, no more and no fewer (`truthChecked`).
+- **Steps played twice and one id with two inputs** are build problems on the line that does it, so a joined scene names the part to change.
+- **The joined scene repairs its parts.** When the whole does not build, each problem is mapped back to the part whose lines it names (`joinWithSpans`), that part is sent back with the error, and the parts are joined again (two rounds). There is no throw while a part can still be repaired.
+- **Demonstrations fit their words.** A phase whose words name values of the computed thing that its steps never show is a problem (`pipeline/lib/demo.ts`). The direction stage repairs it while planning; the scene step checks the plan it gets and, where it does not fit, has Spark choose the thing's settings (an order of steps, such as `order=levels`) and phases that do, before any part is written (`prompts/scene-demo.md`).
+- **Words in view.** Words a state puts up, or changes, must be wholly in view under the scene's own camera; only words that stayed from before may fall out of a close view. The camera that follows small kits keeps the same words in view and goes only as close as they allow.
+- **Tags on moving parts.** A tag on a part of a computed thing travels with it as its steps play; where that carries it onto the thing's values at any step, it is a build problem naming the step.
+
 ## Not yet decided
 
 The scene language Spark writes, text split into letters, measured layout, 3D, and how the engine replaces `video/Stage.tsx` and `video/Board.tsx`. The foundation is not connected to the pipeline yet.
