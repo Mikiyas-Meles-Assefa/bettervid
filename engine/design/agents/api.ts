@@ -1,0 +1,94 @@
+// The reasoning agents' contract (docs/DESIGN-BRAIN.md 2.3): what each agent is given, what it answers, and how an
+// answer changes the Design. Implemented in engine/design/agents/*.ts (director.ts, designer.ts, viewer.ts); the search
+// loop (engine/design/search) calls them through the Reasoner. In production the Reasoner is Spark; in development a
+// Claude subagent answering files. Changes here need the lead's review.
+import type { Theme } from "../../core/types.ts";
+import type { AgentTask, Candidate, Design, Goal, IntentPlan, PartCard, Reading, Requirement, Viewing, Word } from "../types.ts";
+
+/** What the director knows about the video: everything a top director would ask before deciding anything. */
+export type DirectorInput = {
+  plan: IntentPlan;
+  words: Word[];
+  holds: { id: string; afterWord: number; seconds: number; purpose?: string }[];
+  cards: PartCard[];
+  requirements: Requirement[];
+  /** The user's request and what the plan stage knows: purpose, audience, platform, any explicit asks. Plain text. */
+  brief: string;
+  /** The direction plan's events when there is one (wave 2), as plain text. */
+  direction?: string;
+  theme: Theme;
+  styleName: string;
+  /** The viewing the platform implies, if known; the director confirms or replaces it. */
+  viewing?: Viewing;
+  /** The design the engine would start from (style suggestions), so the director overrides only what it means to. */
+  start: Design;
+};
+
+export type DirectorAnswer = {
+  viewing: Viewing;
+  tempo: { value: number; why: string };
+  /** Per plan moment (by index): importance 0..1 and what the viewer should know, feel and wait for after it. */
+  moments: { moment: number; importance: number; know: string; feel?: string; waiting?: string; focus?: string }[];
+  demos: { moment: number; act: number; speed: "real" | "slow" | "fast" | number; replay?: { speed: "real" | "slow" | number }; why: string }[];
+  goals: Goal[]; // video goals
+  overrides: { key: string; value: unknown; why: string }[];
+  /** Budget per video: candidates per moment, rounds, model calls (a setting; the director spends unevenly by importance). */
+  budget: { candidatesPerMoment: number; rounds: number; calls: number };
+  /** Corrections of the plan against the material or the world: never silent; each is a visible note. */
+  corrections: { moment?: number; was: string; now: string; source: string }[];
+  /** Viewers the panel should include for this audience, beyond the standing seats. */
+  seats: { who: string; why: string }[];
+  why: string;
+};
+
+export type DesignerInput = {
+  plan: IntentPlan;
+  moment: number;
+  design: Design;
+  director: DirectorAnswer;
+  cards: PartCard[];
+  words: Word[];
+  /** The style's suggestions with reasons (suggest.ts styleValues), keys the designer may override. */
+  styleValues: Record<string, { value: unknown; why: string }>;
+  /** After a search round: the best candidates' readings and goal scores, and their contact sheet. */
+  round?: { candidates: Candidate[]; sheet?: string; readings: Reading[] };
+  /** The instruments it can set goals on, with their value names and settings (from the registry's describe). */
+  instruments: { name: string; describe: string; suggested: Record<string, unknown> }[];
+};
+
+/** The space a search explores for one moment: per MomentDesign field, the values worth trying. */
+export type SearchSpace = Partial<Record<"subjectScale" | "subjectAt" | "arrangement" | "supportOpacity" | "typeScale" | "lead" | "dwell" | "camera", unknown[]>>;
+
+export type DesignerAnswer = {
+  goals: Goal[]; // moment goals, each with instrument settings
+  space: SearchSpace;
+  overrides: { key: string; value: unknown; why: string }[]; // style keys, written key@N for this moment
+  proposals: { kind: string; ids: string[]; args?: Record<string, unknown>; why: string }[];
+  /** After a round: keep one candidate, or revise the space. */
+  pick?: string;
+  done: boolean;
+  why: string;
+};
+
+export type ViewerInput = {
+  /** One contact sheet per finalist (or one sheet with every finalist labelled), and the words spoken in its window. */
+  sheets: { candidate: string; image: string }[];
+  transcript: string;
+  seats: { who: string; why: string }[];
+  goals: Goal[];
+};
+
+export type ViewerAnswer = {
+  seats: { who: string; candidate: string; saw: string; remembers: string; problems: string[]; wouldKeepWatching: boolean }[];
+  pick: string;
+  fixes: { candidate: string; field: string; value: unknown; why: string }[];
+};
+
+/** Implemented by engine/design/agents. Tasks are pure functions of their input; apply functions are pure too. */
+export type Agents = {
+  directorTask(input: DirectorInput): AgentTask;
+  applyDirector(design: Design, answer: DirectorAnswer): Design;
+  designerTask(input: DesignerInput): AgentTask;
+  applyDesigner(design: Design, moment: number, answer: DesignerAnswer): Design;
+  viewerTask(input: ViewerInput): AgentTask;
+};
