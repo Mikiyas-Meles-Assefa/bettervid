@@ -665,7 +665,9 @@ export function truthPlan(p: Project, range: Range): TruthPart[] {
   }
   return [...things.values()].map(({ phases, ...t }) => ({
     ...t,
-    done: Math.max(0, ...phases.filter((ph) => ph.word < range.firstWord).map((ph) => ph.to)),
+    // Where it stands as the range begins: after the steps played before it, or, in a video that opens partway through
+    // a process, just before the first step any phase plays.
+    done: Math.max(0, phases.length ? Math.min(...phases.map((ph) => ph.from)) - 1 : 0, ...phases.filter((ph) => ph.word < range.firstWord).map((ph) => ph.to)),
     plays: phases.filter((ph) => ph.word >= range.firstWord && ph.word <= range.lastWord).map(({ word: _w, ...ph }) => ph),
   }));
 }
