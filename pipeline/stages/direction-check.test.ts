@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Key, Scene, SceneNode, Track } from "../../engine/core/types.ts";
 import type { DirectionEvent, DirectionPlan, Word } from "../../schemas/project.ts";
-import { asCritic, attachments, beats, belongs, checkDemo, checkHoldAudio, checkHoldPictures, checkLook, checkPromise, checkTempo, checkWithhold, cleanMap, holds, type IdMap, parseSilences, runChecks, sample, spans } from "../lib/direction-check.ts";
+import { asCritic, attachments, beats, belongs, checkDemo, checkHoldAudio, checkHoldPictures, checkLook, checkPredict, checkPromise, checkTempo, checkWithhold, cleanMap, holds, type IdMap, type Mapped, mergeMaps, parseSilences, readsAt, runChecks, sample, says, spans } from "../lib/direction-check.ts";
 
 const FPS = 30;
 const scene = (frames: number, nodes: SceneNode[], tracks: Track[] = []): Scene => ({ fps: FPS, width: 1080, height: 1920, frames, background: "#000", nodes, tracks, events: [] });
@@ -48,7 +48,7 @@ test("a thing is named by every text it comes to show, so a slot that fills late
   assert.equal(s.text.get("slot"), "SLOT ? 42");
   assert.deepEqual(s.rewords.get("slot"), [{ frame: 30, text: "42" }]);
   const p = plan([event("e1", 0, 1, { withhold: { what: "the answer", until: "e2" } }), event("e2", 2, 3)]);
-  const r = checkWithhold(s, spans(p, words(4, 0.75), FPS, 60), ids({ e1: { withhold: ["slot"] } }), new Map());
+  const r = checkWithhold(s, spans(p, words(4, 0.75), FPS, 60), ids({ e1: { withhold: [["slot"]] } }), new Map());
   assert.match(r[0]!.note, /shows from 0\.0 s and reads "42" from 1\.0 s/);
 });
 
@@ -117,11 +117,20 @@ test("withhold: a withheld thing on screen before its event is found, one that w
     track("ans", "opacity", [[0, 0], [150, 0], [160, 1]]), // shows during e2, before e3 at 300
     track("other", "opacity", [[0, 0], [310, 0], [320, 1]]),
   ]);
-  const r = checkWithhold(sample(sc), spans(p, w, FPS, sc.frames), ids({ e1: { withhold: ["ans"] }, e2: { withhold: ["other"] } }), new Map());
+  const r = checkWithhold(sample(sc), spans(p, w, FPS, sc.frames), ids({ e1: { withhold: [["ans"]] }, e2: { withhold: [["other"]] } }), new Map());
   assert.equal(r.length, 1);
   assert.equal(r[0]!.kind, "withheld_early");
   assert.equal(r[0]!.event, "e1");
   assert.match(r[0]!.note, /ans .* shows from 5\.0 s/);
+});
+
+test("withhold: a thing made of parts is shown only when the whole of it is on screen at once", () => {
+  const w = words(30);
+  const p = plan([event("e1", 0, 9, { withhold: { what: "the result", until: "e3" } }), event("e2", 10, 19), event("e3", 20, 29)]);
+  const mk = (bAt: number) => sample(scene(450, [...box("a", 100, 500, { opacity: 0 }), ...box("b", 500, 500, { opacity: 0 })], [track("a", "opacity", [[0, 0], [60, 0], [66, 1], [120, 1], [126, 0]]), track("b", "opacity", [[0, 0], [bAt, 0], [bAt + 6, 1]])]));
+  const map = ids({ e1: { withhold: [["a", "b"]] } });
+  assert.equal(checkWithhold(mk(200), spans(p, w, FPS, 450), map, new Map()).length, 0); // a has gone by the time b comes
+  assert.match(checkWithhold(mk(90), spans(p, w, FPS, 450), map, new Map())[0]!.note, /together from 3\.0 s/);
 });
 
 test("tempo: a flat rate of change is found, a varied one is not, and a long event busier than the short ones is named", () => {
@@ -216,20 +225,70 @@ test("promise: found from the scene when something it names shows in the first s
 
 test("the id map keeps only ids the scene has, and a container stands for what it holds", () => {
   const s = sample(scene(10, [...box("a", 100, 500), ...box("b", 500, 500)]));
-  const m = cleanMap({ promise: ["row1", "ghost"], events: [{ id: "e1", look: ["a", "nope"], withhold: [], demo: ["row1"] }] }, s, new Map([["row1", ["a", "b", "a.label"]]]));
+  const m = cleanMap({ promise: ["row1", "ghost"], events: [{ id: "e1", look: ["a", "nope"], lookNone: "", withhold: [], demo: ["row1"], holds: [] }] }, s, new Map([["row1", ["a", "b", "a.label"]]]));
   assert.deepEqual(m.promise, ["a", "b"]);
-  assert.deepEqual(m.events.e1, { look: ["a"], withhold: [], demo: ["a", "b"] });
+  assert.deepEqual(m.events.e1, { look: ["a"], lookNone: undefined, withhold: [], demo: ["a", "b"], holds: {} });
+  assert.deepEqual(m.unmapped, []);
+});
+
+const mapped = (id: string, look: string[], lookNone = ""): Mapped["events"][number] => ({ id, look, lookNone, withhold: [], demo: [], holds: [] });
+
+test("an event the map leaves without a look or a reason is unmapped, repaired from a second answer, and never read as absent", () => {
+  const w = words(20);
+  const p = plan([event("e1", 0, 9), event("e2", 10, 19)]);
+  const s = sample(scene(300, [...box("a", 100, 500), ...box("b", 500, 500)], [wobble("b", 0, 290)]));
+  const first: Mapped = { promise: [], events: [mapped("e1", []), mapped("e2", [], "only a heading is on screen")] };
+  const m = cleanMap(first, s, new Map(), ["e1", "e2"]);
+  assert.deepEqual(m.unmapped, ["e1"]);
+  const r = runChecks({ plan: p, narration: { words: w }, samples: s, ids: m });
+  const kinds = r.tickets.map((t) => `${t.kind} ${t.event}`);
+  assert.ok(kinds.includes("map_failed e1"));
+  assert.ok(!kinds.includes("look_absent e1"));
+  assert.match(r.tickets.find((t) => t.kind === "look_absent")!.note, /only a heading is on screen/);
+  assert.equal(r.tickets.find((t) => t.kind === "map_failed")!.route, "check");
+  // A second answer for e1 replaces the empty one.
+  const fixed = cleanMap(mergeMaps(first, { promise: [], events: [mapped("e1", ["a"])] }), s, new Map(), ["e1", "e2"]);
+  assert.deepEqual(fixed.unmapped, []);
+  assert.deepEqual(fixed.events.e1!.look, ["a"]);
+});
+
+test("a camera or layer group around everything is looked through: the things inside it are the things", () => {
+  const nodes: SceneNode[] = [{ id: "camera", kind: "group", props: { x: 0, y: 0 } }, ...box("a", 100, 500).map((n) => (n.parent ? n : { ...n, parent: "camera" })), ...box("b", 500, 500).map((n) => (n.parent ? n : { ...n, parent: "camera" }))];
+  const s = sample(scene(60, nodes, [track("camera", "opacity", [[0, 1], [30, 1], [40, 0]]), wobble("a", 0, 20)]));
+  assert.deepEqual(s.ids, ["a", "b"]);
+  assert.equal(s.active[0]![10], 1);
+  assert.equal(s.active[1]![10], 0);
+  assert.equal(s.visible[1]![50], 0); // the wrapper's fade reaches what is inside it
+  assert.equal(readsAt(s, "a", 10), "A");
+});
+
+test("a predict hold must not show its answer: a slot that fills during the hold is found, one that fills after is not", () => {
+  const w = words(20);
+  const mk = (fillAt: number) => sample(scene(300, box("root", 500, 500), [track("root.label", "text", [[0, "√4"], [fillAt, "√4 = 2"]])]));
+  const p = plan([event("e1", 0, 19, { holds: [{ id: "h1", afterWord: 5, seconds: 2, purpose: "predict", does: "the root waits", shows: "What is √4?" }] })]);
+  const hs = holds(p, { words: w, holds: [{ id: "h1", afterWord: 5, start: 3, seconds: 2 }] });
+  const map: IdMap = { promise: [], events: { e1: { look: ["root"], withhold: [], demo: [], holds: { h1: { does: [], answer: "2", ids: ["root"] } } } } };
+  const early = checkPredict(mk(100), hs, map);
+  assert.equal(early[0]!.kind, "predict_answered");
+  assert.match(early[0]!.note, /root reads "√4 = 2"/);
+  assert.deepEqual(checkPredict(mk(160), hs, map), []);
+  // The question's own setup, on screen well before the hold, is not the answer given away.
+  assert.deepEqual(checkPredict(mk(10), hs, map), []);
+  assert.ok(says("√4 = 2", "2") && !says("12", "2") && !says("√4", "2") && says("The mean is 3.5", "mean is 3.5"));
 });
 
 test("everything together: tickets in time order, in the critic's format with the event and who acts", () => {
   const w = words(20);
   const p = plan([event("e1", 0, 9, { holds: [{ id: "h1", afterWord: 4, seconds: 2, purpose: "look", does: "pulse" }] }), event("e2", 10, 19)]);
   const s = sample(scene(300, box("a", 100, 500)));
-  const r = runChecks({ plan: p, narration: { words: w }, samples: s, ids: ids({ e1: { look: ["a"] }, e2: { look: ["a"] } }, ["a"]), quiet: [] });
-  const kinds = r.tickets.map((t) => t.kind);
-  assert.ok(kinds.includes("hold_frozen") && kinds.includes("hold_missing"));
-  assert.deepEqual([...r.tickets.map((t) => t.from)], [...r.tickets.map((t) => t.from)].sort((a, b) => a - b));
-  const c = asCritic(r.tickets.find((t) => t.kind === "hold_missing")!);
+  const r = runChecks({ plan: p, narration: { words: w, holds: [{ id: "h1", afterWord: 4, start: 2.4, seconds: 2 }] }, samples: s, ids: ids({ e1: { look: ["a"] }, e2: { look: ["a"] } }, ["a"]), quiet: [{ start: 2.4, end: 4.4 }] });
+  assert.deepEqual(r.tickets.map((t) => t.kind), ["hold_frozen"]);
+  // The same hold the voice never left: reported by the audio check, its picture not judged.
+  const r2 = runChecks({ plan: p, narration: { words: w }, samples: s, ids: ids({ e1: { look: ["a"] }, e2: { look: ["a"] } }, ["a"]), quiet: [] });
+  const kinds = r2.tickets.map((t) => t.kind);
+  assert.ok(kinds.includes("hold_missing") && !kinds.includes("hold_frozen"));
+  assert.deepEqual([...r2.tickets.map((t) => t.from)], [...r2.tickets.map((t) => t.from)].sort((a, b) => a - b));
+  const c = asCritic(r2.tickets.find((t) => t.kind === "hold_missing")!);
   assert.equal(c.shotId, "e1");
   assert.equal(c.action, "direction:voice:hold_missing:3");
   assert.equal(beats(s, 0, 300).length, 0);
