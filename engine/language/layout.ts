@@ -530,8 +530,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
     }
     if (!item || told.has(item.id)) return;
     const role = wordRole(item);
-    const carrier = role && CARRIERS.has(role) ? (wordLook(item)?.size ?? 0) * short * 0.6 : 0;
-    const asked = item.attrs.size !== undefined && (TEXT_SIZE[item.attrs.size] ?? 0) >= TEXT_SIZE.big! ? TEXT_SIZE[item.attrs.size]! * 0.55 : 0;
+    const carrier = role && CARRIERS.has(role) ? (wordLook(item)?.size ?? 0) * short * 0.5 : 0;
+    const asked = item.attrs.size !== undefined && (TEXT_SIZE[item.attrs.size] ?? 0) >= TEXT_SIZE.big! ? TEXT_SIZE[item.attrs.size]! * 0.5 : 0;
     const floor = Math.max(carrier, asked);
     if (size >= floor - 0.5) return;
     told.add(item.id);

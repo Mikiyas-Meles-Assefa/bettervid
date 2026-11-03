@@ -2197,6 +2197,8 @@ function withheldEarly(scene: Scene, doc: Doc, momentOf: (t: Time, line: number)
 const CLAIM = /\b(sorted|in order|ascending|increasing|descending|decreasing)\b/i;
 const DENIED = /\b(not|never|no|nothing|nor|without|isn't|aren't|unless|until|before|yet to)\b[^.;:,]{0,16}\b(sorted|in order|ascending|increasing|descending|decreasing)\b|\bout of order\b|\bunsorted\b/i;
 const NUMERIC = /^[−-]?\d+(?:[.,]\d+)?$/;
+const CLAIM_WORDS = /\b(sorted|in order|ascending|increasing|descending|decreasing)\b/g;
+const GLUE = new Set(["already", "fully", "now", "all", "is", "are", "it", "its", "the", "list", "row", "whole", "completely", "and", "done"]);
 function falseOrder(scene: Scene, doc: Doc, momentOf: (t: Time, line: number) => number, ctx: CompileContext): Problem[] {
   const out: Problem[] = [];
   const told = new Set<number>();
@@ -2233,8 +2235,10 @@ function falseOrder(scene: Scene, doc: Doc, momentOf: (t: Time, line: number) =>
     // the closest row of numbers on screen, above or below, must then be in that order.
     const texts: { id: string; line: number; text: string }[] = [];
     const collect = (items: Item[]) => items.forEach((i) => {
-      // A short label (a sentence carries its own qualifiers, such as "one alone is sorted").
-      if (i.kind === "text" && i.text && i.text.trim().split(/\s+/).length <= 4) texts.push({ id: i.id, line: i.line, text: i.text });
+      // A label that names nothing but the order ("Sorted", "already sorted", "now in order"). Words that name what is in
+      // order ("ones count as sorted", "two sorted fours") carry their own subject and are left to the reader.
+      const rest = (i.text ?? "").toLowerCase().replace(CLAIM_WORDS, " ").replace(/[^a-z\s]/g, " ").split(/\s+/).filter((w) => w && !GLUE.has(w));
+      if (i.kind === "text" && i.text && !rest.length) texts.push({ id: i.id, line: i.line, text: i.text });
       collect(i.children);
     });
     collect(s.items);
