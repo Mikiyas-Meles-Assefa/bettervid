@@ -1257,11 +1257,21 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
         "The repaired frames, with what the instruments read on each:",
       ].filter(Boolean).join("\n\n");
       repairs++;
-      const third = await checkMended(job, await ask([{ type: "input_text", text: text2 }, ...frameContent(seen2, new Set(spreadOf(seen2, 5)), "Frame", readings2)]), fixed);
+      let third = await checkMended(job, await ask([{ type: "input_text", text: text2 }, ...frameContent(seen2, new Set(spreadOf(seen2, 5)), "Frame", readings2)]), fixed);
+      // A re-composition is the change most likely to break the build, and the one most worth keeping, so like the
+      // first repair it gets its build problems back once before it is given up.
+      if (!built(third.c)) {
+        repairs++;
+        log(`the last repair does not build (${buildProblems(third.c)}); asking once more with its build problems`);
+        third = await checkMended(job, await ask(repairRequest(job, third.source, [...third.c.problems, ...third.c.warnings])), fixed);
+      }
       if (built(third.c)) {
         next = third;
         looks.push("repaired again after the check");
-      } else looks.push("the last repair did not build, kept the first repair");
+      } else {
+        writeFileSync(join(folder, "unbuilt.txt"), `${third.c.problems.join("\n")}\n\n${third.source}`);
+        looks.push("the last repair did not build, kept the first repair");
+      }
     } else looks.push(again ? `check: ${again.verdict}` : "check: no answer");
   }
   return { ...written(next.source, next.c, 1 + repairs), usd, looks, repairs, fixed };
