@@ -428,6 +428,8 @@ Your part is built, rendered and measured once, and you get one correction. Most
 - **Directions.** When the words say down, up, left or right, the thing on screen moves that way: set the form yourself.
 - **Only the settings listed.** Each kind takes the settings its line in this guide names and no others; a setting it does not take is a build error. `drop` works in a keep state only; in a plain state, what you do not list leaves by itself.
 - **Nothing arrives unasked.** Everything on screen is something the words are about now or build on soon; nothing stays after the words have moved on.
+- **Words over a picture sit on a backing.** A word placed straight on a photograph cannot read on every part of it, so give it `role=caption` or a `back=`, or put it beside the picture; and never fade words below the level where they stop reading.
+- **Withheld things stay withheld.** What the direction holds back until a later moment (the answer, the result, the reveal) does not appear in your part before that moment, in any form.
 # Example of the form, on an unrelated topic
 
     program ticks n=24 doc="A dial of tick marks that light up in turn."

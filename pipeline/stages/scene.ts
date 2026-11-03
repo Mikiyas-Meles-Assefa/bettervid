@@ -52,7 +52,9 @@ export const BUILD_ROUNDS = 4;
 const LOOK_ROUNDS = 2;
 const LOOK_FRAMES = 10; // each state settled, and changes while they happen
 const LOOK_SCALE = 0.6; // frames Spark sees: 648 by 1152, near full size
-const PARALLEL = 6;
+// Sections written at once. A minute of video is about ten sections and each is a handful of model calls over a few
+// minutes, so every section of a usual video starts together; the Contributor tier allows 150 requests a minute.
+const PARALLEL = 16;
 export const MAX_PROBLEMS = 25;
 const JOIN_ROUNDS = 2; // repairs of the parts a joined scene that does not build names
 export const REVIEW_ROUNDS = 2; // repairs from the instruments and a reviewer, after the look
