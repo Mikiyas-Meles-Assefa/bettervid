@@ -1,0 +1,117 @@
+{
+ "id": "egg-float",
+ "use": "a 4:5 social feed post",
+ "request": "A 20 second post for our farm's Instagram feed: how to tell if an egg is fresh with a glass of water.",
+ "topic": "The egg float test",
+ "intent": "People scrolling a feed should come away able to do the test in their kitchen.",
+ "style": "flat",
+ "goal": "The viewer knows: sinks flat is fresh, stands on end is older, floats means throw it out, and why.",
+ "promise": "A glass of water that tells you how old an egg is.",
+ "arc": "An egg into a glass, flat on the bottom, standing up, a pause, floating, the reason.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Not sure if an egg is still good? Put it in a glass of water.",
+   "job": "The hook and the setup.",
+   "knows": "The test uses a glass of water.",
+   "waiting": "What will it do?",
+   "look": "an egg dropping into a glass of water",
+   "feel": "playful",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "A fresh egg sinks and lies flat on its side.",
+   "job": "Fresh.",
+   "knows": "Fresh: sinks, lies flat.",
+   "waiting": "",
+   "look": "the egg lying flat on the glass's bottom",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e3",
+   "text": "A week or two old, it stands up on one end.",
+   "job": "Older.",
+   "knows": "One to two weeks: stands on end.",
+   "waiting": "And if it is older still?",
+   "look": "a second egg standing on its narrow end, wide end up",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "one end.",
+     "seconds": 1.5,
+     "purpose": "predict",
+     "does": "the two eggs rest on the bottom while a third egg waits above the glass",
+     "shows": "And if it floats?"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "If it floats, the air pocket inside has grown too big. Toss it.",
+   "job": "Old, and why.",
+   "knows": "Floating: the air pocket is too big; throw it out.",
+   "waiting": "",
+   "look": "the third egg floating at the surface, its air pocket drawn at the wide end",
+   "feel": "",
+   "rhythm": "long",
+   "reveal": {
+    "at": "If it floats,",
+    "what": "the third egg floating"
+   }
+  }
+ ],
+ "measure": {
+  "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion. A 4:5 feed post fills the phone's width as a 9:16 clip does, so read sizes as shares of the frame's width stay the phone's.",
+  "context": {
+   "screen": "phone",
+   "frame": "4:5",
+   "distance": "arm's length",
+   "attention": "glancing in a feed",
+   "why": "an Instagram feed post"
+  }
+ },
+ "quiz": [
+  {
+   "q": "What do you put the egg in?",
+   "a": "A glass of water.",
+   "needs": "words"
+  },
+  {
+   "q": "What does a fresh egg do?",
+   "a": "Sinks and lies flat on its side.",
+   "needs": "words"
+  },
+  {
+   "q": "What does an egg a week or two old do?",
+   "a": "Stands up on one end.",
+   "needs": "words"
+  },
+  {
+   "q": "Why does an old egg float?",
+   "a": "Its air pocket has grown too big.",
+   "needs": "words"
+  },
+  {
+   "q": "Which end of the standing egg points up, the wide or the narrow end?",
+   "a": "The wide end.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Where inside the floating egg is the air pocket?",
+   "a": "At its wide end.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "During the pause, where is the third egg?",
+   "a": "Above the glass, waiting to go in.",
+   "needs": "picture",
+   "hard": true
+  }
+ ]
+}

@@ -9,6 +9,8 @@ Claude Haiku stands in for Muse Spark as the scene's author, so a run spends no 
 Each step is `npm run -s bench -- <step> <run> [case ...]` from the repo root (no case names means all cases). The steps in order:
 
 ```
+npm run -s bench -- read 2026-11-03-baseline        # the user's material into part cards (cases with material)
+#   agents read: loop of read/ask/<task>.md -> read/answer/<task>.json -> read until every case has cards.json
 npm run -s bench -- prepare 2026-11-03-baseline     # prompts for the authors
 #   agents author: loop of next.md -> answer.txt -> submit until DONE
 npm run -s bench -- map 2026-11-03-baseline         # id-map requests (map.md); an agent answers map.json
@@ -16,6 +18,7 @@ npm run -s bench -- measure 2026-11-03-baseline     # free measures -> work/<run
 npm run -s bench -- render 2026-11-03-baseline      # clip.mp4, watch sheets, transcript, watch tasks
 #   agents watch: watch-learner.md, watch-words.md, watch-follow.md, watch-designer.md, watch-scroll.md, watch-depict.md
 npm run -s bench -- grade 2026-11-03-baseline       # grading requests (grade-N.md); an agent answers grades-N.json
+npm run -s bench -- requirements 2026-11-03-baseline  # the material's requirements on the built scenes -> requirements.json
 npm run -s bench -- report 2026-11-03-baseline      # bench/results/<run>/scores.md and summary.json
 npm run -s bench -- status 2026-11-03-baseline      # where every author stands
 ```
@@ -27,6 +30,14 @@ Render needs `BETTERVID_CHROME` (the chrome-headless-shell under `node_modules/.
 `bench/cases/*.json`, one short moment each (one scene part, at most 85 words, 15 to 40 s). A case is written as a director and teacher would: the user's request, topic, intent, style, the direction plan (events with their look, rhythm, holds, reveals, withholds and demonstrations, anchored to phrases rather than word numbers so they cannot drift), any material the user supplied, and a quiz with reference answers. Each question says what a viewer needs to answer it: the words, the picture, or both. `material` holds what the user brought: notes, a document excerpt, a CSV, a code file (text goes to `plan.material`, as the pipeline does) or a picture in `bench/cases/material/` (offered to the author by name, as the pipeline offers the director's pictures).
 
 Words are timed without a voice at about 2.4 words a second, weighted by length, with pauses after commas and sentences and each hold as a silence (`synthTiming` in `lib/case.ts`). `prepare --voice` records real narration instead, which costs ElevenLabs credits.
+
+The frame's shape is the case's `measure.context.frame` ("9:16", "16:9", "4:5", "1:1"; 9:16 when absent): the project carries it (`input.frame`, the short side 1080 px), so the author's canvas, the build, the measures, the clip (16:9 renders 640 by 360) and the sheets' tiles all follow it, and the watch tasks name the video's shape and screen from the case's context.
+
+## Material: part cards and requirements (`lib/read.ts`, `engine/design/material`)
+
+`read` turns each case's material into part cards (`PartCard` in `engine/design/types.ts`): tables, code and text documents are read by code (rows and data, numbered lines, headings, sentences, items and quotes, each with its line); each picture is a reader task for an agent (named parts with boxes, the words in it, a chart's data). Every reading is checked against its source without a model (boxes inside the picture and not degenerate, values against the stated total, the bars' boxes and the parts' own numbers, words found in the document, data against a table in the project); problems go back to the reader as a repair task (`read.<name>.r1` ...). Once every card checks, a linker task reads all the cards and returns the requirements one file states about another or about the video, each citing its file and part; a check makes sure they name real files and parts, and repairs the same way. The tasks go through the file Reasoner (`engine/design/reasoner.ts`): `<case>/read/ask/<task>.md` is the task, `<case>/read/answer/<task>.json` the answer; run `read` again after answering. The result is `<case>/cards.json` (cards, requirements, any problems left). `scripts/design-brain/bench-setup.ts` hands the cards to the composer as `material.json` (by name, with the requirements about each), `requirements.json`, and the intent author's request.
+
+`requirements` checks each requirement on the built scene with plain geometry (`lib/requirements.ts`): a requirement about a picture or a part of one reports the seconds it is on screen, the longest stretch, the seconds it is also legible at the case's read sizes (the type size of its smallest words, from the card's boxes), and met or not; one that names colors reports the share of painted words and shapes in them; anything else is reported as not measured here. What counts as long enough is the case's `requirementSettings`.
 
 ## Authoring protocol (Haiku in Spark's seat)
 
@@ -61,7 +72,7 @@ All are 0 to 1, computed from the built scene sampled frame by frame and the nar
 
 ## Watch tests (Claude subagents; `render` writes their tasks)
 
-Clips are 360 by 640 MP4s with the video's own captions and a clock. Watchers see them as sheets of 8 frames (2 s at 4 frames a second) with the narration cut to the same windows.
+Clips are MP4s a third of the frame's size (360 by 640 for 9:16, 640 by 360 for 16:9) with the video's own captions and a clock. Watchers see them as sheets of 8 frames (2 s at 4 frames a second) with the narration cut to the same windows.
 
 - **Learner** (`watch-learner.md`): a first-time learner watches every sheet with the words, then takes the quiz without outside knowledge, saying where each answer came from.
 - **Words only** (`watch-words.md`): the same quiz from the narration alone. The **teach gap**, video learner minus words only over the whole quiz, is the bench's main teaching number: what the picture teaches beyond the narration.

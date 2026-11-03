@@ -192,6 +192,10 @@ export type ChartData = {
   plot?: Box; // the plot area inside the picture
   barFrac?: number;
   texts?: Record<string, string>;
+  /** A total the picture itself states, when it states one (checked against the values). */
+  total?: number;
+  /** The card's part that shows each value, in the order of `labels` (checked against the values: bar lengths). */
+  parts?: string[];
 };
 
 export type Requirement = {

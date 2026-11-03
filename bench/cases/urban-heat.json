@@ -1,0 +1,148 @@
+{
+ "id": "urban-heat",
+ "use": "a 16:9 recap from a slide, held to a syllabus and a style note",
+ "request": "Make a 25 second recap of slide 14 for the course page, for my students before Thursday's quiz. Follow the syllabus and our department's style note; both are attached.",
+ "material": [
+  {
+   "kind": "image",
+   "name": "slide14",
+   "about": "the lecturer's slide 14: a bar chart of ground surface temperature by land cover",
+   "file": "urban-heat-slide14.png",
+   "size": [
+    1280,
+    720
+   ]
+  },
+  {
+   "kind": "doc",
+   "name": "syllabus.txt",
+   "about": "an excerpt of the course syllabus",
+   "text": "GEOG 210 Urban Environments\n\nWeek 6: Urban heat\nReading: chapter 4, sections 4.1 to 4.3.\nEssential figure: slide 14, surface temperature by land cover. Students must be able to read the gap between asphalt and tree canopy from the figure itself; the week 6 quiz asks for it.\nAny recap video must show the figure whole and readable for at least 5 seconds, not only redrawn.\nKey idea: shade, not only vegetation, lowers surface temperature."
+  },
+  {
+   "kind": "doc",
+   "name": "style-note.md",
+   "about": "the department's style note for teaching media",
+   "text": "# Department of Geography: teaching media style\n\n## Colors\n- Deep green #1F5C46 for headings and data.\n- Sand #F2EBDD for backgrounds.\n- Orange #D9622B to highlight one thing at a time.\n- Charcoal #2B2B2B for text.\nNever use red for data: some students are colour-blind.\n\n## Type\nOne sans-serif family; no more than two weights."
+  }
+ ],
+ "topic": "Surface temperature by land cover",
+ "intent": "Geography students revising at a desk need to read the asphalt to tree canopy gap off the essential figure before their quiz, in the department's colors.",
+ "style": "flat",
+ "goal": "The viewer can read 52 and 29 off the figure, knows the gap is 23 degrees, and that shade does the cooling.",
+ "promise": "One city block, five temperatures, a gap you can feel.",
+ "arc": "The whole figure as it is, the asphalt bar, the canopy bar, the gap between them, the two in between, the idea.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "On a July afternoon, the ground in one city block is not one temperature.",
+   "job": "Show the essential figure whole.",
+   "knows": "Surface temperature varies within a block.",
+   "waiting": "How different?",
+   "look": "the whole figure from slide 14, readable",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "Asphalt reached fifty-two degrees. Under tree canopy, the ground stayed at twenty-nine.",
+   "job": "The two ends.",
+   "knows": "Asphalt 52, tree canopy 29.",
+   "waiting": "",
+   "look": "the asphalt bar, then the tree canopy bar",
+   "feel": "",
+   "rhythm": "long",
+   "reveal": {
+    "at": "twenty-nine.",
+    "what": "the tree canopy value"
+   }
+  },
+  {
+   "id": "e3",
+   "text": "That is a gap of twenty-three degrees, a few steps apart.",
+   "job": "Name the gap.",
+   "knows": "A 23 degree gap.",
+   "waiting": "",
+   "look": "the gap between the asphalt and tree canopy bars",
+   "feel": "surprise",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "steps apart.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the gap between the two bar tops is marked in orange while the figure stays readable"
+    }
+   ]
+  },
+  {
+   "id": "e4",
+   "text": "Grass and bare soil sit in between. Shade, not just green, does the cooling.",
+   "job": "The idea.",
+   "knows": "Shade cools most.",
+   "waiting": "",
+   "look": "the grass and bare soil bars between the two ends",
+   "feel": "",
+   "rhythm": "long"
+  }
+ ],
+ "measure": {
+  "derived": "Derived once from the request, intent and audience; thresholds not named here take the defaults in bench/lib/settings.ts. Read sizes scale with how wide the frame looks: a classroom or meeting screen from the back looks narrower than a phone at arm's length, a laptop at a desk wider. A hold listed as still is one the plan asks to wait without motion. A 16:9 frame full screen on a laptop at a desk is about 330 mm wide, about 3.1 times the width a 9:16 frame gets on the same screen (off-by-one's laptop settings, 0.023 and 0.046), so the read sizes are those divided by 3.1.",
+  "context": {
+   "screen": "laptop",
+   "frame": "16:9",
+   "distance": "at a desk",
+   "attention": "watching on purpose",
+   "why": "a recap posted on the course page, watched while revising at a desk"
+  },
+  "read": {
+   "small": 0.0075,
+   "comfortable": 0.015
+  }
+ },
+ "requirementSettings": {
+  "seconds": 5,
+  "why": "the syllabus asks the figure to be whole and readable for at least 5 seconds"
+ },
+ "quiz": [
+  {
+   "q": "What temperature did the asphalt reach?",
+   "a": "52 degrees.",
+   "needs": "words"
+  },
+  {
+   "q": "What temperature did the ground stay at under tree canopy?",
+   "a": "29 degrees.",
+   "needs": "words"
+  },
+  {
+   "q": "How big is the gap between them?",
+   "a": "23 degrees.",
+   "needs": "words"
+  },
+  {
+   "q": "What does the cooling?",
+   "a": "Shade (not just green).",
+   "needs": "words"
+  },
+  {
+   "q": "Which land cover was the second hottest?",
+   "a": "Dark roof.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What temperature does the figure give for bare soil?",
+   "a": "41 degrees.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How many kinds of land cover does the figure compare?",
+   "a": "Five.",
+   "needs": "picture",
+   "hard": true
+  }
+ ]
+}
