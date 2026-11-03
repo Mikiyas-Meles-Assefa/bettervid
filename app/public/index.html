@@ -182,6 +182,148 @@
   .viewer .bar { display: flex; gap: 18px; font-size: 15px; align-items: center; flex-wrap: wrap; justify-content: center; }
   .viewer .bar a, .viewer .bar button { color: #fff; background: none; border: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; padding: 4px; }
 
+  /* Studio: the player stays on the left, how it was made reads on the right. */
+  .studio { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start; padding-top: 30px; }
+  .side { position: sticky; top: 84px; }
+  .screen { aspect-ratio: var(--ratio, 9 / 16); width: 100%; max-height: calc(100vh - 190px); background: #0f0e0c; color: #efe8da; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px; font-family: var(--serif); font-size: 21px; line-height: 1.3; gap: 12px; margin: 0 auto; }
+  .screen small { font-family: var(--sans); font-size: 14px; opacity: 0.7; line-height: 1.45; }
+  .screen video { width: 100%; height: 100%; display: block; background: #000; }
+  .screen.playing { padding: 0; }
+  .screen .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.18); border-top-color: #f0715c; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .facts-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  .facts-mini div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+  .facts-mini b { display: block; font-family: var(--serif); font-size: 20px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .facts-mini span { font-size: 12.5px; color: var(--soft); }
+  .side .links { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .side .links .btn { flex: 1; }
+  .head .eyebrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .head h1 { font-size: clamp(30px, 3.6vw, 44px); margin-top: 8px; max-width: 22ch; }
+  .asked { color: var(--soft); margin: 14px 0 0; font-family: var(--serif); font-size: 18px; max-width: 62ch; }
+  .asked::before { content: "Asked: "; font-family: var(--sans); font-size: 13px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+  .takeaway { margin: 10px 0 0; font-size: 16px; max-width: 62ch; }
+  [role="tablist"] { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 28px 0 0; overflow-x: auto; scrollbar-width: none; }
+  [role="tab"] { background: none; border: 0; border-bottom: 2.5px solid transparent; padding: 11px 14px 10px; font-weight: 600; font-size: 15px; color: var(--soft); cursor: pointer; white-space: nowrap; margin-bottom: -1px; }
+  [role="tab"]:hover { color: var(--ink); }
+  [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  [role="tab"] small { color: var(--faint); font-weight: 500; margin-left: 5px; font-variant-numeric: tabular-nums; }
+  [role="tabpanel"] { padding-top: 6px; }
+  [role="tabpanel"]:focus-visible { outline: none; }
+  .block { padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .block:last-child { border-bottom: 0; }
+  .block > h3 { margin-bottom: 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .block > h3 small { font-family: var(--sans); font-size: 13.5px; font-weight: 400; color: var(--faint); }
+  .prose { font-family: var(--serif); font-size: 18px; line-height: 1.6; max-width: 64ch; }
+  .prose p { margin: 0 0 12px; }
+  dl.pairs { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 0; }
+  dl.pairs dt { color: var(--faint); font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
+  dl.pairs dd { margin: 0; max-width: 64ch; }
+  ul.clean { list-style: none; margin: 0; padding: 0; }
+  ul.ticks { margin: 0; padding-left: 18px; }
+  ul.ticks li { margin: 3px 0; }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; }
+  ol.steps > li { display: grid; grid-template-columns: 14px 1fr auto; column-gap: 12px; align-items: baseline; padding: 6px 0; color: var(--faint); }
+  ol.steps > li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); transform: translateY(1px); }
+  ol.steps > li.done { color: var(--ink); }
+  ol.steps > li.done::before { background: var(--ok); border-color: var(--ok); }
+  ol.steps > li.now { color: var(--ink); font-weight: 650; }
+  ol.steps > li.now::before { border-color: var(--accent); background: var(--accent); animation: pulse 1.2s infinite; }
+  ol.steps > li.failed::before { background: var(--accent); border-color: var(--accent); }
+  ol.steps time { font-size: 13.5px; color: var(--soft); font-weight: 400; font-variant-numeric: tabular-nums; }
+  ol.steps .sub { grid-column: 2 / 4; font-size: 13.5px; color: var(--faint); font-weight: 400; }
+  ol.steps ul { grid-column: 2 / 4; margin: 4px 0 2px; padding: 0; list-style: none; font-weight: 400; font-size: 14px; color: var(--soft); }
+  ol.steps ul li { overflow-wrap: anywhere; }
+  .meter { grid-column: 2 / 4; height: 5px; background: var(--line); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--accent); }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  @media (prefers-reduced-motion: reduce) { ol.steps > li.now::before, .screen .spinner { animation: none; } }
+
+  .beats { display: grid; gap: 4px; }
+  .beat { display: grid; grid-template-columns: 92px 1fr; gap: 16px; padding: 10px 0; border-top: 1px dashed var(--line); }
+  .beat:first-child { border-top: 0; }
+  .beat .role { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); font-weight: 650; padding-top: 5px; }
+  .beat p { margin: 0; font-family: var(--serif); font-size: 18px; line-height: 1.55; max-width: 62ch; }
+  .beat.cue p { font-style: italic; color: var(--soft); }
+  .refs { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: 2px; }
+  .refs a { font-family: var(--sans); font-size: 11.5px; font-weight: 650; text-decoration: none; color: var(--soft); background: var(--sunk); border-radius: 5px; padding: 1px 6px; }
+  .refs a:hover { color: var(--accent-ink); background: var(--accent); }
+
+  .moments { position: relative; margin: 0; padding: 0; list-style: none; }
+  .moment { display: grid; grid-template-columns: 86px 1fr; gap: 18px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .moment:first-child { border-top: 0; }
+  .moment .when { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--soft); font-weight: 600; padding-top: 3px; }
+  .moment .when small { display: block; color: var(--faint); font-weight: 400; }
+  .moment h4 { margin: 0 0 8px; font-family: var(--serif); font-size: 18.5px; line-height: 1.35; font-weight: 600; }
+  .moment dl.pairs { font-size: 15px; gap: 6px 14px; }
+  .moment dl.pairs dt { font-size: 11.5px; }
+  .hold { display: flex; gap: 10px; align-items: baseline; margin-top: 8px; padding: 8px 12px; background: var(--sunk); border-radius: 9px; font-size: 14.5px; }
+  .hold b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .chipset { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+  .section-card { padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .section-card header { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+  .section-card header b { font-family: var(--serif); font-size: 19px; }
+  .section-card .words { font-family: var(--serif); font-style: italic; color: var(--soft); margin: 0 0 14px; max-width: 64ch; }
+  .stills { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; scrollbar-width: thin; }
+  .stills button { flex: none; width: 108px; background: none; border: 0; padding: 0; cursor: zoom-in; text-align: left; }
+  .stills img { width: 108px; aspect-ratio: var(--ratio, 9 / 16); object-fit: cover; border-radius: 8px; display: block; background: var(--sunk); outline: 1px solid var(--line); outline-offset: -1px; }
+  .stills span { display: block; font-size: 12px; color: var(--faint); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  details.source summary { cursor: pointer; color: var(--soft); font-size: 14.5px; margin-top: 6px; }
+  pre.code { background: var(--sunk); border-radius: 10px; padding: 14px; overflow: auto; max-height: 420px; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; white-space: pre; margin: 10px 0 0; }
+  pre.read { white-space: pre-wrap; font-family: var(--serif); font-size: 15px; }
+
+  .claims li { display: grid; grid-template-columns: 40px 1fr; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--line); scroll-margin-top: 90px; }
+  .claims li:first-child { border-top: 0; }
+  .claims li.hit { background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 8px; }
+  .claims .id { font-size: 12.5px; color: var(--faint); font-weight: 650; padding-top: 3px; }
+  .claims q { display: block; color: var(--soft); font-size: 14.5px; margin-top: 3px; font-style: italic; }
+  .claims small { color: var(--faint); font-size: 13px; }
+  ol.sources { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  ol.sources li { break-inside: avoid; margin: 0 0 8px; font-size: 15px; }
+  ol.sources small { display: block; color: var(--faint); }
+  .pictures { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px; }
+  .pictures figure { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .body { min-width: 0; overflow-wrap: break-word; }
+  .pictures img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 9px; background: var(--sunk); display: block; cursor: zoom-in; }
+  .pictures figcaption { font-size: 13px; color: var(--soft); margin-top: 6px; line-height: 1.4; }
+  .pictures figcaption b { color: var(--ink); font-weight: 600; display: block; }
+  .bars { display: grid; gap: 8px; max-width: 560px; }
+  .bars div { display: grid; grid-template-columns: 180px 1fr 64px; gap: 12px; align-items: center; font-size: 14.5px; }
+  .bars i { display: block; height: 8px; border-radius: 4px; background: var(--accent); min-width: 2px; }
+  .bars span:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--soft); }
+  table.data { border-collapse: collapse; font-size: 14.5px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  table.data th, table.data td { border-bottom: 1px solid var(--line); padding: 6px 14px 6px 0; text-align: left; }
+  table.data th { color: var(--faint); font-weight: 650; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .scroll-x { overflow-x: auto; }
+
+  .file { padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .file > header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .file > header b { font-family: var(--serif); font-size: 20px; }
+  .file h4 { margin: 18px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
+  .pages { display: flex; flex-direction: column; gap: 16px; max-height: 720px; overflow-y: auto; padding: 4px 10px 4px 2px; scrollbar-width: thin; }
+  .pages figure { margin: 0; display: grid; grid-template-columns: minmax(140px, 260px) 1fr; gap: 16px; align-items: start; }
+  .pages img { width: 100%; border-radius: 8px; background: #fff; outline: 1px solid var(--line); cursor: zoom-in; display: block; }
+  .pages figcaption { font-size: 14.5px; color: var(--soft); }
+  .pages figcaption b { color: var(--ink); display: block; margin-bottom: 3px; }
+  .bad { color: var(--warn); }
+
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .edit { padding: 18px 0; }
+  .edit input { display: block; width: 100%; max-width: 480px; margin-bottom: 6px; padding: 8px 11px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; }
+
+  @media (max-width: 860px) {
+    .studio { grid-template-columns: 1fr; gap: 26px; padding-top: 20px; }
+    .side { position: static; max-width: 360px; width: 100%; margin: 0 auto; }
+    .screen { max-height: 72vh; }
+    ol.sources { columns: 1; }
+    .beat, .moment { grid-template-columns: 1fr; gap: 4px; }
+    .bars div { grid-template-columns: 120px 1fr 56px; }
+    .pages figure { grid-template-columns: 1fr; }
+    dl.pairs { grid-template-columns: 1fr; gap: 2px; }
+    dl.pairs dd { margin-bottom: 8px; }
+  }
+
   .empty { padding: 60px 0; }
   .empty p { color: var(--soft); }
 
@@ -462,18 +604,319 @@ async function home() {
       el("div", { class: "row" }, show.map((v) => card(v, v.why ? el("p", {}, v.why) : null)))) : null);
 }
 
+// ---------- Studio: one project, how it was made ----------
+const ROLES = { hook: "Hook", setup: "Setup", explain: "Explain", example: "Example", but: "But", therefore: "So", twist: "Twist", reveal: "Reveal", ending: "Ending" };
+const PURPOSE = { look: "Look", predict: "Predict", settle: "Settle", recap: "Recap", reveal: "Reveal" };
+const SCRIPT_STEPS = { draft: "first draft", cut: "tightened", review: "after review", check: "checked", revise: "revised", final: "final" };
+const span = (a, b) => (a !== undefined && b !== undefined ? `${clock(a)} to ${clock(b)}` : "");
+let misses = 0;
+let replaying;
+
+function openViewer(content, caption) {
+  viewer.replaceChildren(el("div", { class: "viewer" }, content, el("div", { class: "bar" }, caption ? el("span", {}, caption) : null, el("button", { type: "button", onclick: () => viewer.close() }, "Close"))));
+  viewer.showModal();
+}
+const zoom = (url, caption) => () => openViewer(el("img", { src: url, alt: caption || "" }), caption);
+
+function block(title, note, ...kids) {
+  return el("section", { class: "block" }, el("h3", {}, title, note ? el("small", {}, note) : null), kids);
+}
+
+function stepsList(v) {
+  const calls = Object.fromEntries((v.models ?? []).map((m) => [m.stage, m]));
+  return el("ol", { class: "steps" }, v.steps.map((s) => {
+    const m = calls[s.key];
+    return el("li", { class: s.state },
+      el("span", {}, s.label),
+      el("time", {}, s.state === "done" ? (s.reused ? "reused" : s.seconds === 0 ? "under 1 s" : s.seconds !== undefined ? clock(s.seconds) : "") : s.state === "now" ? "working" : ""),
+      m && s.state === "done" ? el("span", { class: "sub" }, `${m.calls} model ${m.calls === 1 ? "call" : "calls"} (${m.models.map(modelName).join(", ")})`) : null,
+      s.state === "now" && s.percent !== undefined ? el("div", { class: "meter", role: "progressbar", "aria-label": `${s.label}, ${s.percent} percent`, "aria-valuenow": s.percent, "aria-valuemin": 0, "aria-valuemax": 100 }, el("i", { style: `width:${s.percent}%` })) : null,
+      s.details?.length && s.state !== "next" ? el("ul", {}, s.details.map((d) => el("li", {}, d))) : null);
+  }));
+}
+const modelName = (m) => (/muse-spark/.test(m) ? "Muse Spark" : /muse-image|image/.test(m) ? "Muse Image" : /sam/i.test(m) ? "SAM" : m);
+
+function overview(v) {
+  const asked = v.asked ?? {};
+  const wishes = [...(asked.story ?? []), asked.tone && `Tone: ${asked.tone}`, ...(asked.visuals ?? []), ...(asked.sound ?? []), asked.seconds && `About ${length(asked.seconds)}`].filter(Boolean);
+  const total = (v.times ?? []).reduce((n, t) => n + t.seconds, 0);
+  return [
+    v.video && !v.running && !replaying ? el("div", { class: "tools" },
+      el("button", { class: "btn quiet", type: "button", onclick: () => replay(v) }, "Replay how it was made"),
+      v.captions ? el("button", { class: "btn quiet", type: "button", onclick: (e) => editCaptions(v, e.currentTarget) }, "Edit captions") : null) : null,
+    block(v.running || replaying ? "Making it" : v.queued ? "Waiting in line" : "How it was made", total && !v.running && !replaying ? `${clock(total)} of work, stage by stage` : v.style, stepsList(v)),
+    v.plan ? block("The plan", "read from the request before anything was made",
+      el("dl", { class: "pairs" },
+        el("dt", {}, "Topic"), el("dd", {}, v.plan.topic),
+        v.intent ? [el("dt", {}, "Why"), el("dd", {}, v.intent)] : null,
+        v.angle ? [el("dt", {}, "Angle"), el("dd", {}, v.angle)] : null,
+        v.misconception ? [el("dt", {}, "Fixes"), el("dd", {}, v.misconception)] : null,
+        el("dt", {}, "Asked for"), el("dd", {}, wishes.length ? el("ul", { class: "ticks" }, wishes.map((w) => el("li", {}, w))) : "Nothing beyond the topic, so every choice was left to the agents."),
+        asked.notation ? [el("dt", {}, "Shown as"), el("dd", {}, "Worked notation, step by step")] : null)) : null,
+    v.material && !v.running ? null : v.material ? block("Your files", "read first", el("p", {}, `${v.material.files.length} ${v.material.files.length === 1 ? "file" : "files"}. `, el("a", { href: `#/p/${v.id}/material` }, "See what was read from them."))) : null,
+    v.critic ? block("What the critic said", "it watched the finished video and filed fixes", el("p", { class: "prose" }, v.critic.verdict), v.critic.tickets.length ? el("ul", { class: "ticks" }, v.critic.tickets.map((t) => el("li", {}, t.note))) : null) : null,
+  ];
+}
+
+function scriptPanel(v) {
+  const writing = (v.writing ?? []).filter((w) => w.words);
+  return [
+    v.beats?.length ? block("The script", v.scriptStep ? SCRIPT_STEPS[v.scriptStep] ?? v.scriptStep : "",
+      el("div", { class: "beats" }, v.beats.map((b) => el("div", { class: `beat${b.cue ? " cue" : ""}` },
+        el("span", { class: "role" }, b.cue ? "Cue" : ROLES[b.role] ?? b.role),
+        el("p", {}, b.text, b.claims?.length ? el("span", { class: "refs" }, b.claims.map((c) => el("a", { href: `#/p/${v.id}/trail`, "data-claim": c, title: "The sourced fact behind this line", onclick: (e) => jumpClaim(e, v, c) }, c))) : null)))))
+      : v.narration ? block("The script", v.scriptStep ? SCRIPT_STEPS[v.scriptStep] ?? v.scriptStep : "", el("div", { class: "prose" }, v.narration.split(/\n\s*\n/).map((p) => el("p", {}, p)))) : null,
+    writing.length ? block("How the writing changed", "each pass is kept",
+      el("ol", { class: "steps" }, writing.map((w) => el("li", { class: "done" }, el("span", {}, `${(SCRIPT_STEPS[w.step] ?? w.step).replace(/^./, (c) => c.toUpperCase())}`), el("time", {}, `${w.words} words`),
+        w.notes?.length ? el("ul", {}, w.notes.slice(0, 6).map((n) => el("li", {}, n))) : null)))) : null,
+  ];
+}
+function jumpClaim(e, v, c) {
+  e.preventDefault();
+  history.replaceState(null, "", `#/p/${v.id}/trail`);
+  paintStudio(v, "trail");
+  requestAnimationFrame(() => {
+    const target = document.getElementById(`claim-${c}`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: STILL ? "auto" : "smooth", block: "center" });
+    target.classList.add("hit");
+    target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
+  });
+}
+
+function directionPanel(v) {
+  const d = v.direction;
+  const look = d.look ? Object.entries({ emphasis: "Emphasis", scale: "Scale", motifs: "Motifs", texture: "Texture" }).filter(([k]) => d.look[k]) : [];
+  const holds = d.events.reduce((n, e) => n + e.holds.length, 0);
+  return [
+    block("The direction", "written after the script, before the voice, by walking it as the viewer",
+      el("dl", { class: "pairs" }, el("dt", {}, "Goal"), el("dd", {}, d.goal), el("dt", {}, "Promise"), el("dd", {}, d.promise), el("dt", {}, "Arc"), el("dd", {}, d.arc))),
+    look.length ? block("The look", "one art direction every scene writer is given", el("dl", { class: "pairs" }, look.map(([k, t]) => [el("dt", {}, t), el("dd", {}, d.look[k])]))) : null,
+    block("Moment by moment", `${d.events.length} moments, ${holds} ${holds === 1 ? "hold" : "holds"}${d.cues.length ? `, ${d.cues.length} added cue ${d.cues.length === 1 ? "line" : "lines"}` : ""}`,
+      el("ol", { class: "moments" }, d.events.map((e) => el("li", { class: "moment" },
+        el("div", { class: "when" }, e.from !== undefined ? clock(e.from) : "", e.to !== undefined ? el("small", {}, `to ${clock(e.to)}`) : null),
+        el("div", {},
+          el("h4", {}, e.job),
+          el("dl", { class: "pairs" },
+            e.look ? [el("dt", {}, "Eye on"), el("dd", {}, e.look)] : null,
+            e.knows ? [el("dt", {}, "Then knows"), el("dd", {}, e.knows)] : null,
+            e.waiting ? [el("dt", {}, "Wondering"), el("dd", {}, e.waiting)] : null,
+            e.demo ? [el("dt", {}, "Shows"), el("dd", {}, e.demo)] : null,
+            e.reveal ? [el("dt", {}, "Reveals"), el("dd", {}, e.reveal)] : null,
+            e.withhold ? [el("dt", {}, "Holds back"), el("dd", {}, e.withhold)] : null),
+          e.holds.map((h) => el("div", { class: "hold" }, el("b", {}, `${PURPOSE[h.purpose] ?? h.purpose} ${h.seconds} s${h.at !== undefined ? ` at ${clock(h.at)}` : ""}`), el("span", {}, h.does, h.shows ? ` On screen: "${h.shows}"` : ""))),
+          el("div", { class: "chipset" }, e.feel ? el("span", { class: "tag" }, e.feel) : null, el("span", { class: "tag" }, e.rhythm === "long" ? "long beat" : "short beat"))))))),
+    d.cues.length ? block("Cue lines it added", "short lines that point the eye, never new facts", el("ul", { class: "ticks" }, d.cues.map((c) => el("li", {}, c)))) : null,
+  ];
+}
+
+function scenesPanel(v) {
+  const ratio = v.frame ? `${v.frame[0]} / ${v.frame[1]}` : "9 / 16";
+  return [
+    el("p", { class: "note", style: "margin:18px 0 0" }, "Each section is written by Muse Spark in the scene language, built by the engine, measured by the instruments and looked at once by the reviewers. These are the frames they looked at."),
+    v.sections.map((s) => el("article", { class: "section-card", style: `--ratio:${ratio}` },
+      el("header", {}, el("b", {}, `Section ${s.id.replace(/^s/, "")}`), el("span", { class: "note" }, span(s.from, s.to)),
+        el("span", { class: "tag" }, `${s.rounds} ${s.rounds === 1 ? "round" : "rounds"}`), s.ok ? null : el("span", { class: "tag" }, "did not fully build"), s.author !== "language" ? el("span", { class: "tag" }, s.author) : null),
+      s.words ? el("p", { class: "words" }, `"${s.words}"`) : null,
+      s.stills.length ? el("div", { class: "stills" }, s.stills.map((x, i) => el("button", { type: "button", "aria-label": `Frame ${i + 1}${x.at !== undefined ? ` at ${clock(x.at)}` : ""}, enlarge`, onclick: zoom(x.url, x.at !== undefined ? `Section ${s.id.replace(/^s/, "")} at ${clock(x.at)}` : "") },
+        el("img", { src: x.url, alt: "", loading: "lazy", decoding: "async" }), x.at !== undefined ? el("span", {}, clock(x.at)) : null)))
+        : el("p", { class: "note" }, "No review frames were kept for this section."),
+      el("details", { class: "source" }, el("summary", {}, "The scene as written"), el("pre", { class: "code" }, s.source)))),
+  ];
+}
+
+function trailPanel(v) {
+  const sources = v.sourceList ?? [];
+  const max = Math.max(...(v.spend?.stages ?? []).map((s) => s.usd), 0.0001);
+  const tokens = (v.models ?? []).reduce((n, m) => n + m.tokensIn + m.tokensOut, 0);
+  return [
+    v.claims?.length ? block("The fact sheet", `${v.claims.length} claims, each tied to its sources`,
+      el("ol", { class: "clean claims" }, v.claims.map((c) => el("li", { id: `claim-${c.id}` },
+        el("span", { class: "id" }, c.id),
+        el("div", {}, c.text, c.quote ? el("q", {}, c.quote) : null,
+          el("small", {}, [c.sources.map((id) => sources.find((s) => s.id === id)?.publisher || sources.find((s) => s.id === id)?.title || id).join(", "), c.confidence !== "high" ? `${c.confidence} confidence` : ""].filter(Boolean).join(" · "))))))) : null,
+    sources.length ? block("Sources", `${sources.length}`,
+      el("ol", { class: "sources" }, sources.map((s) => el("li", {}, s.url ? el("a", { href: s.url, target: "_blank", rel: "noreferrer" }, s.title || s.publisher) : el("span", {}, s.title || s.publisher),
+        el("small", {}, [s.yours ? "your file" : s.publisher, s.date].filter(Boolean).join(", ")))))) : null,
+    v.pictures?.length ? block("Pictures", `${v.pictures.length}, with who made them`,
+      el("div", { class: "pictures" }, v.pictures.map((p) => el("figure", {},
+        el("img", { src: p.url, alt: p.title || "", loading: "lazy", decoding: "async", onclick: zoom(p.url, [p.title, p.credit, p.license].filter(Boolean).join(", ")) }),
+        el("figcaption", {}, el("b", {}, p.kind === "generated" ? "Made with Muse Image" : p.kind === "yours" ? "Your picture" : p.title || (p.kind === "real" ? "Archive picture" : "Picture")),
+          [p.credit, p.license, p.kind === "real" ? p.source : null].filter(Boolean).join(", "), p.page ? [" ", el("a", { href: p.page, target: "_blank", rel: "noreferrer" }, "page")] : null))))) : null,
+    v.spend ? block("Spend", `$${v.spend.usd.toFixed(2)} on the ledger for this video`,
+      el("div", { class: "bars" }, v.spend.stages.map((s) => el("div", {}, el("span", {}, s.label), el("i", { style: `width:${Math.max(1, (s.usd / max) * 100)}%` }), el("span", {}, `$${s.usd < 0.01 ? s.usd.toFixed(3) : s.usd.toFixed(2)}`))))) : null,
+    v.models?.length ? block("Model calls", `${v.models.reduce((n, m) => n + m.calls, 0)} calls, ${(tokens / 1000).toFixed(0)}k tokens, from the latest run's log`,
+      el("div", { class: "scroll-x" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, el("th", {}, "Stage"), el("th", {}, "Calls"), el("th", {}, "Tokens in"), el("th", {}, "Tokens out"), el("th", {}, "Model"))),
+        el("tbody", {}, v.models.map((m) => el("tr", {}, el("td", {}, m.label), el("td", {}, String(m.calls)), el("td", {}, m.tokensIn.toLocaleString()), el("td", {}, m.tokensOut.toLocaleString()), el("td", {}, m.models.map(modelName).join(", "))))))))
+      : null,
+    v.times?.length ? block("Time", "how long each stage took when it last ran",
+      el("div", { class: "bars" }, v.times.map((t) => el("div", {}, el("span", {}, t.label), el("i", { style: `width:${Math.max(1, (t.seconds / Math.max(...v.times.map((x) => x.seconds))) * 100)}%`, class: "" }), el("span", {}, clock(t.seconds)))))) : null,
+  ];
+}
+
+function table(rows) {
+  if (!rows.length) return null;
+  const [head, ...body] = rows;
+  return el("div", { class: "scroll-x" }, el("table", { class: "data" }, el("thead", {}, el("tr", {}, head.map((c) => el("th", {}, c)))), el("tbody", {}, body.map((r) => el("tr", {}, r.map((c) => el("td", {}, c)))))));
+}
+
+function materialPanel(v) {
+  const m = v.material;
+  const size = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+  return [
+    !m.read ? el("p", { class: "note", style: "margin-top:18px" }, "Your files have not been read yet. They are read first, before anything is planned.") : null,
+    m.requirements.length ? block("What your files require", "found in the files themselves, passed to every later stage",
+      el("ul", { class: "ticks" }, m.requirements.map((r) => el("li", {}, el("b", {}, `${r.kind}: `), r.detail, el("span", { class: "muted" }, ` (from ${r.file})`))))) : null,
+    m.files.map((f) => el("article", { class: "file" },
+      el("header", {}, el("b", {}, f.name), el("span", { class: "tag" }, f.type), el("span", { class: "note" }, size(f.size)), m.read ? el("span", { class: "note" }, `${f.cards} ${f.cards === 1 ? "part card" : "part cards"}`) : null),
+      f.problems.map((x) => el("p", { class: "bad" }, x)),
+      f.headings.length ? [el("h4", {}, "Headings"), el("ul", { class: "ticks" }, f.headings.map((h) => el("li", {}, h.text, h.where ? el("span", { class: "muted" }, ` (${h.where})`) : null)))] : null,
+      f.tables.map((t) => [el("h4", {}, "Table"), el("p", { class: "note" }, t.about), table(t.rows)]),
+      f.figures.length || f.loose.length ? [el("h4", {}, f.type === "PDF" ? "Pages and pictures taken from it" : "Pictures"),
+        el("div", { class: "pages" },
+          f.figures.map((x) => el("figure", {}, x.url ? el("img", { src: x.url, alt: x.about, loading: "lazy", decoding: "async", onclick: zoom(x.url, x.name) }) : null,
+            el("figcaption", {}, el("b", {}, x.kind), x.about, x.words.length ? el("ul", { class: "ticks" }, x.words.map((w) => el("li", {}, w))) : null, x.checked ? null : el("div", { class: "bad" }, "The reading did not fully check against the picture.")))),
+          f.loose.map((u) => el("figure", {}, el("img", { src: u, alt: "", loading: "lazy", onclick: zoom(u, f.name) }), el("figcaption", {}, "Saved from the file; the reader wrote no card for it."))))]
+        : f.type === "PDF" && m.read ? el("p", { class: "note" }, "No pages were rendered from this PDF: every page had text that could be read directly, and it held no pictures.") : null,
+      f.text ? [el("h4", {}, "What was read"), el("pre", { class: "code read" }, f.text)] : null)),
+  ];
+}
+
+const PANELS = {
+  overview: ["Overview", () => true, overview],
+  script: ["Script", (v) => v.beats?.length || v.narration, scriptPanel],
+  direction: ["Direction", (v) => v.direction, directionPanel],
+  scenes: ["Scenes", (v) => v.sections?.length, scenesPanel],
+  trail: ["Trail", (v) => v.claims?.length || v.sourceList?.length || v.pictures?.length || v.spend, trailPanel],
+  material: ["Material", (v) => v.material, materialPanel],
+};
+const counts = { scenes: (v) => v.sections.length, trail: (v) => v.claims?.length, material: (v) => v.material.files.length };
+
+function paintStudio(v, tab) {
+  const tabs = Object.entries(PANELS).filter(([, [, has]]) => has(v));
+  if (!tabs.some(([k]) => k === tab)) tab = "overview";
+  const same = app.dataset.studio === v.id;
+  const keep = same ? app.querySelector(".screen video") : null;
+  const now = v.steps.find((s) => s.state === "now");
+  const ratio = v.frame ? `${v.frame[0]} / ${v.frame[1]}` : "9 / 16";
+  const screen = v.video && !replaying
+    ? keep ? [] : el("video", { src: `/videos/${v.id}.mp4`, controls: true, playsinline: true, preload: "metadata", poster: v.thumb, "aria-label": `Play ${v.title}` })
+    : v.error ? [el("span", {}, "It stopped."), el("small", {}, v.error)]
+    : v.running || replaying ? [el("span", { class: "spinner", "aria-hidden": "true" }), el("span", {}, `${now?.label ?? "Starting"}...`), el("small", {}, replaying ? "A replay of how it was made. Nothing is being spent." : "This takes a while. You can leave; it will be in the gallery when it is done.")]
+    : v.queued ? [el("span", {}, `Number ${v.queued} in line`), el("small", {}, "It starts when the videos before it are done.")]
+    : [el("span", {}, "This one did not finish."), el("small", {}, "Its record is kept below.")];
+  const status = v.running ? el("span", { class: "tag live" }, "Making now") : v.queued ? el("span", { class: "tag" }, `Waiting, number ${v.queued}`) : v.video ? el("span", { class: "tag ok" }, "Finished") : el("span", { class: "tag" }, v.error ? "Stopped" : "Not finished");
+  const facts = [[v.seconds && clock(v.seconds), "long"], [v.facts?.claims, "sourced facts"], [v.sections?.length || v.shots, v.sections?.length ? "sections" : "shots"], [v.pictures?.length, "pictures"], [v.spend ? `$${v.spend.usd.toFixed(2)}` : v.usd ? `$${v.usd.toFixed(2)}` : undefined, "spent"], [v.direction?.events.length, "moments"]].filter(([n]) => n).slice(0, 6);
+  const side = el("aside", { class: "side", style: `--ratio:${ratio}` },
+    el("div", { class: `screen${v.video && !replaying ? " playing" : ""}`, "aria-live": v.running ? "polite" : null }, screen),
+    facts.length ? el("div", { class: "facts-mini" }, facts.map(([n, t]) => el("div", {}, el("b", {}, String(n)), el("span", {}, t)))) : null,
+    el("div", { class: "links" },
+      v.video ? el("a", { class: "btn quiet", href: `/videos/${v.id}.mp4`, download: `${v.id}.mp4` }, "Download") : null,
+      v.queued ? el("button", { class: "btn quiet", type: "button", onclick: async (e) => { try { await api(`/api/queue/${v.id}`, { method: "DELETE" }); location.hash = "#/batch"; } catch (err) { e.target.textContent = err.message; } } }, "Take out of line") : null,
+      el("a", { class: "btn quiet", href: "#/" }, "Make another")));
+  const tablist = el("div", { role: "tablist", "aria-label": "About this video" }, tabs.map(([k, [name]]) => {
+    const n = counts[k]?.(v);
+    return el("button", { role: "tab", type: "button", id: `tab-${k}`, "aria-controls": "panel", "aria-selected": String(k === tab), tabindex: k === tab ? "0" : "-1", "data-tab": k }, name, n ? el("small", {}, String(n)) : null);
+  }));
+  const panel = el("div", { role: "tabpanel", id: "panel", "aria-labelledby": `tab-${tab}`, tabindex: "0" }, PANELS[tab][2](v));
+  const choose = (k, focus) => {
+    history.replaceState(null, "", `#/p/${v.id}${k === "overview" ? "" : `/${k}`}`);
+    studio.tab = k;
+    paintStudio(v, k);
+    if (focus) app.querySelector(`#tab-${k}`)?.focus();
+  };
+  tablist.addEventListener("click", (e) => { const b = e.target.closest("[role=tab]"); if (b) choose(b.dataset.tab); });
+  tablist.addEventListener("keydown", (e) => {
+    const keys = tabs.map(([k]) => k);
+    const i = keys.indexOf(tab);
+    const to = e.key === "ArrowRight" ? keys[(i + 1) % keys.length] : e.key === "ArrowLeft" ? keys[(i - 1 + keys.length) % keys.length] : e.key === "Home" ? keys[0] : e.key === "End" ? keys.at(-1) : undefined;
+    if (to) { e.preventDefault(); choose(to, true); }
+  });
+  const head = el("div", { class: "head" },
+    el("div", { class: "eyebrow" }, status, el("span", {}, [v.style, day(v.createdAt), v.files ? `${v.files} ${v.files === 1 ? "file" : "files"}` : ""].filter(Boolean).join(" · "))),
+    el("h1", {}, v.title), v.prompt && v.prompt !== v.title ? el("p", { class: "asked" }, v.prompt) : null, v.takeaway ? el("p", { class: "takeaway" }, v.takeaway) : null);
+  const body = el("div", { class: "body" }, head, tablist, panel);
+  if (same && app.querySelector(".studio")) {
+    const old = app.querySelector(".studio");
+    const oldSide = old.querySelector(".side");
+    if (keep) {
+      oldSide.querySelector(".facts-mini")?.replaceWith(side.querySelector(".facts-mini") ?? "");
+      oldSide.querySelector(".links").replaceWith(side.querySelector(".links"));
+    } else old.replaceChild(side, oldSide);
+    old.replaceChild(body, old.querySelector(".body"));
+  } else {
+    app.replaceChildren(el("div", { class: "studio" }, side, body));
+    app.dataset.studio = v.id;
+  }
+}
+
+async function studio(id, tab) {
+  clearTimeout(timer);
+  replaying = undefined;
+  if (app.dataset.studio !== id) { delete app.dataset.studio; misses = 0; }
+  studio.tab = tab ?? studio.tab;
+  if (app.dataset.studio !== id) studio.tab = tab;
+  try {
+    const v = await api(`/api/videos/${id}`);
+    misses = 0;
+    paintStudio(v, studio.tab);
+    if (v.running || v.queued) timer = setTimeout(() => studio(id, studio.tab), v.running ? 1500 : 4000);
+  } catch (e) {
+    // The project file can be mid-write during a run, so try again before giving up.
+    if (++misses < 5) { timer = setTimeout(() => studio(id, studio.tab), 1200); return; }
+    delete app.dataset.studio;
+    app.replaceChildren(el("section", { class: "empty" }, el("h1", {}, "That video was not found."), el("p", {}, "It may have been taken out of line, or the link is wrong."), el("a", { href: "#/" }, "Back to the start")));
+  }
+}
+
+// Replay: walks through a finished run with no model calls, for when the budget or a rate limit stops new videos.
+function replay(v) {
+  clearTimeout(timer);
+  const done = v.steps.filter((s) => s.state === "done");
+  const step = (i) => {
+    if (i >= done.length) { replaying = undefined; delete app.dataset.studio; return paintStudio(v, "overview"); }
+    replaying = true;
+    paintStudio({ ...v, running: false, steps: done.map((s, k) => ({ ...s, details: [], percent: undefined, state: k < i ? "done" : k === i ? "now" : "next" })) }, "overview");
+    timer = setTimeout(() => step(i + 1), 1300);
+  };
+  delete app.dataset.studio;
+  step(0);
+}
+
+function editCaptions(v, button) {
+  if (app.querySelector(".edit")) return;
+  const boxes = v.captions.map((c, i) => el("input", { value: c, "aria-label": `Caption ${i + 1}`, maxlength: 60 }));
+  const err = el("div", { class: "error", role: "alert" });
+  const save = el("button", { class: "btn", type: "submit" }, "Save and re-render");
+  const form = el("form", { class: "edit", onsubmit: async (e) => {
+    e.preventDefault();
+    save.disabled = true;
+    err.textContent = "";
+    try {
+      await post(`/api/videos/${v.id}/captions`, { captions: boxes.map((b) => b.value) });
+      delete app.dataset.studio;
+      studio(v.id);
+    } catch (e) { err.textContent = e.message; save.disabled = false; }
+  } }, el("h3", {}, "Captions"), el("p", { class: "note" }, "Change the words; the timing stays. It renders again with no model calls."), boxes, save, err);
+  button.closest(".tools").after(form);
+  boxes[0]?.focus();
+}
+
 // Pages: #/ (make), #/p/<id>[/<tab>] (studio). Older links (#<id>) still open the studio.
 const views = { home };
 function route() {
   clearTimeout(timer);
+  replaying = undefined;
   if (viewer.open) viewer.close();
   const hash = location.hash.replace(/^#\/?/, "");
-  const [page, id, tab] = hash.split("/");
+  const [page, id, tab] = hash.split("/").map((x) => decodeURIComponent(x));
   let view = "home";
   let run = home;
   if (page && views[page]) { view = page; run = views[page]; }
-  else if (page === "p" && id && views.studio) { view = "studio"; run = () => views.studio(id, tab); }
-  else if (page && /^[a-z0-9-]+$/.test(page) && views.studio) { location.replace(`#/p/${page}`); return; }
+  else if (page === "p" && id) { view = "studio"; run = () => studio(id, tab); }
+  else if (page && /^[a-z0-9-]+$/.test(page)) { location.replace(`#/p/${page}`); return; }
+  if (view !== "studio") delete app.dataset.studio;
   for (const a of document.querySelectorAll("nav.main a")) a.toggleAttribute("aria-current", a.dataset.nav === view) && a.setAttribute("aria-current", "page");
   if (route.last !== `${view}/${id ?? ""}`) scrollTo(0, 0);
   route.last = `${view}/${id ?? ""}`;
