@@ -27,19 +27,19 @@ table{border-collapse:collapse;width:100%;background:var(--card)}td,th{border-bo
 button.reset{font:inherit;font-size:12px;color:var(--mute);background:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer}
 </style></head><body>
 <h1>bettervid, from prompt to product</h1>
-<p>Goal: the best video creation platform in the world, built on the best agent-native video engine. Circle size = how much improving the layer matters. Blue fill = how close it is to perfect (estimates). Green fill = your goal for it. Type a goal in a row, or in a section to set every row in it. Goals typed here are saved in this browser; the defaults in the file are Miki's goals from Nov 3. Orange ring = being built now. Red ring = the next job, not started. Dashed ring = built on a branch, not on main yet. Status as of Nov 3, 19:45 Doha. Code freeze: Nov 4, 20:00 Doha.</p>
+<p>Goal: the best video creation platform in the world, built on the best agent-native video engine. Circle size = how much improving the layer matters. Blue fill = how close it is to perfect (estimates). Green fill = your goal for it. Type a goal in a row, or in a section to set every row in it. Goals typed here are saved in this browser; the defaults in the file are Miki's goals from Nov 3. Orange ring = being built now. Red ring = the next job, not started. Dashed ring = built on a branch, not on main yet. Status as of Nov 3, 20:05 Doha. Code freeze: Nov 4, 20:00 Doha.</p>
 <p class="legend"><i style="background:var(--fill)"></i>now &nbsp; <i style="background:var(--goal)"></i>goal &nbsp; <i style="border:2px solid var(--now);width:8px;height:8px"></i>being built now &nbsp; <i style="border:2px solid var(--next);width:8px;height:8px"></i>next job &nbsp; <i style="border:2px dashed var(--branch);width:8px;height:8px"></i>on a branch &nbsp; <button class="reset" id="reset">back to file goals</button></p>
 <div class="chart" id="c"></div>
 <h2>Waves</h2>
 <table>
 <tr><th>Wave</th><th>Covers</th><th>Size</th><th>Now</th></tr>
 <tr><td>3. Teaching bench</td><td>Clips judged in time: eye, lag, pace, load, holds, depiction, readability, learner quiz, designer and scroller seats</td><td>60</td><td>done, paused: we judge with real clips Miki watches</td></tr>
-<tr><td>4. Design brain</td><td>Abilities, instruments, reasoning agents, search and look loops, style suggestions; direction as an ability; zero hardcoding</td><td>100</td><td>about 45%: built and merged (staging, steadiness, hand-drawn fix, motion vocabulary). <span class="branch">Path A on its branch</span> (Spark writes scenes with the toolbox, the board, sprites, one repair round, taste review). Open: Spark does not reach for the new tools and does not re-compose when the taste review asks; three merge sort clips look the same, small numbers in a mostly empty frame</td></tr>
+<tr><td>4. Design brain</td><td>Abilities, instruments, reasoning agents, search and look loops, style suggestions; direction as an ability; zero hardcoding</td><td>100</td><td>about 45%: built and merged (staging, steadiness, hand-drawn fix, motion vocabulary). Path A merged behind the sceneAuthor switch (Spark writes scenes with the toolbox, the board, sprites, one repair round, taste review). Open: Spark does not reach for the new tools and does not re-compose when the taste review asks; three merge sort clips look the same, small numbers in a mostly empty frame</td></tr>
 <tr><td>5. What can be shown</td><td>Your material first (agentic parsing, project graph, requirements across files), bringing static charts and images to life, agentic picture hunting, truth engines</td><td>90</td><td>about 50%: uploads and PDF, Word, PowerPoint, Excel readers merged; round 2 briefed (docs/briefs/uploads-2.md), not started</td></tr>
-<tr><td>6. Styles, sound, voice</td><td>Design languages and brand kits, sound tied to events, delivery per moment</td><td>60</td><td class="branch">about 65%: sound tied to events built by Codex on the sound branch, real checks on two videos (-14.2 and -14.1 LUFS), not merged</td></tr>
+<tr><td>6. Styles, sound, voice</td><td>Design languages and brand kits, sound tied to events, delivery per moment</td><td>60</td><td>about 65%: sound tied to scene moments merged (Codex), real checks on two videos (-14.2 and -14.1 LUFS)</td></tr>
 <tr><td>7. Proof</td><td>Full blind benchmark against NotebookLM and human-made videos</td><td>50</td><td>10%</td></tr>
 <tr><td>8. Platform</td><td>Chat-to-edit, live preview, uploads and library, interactive export, dubbing, sharing, hosting, accounts</td><td>95</td><td>about 25%: uploads in the app; the Dockerfile exists but was never built or hosted</td></tr>
-<tr><td>9. Speed and cost</td><td>Minutes per video, Spark only where it matters</td><td>30</td><td class="now">about 80%: speed midway on the speed branch (Codex, uncommitted edits); a 1-minute video takes about 15 min, 4 to 5 min when the voice is reused</td></tr>
+<tr><td>9. Speed and cost</td><td>Minutes per video, Spark only where it matters</td><td>30</td><td>about 80%: timings, stage scheduling, parallel critic and cache fixes merged (Codex); no end-to-end speedup measured yet, critic 55% faster; a 1-minute video takes about 15 min, 4 to 5 min when the voice is reused</td></tr>
 <tr><td>Every wave</td><td>Checks that only improve, better examples and stories, truthful research, real clips after every change</td><td>50</td><td>about 60%</td></tr>
 <tr><td>Submission (Nov 4)</td><td>README and the story, 3 to 4 showcase videos, hosted live product, code pushed, 3-minute demo video. Rubric: impact 30, Meta tooling 25, demo 25, technical depth 20</td><td>100</td><td class="now">about 5%: the next job; nothing exists yet and main has never been pushed</td></tr>
 </table>
@@ -53,13 +53,13 @@ const L=[
  ["Story","Direction: tempo, pauses, demos, the video's look",50,5,null,75],
  ["Story","Voice: narration with real pauses",80,3,null,75],
  ["Visuals","Pictures: hunt, make, frame, sprites",60,4,null,75],
- ["Visuals","Scene authoring (path A on a branch)",40,4,"branch",75],
+ ["Visuals","Scene authoring (path A merged, behind its switch)",40,4,null,75],
  ["Visuals","Design brain: composition, type, motion",40,6,null,75],
  ["Visuals","Truth engines: what can be shown",35,5,null,75],
  ["Visuals","Styles",60,4,null,75],
- ["Finish","Sound and music (done on the sound branch)",65,3,"branch"],
+ ["Finish","Sound and music (tied to scene moments, merged)",65,3],
  ["Finish","Render",85,1.5],
- ["Finish","Speed: minutes per video",80,2,"now"],
+ ["Finish","Speed: minutes per video (timings and scheduling merged)",80,2],
  ["Quality","Checks and repair, taste review",60,3],
  ["Quality","Teaching bench (paused)",70,4],
  ["Quality","Full blind benchmark",10,3],

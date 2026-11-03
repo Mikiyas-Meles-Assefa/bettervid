@@ -2,7 +2,10 @@
 
 For the next agent picking up bettervid. Read `AGENTS.md`, then `docs/PLAN.md` (v2, source of truth), then `research/DECISIONS.md`.
 
-## Latest state (Nov 3, about 19:45 Doha)
+## Latest state (Nov 3, about 20:05 Doha)
+Merged into main at 20:00: path A (behind `"sceneAuthor": "toolbox"`), sound tied to scene moments (Codex), speed (timings, stage scheduling, parallel critic, cache fixes; Codex) and the taste rerun report. Checks after the merges: tsc clean, test:engine 564, test:pipeline 157. Reports: `docs/briefs/path-a-report.md`, `sound-report.md`, `speed-report.md`, `taste-rerun-report.md`. The request layer (material, research, plan) is briefed for Codex in `docs/briefs/request.md`. Goals per layer are in `docs/layers.html`. The paragraph below is from before these merges.
+
+## State before the merges (Nov 3, about 19:45 Doha)
 Deadline: code freeze Wed Nov 4, noon ET (20:00 Doha); submit by 18:00 ET, hard deadline 21:00 ET. Nothing for the submission exists yet (README, demo video, hosting). main is 177 commits ahead of origin and has never been pushed; pushing is Miki's call.
 
 **Read first:** `AGENTS.md` (Miki's own words), `NEXT.md`, `docs/ROADMAP.md` ("Wave 4 status" and "How waves are judged"), `docs/DESIGN-BRAIN.md`, `docs/layers.html` (status chart), and the memory rules in `/Users/miki/.claude/projects/-Users-miki-Desktop-deskt-bettervid/memory/`.

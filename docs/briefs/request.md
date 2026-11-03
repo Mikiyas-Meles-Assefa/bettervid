@@ -31,7 +31,7 @@ Run two short projects (about 30 seconds each) all the way to a rendered video, 
 Look at the frames and the script yourself: the right figure appears, the requirements are met, the disagreement is flagged. Record paths and spend.
 
 ## Do not touch
-`engine/` except `engine/design/material/`; `pipeline/stages/scene.ts`, `direction.ts`, `mix.ts`, `render.ts`; `pipeline/lib/kit.ts`, `sound.ts`; `pipeline/run.ts`, `pipeline/lib/meta.ts`, `util.ts`, `project.ts` (the speed branch is changing them); `prompts/engine-language.md`, `scene*.md`, `taste-review.md`, `art-direction.md`.
+`engine/` except `engine/design/material/`; `pipeline/stages/scene.ts`, `direction.ts`, `mix.ts`, `render.ts`; `pipeline/lib/kit.ts`, `sound.ts`; `pipeline/run.ts`, `pipeline/lib/meta.ts`, `util.ts`, `project.ts`, `scheduler.ts`, `timing.ts`; `prompts/engine-language.md`, `scene*.md`, `taste-review.md`, `art-direction.md`.
 
 ## Rules
 - Commit with plain messages and no Co-Authored-By or "Generated with" lines, ever. Do not push; do not merge.
