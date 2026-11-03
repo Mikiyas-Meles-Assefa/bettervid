@@ -232,6 +232,32 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
   return { steps, drawn, problems };
 }
 
+// A phase that names steps past the end of what the kit computes is cut to the real range in code, and one that names
+// nothing real is emptied, so a plan written before the steps were seen does not cost a round for that alone. Returns
+// what was changed, in words.
+export function clampPhases(raw: RawPlan, steps: Map<string, string[]>): string[] {
+  const out: string[] = [];
+  for (const e of raw.events.filter(hasTruth)) {
+    const real = steps.get(truthKey(e.demo));
+    if (!real) continue;
+    for (const ph of e.demo.phases) {
+      if (!ph.from && !ph.to) continue;
+      const from = Math.max(1, ph.from);
+      const to = Math.min(real.length, ph.to);
+      if (from === ph.from && to === ph.to) continue;
+      if (from > to) {
+        out.push(`event ${e.id}: a phase named steps ${ph.from} to ${ph.to}, past the ${real.length} the kit computes; it plays no steps now`);
+        ph.from = ph.to = 0;
+      } else {
+        out.push(`event ${e.id}: a phase named steps ${ph.from} to ${ph.to}; the kit computes 1 to ${real.length}, so it plays ${from} to ${to}`);
+        ph.from = from;
+        ph.to = to;
+      }
+    }
+  }
+  return out;
+}
+
 // Every rule a plan must keep, in the numbering the model wrote (the script before cues). Empty when it holds.
 export function problems(raw: RawPlan, words: string[], steps: Map<string, string[]> = new Map(), scriptText = words.join(" ")): string[] {
   const out: string[] = [];
@@ -488,6 +514,7 @@ export async function direction(p: Project, force = false) {
       const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: round === 1 ? "high" : "medium" });
       const raw = r.value;
       const { steps, drawn, problems: refused } = demoSteps(raw, ctx, kinds);
+      for (const m of clampPhases(raw, steps)) console.log(`    mended: ${m}`);
       const found = [...refused, ...problems(raw, words, steps), ...unspoken(raw, words, steps)];
       const unseen = [...steps.entries()].filter(([k]) => !shown.has(k));
       charge(p, "direction", r.usd, `round ${round}: ${raw.events.length} events, ${raw.cues.length} cues, ${found.length} problems${unseen.length ? `, ${unseen.length} step lists to show` : ""}`);

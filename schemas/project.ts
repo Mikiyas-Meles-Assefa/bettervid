@@ -43,7 +43,8 @@ export type Input = {
   // Who writes the scene: "language" (each part in the scene language) or "intent" (an intent plan per part, which the
   // design brain composes). Absent: the scene stage's default (SCENE_AUTHOR_DEFAULT).
   sceneAuthor?: "language" | "intent" | "toolbox";
-  sceneRepair?: "once"; // one repair round per section: write, build, look once, one repair with every note // toolbox: the language with the design brain's abilities (path A)
+  sceneRepair?: "once" | "check" | "full"; // once (default): write, one look, one correction; check: plus the art director's check and one last repair; full: the review rounds // toolbox: the language with the design brain's abilities (path A)
+  passes?: "once" | "full"; // the writer and direction: once (default) is one call each; full is the draft, review, check and revise chain and the direction's rounds
   files?: InputFile[]; // the user's own files, stored in the project's material folder
 };
 

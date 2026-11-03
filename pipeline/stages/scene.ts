@@ -439,7 +439,8 @@ export const sectionsOf = (p: Project): Range[] => splitSections(p.narration!.wo
 export const joinScene = (plan: ScenePlan) => joinSections(plan.sections.filter((s) => s.author !== "intent"));
 
 // Who writes the scene when neither the call nor the project says: the scene language, until the intent path is chosen.
-export const SCENE_AUTHOR_DEFAULT: "language" | "intent" = "language";
+// Path A, the planned main path: Spark writes each scene with the design brain as its toolbox.
+export const SCENE_AUTHOR_DEFAULT: "language" | "intent" | "toolbox" = "toolbox";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The whole scene: the language parts built as one document, and each composed part shown only in its own window.
@@ -637,6 +638,7 @@ export type Job = {
   log: (line: string) => void;
   review?: boolean; // false: no review round after the look (reviewRound)
   once?: boolean; // one repair round: write, build, look once, one repair with every note (writeOnce)
+  check?: boolean; // in that round, the art director checks the repair and the writer gets one last request (sceneRepair: "check")
   taste?: Ask; // the taste review's model calls (Spark when not given); tests pass a fake
   // Path A: what prepares the depictions a part asks for before each build, and the toolbox they are kept in.
   toolbox?: { box: Toolbox; makers: ToolboxMakers; inflight: Map<string, Promise<void>>; save: () => void };
@@ -1281,7 +1283,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   looks.push("repaired");
 
   // 3. The check: did what the art director asked for land on screen? One last request if not.
-  if (verdict?.verdict === "revise") {
+  if (job.check && verdict?.verdict === "revise") {
     const folder = join(job.folder, "once", "check");
     const scene2 = next.c.result.scene!;
     const seen2 = await see(job, scene2, next.source, folder, true);
@@ -1985,7 +1987,9 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
       const sections: SceneSection[] = new Array(ranges.length);
       const notes: string[][] = ranges.map(() => []);
       const toolbox = author === "toolbox" ? toolboxFor(p, spent) : undefined;
-      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox && p.input.sceneRepair !== "once", once: p.input.sceneRepair === "once", ...(toolbox ? { toolbox } : {}) }));
+      // once (default): write, one look, one correction. check: plus the art director's check and one last repair. full: the review rounds.
+      const repairMode = p.input.sceneRepair ?? "once";
+      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox && repairMode === "full", once: repairMode !== "full", check: repairMode === "check", ...(toolbox ? { toolbox } : {}) }));
       // The intent path: the material read once into cards, and one plan request per part.
       let intent: { system: string; requests: string[]; cards: PartCard[]; requirements: PartCard["requirements"]; brief: string } | undefined;
       if (author === "intent") {

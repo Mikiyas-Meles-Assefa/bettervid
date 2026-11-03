@@ -7,7 +7,7 @@ import type { CompileContext } from "../../engine/core/types.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { Project, Script } from "../../schemas/project.ts";
 import { truthKindNames } from "../lib/abilities.ts";
-import { applyCues, coverage, demoSteps, problems, scriptWords, settingsFromLine, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
+import { applyCues, clampPhases, coverage, demoSteps, problems, scriptWords, settingsFromLine, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
 import { events } from "./director.ts";
 import { SCENE_KITS } from "./scene.ts";
 
@@ -231,4 +231,13 @@ test("a truth thing's settings written as a scene line or with an id are read as
   assert.deepEqual(JSON.parse(rawPlan.events[1]!.demo.truth.data), { data: [5, 2, 8, 1], algo: "merge", show: "boxes" });
   const withId = plan([event("e1", 0, 5), event("e2", 6, 9, { demo: { what: "merging", truth: { kind: "sort", data: JSON.stringify({ id: "s", data: [3, 1, 2], algo: "bubble" }) }, phases: [phase] } })]);
   assert.deepEqual(demoSteps(withId, ctx, kinds).problems, []);
+});
+
+test("a phase past the kit's last step is cut to the real range in code instead of costing a round", () => {
+  const steps = new Map([["sort {\"data\":[3,1,2],\"algo\":\"insertion\"}", ["a", "b", "c"]]]);
+  const phase = (from: number, to: number) => ({ from, to, pace: "slow" as const, at: { word: 7, hold: "", cue: "" }, until: none, replay: false, why: "" });
+  const rawPlan = plan([event("e1", 0, 5), event("e2", 6, 9, { demo: { what: "sorting", truth: { kind: "sort", data: JSON.stringify({ data: [3, 1, 2], algo: "insertion" }) }, phases: [phase(1, 5), phase(4, 6)] } })]);
+  const mended = clampPhases(rawPlan, steps);
+  assert.equal(mended.length, 2);
+  assert.deepEqual(rawPlan.events[1]!.demo.phases.map((p) => [p.from, p.to]), [[1, 3], [0, 0]]);
 });
