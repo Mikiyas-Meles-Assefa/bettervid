@@ -39,6 +39,7 @@ import { basename } from "node:path";
 import { emptyToolbox, prepareToolbox, toolboxKit, toolboxNotes, type Toolbox, type ToolboxMakers } from "../../engine/language/toolbox.ts";
 import { lookSchema } from "./direction.ts";
 import { metaDepictMakers, spriteStyle } from "../lib/depict-makers.ts";
+import { mend, unwrap } from "../lib/mend.ts";
 
 const VERSION = 6; // bump when the way sections are written or checked changes, so cached sections are redone
 const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
@@ -594,6 +595,7 @@ export type Job = {
   folder: string;
   log: (line: string) => void;
   review?: boolean; // false: no review round after the look (reviewRound)
+  once?: boolean; // one repair round: write, build, look once, one repair with every note (writeOnce)
   // Path A: what prepares the depictions a part asks for before each build, and the toolbox they are kept in.
   toolbox?: { box: Toolbox; makers: ToolboxMakers; inflight: Map<string, Promise<void>>; save: () => void };
 };
@@ -985,7 +987,7 @@ export type ReviewCalls = {
   gate: (before: string, after: Written, named: Issue[], label: string) => Promise<{ keep: boolean; usd: number; why: string }>;
 };
 
-const reviewPart = (name: "Review" | "Repair") => (prompt("scene-review").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
+const reviewPart = (name: "Review" | "Repair" | "Once") => (prompt("scene-review").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
 
 /** What the instruments read on a built part: its window of the video, the project's viewing, the words and silences. */
 export function measurePart(job: Job, scene: Scene): PartNotes {
@@ -1084,7 +1086,77 @@ export async function reviewRound(job: Job, start: Written, calls: ReviewCalls =
 
 // `start`: an answer already written in the scene language (an intent author who wrote today's language instead), which
 // is checked, repaired and looked at as a first answer would be.
+// Build and mend in code: slips the build names with exactly one fix are made before any model sees the part.
+async function checkMended(job: Job, written: string, fixed: string[]): Promise<{ source: string; c: Checked }> {
+  let source = unwrap(written);
+  let c = await check(job, source);
+  for (let pass = 0; pass < 3 && c.result.problems.length; pass++) {
+    const m = mend(source, c.result.problems);
+    if (!m.fixed.length) break;
+    fixed.push(...m.fixed);
+    source = m.source;
+    c = await check(job, source);
+  }
+  return { source, c };
+}
+
+// One repair round (the project's `sceneRepair: "once"`): the writer writes, the part is built and mended in code, rendered
+// once and looked at, and every note goes back together in a single request: the build's problems and notes, what code
+// sees, the look's issues on the frames, and the instruments' readings when the part has them. The repair is kept if it
+// builds; only a repair that does not build is asked again, with its build problems.
+async function writeOnce(job: Job, draft: string): Promise<Written & { looks: string[]; repairs: number; fixed: string[] }> {
+  job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing, one repair round`);
+  let usd = 0;
+  const fixed: string[] = [];
+  const ask = async (user: string | unknown[]): Promise<string> => {
+    const r = await text({ system: job.system, user: user as string, effort: "medium", maxOutput: 32000 });
+    usd += r.usd;
+    return r.value;
+  };
+  const first = await checkMended(job, await ask(draft ? `${job.request}\n\nA first draft of your part, made from the director's shots:\n${draft}` : job.request), fixed);
+  const built = (c: Checked) => !c.problems.length && !!c.result.scene;
+  const written = (source: string, c: Checked, rounds: number): Written => ({ source, result: c.result, problems: c.problems, warnings: [...c.warnings, ...c.notes], usd, rounds });
+  let request: string | unknown[];
+  let repairs = 1;
+  const looks: string[] = [];
+  if (built(first.c)) {
+    const w = written(first.source, first.c, 1);
+    const seen = await see(job, first.c.result.scene!, first.source, join(job.folder, "once"));
+    const j = await judge(job, w, seen);
+    usd += j.usd;
+    const issues = issuesFrom(j.judged.issues, seen.measured);
+    const said = review(job, first.source, first.c.result);
+    const notes = job.toolbox ? measurePart(job, first.c.result.scene!) : undefined;
+    writeFileSync(join(job.folder, "once", "issues.json"), JSON.stringify({ design: j.judged.design, issues, said, warnings: first.c.warnings, instruments: notes?.lines ?? [] }, null, 1));
+    job.log(`  ${job.range.id} look: design ${j.judged.design}/5, ${issues.length} issues, ${first.c.warnings.length} build notes${notes ? `, ${notes.lines.length} instrument lines` : ""}`);
+    if (!issues.length && !first.c.warnings.length && !said.trim()) return { ...w, usd, looks: ["fine"], repairs: 0, fixed };
+    const shown = new Set(issues.flatMap((x) => x.frames).filter((f) => f >= 1 && f <= seen.moments.length).slice(0, 4));
+    const parts = [
+      `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(first.source)}\n\n${reviewPart("Once")}`,
+      first.c.warnings.length ? `What the build reports:\n${first.c.warnings.map((x) => `- ${x}`).join("\n")}` : "",
+      said.trim() ? `What code sees:\n${said}` : "",
+      issues.length ? `Issues the reviewer saw on the frames:\n${issueText(issues)}` : "",
+      notes ? `${NOTES_HEAD}\n${notes.lines.join("\n")}` : "",
+      shown.size ? "The frames the issues name:" : "",
+    ].filter(Boolean).join("\n\n");
+    request = [{ type: "input_text", text: parts }, ...frameContent(seen, shown.size ? shown : new Set([1]), "Frame", notes ? readingsOn(job, first.c.result.scene!, seen) : undefined)];
+  } else request = repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings]);
+  let next = await checkMended(job, await ask(request), fixed);
+  if (!built(next.c)) {
+    repairs++;
+    job.log(`  ${job.range.id}: the repair does not build (${next.c.problems.slice(0, 2).join(" | ").slice(0, 200)}); asking once more with its build problems`);
+    next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings])), fixed);
+  }
+  if (built(next.c)) looks.push("repaired");
+  else if (built(first.c)) {
+    looks.push("repair did not build, kept the first");
+    return { ...written(first.source, first.c, 1 + repairs), usd, looks, repairs, fixed };
+  } else looks.push("did not build");
+  return { ...written(next.source, next.c, 1 + repairs), usd, looks, repairs, fixed };
+}
+
 async function writeSection(job: Job, draft: string, start?: string): Promise<Written & { looks: string[] }> {
+  if (job.once && start === undefined) return writeOnce(job, draft);
   job.log(`  ${job.range.id} (words ${job.range.firstWord} to ${job.range.lastWord}): writing`);
   let w = start !== undefined ? await compose(job, start, job.request, true) : await compose(job, undefined, draft ?`${job.request}\n\nA first draft of your part, made from the director's shots. Keep its pictures where they serve the words and build on it. Its camera lines frame each picture on its subject, measured for this frame, so keep them unless you move the picture; words you add over a picture take role=caption:\n${draft}` : job.request);
   let usd = w.usd;
@@ -1746,7 +1818,7 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
       const sections: SceneSection[] = new Array(ranges.length);
       const notes: string[][] = ranges.map(() => []);
       const toolbox = author === "toolbox" ? toolboxFor(p, spent) : undefined;
-      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox, ...(toolbox ? { toolbox } : {}) }));
+      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox && p.input.sceneRepair !== "once", once: p.input.sceneRepair === "once", ...(toolbox ? { toolbox } : {}) }));
       // The intent path: the material read once into cards, and one plan request per part.
       let intent: { system: string; requests: string[]; cards: PartCard[]; requirements: PartCard["requirements"]; brief: string } | undefined;
       if (author === "intent") {
