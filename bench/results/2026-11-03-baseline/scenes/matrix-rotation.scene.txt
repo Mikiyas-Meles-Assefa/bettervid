@@ -1,0 +1,43 @@
+program s1_plane doc="The point (3, 1) and its turned image (-1, 3) on a grid."
+  const S = Math.min(W, H) / 9, ox = W / 2, oy = H / 2;
+  const TURN = (words.find(w => /^turned/.test(w.text)) || { frame: T0 + (T1 - T0) * 0.8 }).frame;
+  for (let i = 0; i <= 8; i++) {
+    const g = i - 4;
+    path("s1_gh" + i, { points: [ox - 4.4 * S, oy - g * S, ox + 4.4 * S, oy - g * S], stroke: "rubbed", strokeWidth: 2, opacity: 0.35 });
+    path("s1_gv" + i, { points: [ox + g * S, oy - 4.4 * S, ox + g * S, oy + 4.4 * S], stroke: "rubbed", strokeWidth: 2, opacity: 0.35 });
+  }
+  path("s1_ax", { points: [ox - 4.4 * S, oy, ox + 4.4 * S, oy], stroke: "ink", strokeWidth: 4 });
+  path("s1_ay", { points: [ox, oy - 4.4 * S, ox, oy + 4.4 * S], stroke: "ink", strokeWidth: 4 });
+  path("s1_rp", { points: [ox, oy, ox + 3 * S, oy - S], stroke: "accent", strokeWidth: 6 });
+  path("s1_p", { x: ox + 3 * S, y: oy - S, points: circle(0, 0, 0.2 * S), closed: 1, fill: "accent" });
+  text("s1_lp", { x: ox + 3.45 * S, y: oy - 0.3 * S, text: "(3, 1)", size: 0.55 * S, color: "accent" });
+  const r = Math.sqrt(10) * S, a0 = Math.atan2(1, 3), a1 = Math.atan2(3, -1);
+  const pts = [];
+  for (let k = 0; k <= 40; k++) { const a = lerp(a0, a1, k / 40); pts.push(ox + Math.cos(a) * r, oy - Math.sin(a) * r); }
+  path("s1_arc", { points: pts, stroke: "highlight", strokeWidth: 5, drawn: 0 });
+  key("s1_arc", "drawn", TURN, 0);
+  key("s1_arc", "drawn", T1, 1, "smooth");
+  path("s1_q", { x: ox + 3 * S, y: oy - S, points: circle(0, 0, 0.2 * S), closed: 1, fill: "highlight", opacity: 0 });
+  key("s1_q", "opacity", TURN, 1);
+  anim("s1_q", "x", TURN, T1, (t) => ox + Math.cos(lerp(a0, a1, smooth(t))) * r);
+  anim("s1_q", "y", TURN, T1, (t) => oy - Math.sin(lerp(a0, a1, smooth(t))) * r);
+  text("s1_lq", { x: ox - S, y: oy - 3.6 * S, text: "(-1, 3)", size: 0.55 * S, color: "highlight", opacity: 0 });
+  key("s1_lq", "opacity", TURN, 1, "smooth");
+end
+
+@0
+text t0 "A matrix turns a point" size=big role=title
+matvec demo1 m=[[0,-1],[1,0]] v=[3,1]
+@8 keep
+mark brace demo1.v.cell.1.1,demo1.v.cell.2.1 "point three, one" id=s1_vb
+@14 keep
+drop s1_vb
+light demo1.m.cell.1.1 demo1.m.cell.1.2 demo1.v.cell.1.1 demo1.v.cell.2.1
+do steps demo1 from=1 to=1 pace=slow until=@30
+@31 keep
+light demo1.m.cell.2.1 demo1.m.cell.2.2 demo1.v.cell.1.1 demo1.v.cell.2.1
+do steps demo1 from=2 to=2 pace=normal until=@40
+@40+11 keep
+light demo1.out.cell.1.1 demo1.out.cell.2.1
+@41 keep
+run s1_plane s1_plane_run w=700 h=700 until=@55

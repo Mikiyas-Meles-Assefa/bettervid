@@ -1,0 +1,42 @@
+withhold call until=@45
+
+@0
+text t0 "Offside in twenty seconds" role=title
+free pitch w=900 h=1400
+  box goal "goal" at=50,3 w=400 h=200 role=label
+  circle K "K" at=50,12 role=muted
+  circle D1 "D" at=30,26 role=muted
+  circle D2 "D" at=68,33 role=muted
+  circle S "S" at=56,18 role=key
+  circle P "P" at=36,80 role=body
+
+@4 keep
+drop t0
+arrow P -> S "pass" id=pass role=pointer
+
+@10 keep
+light K D1 D2
+
+@19 keep
+mark underline D1 id=oline role=pointer
+tag D1 "second-last" id=sl role=pointer
+
+@34 keep
+light K D1
+
+@40 keep
+drop oline sl
+mark ring S role=pointer
+
+@44 keep
+text q "Onside or offside?" role=title
+
+@44+13 keep
+do pulse S
+
+@45 keep
+drop q
+light K
+
+@50 keep enter=pop
+text call "Offside." size=huge role=answer

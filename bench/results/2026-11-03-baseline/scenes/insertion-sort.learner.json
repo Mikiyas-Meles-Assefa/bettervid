@@ -1,0 +1,7 @@
+[
+  {"q": 1, "answer": "4, 1, 3, 2 (left to right). Shown on the cards at the start; the narration does not say the values.", "from": "picture"},
+  {"q": 2, "answer": "The 1 was taken and compared with the 4 (the only card in the sorted hand). The four is bigger, so the 1 slid in front of it, giving 1, 4, 3, 2.", "from": "both"},
+  {"q": 3, "answer": "The 3 passed the 4 and stopped right after the 1, between the 1 and the 4, giving 1, 3, 4, 2. The words say it stops at the one; the clip does not spell out the reason, though it is implied that the 1 is smaller so it stops there.", "from": "both"},
+  {"q": 4, "answer": "1, 2, 3, 4", "from": "both"},
+  {"q": 5, "answer": "The insertion of the 3 (about 12 to 18 s), which got the longest narration and the longest animation, with the 3 passing the 4 and stopping at the 1. This is a judgment from timing; the clip does not say which was slowest.", "from": "both"}
+]

@@ -1,0 +1,176 @@
+{
+ "id": "running-max",
+ "use": "a line of code changing state, from a code file",
+ "request": "Here's the code from my lesson file. Make a short that explains how this loop finds the biggest number, for beginners.",
+ "material": [
+  {
+   "kind": "code",
+   "name": "biggest.js",
+   "about": "the code file from the user's lesson",
+   "text": "let best = 0\nfor (const x of [3, 7, 2]) {\n  if (x > best) best = x\n}\nconsole.log(best)"
+  }
+ ],
+ "topic": "How a loop finds the biggest number",
+ "intent": "Beginners learning JavaScript need to see a variable change as a loop runs.",
+ "style": "neon",
+ "goal": "The viewer can follow the variable best through each pass of the loop and say why it ends at 7.",
+ "promise": "A tiny program and one variable to watch.",
+ "arc": "The code with best at 0, the first pass slowly, a guess, the rest quickly, ending on the printed 7.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Here's a tiny program that finds the biggest number. Watch the variable called best.",
+   "job": "Show the program and point at the one variable to watch.",
+   "knows": "best is the variable that tracks the answer.",
+   "waiting": "How does best change?",
+   "look": "the code, and the variable best",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "It starts at zero. The loop takes three. Three beats zero, so best becomes three.",
+   "job": "First pass of the loop, slowly.",
+   "knows": "best becomes 3 because 3 > 0.",
+   "waiting": "",
+   "look": "the lit line and best changing from 0 to 3",
+   "feel": "careful",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "becomes three.",
+     "seconds": 2.5,
+     "purpose": "predict",
+     "does": "the program waits; the list still shows 7 coming next",
+     "shows": "Next is 7. What happens to best?"
+    }
+   ],
+   "demo": {
+    "what": "the program running",
+    "truth": {
+     "kind": "trace",
+     "data": {
+      "code": [
+       "let best = 0",
+       "for (const x of [3, 7, 2]) {",
+       "  if (x > best) best = x",
+       "}",
+       "console.log(best)"
+      ]
+     }
+    },
+    "phases": [
+     {
+      "at": "It starts",
+      "pace": "slow",
+      "why": "the first pass, one line at a time",
+      "steps": [
+       1,
+       4
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Seven beats three, so best is seven. Two doesn't beat seven, so nothing changes.",
+   "job": "The rest of the loop, quicker.",
+   "knows": "best is 7; 2 changes nothing.",
+   "waiting": "",
+   "look": "best changing to 7, then staying",
+   "feel": "",
+   "rhythm": "short",
+   "demo": {
+    "what": "the program running",
+    "truth": {
+     "kind": "trace",
+     "data": {
+      "code": [
+       "let best = 0",
+       "for (const x of [3, 7, 2]) {",
+       "  if (x > best) best = x",
+       "}",
+       "console.log(best)"
+      ]
+     }
+    },
+    "phases": [
+     {
+      "at": "Seven beats",
+      "pace": "fast",
+      "why": "the remaining passes, quickly",
+      "steps": [
+       5,
+       10
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "At the end, best holds the biggest number: seven.",
+   "job": "Land the output.",
+   "knows": "The program prints 7.",
+   "waiting": "",
+   "look": "the printed 7",
+   "feel": "",
+   "rhythm": "short",
+   "demo": {
+    "what": "the program running",
+    "truth": {
+     "kind": "trace",
+     "data": {
+      "code": [
+       "let best = 0",
+       "for (const x of [3, 7, 2]) {",
+       "  if (x > best) best = x",
+       "}",
+       "console.log(best)"
+      ]
+     }
+    },
+    "phases": [
+     {
+      "at": "At the end,",
+      "pace": "normal",
+      "why": "the print and the end",
+      "steps": [
+       11,
+       12
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What value does best start at?",
+   "a": "0.",
+   "needs": "both"
+  },
+  {
+   "q": "What list does the loop go through?",
+   "a": "3, 7, 2.",
+   "needs": "picture"
+  },
+  {
+   "q": "What happens when x is 2?",
+   "a": "Nothing changes: 2 doesn't beat 7, so best stays 7.",
+   "needs": "words"
+  },
+  {
+   "q": "Which line of the program is the one that changes best?",
+   "a": "The if line: if (x > best) best = x.",
+   "needs": "picture"
+  },
+  {
+   "q": "What does the program print?",
+   "a": "7.",
+   "needs": "both"
+  }
+ ]
+}

@@ -1,0 +1,37 @@
+@0
+text hook "An octopus has" size=big role=title
+@3 keep
+text three "three" size=huge role=key
+@4 keep
+text hearts "hearts." size=big role=title
+row trio gap=50 align=center
+  circle g1 "heart" w=260
+  circle g2 "heart" w=260
+  circle b1 "heart" w=300
+@5 keep
+tag g1 "gills" id=gt1
+tag g2 "gills" id=gt2
+do pulse g1 frames=12
+do pulse g2 frames=12
+@11 keep
+drop gt1
+drop gt2
+light b1
+tag b1 "body" id=bt
+do pulse b1 frames=14
+@15 keep
+do pulse b1 frames=14
+@19 keep
+do pulse b1 frames=14
+@21 keep
+drop g1
+drop g2
+@22 keep
+text swim "when it swims," role=note
+@28 keep
+mark cross b1 role=wrong
+tag b1 "stopped" id=bt role=wrong
+do shake b1 size=12 frames=14
+@33 keep
+drop swim
+text crawl "they would rather crawl" role=answer

@@ -1,0 +1,170 @@
+{
+ "id": "insertion-sort",
+ "use": "an algorithm's first instance slow, then faster",
+ "request": "Short on insertion sort for my intro CS class. Show the first insert slowly, then let it run.",
+ "topic": "Insertion sort",
+ "intent": "Students in an intro programming course need to see how insertion sort moves values.",
+ "style": "flat",
+ "goal": "The viewer can describe one insertion and predict how the rest go.",
+ "promise": "Sorting a hand of cards, one card at a time.",
+ "arc": "A row of four values, the first insert slowly, the second at normal speed, the rest fast, ending sorted.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Insertion sort builds a sorted hand, one card at a time, like sorting playing cards.",
+   "job": "Set up the row and the idea of a sorted part on the left.",
+   "knows": "There is a sorted part that grows from the left.",
+   "waiting": "How does a card get into the sorted part?",
+   "look": "the row of four values, with the leftmost marked as the sorted part",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "Take the one. The four is bigger, so the one slides in front.",
+   "job": "The first insertion, slowly.",
+   "knows": "A card moves left past every bigger card.",
+   "waiting": "",
+   "look": "the 1 and the 4 being compared, then the 1 sliding in front",
+   "feel": "careful",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "in front.",
+     "seconds": 1.5,
+     "purpose": "look",
+     "does": "the sorted part, now 1 4, is marked as sorted"
+    }
+   ],
+   "demo": {
+    "what": "insertion sort on 4 1 3 2",
+    "truth": {
+     "kind": "sort",
+     "data": {
+      "data": [
+       4,
+       1,
+       3,
+       2
+      ],
+      "algo": "insertion",
+      "show": "boxes"
+     }
+    },
+    "phases": [
+     {
+      "at": "Take the one.",
+      "pace": "slow",
+      "why": "the first comparison and swap, one step at a time",
+      "steps": [
+       1,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Now the three: it passes the four, then stops at the one.",
+   "job": "The second insertion, at normal speed, showing where it stops.",
+   "knows": "A card stops at the first smaller card.",
+   "waiting": "",
+   "look": "the 3 moving past the 4 and stopping at the 1",
+   "feel": "",
+   "rhythm": "short",
+   "demo": {
+    "what": "insertion sort on 4 1 3 2",
+    "truth": {
+     "kind": "sort",
+     "data": {
+      "data": [
+       4,
+       1,
+       3,
+       2
+      ],
+      "algo": "insertion",
+      "show": "boxes"
+     }
+    },
+    "phases": [
+     {
+      "at": "Now the three:",
+      "pace": "normal",
+      "why": "the second insertion, two comparisons",
+      "steps": [
+       2,
+       3
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "The two does the same, and the hand is sorted. Every card was compared only with cards already sorted.",
+   "job": "Run the rest fast and land on the sorted row.",
+   "knows": "The row ends sorted: 1 2 3 4.",
+   "waiting": "",
+   "look": "the last insertion running quickly, then the sorted row",
+   "feel": "",
+   "rhythm": "short",
+   "demo": {
+    "what": "insertion sort on 4 1 3 2",
+    "truth": {
+     "kind": "sort",
+     "data": {
+      "data": [
+       4,
+       1,
+       3,
+       2
+      ],
+      "algo": "insertion",
+      "show": "boxes"
+     }
+    },
+    "phases": [
+     {
+      "at": "The two",
+      "pace": "fast",
+      "why": "the rest of the sort runs quickly and comes to rest sorted",
+      "steps": [
+       4,
+       6
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What was the starting order of the values?",
+   "a": "4, 1, 3, 2.",
+   "needs": "picture"
+  },
+  {
+   "q": "What happened in the first comparison?",
+   "a": "The 1 was compared with the 4; the 4 was bigger, so the 1 moved in front of it.",
+   "needs": "both"
+  },
+  {
+   "q": "Where did the 3 stop, and why?",
+   "a": "Just after the 1 (between 1 and 4), because the 1 is smaller.",
+   "needs": "both"
+  },
+  {
+   "q": "What was the final order?",
+   "a": "1, 2, 3, 4.",
+   "needs": "picture"
+  },
+  {
+   "q": "Which insertion was shown most slowly?",
+   "a": "The first one (the 1 moving in front of the 4).",
+   "needs": "picture"
+  }
+ ]
+}

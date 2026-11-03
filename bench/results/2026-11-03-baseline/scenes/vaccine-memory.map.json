@@ -1,0 +1,9 @@
+{
+  "promise": ["s1_field", "tag.s1_field.s1_k4_0"],
+  "events": [
+    {"id": "e1", "look": ["s1_piece"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["s1_field", "s1_head"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e3", "look": ["s1_field"], "lookNone": "", "withhold": [], "demo": [], "holds": [{"hold": "h1", "does": ["s1_field", "tag.s1_field.s1_k4_0"], "answer": "", "ids": []}]},
+    {"id": "e4", "look": ["s1_germ", "s1_field"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

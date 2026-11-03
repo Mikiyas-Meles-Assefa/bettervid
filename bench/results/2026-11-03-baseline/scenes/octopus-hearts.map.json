@@ -1,0 +1,8 @@
+{
+  "promise": ["hook", "three", "hearts", "g1", "g2", "b1"],
+  "events": [
+    {"id": "e1", "look": ["g1", "g2", "b1"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["g1", "g2", "b1"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e3", "look": ["b1"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

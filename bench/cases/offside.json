@@ -1,0 +1,103 @@
+{
+ "id": "offside",
+ "use": "a sports rule, explained in space",
+ "request": "Explain the offside rule in soccer in 20 seconds, with an example.",
+ "topic": "The offside rule in soccer",
+ "intent": "A new soccer fan wants to understand calls during a match.",
+ "style": "whiteboard",
+ "goal": "The viewer can judge a simple offside call from the positions at the moment of the pass.",
+ "promise": "Offside, from one frozen moment.",
+ "arc": "A pitch with players, the moment of the pass frozen, the line of the second-last defender, an example to judge, the call.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Offside in twenty seconds.",
+   "job": "Hook.",
+   "knows": "",
+   "waiting": "",
+   "look": "the pitch with the attackers, defenders and goal",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "At the moment your teammate passes, look at the defenders between you and the goal.",
+   "job": "When and where to look.",
+   "knows": "It is judged at the moment of the pass.",
+   "waiting": "",
+   "look": "the moment of the pass, and the defenders",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e3",
+   "text": "You need at least two of them level with you or closer to their goal. Usually that's the keeper plus one.",
+   "job": "The rule.",
+   "knows": "Two defenders level or closer, usually the keeper plus one.",
+   "waiting": "",
+   "look": "the line of the second defender",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e4",
+   "text": "Here, is the striker onside?",
+   "job": "An example to judge.",
+   "knows": "",
+   "waiting": "Onside or offside?",
+   "look": "the striker and the defenders' positions at the pass",
+   "feel": "",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "onside?",
+     "seconds": 2.5,
+     "purpose": "predict",
+     "does": "the positions stay frozen at the pass, with no call shown",
+     "shows": "Onside or offside?"
+    }
+   ],
+   "withhold": {
+    "what": "the call",
+    "until": "e5"
+   }
+  },
+  {
+   "id": "e5",
+   "text": "Only the keeper is closer. Offside.",
+   "job": "The call.",
+   "knows": "Offside: only one defender closer.",
+   "waiting": "",
+   "look": "the striker past the last outfield defender, and the call",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "Offside.",
+    "what": "the call"
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "When is offside judged?",
+   "a": "At the moment the teammate passes the ball.",
+   "needs": "words"
+  },
+  {
+   "q": "How many defenders must be level with you or closer to their goal?",
+   "a": "At least two (usually the keeper plus one).",
+   "needs": "words"
+  },
+  {
+   "q": "Was the striker in the example offside?",
+   "a": "Yes: only the keeper was closer to the goal.",
+   "needs": "both"
+  },
+  {
+   "q": "In the example, where was the last outfield defender compared with the striker?",
+   "a": "Farther from the goal than the striker (the striker was past him).",
+   "needs": "picture"
+  }
+ ]
+}

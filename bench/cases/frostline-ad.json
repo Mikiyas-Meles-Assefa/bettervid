@@ -1,0 +1,98 @@
+{
+ "id": "frostline-ad",
+ "use": "an ad hook for a product",
+ "request": "15 to 20 second ad hook for our insulated bottle Frostline: ice stays frozen 24 hours. Punchy, for Reels.",
+ "topic": "Frostline insulated bottle",
+ "intent": "A brand wants viewers to stop scrolling and remember the 24 hour claim.",
+ "style": "custom/late-night-synthwave-arcade-dfd9",
+ "goal": "The viewer remembers the name Frostline and that ice lasts a full day in it.",
+ "promise": "A familiar annoyance, then a test with a result you want to see.",
+ "arc": "Warm coffee, a hot car, a clock spun forward with a guess, ice still there, the name.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "It's 3 p.m. Your iced coffee is now warm coffee.",
+   "job": "Hook with a familiar annoyance.",
+   "knows": "Ice melts by afternoon.",
+   "waiting": "Is there a fix?",
+   "look": "the iced coffee gone warm",
+   "feel": "relatable annoyance",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "We left ice in a Frostline bottle in a hot car. All day.",
+   "job": "Set up the test.",
+   "knows": "The test: a full day in a hot car.",
+   "waiting": "Is the ice still there?",
+   "look": "the bottle in a hot car, time passing",
+   "feel": "dare",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "day.",
+     "seconds": 2.0,
+     "purpose": "predict",
+     "does": "the clock spins forward through the day while the bottle sits",
+     "shows": "24 hours later?"
+    }
+   ],
+   "withhold": {
+    "what": "what is inside the bottle after the day",
+    "until": "e3"
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Twenty-four hours later, still clinking.",
+   "job": "The payoff.",
+   "knows": "The ice survived 24 hours.",
+   "waiting": "",
+   "look": "ice still inside the bottle",
+   "feel": "satisfying",
+   "rhythm": "short",
+   "reveal": {
+    "at": "still clinking.",
+    "what": "ice still in the bottle"
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Frostline. Cold that keeps its promise.",
+   "job": "Land the name.",
+   "knows": "The product is Frostline.",
+   "waiting": "",
+   "look": "the name Frostline with the bottle",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What problem does the ad open with?",
+   "a": "Iced coffee has gone warm by the afternoon.",
+   "needs": "words"
+  },
+  {
+   "q": "What was the test?",
+   "a": "Ice left in the bottle in a hot car all day (24 hours).",
+   "needs": "words"
+  },
+  {
+   "q": "What was the result?",
+   "a": "The ice was still there after 24 hours (still clinking).",
+   "needs": "both"
+  },
+  {
+   "q": "What is the product called?",
+   "a": "Frostline.",
+   "needs": "both"
+  },
+  {
+   "q": "What did the screen show during the pause before the result?",
+   "a": "Time passing (a clock spinning forward) while the bottle sat in the car, with the question 24 hours later?",
+   "needs": "picture"
+  }
+ ]
+}

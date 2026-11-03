@@ -1,0 +1,17 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "Grey background with a big bold question, 'How long does money take to double?'. The question hooks me and the type is strong."},
+    {"sheet": 2, "watching": true, "noticed": "The question stays and a red 'years to double' tag and '72 ÷ rate' appear. Curious, staying."},
+    {"sheet": 3, "watching": true, "noticed": "The formula sits in the middle and the caption talks about the yearly rate. Clean, still with it."},
+    {"sheet": 4, "watching": true, "noticed": "The formula becomes '72 ÷ 6 = ?' for six percent. The question style makes me wait for the answer."},
+    {"sheet": 5, "watching": true, "noticed": "The equation fills in with a red 12. A satisfying payoff."},
+    {"sheet": 6, "watching": true, "noticed": "'Twelve years to double' appears in red under the equation. Clear, I would keep watching."},
+    {"sheet": 7, "watching": false, "noticed": "The layout breaks: the headline and the equation run off the right edge and overlap each other. It looks broken, so I swipe."},
+    {"sheet": 8, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 9, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 10, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 11, "watching": false, "noticed": "Already swiped away; not watching."}
+  ],
+  "swiped_at": 7,
+  "remembers": "To find how long money takes to double, divide 72 by the yearly rate: at 6 percent that is twelve years, and it is a close estimate for everyday rates."
+}

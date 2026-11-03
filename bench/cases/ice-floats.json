@@ -1,0 +1,94 @@
+{
+ "id": "ice-floats",
+ "use": "why something happens, at the scale of molecules",
+ "request": "Why does ice float? Show the molecules.",
+ "topic": "Why ice floats",
+ "intent": "A curious viewer wants the molecular reason.",
+ "style": "custom/a-1970s-science-c503",
+ "goal": "The viewer knows ice's open lattice takes more room than liquid water, so ice is less dense and floats.",
+ "promise": "Ice breaks a rule almost every solid follows.",
+ "arc": "An ice cube floating, tumbling molecules, a lattice locking into hexagons, the open space compared.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Almost every solid sinks in its own liquid. Ice floats. Why?",
+   "job": "Pose the puzzle.",
+   "knows": "",
+   "waiting": "Why does ice float?",
+   "look": "ice floating on water",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "In liquid water, molecules tumble close together.",
+   "job": "Show the liquid.",
+   "knows": "Liquid molecules are close and moving.",
+   "waiting": "",
+   "look": "water molecules tumbling close together",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e3",
+   "text": "As water freezes, hydrogen bonds lock each molecule to four neighbors, in an open hexagon pattern.",
+   "job": "Form the lattice.",
+   "knows": "Ice is an open hexagonal lattice, four bonds each.",
+   "waiting": "",
+   "look": "the hexagonal lattice forming",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "pattern.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the lattice holds still, its open middle visible"
+    }
+   ],
+   "demo": {
+    "what": "molecules locking into a lattice",
+    "phases": [
+     {
+      "at": "As water",
+      "pace": "slow",
+      "why": "molecules lock one bond at a time"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "That open lattice takes more room than the liquid, so ice is about nine percent less dense, and it floats.",
+   "job": "Answer the puzzle.",
+   "knows": "More room, about 9% less dense, so it floats.",
+   "waiting": "",
+   "look": "the lattice beside the liquid, taking more room",
+   "feel": "",
+   "rhythm": "long"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "Why does ice float?",
+   "a": "Its open hexagonal lattice takes more room than liquid water, so it is less dense.",
+   "needs": "words"
+  },
+  {
+   "q": "How many neighbors does each molecule bond to in ice?",
+   "a": "Four.",
+   "needs": "words"
+  },
+  {
+   "q": "How much less dense is ice than water?",
+   "a": "About 9 percent.",
+   "needs": "words"
+  },
+  {
+   "q": "How did the molecules in the liquid look different from those in ice?",
+   "a": "In the liquid they tumbled close together; in ice they were locked in an open hexagon pattern with space in the middle.",
+   "needs": "both"
+  }
+ ]
+}

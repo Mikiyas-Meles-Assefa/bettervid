@@ -1,0 +1,15 @@
+[
+{"sheet":1,"looking":"A title 'The trail to the summit' and a small hand-drawn style trail map on lined paper, with a 'trailhead' label","waiting":"What the narrator says about the trail; how the map gets used","confusing":"The map text is tiny and hard to read; the 'trailhead' label overlaps the map's own label"},
+{"sheet":2,"looking":"A red line starting to draw up from the trailhead on the map; blue caption '2.1 km to the creek'","waiting":"The line to reach the creek crossing","confusing":"The red line starts at the middle of the label, not at the trailhead dot"},
+{"sheet":3,"looking":"The red line reaching the creek crossing, with a 'cross on the stones' label popping up on the map","waiting":"The next stop after the creek","confusing":"The 'cross on the stones' label sits over the map's own creek label and hides it"},
+{"sheet":4,"looking":"The red line extends up past the creek; the stones label fades","waiting":"The ridge junction","confusing":""},
+{"sheet":5,"looking":"A red circle drawn around the ridge junction; caption '4 km: ridge junction'","waiting":"What is special about this junction","confusing":"The circle covers part of the map's '4.0 km' label"},
+{"sheet":6,"looking":"A red branch drawn off the junction to the right; caption changes to 'Where people go wrong'","waiting":"Which way is wrong and what to do instead","confusing":"The red branch goes up and right, but the map's right fork goes down to 'to road'; it is not clear which line is meant"},
+{"sheet":7,"looking":"A red X over the right branch and a blue line going up-left; caption 'Keep left'","waiting":"What happens on the right fork","confusing":"The blue 'keep left' line looks short and a bit apart from the map's own path"},
+{"sheet":8,"looking":"Red caption 'Right fork: back to the road' with the X still on the map","waiting":"The way on to the summit","confusing":"The X sits on a branch heading toward the summit, not the one going down to the road"},
+{"sheet":9,"looking":"The X fades out and the right fork is plain again; caption 'Right fork: back to the road' goes blue","waiting":"The path to the summit","confusing":"The right fork was crossed out and then the mark vanished, so the repeat of the warning is unclear"},
+{"sheet":10,"looking":"A red line extends from the junction up the left path toward the summit","waiting":"Where the distance ends up","confusing":""},
+{"sheet":11,"looking":"The red line continues up past the junction toward the top","waiting":"The summit distance","confusing":""},
+{"sheet":12,"looking":"The red line reaches the top; a green circle appears near the summit and 'Summit: 5.6 km' shows in green","waiting":"The final number","confusing":"The green circle lands near the summit label but off the summit marker"},
+{"sheet":13,"looking":"The green circle and the green 'Summit: 5.6 km' caption","waiting":"Nothing, it seems finished","confusing":"The caption is left on the screen as the clip ends, with no wrap-up"}
+]

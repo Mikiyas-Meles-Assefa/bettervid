@@ -1,0 +1,20 @@
+[
+{"sheet":1,"looking":"Blank blue grid; then a PEDAL box at top and a WHEEL circle appear","waiting":"What the pedal and wheel have to do with each other","confusing":"Empty screen for the first moments; no picture of a foot or car, just two labels"},
+{"sheet":2,"looking":"PEDAL and WHEEL labels far apart, then a small '5 CM' tag next to PEDAL","waiting":"The point of the 5 cm and what connects pedal to wheel","confusing":""},
+{"sheet":3,"looking":"The same pedal and wheel with the 5 CM tag, caption only","waiting":"The answer to the 'how does that stop' question","confusing":"Nothing on screen changes while the question is asked"},
+{"sheet":4,"looking":"'TWO TONS' tag appears beside WHEEL, then the 5 CM tag fades","waiting":"How a tiny push can move something so heavy","confusing":"Tags drop in as text only; no sense of scale between 5 cm and two tons"},
+{"sheet":5,"looking":"A new PISTON box appears under PEDAL with a PUSH label","waiting":"What the piston does next","confusing":"I don't know what a piston is; it is just a box with an arrow"},
+{"sheet":6,"looking":"A stack building at the top: PEDAL, PISTON, BRAKE FLUID","waiting":"Where the fluid goes, and why it matters","confusing":"BRAKE FLUID text overflows its box and looks crowded; the 'cylinder' is not shown"},
+{"sheet":7,"looking":"A small line 'CAN'T BE SQUEEZED' appears under the stack","waiting":"What follows from fluid not being squeezable","confusing":"Same line appears twice (screen and caption) for a moment; no picture of what squeezing means"},
+{"sheet":8,"looking":"Stack and 'CAN'T BE SQUEEZED' note, unchanged, with the caption underneath","waiting":"The 'so' to arrive: where the pressure goes","confusing":"Screen is static for the whole 2 seconds while the narration moves on"},
+{"sheet":9,"looking":"BRAKE LINE box and a PRESSURE label appear, then CALIPER fades in below","waiting":"What the caliper is and how it reaches the wheel","confusing":"The note 'CAN'T BE SQUEEZED' vanishes quickly; the chain is getting long and small"},
+{"sheet":10,"looking":"Whole chain from PEDAL down to CALIPER, with no caption for a bit","waiting":"Narration to resume and tie the caliper to the wheel","confusing":"Long silent stretch with a static diagram; the caliper still sits far from the wheel"},
+{"sheet":11,"looking":"The same chain, caption 'at the wheel / that pressure pushes'","waiting":"What the pressure pushes at the wheel","confusing":"The diagram shows the caliper at the top, not at the wheel, so 'at the wheel' does not match the picture"},
+{"sheet":12,"looking":"A 'PISTONS' label appears beside CALIPER","waiting":"What the caliper pistons squeeze","confusing":"PISTONS is a faint label at the side; I can't tell where the pistons are inside the caliper"},
+{"sheet":13,"looking":"Two PAD boxes pop in between the caliper and the wheel","waiting":"What the pads press on","confusing":"PISTONS label is gone and the wheel is still just a circle labelled WHEEL"},
+{"sheet":14,"looking":"The WHEEL circle changes to DISC, with the two pads above it","waiting":"What the squeezing does to the car","confusing":"The pads sit above the disc, not on either side, so I can't see the squeeze or the spinning"},
+{"sheet":15,"looking":"A \"CAR'S MOTION\" tag beside DISC","waiting":"The word the friction turns motion into","confusing":"Nothing moves or spins on screen; the motion is only a text tag"},
+{"sheet":16,"looking":"DISC turns pink/orange with HEAT underneath","waiting":"The payoff: why it matters","confusing":"Nice colour change, but it is the only visual idea in the whole clip and it arrives at the very end"},
+{"sheet":17,"looking":"Hot pink disc with HEAT label, full diagram above","waiting":"Probably the end","confusing":"No glowing effect; 'glow' is only suggested by the flat pink colour"},
+{"sheet":18,"looking":"Final still of the whole chain with the pink disc","waiting":"Nothing","confusing":"The diagram is a small stack of boxes; I couldn't picture a real brake from it"}
+]

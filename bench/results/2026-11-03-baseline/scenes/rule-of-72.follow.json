@@ -1,0 +1,13 @@
+[
+{"sheet":1,"looking":"A big headline fading in: 'How long does money take to double?'","waiting":"The answer to the question","confusing":"Blank for the first moment"},
+{"sheet":2,"looking":"The same headline, static, until a '72 ÷ rate' formula and a red 'years to double' label appear at the end","waiting":"What the rate is and how the formula is used","confusing":"The headline sits unchanged for about 3 seconds while the narration moves on"},
+{"sheet":3,"looking":"The formula '72 ÷ rate' with the red label 'years to double' above it","waiting":"A real example with numbers","confusing":""},
+{"sheet":4,"looking":"The formula turning into '72 ÷ 6 = ?', with the 'rate' swapped for 6","waiting":"The answer to the question mark","confusing":"The swap happens with overlapping text for a moment, but it is easy to follow"},
+{"sheet":5,"looking":"'72 ÷ 6 = ?', then the ? turns red and becomes 12","waiting":"What the 12 means","confusing":""},
+{"sheet":6,"looking":"'72 ÷ 6 = 12' with a red 'twelve years to double' appearing below it","waiting":"Another example, or what comes next","confusing":""},
+{"sheet":7,"looking":"A new 'at 8%' label at the top, but the old headline and the formula are overlapping and cut off at the right edge","waiting":"The 8% result","confusing":"The overlapping, clipped text is a messy jumble that is hard to read. The narration is silent for the last part of this sheet."},
+{"sheet":8,"looking":"The same jumble of overlapping text for about 1.5 seconds, then it clears to '72 ÷ 8 = 9' with a red swoosh","waiting":"Confirmation that 9 is the answer","confusing":"The jumbled overlap stays on screen a long time, and the answer comes late"},
+{"sheet":9,"looking":"'72 ÷ 8 = 9' with the 9 circled in red, and a small line below about an estimate being close for everyday rates","waiting":"The wrap-up","confusing":""},
+{"sheet":10,"looking":"The final frame: '72 ÷ 8 = 9' with the 9 circled, and the note about an estimate","waiting":"Nothing, it seems to be ending","confusing":""},
+{"sheet":11,"looking":"The same final frame held, with the note staying up","waiting":"Nothing","confusing":""}
+]

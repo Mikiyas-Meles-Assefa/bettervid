@@ -1,0 +1,37 @@
+withhold nine until=@32
+
+@0
+text q "How long does money take to double?" size=huge role=title
+
+@9 keep
+drop q
+text lbl "years to double" role=heading
+huge rule: a72=72 dv=÷ rt=rate
+
+@17 keep
+huge rule: a72=72 dv=÷ rt=6 eq== ans=?
+
+@23 keep
+huge rule: a72=72 dv=÷ rt=6 eq== ans=12
+light ans
+
+@25 keep
+text res "twelve years to double" role=answer
+
+@29 keep
+drop rule
+drop res
+drop lbl
+text pct "at 8%" role=heading
+huge try: t72=72 tdiv=÷ t8=8 teq== q=?
+
+@31+12 keep
+light q
+
+@32 keep
+drop q
+huge try: t72=72 tdiv=÷ t8=8 teq== nine=9
+mark ring nine
+
+@34 keep
+text est "an estimate, but close for everyday rates" role=note

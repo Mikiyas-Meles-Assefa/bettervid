@@ -1,0 +1,6 @@
+[
+  {"q": 1, "answer": "It rotates any point a quarter turn"},
+  {"q": 2, "answer": "Zero and minus one in the top row; one and zero in the bottom row"},
+  {"q": 3, "answer": "Top row times the vector: zero times three, plus minus one times one, giving minus one"},
+  {"q": 4, "answer": "At minus one, three"}
+]

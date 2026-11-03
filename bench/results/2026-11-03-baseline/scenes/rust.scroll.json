@@ -1,0 +1,20 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "Cream background with 'RUST NEEDS THREE THINGS' stacked in big bold type. Very readable, the typography is strong, I stay."},
+    {"sheet": 2, "watching": true, "noticed": "IRON, WATER and OXYGEN boxes light up one by one. Clear, I keep watching."},
+    {"sheet": 3, "watching": true, "noticed": "A dark blob of iron with a row of FE circles and orange dots appears. More like a diagram, but the dots add some life."},
+    {"sheet": 4, "watching": true, "noticed": "The iron blob stays and a few tiny orange dots drift. Slow, restless, but still watching."},
+    {"sheet": 5, "watching": false, "noticed": "Still the same blob and a few small dots drifting off to the side. Too little change, so I swipe here."},
+    {"sheet": 6, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 7, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 8, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 9, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 10, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 11, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 12, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 13, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 14, "watching": false, "noticed": "Already swiped away; not watching."}
+  ],
+  "swiped_at": 5,
+  "remembers": "Rust needs iron, water and oxygen: water on iron lets the iron give up electrons to oxygen and form iron oxide, and because the rust is flaky and porous, water keeps getting in and the rusting keeps going."
+}

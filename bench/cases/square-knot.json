@@ -1,0 +1,104 @@
+{
+ "id": "square-knot",
+ "use": "a how-to step",
+ "request": "Teach me to tie a square knot in under 30 seconds.",
+ "topic": "How to tie a square knot",
+ "intent": "Someone wants to tie a square knot right now.",
+ "style": "flat",
+ "goal": "The viewer can tie a square knot and tell it from a granny knot.",
+ "promise": "A square knot in two crossings.",
+ "arc": "Two rope ends, the first crossing slowly, a pause, the second crossing, the finished knot beside a granny.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "A square knot, in two crossings.",
+   "job": "Say what we are making.",
+   "knows": "Two crossings.",
+   "waiting": "",
+   "look": "two rope ends",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Right end over left, and tuck it under. Pull snug.",
+   "job": "First crossing, slowly.",
+   "knows": "First: right over left.",
+   "waiting": "",
+   "look": "the right end going over the left and tucking under",
+   "feel": "careful",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "snug.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the first half knot tightens and holds"
+    }
+   ],
+   "demo": {
+    "what": "the first crossing",
+    "phases": [
+     {
+      "at": "Right end",
+      "pace": "slow",
+      "why": "each move of the rope one at a time"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Now left over right, and tuck under. Pull both ends.",
+   "job": "Second crossing.",
+   "knows": "Second: left over right.",
+   "waiting": "",
+   "look": "the left end going over the right",
+   "feel": "",
+   "rhythm": "long",
+   "demo": {
+    "what": "the second crossing",
+    "phases": [
+     {
+      "at": "Now left",
+      "pace": "normal",
+      "why": "the mirror move, a little quicker"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Right over left, then left over right. If you crossed the same way twice, you've tied a granny knot, and it slips.",
+   "job": "Recap and warn.",
+   "knows": "Same way twice makes a granny knot that slips.",
+   "waiting": "",
+   "look": "the finished square knot beside a granny knot",
+   "feel": "",
+   "rhythm": "long"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What is the first crossing?",
+   "a": "Right end over left, tucked under.",
+   "needs": "words"
+  },
+  {
+   "q": "What is the second crossing?",
+   "a": "Left over right, tucked under.",
+   "needs": "words"
+  },
+  {
+   "q": "What happens if you cross the same way twice?",
+   "a": "You get a granny knot, which slips.",
+   "needs": "words"
+  },
+  {
+   "q": "What did the screen show during the pause after the first crossing?",
+   "a": "The first half knot pulled snug and holding.",
+   "needs": "picture"
+  }
+ ]
+}

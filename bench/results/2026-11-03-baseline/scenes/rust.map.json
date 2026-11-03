@@ -1,0 +1,9 @@
+{
+  "promise": ["t0", "iron", "water", "oxygen"],
+  "events": [
+    {"id": "e1", "look": ["iron", "water", "oxygen"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["s1_iron", "h8"], "lookNone": "", "withhold": [], "demo": ["s1_iron"], "holds": []},
+    {"id": "e3", "look": ["h27", "s1_rust"], "lookNone": "", "withhold": [], "demo": [], "holds": [{"hold": "h1", "does": ["s1_rust"], "answer": "", "ids": []}]},
+    {"id": "e4", "look": ["s1_crack", "h46"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

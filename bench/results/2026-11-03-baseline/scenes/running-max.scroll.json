@@ -1,0 +1,19 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "Dark code screen titled 'Finding the biggest number' with a short loop. Looks like a tutorial and a bit dry, but I will wait a moment."},
+    {"sheet": 2, "watching": true, "noticed": "Same code with the variables and output panels. Still static, mild interest."},
+    {"sheet": 3, "watching": true, "noticed": "A highlight moves to the if line and a pink variables box appears. Little motion, still here."},
+    {"sheet": 4, "watching": true, "noticed": "The first line highlights and 'best = 0' appears in the box. Slow, but I stay."},
+    {"sheet": 5, "watching": true, "noticed": "The loop line highlights and x = 3 appears. The 'three beats zero' idea is shown, so there is some motion."},
+    {"sheet": 6, "watching": true, "noticed": "The if line highlights and 'so best becomes three'. Same layout, I am getting tired but I stay for one more."},
+    {"sheet": 7, "watching": true, "noticed": "A yellow question appears: 'Next is 7. What happens to best?'. That is a real hook, so I stay."},
+    {"sheet": 8, "watching": true, "noticed": "x = 7 shows and best turns to 7, 'Seven beats three'. A small reveal, watching."},
+    {"sheet": 9, "watching": true, "noticed": "The loop highlights again and 'Two doesn't beat' appears. Same layout and the change is tiny, but I stay."},
+    {"sheet": 10, "watching": false, "noticed": "The same screen again with 'so nothing changes' and only a highlight moving. Static and a small result, so I swipe here."},
+    {"sheet": 11, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 12, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 13, "watching": false, "noticed": "Already swiped away; not watching."}
+  ],
+  "swiped_at": 10,
+  "remembers": "The loop keeps a variable called best, starting at zero, and sets it to each number that beats it, so after 3, 7 and 2 it ends at seven, the biggest number."
+}

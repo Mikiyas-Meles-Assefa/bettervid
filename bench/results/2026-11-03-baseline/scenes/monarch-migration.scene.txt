@@ -1,0 +1,51 @@
+program s1_map n=0 doc="North America with the monarch route drawn south, and generations along it."
+  const s = Math.min(W / 66, H / 46);
+  const ox = (W - 66 * s) / 2, oy = (H - 46 * s) / 2;
+  const px = (lon) => ox + (lon + 130) * s;
+  const py = (lat) => oy + (60 - lat) * s;
+  const flat = (ps) => ps.reduce((a, p) => a.concat([px(p[0]), py(p[1])]), []);
+  const wf = (q) => { const w = words.find((x) => x.text.indexOf(q) === 0); return w ? w.frame : T0; };
+  const outline = [[-168,66],[-160,70],[-141,70],[-128,70],[-115,68],[-95,68],[-85,69],[-82,66],[-88,64],[-94,60],[-92,57],[-85,55],[-80,52],[-79,57],[-77,62],[-70,61],[-65,60],[-60,55],[-56,52],[-60,47],[-65,45],[-70,43],[-70,41],[-74,40],[-76,37],[-76,35],[-81,31],[-80,27],[-81,25],[-83,29],[-85,30],[-89,30],[-94,29.5],[-97,27],[-97.5,22],[-96,19],[-91,18.5],[-90.5,21],[-87,21.5],[-88,16],[-84,15.5],[-83,10],[-86,13],[-92,14.5],[-97,16],[-105,19.5],[-106,23],[-109,25],[-112,29],[-114.7,31],[-117,32.5],[-120,34.5],[-122.5,37.5],[-124,40],[-124,46],[-123,49],[-127,51],[-130,55],[-135,58],[-140,60],[-146,61],[-152,59],[-158,57],[-164,55],[-162,58],[-165,61],[-166,64]];
+  const wp = [[-80,45],[-83,42],[-86,39],[-89,37],[-93,35],[-96,32],[-98,29],[-99.5,25],[-100,22],[-99.5,19.5]];
+  const rt = [];
+  for (let i = 0; i < wp.length - 1; i++) {
+    for (let k = 0; k < 8; k++) {
+      const t = k / 8;
+      rt.push([lerp(wp[i][0], wp[i + 1][0], t), lerp(wp[i][1], wp[i + 1][1], t)]);
+    }
+  }
+  rt.push(wp[wp.length - 1]);
+  const start = rt[0], end = rt[rt.length - 1], mid = rt[Math.floor(rt.length / 2)];
+  path("s1_map", { x: 0, y: 0, points: flat(outline), closed: 1, fill: "strip", stroke: "faded", strokeWidth: 4 });
+  path("s1_route", { x: 0, y: 0, points: flat(rt), closed: 0, fill: "none", stroke: "accent", strokeWidth: 10, drawn: 0 });
+  key("s1_route", "drawn", T0, 0);
+  anim("s1_route", "drawn", wf("Down"), wf("Mexico"), (t) => t, 2);
+  path("s1_start", { x: px(start[0]), y: py(start[1]), points: circle(0, 0, 14), fill: "ink" });
+  path("s1_mid", { x: px(mid[0]), y: py(mid[1]), points: circle(0, 0, 6), fill: "ink" });
+  path("s1_end", { x: px(end[0]), y: py(end[1]), points: circle(0, 0, 14), fill: "ink" });
+  const ga = wf("Their"), gb = wf("trip");
+  for (let i = 0; i < 5; i++) {
+    const p = rt[Math.round((0.2 + i * 0.15) * (rt.length - 1))];
+    const id = "s1_gen" + i;
+    path(id, { x: px(p[0]), y: py(p[1]), points: circle(0, 0, 9), fill: "warm", opacity: 0 });
+    key(id, "opacity", lerp(ga, gb, i / 5), 1, "smooth");
+  }
+end
+
+@0
+text s1_title "Monarch migration" size=normal role=heading
+run s1_map s1_mp w=900 h=700 until=@40
+@6 keep
+tag s1_mp.s1_start "southern Canada"
+do pulse s1_mp.s1_start
+@19 keep
+tag s1_mp.s1_mid "up to 4,000 km" id=s1_km
+@27 keep
+tag s1_mp.s1_end "central Mexico"
+@27+12 keep
+do pulse s1_mp.s1_end
+@28 keep
+text s1_none "None of them has ever been there" role=key
+@35 keep
+drop s1_none
+text s1_gr "Their great-grandparents made the last trip" role=key

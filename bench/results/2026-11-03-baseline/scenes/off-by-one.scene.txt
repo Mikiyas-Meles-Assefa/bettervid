@@ -1,0 +1,38 @@
+@0
+text s1_t "Sum from 1 to n" size=normal role=title
+code s1_fn
+  | function sum(n) {
+  |   let total = 0;
+  |   for (let i = 0; i < n; i++) total += i;
+  |   return total;
+  | }
+@11 keep
+text s1_want "sum(5) should be 15" role=key
+@17 keep
+text s1_got "sum(5) returns 10" role=wrong
+light s1_fn s1_got
+@20 keep
+drop s1_fn
+drop s1_want
+drop s1_t
+trace s1_tr code=["function sum(n) {","  let total = 0;","  for (let i = 0; i < n; i++) {","    total += i;","  }","  return total;","}","console.log(sum(5))"]
+light s1_tr.line.3
+tag s1_tr.line.3 "starts at 0, stops before n" side=right
+@34 keep
+do steps s1_tr until=@39 pace=slow
+@40 keep
+drop s1_tr
+code s1_fix
+  | function sum(n) {
+  |   let total = 0;
+  |   for (let i = 1; i <= n; i++) total += i;
+  |   return total;
+  | }
+light s1_fix.3
+tag s1_fix.3 "from 1, up to n" side=right
+mark cross s1_got
+@52 keep
+text s1_ans "15" size=big role=answer
+light s1_fix.3 s1_ans
+@52+14 keep
+light s1_fix.3 s1_ans

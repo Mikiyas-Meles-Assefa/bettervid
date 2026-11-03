@@ -1,0 +1,73 @@
+{
+ "id": "octopus-hearts",
+ "use": "a social-media fact",
+ "request": "Quick fun fact video about octopus hearts for TikTok.",
+ "topic": "Octopuses have three hearts",
+ "intent": "Social media viewers want a surprising fact they can repeat.",
+ "style": "custom/late-night-synthwave-arcade-dfd9",
+ "goal": "The viewer remembers three hearts, what each does, and that the third stops when swimming.",
+ "promise": "An animal with three hearts.",
+ "arc": "Three hearts appear, two at the gills and one for the body, then the third one stops.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "An octopus has three hearts.",
+   "job": "Hook with the fact.",
+   "knows": "Three hearts.",
+   "waiting": "",
+   "look": "the octopus with three hearts",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "three hearts.",
+    "what": "the three hearts"
+   }
+  },
+  {
+   "id": "e2",
+   "text": "Two pump blood through the gills. The third pumps it to the rest of the body.",
+   "job": "What each heart does.",
+   "knows": "Two for the gills, one for the body.",
+   "waiting": "",
+   "look": "the two gill hearts, then the third heart",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e3",
+   "text": "And when it swims, that third heart stops. Which is why octopuses would rather crawl.",
+   "job": "The twist.",
+   "knows": "The body heart stops while swimming.",
+   "waiting": "",
+   "look": "the third heart stopping",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "stops.",
+    "what": "the third heart stopping"
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "How many hearts does an octopus have?",
+   "a": "Three.",
+   "needs": "words"
+  },
+  {
+   "q": "What do two of the hearts do?",
+   "a": "Pump blood through the gills.",
+   "needs": "words"
+  },
+  {
+   "q": "What happens to the third heart when it swims?",
+   "a": "It stops.",
+   "needs": "words"
+  },
+  {
+   "q": "Which heart stopped on screen?",
+   "a": "The third one, the one that pumps blood to the rest of the body.",
+   "needs": "both"
+  }
+ ]
+}

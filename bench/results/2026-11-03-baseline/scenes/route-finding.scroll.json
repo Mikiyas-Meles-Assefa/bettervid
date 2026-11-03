@@ -1,0 +1,22 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "Blueprint-style map with HOME, CAFE, PARK and WORK and numbered edges. Neat, a bit diagrammatic, but the title is clear, so I give it a moment."},
+    {"sheet": 2, "watching": true, "noticed": "Same graph under 'Fastest way home to work'. Still curious, though nothing is moving much."},
+    {"sheet": 3, "watching": true, "noticed": "The graph is static while the narration counts places. Starting to feel like a slide."},
+    {"sheet": 4, "watching": true, "noticed": "Nothing on screen changes except the small caption. Restless, but I keep going one more sheet."},
+    {"sheet": 5, "watching": true, "noticed": "Distance labels turn into infinity markers and HOME lights up with a zero. Some motion, so I stay one more sheet."},
+    {"sheet": 6, "watching": false, "noticed": "The graph is mostly the same and the caption is flat. I would swipe on this stretch."},
+    {"sheet": 7, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 8, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 9, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 10, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 11, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 12, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 13, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 14, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 15, "watching": false, "noticed": "Already swiped away; not watching."},
+    {"sheet": 16, "watching": false, "noticed": "Already swiped away; not watching."}
+  ],
+  "swiped_at": 6,
+  "remembers": "A map app works out the fastest way from home to work by comparing the minutes between places, and here the route through the park and the cafe takes eight minutes."
+}

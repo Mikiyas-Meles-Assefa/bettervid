@@ -1,0 +1,20 @@
+{
+  "sheets": [
+    {"sheet": 1, "watching": true, "noticed": "Chalkboard with 'What is six divided by one half?' and '6 ÷ ½ = ? key'. A puzzle that sounds wrong, so I want to see the answer."},
+    {"sheet": 2, "watching": true, "noticed": "The question holds on the board, with 'half?' in the caption and a pause. Still curious."},
+    {"sheet": 3, "watching": true, "noticed": "The same question with a silent gap, then 'It's twelve' appears at the end. The answer is surprising, so I stay."},
+    {"sheet": 4, "watching": true, "noticed": "'6 ÷ ½ = 12' and a pink 'not three' tag. The contrast with the obvious guess keeps me in."},
+    {"sheet": 5, "watching": true, "noticed": "'how many halves fit into six?' appears in yellow over the answer. The question reframes it, so I stay."},
+    {"sheet": 6, "watching": true, "noticed": "'Cut each of' starts and the caption moves toward cutting the wholes. Something is about to happen."},
+    {"sheet": 7, "watching": true, "noticed": "Six circles get cut into halves with a '0 halves' counter. The cutting animation is satisfying to watch."},
+    {"sheet": 8, "watching": true, "noticed": "More cuts, with 'Every whole gives' under it. Clear visual logic, I'm following it."},
+    {"sheet": 9, "watching": true, "noticed": "The counter moves toward 'two halves' as the circles split. The counting makes it click."},
+    {"sheet": 10, "watching": true, "noticed": "All twelve halves are shown and 'give twelve halves' is said. The visual proof is strong."},
+    {"sheet": 11, "watching": true, "noticed": "The halves hold still while 'That's why dividing' starts. A calm pause, and the answer is near."},
+    {"sheet": 12, "watching": true, "noticed": "'Dividing by a half is multiplying by two' is written under the answer, with '6 × 2 = 12'. The rule is stated plainly."},
+    {"sheet": 13, "watching": true, "noticed": "The same frame with 'as multiplying by' being said. Slow, but the payoff is close."},
+    {"sheet": 14, "watching": true, "noticed": "The board holds with '6 × 2 = 12' and the last word 'two'. The clip ends on a clear takeaway."}
+  ],
+  "swiped_at": null,
+  "remembers": "Six divided by one half is twelve, not three, because division asks how many halves fit into six, and each whole gives two. So dividing by a half is the same as multiplying by two."
+}

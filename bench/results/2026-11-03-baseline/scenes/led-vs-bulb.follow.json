@@ -1,0 +1,14 @@
+[
+{"sheet":1,"looking":"Title 'Same light' and two circles labeled old bulb and LED","waiting":"What will be compared between them","confusing":""},
+{"sheet":2,"looking":"The two circles, unchanged","waiting":"Something to happen to them","confusing":"Nothing moves while the narration introduces the two bulbs"},
+{"sheet":3,"looking":"Still the two circles, then they are replaced by a long box labeled heat","waiting":"What the heat box means","confusing":"The circles vanish abruptly and a wide box labeled heat appears with no explanation of what it stands for"},
+{"sheet":4,"looking":"A long 'heat' box under 'old bulb' with a small grey end piece, plus 'ninety percent' in green","waiting":"The light part of the bar","confusing":"The bar's small grey end piece is not labeled; I guess it is the light share but it is not said"},
+{"sheet":5,"looking":"The same bar and 'ninety percent' label, static","waiting":"The LED to be shown","confusing":""},
+{"sheet":6,"looking":"A small LED box appears to the right of the bulb bar","waiting":"How the LED compares","confusing":"The LED box is tiny and sits right against the bulb bar, so it is not clear it is a separate bar"},
+{"sheet":7,"looking":"Bulb bar and small LED box, nothing changing","waiting":"The quarter figure to be shown","confusing":"The LED box has no label of what it is made of; narration says same light but nothing shows light"},
+{"sheet":8,"looking":"'a quarter' in green appears above the LED box","waiting":"The longer-life claim","confusing":"It is not obvious that the quarter refers to the LED box's size relative to the bulb bar"},
+{"sheet":9,"looking":"The same picture with 'a quarter' and 'ninety percent'","waiting":"Something showing lasting longer","confusing":"Nothing on screen shows lifetime or twenty-five times"},
+{"sheet":10,"looking":"A red outline is drawn around the heat bar and its grey end","waiting":"What the red box is pointing out","confusing":"The red outline is not explained; it is unclear what it highlights"},
+{"sheet":11,"looking":"The title changes to 'A quarter of the energy' in green","waiting":"The end","confusing":"The title now says energy but the red box is still there, unexplained"},
+{"sheet":12,"looking":"Final picture with the green title and the bars, unchanged","waiting":"nothing","confusing":"The red box around the bulb bar still seems to say something I could not work out"}
+]

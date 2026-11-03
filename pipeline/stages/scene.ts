@@ -32,12 +32,12 @@ const CHECKS = 8; // bump when the engine checks a built scene differently: the 
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
-const BUILD_ROUNDS = 4;
+export const BUILD_ROUNDS = 4;
 const LOOK_ROUNDS = 2;
 const LOOK_FRAMES = 10; // each state settled, and changes while they happen
 const LOOK_SCALE = 0.6; // frames Spark sees: 648 by 1152, near full size
 const PARALLEL = 6;
-const MAX_PROBLEMS = 25;
+export const MAX_PROBLEMS = 25;
 const JOIN_ROUNDS = 2; // repairs of the parts a joined scene that does not build names
 
 export type Range = { id: string; firstWord: number; lastWord: number };
@@ -364,7 +364,7 @@ export const kitKinds = () => SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {
 // ---------------------------------------------------------------------------------------------------------------------
 // Pictures: the director's images, offered to Spark by name.
 
-type Picture = { name: string; path: string; size?: [number, number]; about: string; words?: [number, number] };
+export type Picture = { name: string; path: string; size?: [number, number]; about: string; words?: [number, number] };
 
 function pictures(p: Project, names?: Record<string, string>): Picture[] {
   const words = p.narration!.words;
@@ -379,7 +379,7 @@ function pictures(p: Project, names?: Record<string, string>): Picture[] {
   return Object.entries(names).map(([name, path]) => fromAssets.find((x) => x.name === name && x.path === path) ?? { ...(fromAssets.find((x) => x.path === path) ?? { about: "a picture" }), name, path });
 }
 
-const describe = (list: Picture[]) => list.map((x) => `- ${x.name}${x.size ? `, ${x.size[0]} by ${x.size[1]}` : ""}: ${x.about}${x.words ? ` (the director planned it for words ${x.words[0]} to ${x.words[1]})` : ""}`).join("\n");
+export const describe = (list: Picture[]) => list.map((x) => `- ${x.name}${x.size ? `, ${x.size[0]} by ${x.size[1]}` : ""}: ${x.about}${x.words ? ` (the director planned it for words ${x.words[0]} to ${x.words[1]})` : ""}`).join("\n");
 
 // Shots the director chose to have drawn rather than shown as a picture (no honest picture exists, or a drawing
 // explains better). The scene draws them at their words with the engine, from facts in the narration only.
@@ -459,7 +459,7 @@ export async function renderStills(scene: Scene, theme: Theme, frames: number[],
 // ---------------------------------------------------------------------------------------------------------------------
 // Writing one section: build, repair from errors, then look at stills and repair from what Spark sees.
 
-type Job = {
+export type Job = {
   p: Project;
   range: Range;
   next?: Range;
@@ -475,9 +475,9 @@ type Written = { source: string; result: BuildResult; problems: string[]; warnin
 
 const endFrame = (job: Job) => (job.next ? when({ word: job.next.firstWord }, job.opts.ctx) - 2 : job.opts.ctx.frames - 1);
 
-type Checked = { result: BuildResult; problems: string[]; warnings: string[]; notes: string[] };
+export type Checked = { result: BuildResult; problems: string[]; warnings: string[]; notes: string[] };
 
-async function check(job: Job, written: string): Promise<Checked> {
+export async function check(job: Job, written: string): Promise<Checked> {
   const kinds = kitKinds();
   const result = await build(written, job.opts);
   const source = plainMoments(written, job.opts);
@@ -587,13 +587,17 @@ export function directed(source: string, p: Project, range: Range, kitKindList: 
 }
 
 // What code can see about a built part beyond errors: computed steps to bind, and craft notes the writer weighs.
-function review(job: Job, written: string, result: BuildResult): string {
+export function review(job: Job, written: string, result: BuildResult): string {
   const kinds = kitKinds();
   const source = plainMoments(written, job.opts);
   const from = when({ word: job.range.firstWord }, job.opts.ctx);
   const extra = result.scene ? overPictures(source, result.scene, from, endFrame(job), kinds) : [];
   return reviewText(source, result, { kitKinds: kinds, truthKinds: truthKinds(SCENE_KITS), math: kinds.includes("math"), extra });
 }
+
+// What goes back to the writer: a part with build problems, and a part that builds with what code can see about it.
+export const repairRequest = (job: Job, src: string, list: string[]) => `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(src)}\n\n${prompt("engine-repair")}\nProblems:\n${list.slice(0, MAX_PROBLEMS).join("\n")}`;
+export const reviewRequest = (job: Job, src: string, said: string) => `${job.request}\n\nYour part builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(src)}\n\n${said}`;
 
 async function compose(job: Job, start: string | undefined, prior: string, reviewed = start === undefined): Promise<Written> {
   let usd = 0;
@@ -612,7 +616,7 @@ async function compose(job: Job, start: string | undefined, prior: string, revie
       return undefined;
     }
   };
-  const repair = (src: string, list: string[]) => `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(src)}\n\n${prompt("engine-repair")}\nProblems:\n${list.slice(0, MAX_PROBLEMS).join("\n")}`;
+  const repair = (src: string, list: string[]) => repairRequest(job, src, list);
   for (round = 1; round <= BUILD_ROUNDS; round++) {
     if (round > 1 || start === undefined) {
       const reply = await ask(next, `round ${round}`);
@@ -632,7 +636,7 @@ async function compose(job: Job, start: string | undefined, prior: string, revie
   // only when it is sound.
   const said = last && !last.problems.length && reviewed ? review(job, source, last.result) : "";
   if (said && last) {
-    let src = await ask(`${job.request}\n\nYour part builds. Here it is, with line numbers added for reference. Do not include the numbers:\n${numbered(source)}\n\n${said}`, "review");
+    let src = await ask(reviewRequest(job, source, said), "review");
     let seen = src === undefined ? undefined : await check(job, src);
     if (src !== undefined && seen?.problems.length) {
       src = await ask(repair(src, [...seen.problems, ...seen.warnings]), "review repair");
@@ -990,7 +994,7 @@ function fill(template: string, values: Record<string, string>) {
   return template.replace(/\{\{(\w+)\}\}/g, (_, k: string) => values[k] ?? "");
 }
 
-function requestFor(p: Project, ranges: Range[], i: number, cast: CastPart[], header: string, pics: string): string {
+export function requestFor(p: Project, ranges: Range[], i: number, cast: CastPart[], header: string, pics: string): string {
   const r = ranges[i]!;
   const words = p.narration!.words;
   const list = (c: Carry[]) => c.map((x) => `- ${x.id}: ${x.what}${x.parts?.length ? ` Its pieces have the ids ${x.parts.join(", ")}.` : ""}${x.use ? ` The next part: ${x.use}` : ""}`).join("\n");
@@ -1227,6 +1231,13 @@ function directionSummary(p: Project, ranges: Range[]): string {
   return `How the video is directed, event by event:\n${lines.join("\n")}${things.length ? `\n${things.join("\n")}` : ""}\n\n`;
 }
 
+// What every part's request starts with: the topic, why the viewer wants it, and what the user asked for on purpose.
+export const sceneHeader = (p: Project) => [
+  `Topic: ${topic(p)}`,
+  p.plan?.intent ? `Why the viewer wants this: ${p.plan.intent}` : "",
+  asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])]),
+].filter(Boolean).join("\n\n") + "\n\n";
+
 export async function scene(p: Project, force = false) {
   const words = p.narration!.words;
   // Every part's step numbers come from the plan's demonstrations, so they must show their words before any is written.
@@ -1242,11 +1253,7 @@ export async function scene(p: Project, force = false) {
     }
   }
   const pics = pictures(p, draft?.assets);
-  const header = [
-    `Topic: ${topic(p)}`,
-    p.plan?.intent ? `Why the viewer wants this: ${p.plan.intent}` : "",
-    asked([...(p.plan?.story ?? []), ...(p.plan?.visuals ?? [])]),
-  ].filter(Boolean).join("\n\n") + "\n\n";
+  const header = sceneHeader(p);
   const prompts = ["scene", "scene-cast", "scene-look", "scene-demo", "engine-language", "engine-repair"].map(prompt);
   const library = loadLibrary().map((x) => x.name);
   const done = new Set(doneTickets(p));

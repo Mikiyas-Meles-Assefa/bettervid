@@ -1,0 +1,16 @@
+[
+{"sheet":1,"looking":"Big text 'SOMEONE STEALS YOUR PASSWORD.' on a blue grid background","waiting":"What happens next, what the consequence or fix is","confusing":""},
+{"sheet":2,"looking":"The headline swaps to 'WITH TWO-FACTOR LOGIN, THEY STILL CAN'T GET IN.'","waiting":"An explanation of what two-factor login is","confusing":"A 'can't get in' line flickered in before the new text, a bit jumpy"},
+{"sheet":3,"looking":"The same sentence held on screen, then it fades to 'HERE'S WHY.'","waiting":"The reason","confusing":"Only text so far and it is held a while; no picture"},
+{"sheet":4,"looking":"'LOGGING IN ASKS FOR TWO THINGS' as big text","waiting":"The two things","confusing":""},
+{"sheet":5,"looking":"A boxed 'PASSWORD' labeled 'SOMETHING YOU KNOW' at top left","waiting":"The second thing","confusing":""},
+{"sheet":6,"looking":"A second box 'PHONE' labeled 'SOMETHING YOU HAVE' appears beside the password box","waiting":"How these two are used, and where the thief comes in","confusing":"The labels sit under the boxes at slightly odd places, but it reads fine"},
+{"sheet":7,"looking":"The two boxes at the top, then the word 'THIEF' appearing below","waiting":"What the thief has or does","confusing":"A lone word 'THIEF' with nothing around it yet"},
+{"sheet":8,"looking":"An arrow from THIEF up to the PASSWORD box, then 'THE SITE' appearing next to THIEF","waiting":"What the site does","confusing":"The arrow is thin and easy to miss; I'm inferring it means the thief holds the password"},
+{"sheet":9,"looking":"An arrow from THE SITE up toward the PHONE box, with a small yellow 'CODE'","waiting":"Whether the thief can get the code","confusing":"The 'CODE' label is tiny and the arrow is thin, so it is hard to see it is being sent to the phone"},
+{"sheet":10,"looking":"The same diagram, holding; the code arrow animates once more","waiting":"The outcome for the thief","confusing":"Nothing new on the diagram while the voice talks, so the eye has nowhere to go"},
+{"sheet":11,"looking":"A box 'THIEF'S LOGIN' appears in the lower middle, with no matching narration","waiting":"What happens to the thief's login attempt","confusing":"It is silent and I don't know what the box is for or why nothing happens; it just sits there"},
+{"sheet":12,"looking":"The diagram clears, leaving the two boxes and a new 'STILL LOCKED' box","waiting":"The wrap-up","confusing":"The thief and site labels are gone, but the point lands: locked"},
+{"sheet":13,"looking":"'THEY'D NEED BOTH.' large under 'STILL LOCKED'","waiting":"Nothing, it seems finished","confusing":""},
+{"sheet":14,"looking":"The final frame, a single held frame of the ending","waiting":"Nothing","confusing":""}
+]

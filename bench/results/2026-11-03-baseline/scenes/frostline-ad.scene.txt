@@ -1,0 +1,46 @@
+withhold none until=@23
+
+@0
+text t1 "3 p.m." size=big role=title
+
+@3 keep
+drop t1
+text cup "iced coffee" size=huge role=body
+
+@6 keep
+text cup "warm coffee" size=huge role=wrong
+
+@10 keep
+drop cup
+text car "hot car" size=big role=heading
+stack bottle role=panel gap=30
+  box shell "bottle" w=260 h=360 role=label
+
+@21 keep
+text allday "All day." role=note
+
+@22+10 keep
+drop allday
+text hrs "0" size=huge role=key
+text q "24 hours later?" role=heading
+do count hrs from=0 to=24 frames=60 ease=smooth suffix=" hours"
+
+@23 keep
+drop hrs
+drop q
+drop car
+
+@26 keep enter=pop
+stack bottle role=panel gap=30
+  box shell "bottle" w=260 h=360 role=label
+  circle ice "ice" w=200 role=key
+light ice
+
+@27 keep
+do jiggle ice prop=rotate size=6 frames=20
+
+@28 keep
+text name "Frostline" size=huge role=title
+
+@29 keep
+text promise "Cold that keeps its promise." size=big role=answer

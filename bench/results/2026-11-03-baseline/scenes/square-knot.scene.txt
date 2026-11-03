@@ -1,0 +1,89 @@
+program s1_knot a1=6 a2=15 h0=15 h1=16 b1=16 b2=25 g0=33 g1=38 g2=41 sl=44 doc="Two cords tied into a square knot, one crossing at a time, then a granny knot beside it that slips."
+  const SQ = { x: W * 0.27, y: H * 0.5, sx: W * 0.8, sy: H * 0.8 };
+  const GR = { x: W * 0.73, y: H * 0.5, sx: W * 0.8, sy: H * 0.8 };
+  const piece = (id, C, m, a, b, o) => {
+    const x0 = C.x + m[0] * C.sx, y0 = C.y + m[1] * C.sy;
+    return path(id, Object.assign({
+      x: x0, y: y0,
+      points: [(a[0] - m[0]) * C.sx, (a[1] - m[1]) * C.sy, (b[0] - m[0]) * C.sx, (b[1] - m[1]) * C.sy],
+      stroke: "ink", strokeWidth: 14, opacity: 0.25
+    }, o || {}));
+  };
+  const knot = (pre, C, m, over, under, o, slipAt) => {
+    const dx = under[1][0] - under[0][0], dy = under[1][1] - under[0][1];
+    const n = Math.hypot(dx * C.sx, dy * C.sy);
+    const gx = 22 * dx / n, gy = 22 * dy / n;
+    const px = C.x + m[0] * C.sx, py = C.y + m[1] * C.sy;
+    const ids = [
+      piece(pre + "_o", C, m, over[0], over[1], Object.assign({ strokeWidth: 18 }, o)),
+      piece(pre + "_ua", C, m, under[0], [m[0] - gx, m[1] - gy], o),
+      piece(pre + "_ub", C, m, [m[0] + gx, m[1] + gy], under[1], o),
+      path(pre + "_c", { x: px, y: py, points: circle(0, 0, 44), closed: 1, stroke: "accent", strokeWidth: 3, opacity: 0 })
+    ];
+    if (slipAt) for (const id of ids) anim(id, "y", slipAt, slipAt + 30, (t) => py + 26 * t * t);
+    return ids;
+  };
+  const sq1 = knot("s1_sq1", SQ, [-0.1, 0], [[0.05, -0.3], [-0.25, 0.3]], [[-0.25, -0.3], [0.05, 0.3]], {});
+  const sq2 = knot("s1_sq2", SQ, [0.1, 0], [[-0.05, -0.3], [0.25, 0.3]], [[0.25, -0.3], [-0.05, 0.3]], {});
+  const gr1 = knot("s1_gr1", GR, [-0.1, 0], [[0.05, -0.3], [-0.25, 0.3]], [[-0.25, -0.3], [0.05, 0.3]], { opacity: 0 }, args.sl);
+  const gr2 = knot("s1_gr2", GR, [0.1, 0], [[0.25, -0.3], [-0.05, 0.3]], [[-0.05, -0.3], [0.25, 0.3]], { opacity: 0 }, args.sl);
+  const base = (ids, v) => { for (const id of ids.slice(0, 3)) key(id, "opacity", T0, v); };
+  const ramp = (ids, f0, f1) => {
+    const mid = f0 + (f1 - f0) / 2;
+    key(ids[0], "opacity", f0, 1, "smooth");
+    key(ids[1], "opacity", mid, 1, "smooth");
+    key(ids[2], "opacity", mid, 1, "smooth");
+  };
+  base(sq1, 0.25); base(sq2, 0.25); base(gr1, 0); base(gr2, 0);
+  ramp(sq1, args.a1, args.a2);
+  ramp(sq2, args.b1, args.b2);
+  ramp(gr1, args.g0, args.g1);
+  ramp(gr2, args.g1, args.g2);
+  for (const id of sq1.slice(0, 3)) {
+    key(id, "scaleX", T0, 1); key(id, "scaleY", T0, 1);
+    key(id, "scaleX", args.h0, 1); key(id, "scaleY", args.h0, 1);
+    key(id, "scaleX", args.h1, 0.86, "smooth"); key(id, "scaleY", args.h1, 0.86, "smooth");
+  }
+end
+
+@0
+text title "The square knot" role=title
+run s1_knot k1 w=1000 h=900 until=@47 a1=@6 a2=@15 h0=@15+10 h1=@15+70 b1=@16 b2=@25 g0=@33 g1=@38 g2=@41 sl=@44
+@4 keep
+text sub "two crossings" role=heading after=title
+@6 keep
+light k1.s1_sq1_o
+tag k1.s1_sq1_o "right end over" id=tOver side=right
+@10 keep
+drop tOver
+tag k1.s1_sq1_c "tuck under" id=tUnder side=left
+@15+10 keep
+drop tUnder
+mark ring k1.s1_sq1_c id=ring1
+@15+70 keep
+drop ring1
+@16 keep
+light k1.s1_sq2_o
+tag k1.s1_sq2_o "left over" id=tOver2 side=right
+@21 keep
+drop tOver2
+tag k1.s1_sq2_c "tuck under" id=tUnder2 side=left
+@24 keep
+drop tUnder2
+@26 keep
+light k1.s1_sq1_o
+tag k1.s1_sq1_o "right over" id=tRecap side=right
+@30 keep
+drop tRecap
+light k1.s1_sq2_o
+tag k1.s1_sq2_o "left over" id=tRecap2 side=right
+@33 keep
+drop tRecap2
+tag k1.s1_gr1_c "same way" id=tSame side=left
+@40 keep
+drop tSame
+tag k1.s1_gr2_c "granny knot" id=tGranny side=right
+@46 keep
+drop tGranny
+tag k1.s1_gr1_c "slips" id=tSlip side=left
+text take "Same way twice slips" role=key

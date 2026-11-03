@@ -1,0 +1,116 @@
+{
+ "id": "life-expectancy",
+ "use": "a data story from a pasted CSV",
+ "request": "Here's a CSV I pulled from Our World in Data. Make a short data story from it: how much longer people live now than in 1900.",
+ "material": [
+  {
+   "kind": "csv",
+   "name": "life_expectancy.csv",
+   "about": "world life expectancy at birth, years",
+   "text": "year,life_expectancy\n1900,32\n1950,46\n2000,66\n2021,71\n# note: child mortality in 1900 was above a third of children dying before age five"
+  }
+ ],
+ "topic": "Global life expectancy since 1900",
+ "intent": "A general audience wants the size of the change and why it happened.",
+ "style": "ink",
+ "goal": "The viewer knows the two numbers, why the first was so low, and what raised it.",
+ "promise": "A line that more than doubles in a century.",
+ "arc": "A starting point at 32, the children behind it, the line climbing, landing above 70.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "In 1900, a newborn could expect to live about thirty-two years, on average worldwide.",
+   "job": "Place the start.",
+   "knows": "About 32 years in 1900.",
+   "waiting": "Why so low?",
+   "look": "the 1900 point at about 32",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e2",
+   "text": "That average was dragged down by children: more than one in three died before age five.",
+   "job": "Explain the low start.",
+   "knows": "More than a third of children died before five.",
+   "waiting": "",
+   "look": "the share of children who died young",
+   "feel": "",
+   "rhythm": "long"
+  },
+  {
+   "id": "e3",
+   "text": "Then vaccines, clean water and antibiotics arrived.",
+   "job": "What changed.",
+   "knows": "Vaccines, clean water, antibiotics.",
+   "waiting": "",
+   "look": "the line starting to climb",
+   "feel": "",
+   "rhythm": "short",
+   "demo": {
+    "what": "the line climbing over the century",
+    "phases": [
+     {
+      "at": "Then vaccines,",
+      "pace": "fast",
+      "why": "the century passes quickly as the line climbs"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "Today it's over seventy. The line more than doubled in a little over a century.",
+   "job": "Land the number.",
+   "knows": "Over 70 today, more than double.",
+   "waiting": "",
+   "look": "the line ending above 70",
+   "feel": "awe",
+   "rhythm": "long",
+   "reveal": {
+    "at": "over seventy.",
+    "what": "the end of the line above 70"
+   },
+   "holds": [
+    {
+     "id": "h1",
+     "after": "seventy.",
+     "seconds": 2.0,
+     "purpose": "settle",
+     "does": "the line rests above 70, the gap from 32 marked"
+    }
+   ]
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What was life expectancy in 1900?",
+   "a": "About 32 years.",
+   "needs": "words"
+  },
+  {
+   "q": "Why was it so low?",
+   "a": "Many children died young: more than one in three before age five.",
+   "needs": "words"
+  },
+  {
+   "q": "What three things does the clip credit for the rise?",
+   "a": "Vaccines, clean water and antibiotics.",
+   "needs": "words"
+  },
+  {
+   "q": "What is it today?",
+   "a": "Over 70.",
+   "needs": "words"
+  },
+  {
+   "q": "How did the line on the chart move between 1900 and today?",
+   "a": "It climbed, more than doubling from about 32 to above 70.",
+   "needs": "both"
+  },
+  {
+   "q": "According to the data, how long could a newborn expect to live in 1900 compared with today?",
+   "a": "About 32 years then, over 70 (71) now.",
+   "needs": "words"
+  }
+ ]
+}

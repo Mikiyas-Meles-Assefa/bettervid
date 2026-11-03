@@ -1,0 +1,10 @@
+{"composition": 5, "type": 5, "motion": 5, "hierarchy": 5, "consistency": 6, "overall": 5,
+"issues": [
+"Sheet 08-09: the hexagon lattice is shown for about 8 seconds but is never labeled as open space, and the frame has no empty-space cue; the key point (gaps) is carried by narration only.",
+"Sheet 09-12: the liquid vs ice comparison puts equal numbers of dots in a tiny cramped panel, small and clipped at the left edge, with the 'LIQUID WATER' label overlapping dots (sheet 10-11); it does not show same-count molecules taking more or less volume, so the density claim is not visible.",
+"Sheet 09-12: both panels sit in the top third and the lower half is empty except the caption; the ice lattice is thumb-sized and the labels LIQUID WATER and ICE are tiny for a phone.",
+"Sheet 01-02: the opening is dead, with only a small red 'ALMOST EVERY SOLID SINKS' line at the top and an empty frame; the headline wipes in clipped at the edges (sheet 02 frame 3.73 s) and an unlabeled ICE box slides around with no sinking or floating shown.",
+"Sheet 03-04: the title flashes 'ICE FLOATS. FLOAT?' mid-transition (4.73 s) which looks like a glitch; the liquid dots then repeat for about 4 seconds with random jitter, not tied to the words.",
+"Sheet 12-13: 'ABOUT 9% LESS DENSE' in orange is the loudest element and is mildly redundant with the headline; the final 'SO IT FLOATS.' replaces the headline with no visual of ice on water, and the bottom caption disappears at 24.97 s.",
+"Sheet 05-08: hydrogen bond growth is clean and well timed, but the title changes from 'HYDROGEN BONDS LOCK' to 'HYDROGEN BONDS', with caption text bounces between small and large sizes."
+]}

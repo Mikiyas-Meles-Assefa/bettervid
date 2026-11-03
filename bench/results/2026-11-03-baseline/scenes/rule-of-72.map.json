@@ -1,0 +1,9 @@
+{
+  "promise": ["lbl", "a72", "dv", "rt"],
+  "events": [
+    {"id": "e1", "look": ["a72", "dv", "rt"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e2", "look": ["a72", "dv", "rt", "eq", "ans"], "lookNone": "", "withhold": [], "demo": [], "holds": []},
+    {"id": "e3", "look": ["t72", "tdiv", "t8", "teq"], "lookNone": "", "withhold": [["t72", "tdiv", "t8", "teq", "nine"]], "demo": [], "holds": [{"hold": "h1", "does": ["t72", "tdiv", "t8", "teq"], "answer": "9", "ids": ["nine"]}]},
+    {"id": "e4", "look": ["nine"], "lookNone": "", "withhold": [], "demo": [], "holds": []}
+  ]
+}

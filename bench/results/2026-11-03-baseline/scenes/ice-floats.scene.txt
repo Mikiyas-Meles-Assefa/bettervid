@@ -1,0 +1,90 @@
+program s1_liquid n=36 doc="Water molecules tumbling close together."
+  for (let i = 0; i < args.n; i++) {
+    const bx = random() * W, by = random() * H;
+    const id = path("m" + i, { x: bx, y: by, points: circle(0, 0, 26), fill: "ink", opacity: 0 });
+    key(id, "opacity", T0, 0);
+    key(id, "opacity", lerp(T0, T1, 0.3 * i / args.n), 1, "smooth");
+    anim(id, "x", T0, T1, (t) => bx + Math.sin(t * 9 + i) * 40);
+    anim(id, "y", T0, T1, (t) => by + Math.cos(t * 7 + i * 1.3) * 40);
+  }
+end
+
+program s1_lattice rows=3 cols=3 done=0 doc="Molecules locking into an open hexagonal lattice, one bond at a time."
+  const R = Math.min(W / ((args.cols + 0.5) * 1.732), H / ((args.rows - 1) * 1.5 + 2)) * 0.9;
+  const vmap = {}, verts = [], edges = [], ek = {};
+  const vid = (x, y) => {
+    const k = Math.round(x * 10) + "_" + Math.round(y * 10);
+    if (!(k in vmap)) { vmap[k] = verts.length; verts.push([x, y]); }
+    return vmap[k];
+  };
+  for (let r = 0; r < args.rows; r++) for (let c = 0; c < args.cols; c++) {
+    const cx = R * 1.732 * (c + 0.5 * (r % 2)), cy = R * 1.5 * r;
+    const ids = [];
+    for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; ids.push(vid(cx + R * Math.cos(a), cy + R * Math.sin(a))); }
+    for (let k = 0; k < 6; k++) {
+      const p = ids[k], q = ids[(k + 1) % 6];
+      const pair = Math.min(p, q) + "-" + Math.max(p, q);
+      if (!(pair in ek)) { ek[pair] = 1; edges.push([p, q]); }
+    }
+  }
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const v of verts) { x0 = Math.min(x0, v[0]); x1 = Math.max(x1, v[0]); y0 = Math.min(y0, v[1]); y1 = Math.max(y1, v[1]); }
+  const ox = W / 2 - (x0 + x1) / 2, oy = H / 2 - (y0 + y1) / 2;
+  const cxm = (x0 + x1) / 2, cym = (y0 + y1) / 2;
+  const edist = (e) => (Math.hypot(verts[e[0]][0] - cxm, verts[e[0]][1] - cym) + Math.hypot(verts[e[1]][0] - cxm, verts[e[1]][1] - cym)) / 2;
+  edges.sort((a, b) => edist(a) - edist(b));
+  const V = verts.length, E = edges.length;
+  for (let i = 0; i < V; i++) {
+    const px = verts[i][0] + ox, py = verts[i][1] + oy;
+    const id = path("a" + i, { x: px, y: py, points: circle(0, 0, R * 0.22), fill: "ink", opacity: 0 });
+    if (args.done) key(id, "opacity", T0, 1);
+    else {
+      key(id, "opacity", T0, 0);
+      key(id, "opacity", lerp(T0, T1, 0.5 * i / V), 1, "smooth");
+    }
+  }
+  edges.forEach((e, j) => {
+    const a = verts[e[0]], b = verts[e[1]];
+    const id = path("b" + j, { points: [a[0] + ox, a[1] + oy, b[0] + ox, b[1] + oy], stroke: "accent", strokeWidth: 7, drawn: 0 });
+    if (args.done) key(id, "drawn", T0, 1);
+    else {
+      const s = lerp(T0, T1, 0.9 * j / E);
+      key(id, "drawn", T0, 0);
+      key(id, "drawn", s, 0);
+      key(id, "drawn", s + 8, 1, "smooth");
+    }
+  });
+end
+
+@0
+box s1_water frame=fill fill=cream
+text q "Almost every solid sinks" role=heading
+@8 keep
+text q "Ice floats." role=title
+box ice "ice" w=500 h=260 role=key enter=rise
+do wiggle ice prop=y size=8 speed=0.6 frames=50
+@10 keep
+text q "Why does ice float?" role=title
+@11 keep
+drop ice
+text q "Liquid water" role=title
+run s1_liquid s1_liq w=1000 h=1000 until=@18
+@18 keep enter=fade
+drop s1_liq
+text q "As water freezes" role=title
+run s1_lattice s1_lat w=900 h=900 until=@33
+@21 keep
+text q "Hydrogen bonds" role=title
+@34 cut
+text q "Ice takes more room" role=title
+row cmp gap=60 align=top
+  stack liqcol gap=20 align=center
+    text liqlbl "liquid water" role=label
+    run s1_liquid s1_liq2 w=420 h=520 until=@47
+  stack icecol gap=20 align=center
+    text icelbl "ice" role=label
+    run s1_lattice s1_lat2 w=420 h=520 done=1
+@46 keep
+text ans "about 9% less dense" role=answer
+@53 keep
+text q "So it floats." role=answer

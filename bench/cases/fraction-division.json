@@ -1,0 +1,122 @@
+{
+ "id": "fraction-division",
+ "use": "a worked math step",
+ "request": "Explain why dividing by one half doubles a number. My kid asked and I couldn't explain it.",
+ "topic": "Why dividing by one half doubles a number",
+ "intent": "A parent wants a clear reason they can pass on to a child.",
+ "style": "chalkboard",
+ "goal": "The viewer sees that dividing by a half counts halves, so the answer doubles.",
+ "promise": "A division that makes a number bigger, and the reason you can see.",
+ "arc": "A question that seems to have an obvious answer, a pause to guess, the surprise, then six wholes cut into twelve halves.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "What is six divided by one half?",
+   "job": "Pose the question and let the viewer commit to a guess.",
+   "knows": "",
+   "waiting": "Is it three?",
+   "look": "the expression six divided by one half",
+   "feel": "a small challenge",
+   "rhythm": "short",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "half?",
+     "seconds": 3.0,
+     "purpose": "predict",
+     "does": "the question stays alone on screen; nothing hints at the answer",
+     "shows": "6 ÷ ½ = ?"
+    }
+   ],
+   "withhold": {
+    "what": "the answer 12",
+    "until": "e2"
+   }
+  },
+  {
+   "id": "e2",
+   "text": "It's twelve, not three. Division asks a question: how many halves fit into six?",
+   "job": "Give the surprising answer, then reword division as a question about counting halves.",
+   "knows": "The answer is 12; division counts how many halves fit.",
+   "waiting": "Why twelve?",
+   "look": "the answer 12 beside the reworded question",
+   "feel": "",
+   "rhythm": "short",
+   "reveal": {
+    "at": "It's twelve,",
+    "what": "the answer 12"
+   }
+  },
+  {
+   "id": "e3",
+   "text": "Cut each of the six wholes into halves. Every whole gives two halves, so six wholes give twelve halves.",
+   "job": "Show the counting: wholes split into halves, counted to twelve.",
+   "knows": "Each whole gives two halves, twelve in all.",
+   "waiting": "",
+   "look": "six wholes splitting into halves, counted",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h2",
+     "after": "twelve halves.",
+     "seconds": 2.0,
+     "purpose": "settle",
+     "does": "the twelve halves stay counted, the total 12 lit"
+    }
+   ],
+   "demo": {
+    "what": "six wholes cut into halves and counted",
+    "phases": [
+     {
+      "at": "Cut each",
+      "pace": "slow",
+      "why": "the first whole is cut slowly so the idea lands"
+     },
+     {
+      "at": "so six wholes",
+      "pace": "fast",
+      "why": "the rest are cut quickly and counted to twelve"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e4",
+   "text": "That's why dividing by a half is the same as multiplying by two.",
+   "job": "Name the rule the picture just showed.",
+   "knows": "Dividing by a half is multiplying by two.",
+   "waiting": "",
+   "look": "six divided by one half equals six times two equals twelve",
+   "feel": "",
+   "rhythm": "short"
+  }
+ ],
+ "quiz": [
+  {
+   "q": "What is six divided by one half?",
+   "a": "Twelve.",
+   "needs": "words"
+  },
+  {
+   "q": "What question does the division ask here?",
+   "a": "How many halves fit into six.",
+   "needs": "words"
+  },
+  {
+   "q": "How many halves did each whole give?",
+   "a": "Two.",
+   "needs": "both"
+  },
+  {
+   "q": "Was the first whole cut faster or slower than the rest?",
+   "a": "Slower: the first was cut slowly, the rest quickly.",
+   "needs": "picture"
+  },
+  {
+   "q": "Dividing by a half is the same as what?",
+   "a": "Multiplying by two.",
+   "needs": "words"
+  }
+ ]
+}

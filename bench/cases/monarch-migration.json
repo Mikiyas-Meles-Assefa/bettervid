@@ -1,0 +1,88 @@
+{
+ "id": "monarch-migration",
+ "use": "a map journey",
+ "request": "Show the monarch butterfly migration on a map, it's for a nature short.",
+ "topic": "The monarch butterfly migration",
+ "intent": "Nature fans want to see the route and the surprise behind it.",
+ "style": "collage",
+ "goal": "The viewer can trace the route and knows no butterfly has made the trip before.",
+ "promise": "A journey across a continent by an insect.",
+ "arc": "A map, the route drawing south from Canada to Mexico, the whole path held, then generations along it.",
+ "events": [
+  {
+   "id": "e1",
+   "text": "Every autumn, monarch butterflies leave southern Canada and fly south.",
+   "job": "Start the journey on the map.",
+   "knows": "They start in southern Canada.",
+   "waiting": "Where do they go?",
+   "look": "the start in southern Canada on the map",
+   "feel": "",
+   "rhythm": "short"
+  },
+  {
+   "id": "e2",
+   "text": "Down through the United States, up to four thousand kilometers, to the same mountain forests in central Mexico.",
+   "job": "Draw the route.",
+   "knows": "Up to 4000 km to central Mexico.",
+   "waiting": "",
+   "look": "the route drawing south across the map",
+   "feel": "",
+   "rhythm": "long",
+   "holds": [
+    {
+     "id": "h1",
+     "after": "Mexico.",
+     "seconds": 2.0,
+     "purpose": "look",
+     "does": "the route ends at the forest; the whole path stays in view"
+    }
+   ],
+   "demo": {
+    "what": "the route drawn across the map",
+    "phases": [
+     {
+      "at": "Down through",
+      "pace": "normal",
+      "why": "the route follows the words down the continent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "e3",
+   "text": "None of them has ever been there. Their great-grandparents made the last trip.",
+   "job": "The surprise.",
+   "knows": "No butterfly has made the trip before; earlier generations did.",
+   "waiting": "",
+   "look": "generations along the route",
+   "feel": "wonder",
+   "rhythm": "long",
+   "reveal": {
+    "at": "None of them",
+    "what": "that none of them has been there"
+   }
+  }
+ ],
+ "quiz": [
+  {
+   "q": "Where does the migration start and end?",
+   "a": "Southern Canada to the mountain forests of central Mexico.",
+   "needs": "words"
+  },
+  {
+   "q": "How far do they fly?",
+   "a": "Up to 4000 kilometers.",
+   "needs": "words"
+  },
+  {
+   "q": "What is surprising about the butterflies that make the trip?",
+   "a": "None of them has been there before; their great-grandparents made the last trip.",
+   "needs": "words"
+  },
+  {
+   "q": "Which way did the route move on the map?",
+   "a": "South, down from Canada through the United States to Mexico.",
+   "needs": "both"
+  }
+ ]
+}
