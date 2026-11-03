@@ -5,6 +5,7 @@ import { evaluate } from "../core/evaluate.ts";
 import type { Props, Resolved, Scene, StyleSpec, Theme } from "../core/types.ts";
 import { resolveStyle } from "./format.ts";
 import { paintPath, paintSurface, paintText } from "./paint.ts";
+import { TILE, toothTile } from "./texture.ts";
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).join(" ");
 // Turns noise into specks of one color. `gain` sets the contrast of the specks, `cut` how much noise clears them.
@@ -48,19 +49,29 @@ export const Surface = React.memo<{ style: StyleSpec; color: string; theme: Them
   );
 });
 
-// Dry-stick texture, applied only to the strokes that ask for it. The noise only ever removes specks from a stroke.
-const dry = (amount: number) => `0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 ${-7 * (0.34 + amount * 0.14)}`;
+// Dry-stick texture, applied only to the strokes that ask for it. The tooth only ever removes specks from a stroke.
+//
+// It is a mask of plain pixels (texture.ts), laid out in each stroke's own space, so the specks sit on the object and
+// move, scale and turn with it. It used to be a turbulence filter on each stroke, which looked right on a still but not
+// across a moment: browsers evaluate turbulence in a space they choose from the transform's kind and from whether a
+// parent is composited, so the same chalk line changed its grain, and thin strokes (a tube's ticks) vanished or came
+// back as dense scribble, whenever its object dimmed, brightened or turned. Pixels under a transform do not change.
+const WIDE = { x: -20000, y: -20000, width: 40000, height: 40000 };
+export const dryMask = (id: string) => `url(#${id})`;
 const Dry: React.FC<{ id: string; amount: number }> = ({ id, amount }) => (
-  <filter id={id} x="-6%" y="-6%" width="112%" height="112%" colorInterpolationFilters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.42 0.6" numOctaves={3} seed={5} result="noise" />
-    <feColorMatrix in="noise" type="matrix" values={dry(amount)} result="teeth" />
-    <feComposite in="SourceGraphic" in2="teeth" operator="in" />
-  </filter>
+  <>
+    <pattern id={`${id}-tile`} patternUnits="userSpaceOnUse" width={TILE} height={TILE}>
+      <image href={toothTile(amount)} width={TILE} height={TILE} preserveAspectRatio="none" />
+    </pattern>
+    <mask id={id} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" {...WIDE}>
+      <rect {...WIDE} fill={`url(#${id}-tile)`} />
+    </mask>
+  </>
 );
 
 export const StyleDefs: React.FC<{ style: StyleSpec }> = ({ style }) => (
   <defs>
-    {style.line.grain > 0 && <Dry id="sg-dry" amount={style.line.grain} />}
+    {(style.line.grain > 0 || style.fill.kind === "scribble") && <Dry id="sg-dry" amount={style.line.grain} />}
     {style.type.grain > 0 && <Dry id="sg-dry-text" amount={style.type.grain} />}
   </defs>
 );
@@ -69,7 +80,7 @@ export const StyleDefs: React.FC<{ style: StyleSpec }> = ({ style }) => (
 export const StyledPath: React.FC<{ id: string; a: Props; style: StyleSpec; surface: string; accent: string }> = ({ id, a, style, surface, accent }) => (
   <>
     {paintPath(a, id, style, surface, accent).map((l, i) => (
-      <path key={i} d={l.d} fill={l.fill ?? "none"} stroke={l.stroke ?? "none"} strokeWidth={l.width} opacity={l.opacity} strokeLinecap="round" strokeLinejoin="round" filter={l.dry ? "url(#sg-dry)" : undefined} />
+      <path key={i} d={l.d} fill={l.fill ?? "none"} stroke={l.stroke ?? "none"} strokeWidth={l.width} opacity={l.opacity} strokeLinecap="round" strokeLinejoin="round" mask={l.dry ? dryMask("sg-dry") : undefined} />
     ))}
   </>
 );
@@ -80,7 +91,7 @@ export const StyledText: React.FC<{ id: string; a: Props; theme: Theme; style: S
   return (
     <>
       {t.glow.map((g, i) => <text key={i} {...common} fill="none" stroke={t.color} strokeWidth={g.width} strokeLinejoin="round" opacity={g.opacity}>{t.text}</text>)}
-      <text {...common} fill={t.color} filter={t.dry ? "url(#sg-dry-text)" : undefined}>{t.text}</text>
+      <text {...common} fill={t.color} mask={t.dry ? dryMask("sg-dry-text") : undefined}>{t.text}</text>
     </>
   );
 };

@@ -322,7 +322,7 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
   const fms: FM[] = [];
   for (const { m, i } of sortedM) {
     const md = mdOf(i);
-    const nominal = Math.max(1, Math.round(wordStart(m.word) * FPS) - Math.round(md.lead.value * FPS));
+    let nominal = Math.max(1, Math.round(wordStart(m.word) * FPS) - Math.round(md.lead.value * FPS));
     const fm: FM = { m, i, md, onset: nominal, carry: [], becomes: m.becomes, wrong: m.wrong, acts: m.acts, merged: [] };
     for (;;) {
       const prev = fms.at(-1);
@@ -345,6 +345,13 @@ export function compose(plan: IntentPlan, design: Design, ctx: ComposeCtx): Comp
       fm.acts = [...prev.acts, ...fm.acts];
       fm.merged = [...prev.merged, prev.i, ...fm.merged];
       fms.pop();
+      // The merged moment takes over the time of what it absorbed: the absorbed words are said over its picture (their
+      // subject is in it as support), not over an empty board or the moment before. A payoff keeps its own start while
+      // a moment before it can hold the frame, so it is not given away early.
+      if (!(fm.m.reveal || fm.m.ask) || !fms.length) {
+        nominal = Math.min(nominal, prev.onset);
+        fm.onset = nominal;
+      }
     }
     fms.push(fm);
   }
