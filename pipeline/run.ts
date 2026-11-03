@@ -81,7 +81,7 @@ if (args[0] === "new") {
     costs: [],
   };
   const from = flag("material");
-  if (from) p.input.files = storeMaterial(from, dir(p), process.env.HOST && process.env.HOST !== "127.0.0.1" ? UPLOAD_LIMITS.public : UPLOAD_LIMITS.local);
+  if (from) p.input.files = await storeMaterial(from, dir(p), process.env.HOST && process.env.HOST !== "127.0.0.1" ? UPLOAD_LIMITS.public : UPLOAD_LIMITS.local);
   await save(p);
   console.log(`project ${p.id}`);
 } else {

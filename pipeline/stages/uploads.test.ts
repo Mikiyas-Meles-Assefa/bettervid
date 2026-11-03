@@ -4,8 +4,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { createCanvas } from "@napi-rs/canvas";
 import { deflateRawSync, deflateSync } from "node:zlib";
-import { encodePng, expand, formatOf, readDocx, readPdf, readPptx, readProject, readXlsx, type MaterialFile } from "../../engine/design/material/index.ts";
+import { expand, formatOf, layoutPage, readDocx, readPdf, readPptx, readProject, readXlsx, type MaterialFile, type Piece } from "../../engine/design/material/index.ts";
 import type { AgentTask, Answer, Reasoner } from "../../engine/design/types.ts";
 import type { Project, Shot } from "../../schemas/project.ts";
 import { materialNote, materialText, picturesText } from "../lib/material.ts";
@@ -49,7 +50,7 @@ function zip(entries: Record<string, string | Buffer>): Buffer {
   return Buffer.concat([...locals, c, end]);
 }
 
-const PNG = encodePng(64, 64, 1, Buffer.alloc(64 * 64, 128), false);
+const PNG = createCanvas(64, 64).toBuffer("image/png");
 
 const docx = () => zip({
   "word/document.xml": `<w:document><w:body><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Field method</w:t></w:r></w:p><w:p><w:r><w:t>We sampled 12 ponds &amp; 3 rivers.</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>site</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>count</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>north</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>7</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>`,
@@ -115,18 +116,18 @@ test("names are made safe and cannot leave the folder", () => {
   assert.equal(inside("/tmp/x", "y.txt"), "/tmp/x/y.txt");
 });
 
-test("uploads are checked for what they really are, with a clear message", () => {
-  assert.equal(uploadProblem("a.png", PNG), undefined);
-  assert.match(uploadProblem("a.png", Buffer.from("not a picture"))!, /does not look like/);
-  assert.match(uploadProblem("a.txt", Buffer.alloc(0))!, /empty/);
-  assert.match(uploadProblem("a.doc", Buffer.from("x"))!, /Save it as DOCX/);
-  assert.match(uploadProblem("a.zip", Buffer.from("x"))!, /cannot be read/);
-  assert.match(uploadProblem("a.svg", Buffer.from("<svg/>"))!, /PNG, JPG/);
-  assert.match(uploadProblem("a.pdf", Buffer.from("hello"))!, /could not be read: it is not a PDF/);
-  assert.match(uploadProblem("a.docx", Buffer.from("hello"))!, /could not be read/);
-  assert.match(uploadProblem("a.dat", Buffer.from([1, 0, 2]))!, /not a text file/);
-  assert.equal(uploadProblem("notes", Buffer.from("some notes")), undefined);
-  assert.equal(uploadProblem("a.pdf", pdf(["BT /F1 12 Tf (Hello) Tj ET"])), undefined);
+test("uploads are checked for what they really are, with a clear message", async () => {
+  assert.equal(await uploadProblem("a.png", PNG), undefined);
+  assert.match((await uploadProblem("a.png", Buffer.from("not a picture")))!, /does not look like/);
+  assert.match((await uploadProblem("a.txt", Buffer.alloc(0)))!, /empty/);
+  assert.match((await uploadProblem("a.doc", Buffer.from("x")))!, /Save it as DOCX/);
+  assert.match((await uploadProblem("a.zip", Buffer.from("x")))!, /cannot be read/);
+  assert.match((await uploadProblem("a.svg", Buffer.from("<svg/>")))!, /PNG, JPG/);
+  assert.match((await uploadProblem("a.pdf", Buffer.from("hello")))!, /could not be read/);
+  assert.match((await uploadProblem("a.docx", Buffer.from("hello")))!, /could not be read/);
+  assert.match((await uploadProblem("a.dat", Buffer.from([1, 0, 2])))!, /not a text file/);
+  assert.equal(await uploadProblem("notes", Buffer.from("some notes")), undefined);
+  assert.equal(await uploadProblem("a.pdf", pdf(["BT /F1 12 Tf (Hello) Tj ET"])), undefined);
 });
 
 test("size limits say which limit was reached", () => {
@@ -138,18 +139,18 @@ test("size limits say which limit was reached", () => {
   assert.ok(l.file < UPLOAD_LIMITS.local.file);
 });
 
-test("files are stored only in the project's material folder, and a bad one stops with its name", () => {
+test("files are stored only in the project's material folder, and a bad one stops with its name", async () => {
   const from = temp();
   const project = temp();
   writeFileSync(join(from, "notes (1).md"), "# Notes\n\nA fact.\n");
   writeFileSync(join(from, ".hidden"), "secret");
-  const files = storeMaterial(from, project);
+  const files = await storeMaterial(from, project);
   assert.deepEqual(files.map((f) => f.name), ["notes-1-.md"]);
   assert.ok(existsSync(join(project, "material", "notes-1-.md")));
   assert.ok(!existsSync(join(project, "material", ".hidden")));
   assert.equal(files[0]!.type, "MD");
   writeFileSync(join(from, "bad.pdf"), "nope");
-  assert.throws(() => storeMaterial(from, temp()), /bad\.pdf could not be read/);
+  await assert.rejects(storeMaterial(from, temp()), /bad\.pdf could not be read/);
 });
 
 test("a DOCX gives text, its table as a table, and its picture", () => {
@@ -173,57 +174,89 @@ test("an XLSX gives each sheet as a table, keeping empty cells and dates", () =>
   assert.deepEqual(x.tables[0]!.rows, [["month", "units", "", "day"], ["May", "41", "", "2023-03-15"]]);
 });
 
-test("a PDF gives text by page, in the page tree's order", () => {
-  const x = readPdf(pdf(["BT /F1 12 Tf 72 700 Td (First line.) Tj 0 -14 Td [(Sec) -10 (ond) -300 (line.)] TJ ET", "BT /F1 12 Tf (Page \\050two\\051.) Tj ET"]));
+test("a PDF gives text by page, in the page tree's order", async () => {
+  const x = await readPdf(pdf(["BT /F1 12 Tf 72 700 Td (First line.) Tj 0 -14 Td [(Sec) -10 (ond) -300 (line.)] TJ ET", "BT /F1 12 Tf (Page \\050two\\051.) Tj ET"]));
   assert.deepEqual(x.sections, [{ where: "page 1", text: "First line.\nSecond line." }, { where: "page 2", text: "Page (two)." }]);
 });
 
-test("a PDF's simple fonts use their named encoding and its changes", () => {
-  const b = Buffer.from("%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Contents 4 0 R /Resources << /Font << /M 5 0 R /D 6 0 R >> >> >>\nendobj\n4 0 obj\n<< >>\nstream\nBT /M 9 Tf (\\322x\\323) Tj ET BT /D 9 Tf 1 0 0 1 0 5 Tm (\\001\\002\\001) Tj ET\nendstream\nendobj\n5 0 obj\n<< /Subtype /TrueType /Encoding /MacRomanEncoding >>\nendobj\n6 0 obj\n<< /Subtype /Type1 /Encoding << /Differences [1 /H /space] >> >>\nendobj\n");
-  assert.match(readPdf(b).sections[0]!.text, /^\u201Cx\u201D\s+H H$/);
+test("a PDF's simple fonts use their named encoding and its changes", async () => {
+  const b = Buffer.from("%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Contents 4 0 R /Resources << /Font << /M 5 0 R /D 6 0 R >> >> >>\nendobj\n4 0 obj\n<< /Length 66 >>\nstream\nBT /M 9 Tf (\\322x\\323) Tj ET BT /D 9 Tf 1 0 0 1 0 5 Tm (\\001\\002\\001) Tj ET\nendstream\nendobj\n5 0 obj\n<< /Type /Font /Subtype /TrueType /BaseFont /Helvetica /Encoding /MacRomanEncoding >>\nendobj\n6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding << /Differences [1 /H /space] >> >>\nendobj\ntrailer << /Root 1 0 R >>\n");
+  assert.match((await readPdf(b)).sections[0]!.text, /^H H\n\u201Cx\u201D$/);
 });
 
-test("a PDF font's map turns glyph codes into letters", () => {
-  const cmap = deflateSync(Buffer.from("begincodespacerange <0000> <ffff> endcodespacerange 1 beginbfchar <0001> <0048> endbfchar 1 beginbfrange <0002> <0002> <0069> endbfrange"));
-  const b = Buffer.concat([
-    Buffer.from("%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n"),
-    Buffer.from("4 0 obj\n<< /Length 30 >>\nstream\nBT /F1 12 Tf <00010002> Tj ET  \nendstream\nendobj\n5 0 obj\n<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R >>\nendobj\n"),
-    Buffer.from(`6 0 obj\n<< /Length ${cmap.length} /Filter /FlateDecode >>\nstream\n`), cmap, Buffer.from("\nendstream\nendobj\n"),
-  ]);
-  assert.equal(readPdf(b).sections[0]!.text, "Hi");
-});
+const raw = (w: number, h: number) => deflateSync(Buffer.alloc(w * h * 3, 120));
+const onePage = (content: string, resources: string, more: Buffer[] = []) => Buffer.concat([
+  Buffer.from(`%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Contents 4 0 R /Resources << ${resources} >> >>\nendobj\n4 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`),
+  ...more,
+  Buffer.from("trailer << /Root 1 0 R >>\n%%EOF\n"),
+]);
+const imageObject = (w: number, h: number) => { const z = raw(w, h); return [Buffer.from(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${z.length} >>\nstream\n`), z, Buffer.from("\nendstream\nendobj\n")]; };
 
-test("a scanned PDF page comes back as a picture; a page with no readable font says so", () => {
-  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
-  const scan = Buffer.concat([
-    Buffer.from("%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> >> >>\nendobj\n4 0 obj\n<< /Length 9 >>\nstream\n/Im0 Do  \nendstream\nendobj\n"),
-    Buffer.from(`5 0 obj\n<< /Subtype /Image /Width 800 /Height 600 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`), jpeg, Buffer.from("\nendstream\nendobj\n"),
-  ]);
-  const x = readPdf(scan);
+test("a scanned page is rendered for the picture reader", async () => {
+  const x = await readPdf(onePage("q 600 0 0 800 0 0 cm /Im0 Do Q", "/XObject << /Im0 5 0 R >>", imageObject(300, 400)));
   assert.equal(x.sections.length, 0);
-  assert.equal(x.images[0]!.ext, "jpg");
-  assert.throws(() => readPdf(Buffer.from("%PDF-1.5\ntrailer << /Encrypt 3 0 R >>\n")), /password|encrypted/);
+  assert.equal(x.images.length, 1, "the page, once");
+  assert.equal(x.images[0]!.where, "page 1");
+  assert.equal(x.images[0]!.bytes.readUInt32BE(0), 0x89504e47);
+});
+
+test("a picture on a page with text comes out on its own", async () => {
+  const x = await readPdf(onePage("BT /F1 12 Tf 50 700 Td (Some words about it.) Tj ET q 200 0 0 200 50 400 cm /Im0 Do Q", "/Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> /XObject << /Im0 5 0 R >>", imageObject(100, 100)));
+  assert.equal(x.sections[0]!.text, "Some words about it.");
+  assert.equal(x.images.length, 1);
+});
+
+test("a chart drawn in lines renders its page, and text around it still reads", async () => {
+  const bars = Array.from({ length: 30 }, (_, i) => `${50 + i * 15} 300 10 ${20 + i * 5} re f`).join(" ");
+  const x = await readPdf(onePage(`BT /F1 12 Tf 50 700 Td (Rain by month.) Tj ET ${bars}`, "/Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >>"));
+  assert.equal(x.sections[0]!.text, "Rain by month.");
+  assert.equal(x.images.length, 1);
+});
+
+test("a password protected or broken PDF says so", async () => {
+  await assert.rejects(readPdf(Buffer.from("hello")), /not a readable PDF/);
+});
+
+const word = (x: number, y: number, text: string, h = 10): Piece => ({ x, y, h, w: text.length * h * 0.5, text });
+
+test("two columns of prose read left then right, under a title that crosses them", () => {
+  const left = Array.from({ length: 8 }, (_, i) => word(50, 700 - i * 14, `left column line number ${i} of the prose`));
+  const right = Array.from({ length: 8 }, (_, i) => word(320, 700 - i * 14, `right column line number ${i} of the prose`));
+  const t = layoutPage([...right, word(150, 730, "A title across the top of the whole page, wide"), ...left]).text.split("\n");
+  assert.equal(t[0], "A title across the top of the whole page, wide");
+  assert.equal(t[1], "left column line number 0 of the prose");
+  assert.equal(t[8], "left column line number 7 of the prose");
+  assert.equal(t[9], "right column line number 0 of the prose");
+});
+
+test("short cells that line up are a table; ordinary lines are not", () => {
+  const rows = [["city", "people", "area"], ["Oslo", "709000", "454"], ["Bergen", "291000", "465"], ["Tromso", "", "2521"]];
+  const pieces = rows.flatMap((r, i) => r.flatMap((c, k) => (c ? [word(50 + k * 150, 600 - i * 14, c)] : [])));
+  const l = layoutPage([word(50, 650, "A sentence before the table stands alone."), ...pieces, word(50, 500, "And one after it.")]);
+  assert.deepEqual(l.tables, [rows]);
+  assert.equal(l.text, "A sentence before the table stands alone.\nAnd one after it.");
+  assert.deepEqual(layoutPage([word(50, 650, "Name:"), word(200, 650, "Lena")]).tables, []);
 });
 
 test("one file of each type reads into cards, with locations, through a fake reasoner", async () => {
   const folder = temp();
   const out: MaterialFile[] = [];
-  const add = (file: string, body: string | Buffer) => {
+  const add = async (file: string, body: string | Buffer) => {
     writeFileSync(join(folder, file), body);
-    const x = expand({ name: file, file, path: join(folder, file) }, join(folder, ".extracted"));
+    const x = await expand({ name: file, file, path: join(folder, file) }, join(folder, ".extracted"));
     assert.deepEqual(x.problems, []);
     out.push(...x.files);
   };
-  add("a.pdf", pdf(["BT /F1 12 Tf (A fact on the page.) Tj ET"]));
-  add("b.docx", docx());
-  add("c.pptx", pptx());
-  add("d.xlsx", xlsx());
-  add("e.txt", "A plain note.\n");
-  add("f.md", "# Heading\n\nBody text here.\n");
-  add("g.csv", "city,people\nOslo,5\n");
-  add("h.py", "print(1)\n");
-  add("i.png", PNG);
-  add("j.jpg", Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  await add("a.pdf", pdf(["BT /F1 12 Tf (A fact on the page.) Tj ET"]));
+  await add("b.docx", docx());
+  await add("c.pptx", pptx());
+  await add("d.xlsx", xlsx());
+  await add("e.txt", "A plain note.\n");
+  await add("f.md", "# Heading\n\nBody text here.\n");
+  await add("g.csv", "city,people\nOslo,5\n");
+  await add("h.py", "print(1)\n");
+  await add("i.png", PNG);
+  await add("j.jpg", Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
   const r = scripted();
   const read = await readProject(out, r, { request: "x" });
   const by = Object.fromEntries(read.cards.map((c) => [c.name, c]));

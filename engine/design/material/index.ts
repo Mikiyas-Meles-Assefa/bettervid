@@ -16,7 +16,7 @@ export { cardSummary, checkRequirements, linkSchema, linkTask, LINKER_SYSTEM, re
 export { cardFromPicture, pictureSchema, pictureTask, READER_SYSTEM, repairTask, type PictureAnswer } from "./picture.ts";
 export { numberOf, parseTable, readCode, readDoc, readSections, readTable, splitRow } from "./text.ts";
 export { decodeText, expand, isPaged, probe } from "./expand.ts";
-export { encodePng, readPdf } from "./pdf.ts";
+export { layoutPage, probePdf, readPdf, type Piece } from "./pdf.ts";
 export { readDocx, readPptx, readXlsx, toCsv, type Extracted } from "./office.ts";
 export { readZip } from "./zip.ts";
 

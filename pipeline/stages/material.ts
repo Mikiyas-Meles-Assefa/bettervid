@@ -12,7 +12,7 @@ import { metaReasoner } from "../lib/reasoner-meta.ts";
 import { hash } from "../lib/util.ts";
 
 // Bump when extraction changes, so files are read again under the new rules.
-const READER_VERSION = 1;
+const READER_VERSION = 2;
 
 export const materialKey = (p: Project) => hash(READER_VERSION, (p.input.files ?? []).map((f) => [f.name, f.hash]), p.input.prompt);
 
@@ -22,7 +22,7 @@ export async function readUploads(p: Project, reasoner: Reasoner): Promise<NonNu
   const problems: string[] = [];
   for (const f of p.input.files ?? []) {
     try {
-      const x = expand({ name: f.name, file: f.name, path: join(folder, f.name) }, join(folder, ".extracted"));
+      const x = await expand({ name: f.name, file: f.name, path: join(folder, f.name) }, join(folder, ".extracted"));
       files.push(...x.files);
       problems.push(...x.problems.map((m) => `${f.name}: ${m}`));
     } catch (e) {

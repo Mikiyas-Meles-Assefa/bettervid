@@ -58,7 +58,7 @@ export function typeLabel(name: string): string {
 }
 
 /** Why this file cannot be used, in words for the person who chose it, or undefined when it can. */
-export function uploadProblem(name: string, b: Buffer): string | undefined {
+export async function uploadProblem(name: string, b: Buffer): Promise<string | undefined> {
   const ext = extname(name).toLowerCase();
   if (!b.length) return `${name} is empty.`;
   if (OLD_OFFICE[ext]) return `${name} is in the older ${ext.slice(1).toUpperCase()} format. Save it as ${OLD_OFFICE[ext]} and add it again.`;
@@ -67,7 +67,7 @@ export function uploadProblem(name: string, b: Buffer): string | undefined {
   if (MAGIC[ext]) return MAGIC[ext]!(b) ? undefined : `${name} does not look like a ${ext.slice(1).toUpperCase()} picture. It may be damaged or misnamed.`;
   if ([".pdf", ".docx", ".pptx", ".xlsx"].includes(ext)) {
     try {
-      probe(name, b);
+      await probe(name, b);
       return undefined;
     } catch (e) {
       return `${name} could not be read: ${(e as Error).message}.`;
@@ -92,7 +92,7 @@ export const materialDir = (projectDir: string) => join(projectDir, "material");
 
 /** Checks the files in a folder and copies them into the project's material folder. Throws what is wrong with the first
  * file that cannot be used: nothing is dropped silently. */
-export function storeMaterial(from: string, projectDir: string, limits: UploadLimits = UPLOAD_LIMITS.local): InputFile[] {
+export async function storeMaterial(from: string, projectDir: string, limits: UploadLimits = UPLOAD_LIMITS.local): Promise<InputFile[]> {
   const out = materialDir(projectDir);
   const names = statSync(from).isDirectory() ? readdirSync(from).filter((n) => !n.startsWith(".") && statSync(join(from, n)).isFile()).sort() : [basename(from)];
   const folder = statSync(from).isDirectory() ? from : resolve(from, "..");
@@ -105,7 +105,7 @@ export function storeMaterial(from: string, projectDir: string, limits: UploadLi
     const tooBig = sizeProblem(name, statSync(src).size, sizes, limits);
     if (tooBig) throw new Error(tooBig);
     const bytes = readFileSync(src);
-    const problem = uploadProblem(name, bytes);
+    const problem = await uploadProblem(name, bytes);
     if (problem) throw new Error(problem);
     copyFileSync(src, inside(out, name));
     sizes.push(bytes.length);

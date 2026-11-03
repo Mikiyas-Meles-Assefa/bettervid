@@ -5,9 +5,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { formatOf, type MaterialFile } from "./files.ts";
 import { readDocx, readPptx, readXlsx, toCsv, type Extracted } from "./office.ts";
-import { readPdf } from "./pdf.ts";
+import { probePdf, readPdf } from "./pdf.ts";
 
-const PAGED: Record<string, (b: Buffer) => Extracted> = { ".pdf": readPdf, ".docx": readDocx, ".pptx": readPptx, ".xlsx": readXlsx };
+const PAGED: Record<string, (b: Buffer) => Extracted | Promise<Extracted>> = { ".pdf": readPdf, ".docx": readDocx, ".pptx": readPptx, ".xlsx": readXlsx };
 export const isPaged = (file: string) => extname(file).toLowerCase() in PAGED;
 
 /** Text as written: UTF-8 or UTF-16 by its mark, or Latin-1 when it is not valid UTF-8 (older spreadsheets export that). */
@@ -22,11 +22,13 @@ export function decodeText(b: Buffer): string {
 }
 
 /** Opens a paged file to see that it can be read; throws why not. */
-export function probe(file: string, b: Buffer): void {
-  PAGED[extname(file).toLowerCase()]?.(b);
+export async function probe(file: string, b: Buffer): Promise<void> {
+  const ext = extname(file).toLowerCase();
+  if (ext === ".pdf") await probePdf(b);
+  else await PAGED[ext]?.(b);
 }
 
-export function expand(f: { name: string; file: string; path: string }, out: string, limits = { pictures: 40 }): { files: MaterialFile[]; problems: string[] } {
+export async function expand(f: { name: string; file: string; path: string }, out: string, limits = { pictures: 40 }): Promise<{ files: MaterialFile[]; problems: string[] }> {
   const bytes = readFileSync(f.path);
   const read = PAGED[extname(f.file).toLowerCase()];
   if (!read) {
@@ -34,7 +36,7 @@ export function expand(f: { name: string; file: string; path: string }, out: str
     if (formatOf(one) !== "picture") one.text = decodeText(bytes);
     return { files: [one], problems: [] };
   }
-  const x = read(bytes);
+  const x = await read(bytes);
   const files: MaterialFile[] = [];
   const problems = [...x.problems];
   if (x.sections.some((s) => s.text.trim())) files.push({ name: f.name, file: f.file, path: f.path, sections: x.sections.filter((s) => s.text.trim()), kind: "doc" });

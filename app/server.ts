@@ -372,7 +372,7 @@ createServer(async (req, res) => {
       const held = tidyStaging();
       if (held + bytes.length > UPLOADS.staged) return send(res, 507, { error: "The site is holding too many files right now. Try again later." });
       const waiting = stagedFiles(token);
-      const problem = sizeProblem(name, bytes.length, waiting.map((f) => f.size), UPLOADS) ?? uploadProblem(name, bytes);
+      const problem = sizeProblem(name, bytes.length, waiting.map((f) => f.size), UPLOADS) ?? (await uploadProblem(name, bytes));
       if (problem) return send(res, 400, { error: problem });
       const folder = join(STAGING, token);
       mkdirSync(folder, { recursive: true });
