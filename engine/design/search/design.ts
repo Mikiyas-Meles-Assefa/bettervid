@@ -24,7 +24,7 @@ import { compose, type ComposeCtx, type Composition } from "../compose/compose.t
 import { depict, depicterTask, type DepictRequest } from "../depict/depicter.ts";
 import { checkSpec } from "../depict/depict.ts";
 import type { PropSpec } from "../depict/spec.ts";
-import { idsOf } from "../intent/parse.ts";
+import { idsOf, relationLine } from "../intent/parse.ts";
 import { suggestDesign, viewingFrom } from "../suggest.ts";
 import type { AgentTask, DecisionRecord, Design, IntentPlan, PartCard, Reading, Reasoner, Requirement, Viewing, Word } from "../types.ts";
 import { holdsFrom, measureGoals, newCache, windowOf } from "./evaluate.ts";
@@ -92,7 +92,9 @@ export function depictRequest(plan: IntentPlan, id: string, x: Pick<DesignInputs
   const t = plan.things.find((y) => y.id === id)!;
   const acts = plan.moments.flatMap((m) => m.acts.filter((a) => a.ids.includes(id)).map((a) => ({ verb: a.verb, ...(a.arg ? { arg: a.arg } : {}), ...(a.to ? { to: a.to } : {}) })));
   const unique = [...new Map(acts.map((a) => [JSON.stringify(a), a])).values()];
-  const beside = new Set(plan.moments.filter((m) => idsOf(m).includes(id)).flatMap((m) => idsOf(m)).filter((y) => y !== id));
+  const placed = (plan.relations ?? []).filter((r) => r.a === id || r.b === id);
+  const beside = new Set([...plan.moments.filter((m) => idsOf(m).includes(id)).flatMap((m) => idsOf(m)), ...placed.flatMap((r) => [r.a, r.b])].filter((y) => y !== id));
+  const relations = placed.map(relationLine);
   const company = plan.things.filter((y) => beside.has(y.id)).map(label);
   // Lines of the user's material that name the thing by its plan name (the plan's own word, no list of topic words).
   const name = words(id);
@@ -100,7 +102,7 @@ export function depictRequest(plan: IntentPlan, id: string, x: Pick<DesignInputs
     ...x.cards.flatMap((c) => [c.about, ...(c.text ?? "").split(/\n+/), ...Object.values(c.parts).map((p) => p.about)].filter((l) => l && words(l).includes(name)).map((l) => `${l.trim().slice(0, 300)} (${c.file})`)),
     ...x.requirements.filter((r) => words(`${r.detail} ${r.applies ?? ""}`).includes(name)).map((r) => `${r.kind}: ${r.detail} (${r.source.file})`),
   ].slice(0, 12);
-  return { id: `depict.${id}${tag}`, name: id, desc: t.desc ?? t.id, acts: unique, ...(company.length ? { company } : {}), ...(material.length ? { material } : {}), purpose: x.brief.split("\n").filter(Boolean).slice(0, 3).join(" ").slice(0, 400) };
+  return { id: `depict.${id}${tag}`, name: id, desc: t.desc ?? t.id, acts: unique, ...(company.length ? { company } : {}), ...(material.length ? { material } : {}), purpose: x.brief.split("\n").filter(Boolean).slice(0, 3).join(" ").slice(0, 400), ...(relations.length ? { relations } : {}) };
 }
 
 /** Writes a file under the run's folder. */

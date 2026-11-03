@@ -17,6 +17,22 @@ Name each thing once, before the first moment. A thing is what it means, not how
 
 Ids are short: letters, digits, `_`.
 
+# Where things are
+
+When objects belong to one scene (a cup on a table, a sign on a post, a cat under a chair), say where each is relative to another, one line each, after the things and before the first moment. Say only what matters; never coordinates or sizes:
+
+    cup on table                  a rests on b (also: sits on, stands on, lies on, floats on, on top of)
+    lamp above table "1 m"        a above b; a quoted length is the gap between them
+    cat under chair               a below b (also: beneath, below)
+    coin in jar                   a inside b
+    sign tied to post             a attached to b (also: hangs from, fixed to, clipped to)
+    flag at the top of pole       a at a place on b
+    bike beside wall              a next to b on the same ground (also: next to, left of, right of, against)
+    tree behind house             (also: in front of)
+    mug on desk "left corner"     a quoted place on b: a part, an end, an edge
+
+The engine draws related things as one scene: each where it belongs relative to the others, at their real relative sizes (put the real size in the description when you know it), and a thing stays on screen while what rests on it or hangs from it is shown. Things without a line here are placed on their own.
+
 Material the user gave (a photo, screenshot, chart, slide, diagram, code) is listed in the request by name, with its named parts. It is already a thing with that name, so do not declare it: `show chart` puts the whole picture up, and `show chart.jump` makes a named part the subject, which the engine finds inside the picture and draws the eye to. Prefer the user's own material over words whenever it shows what is being said.
 
 # Moments

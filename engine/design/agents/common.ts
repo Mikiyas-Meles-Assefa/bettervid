@@ -4,6 +4,7 @@
 import { readFileSync } from "node:fs";
 import { ARRANGEMENTS } from "../compose/pack.ts";
 import { instruments } from "../instruments/index.ts";
+import { relationLine } from "../intent/parse.ts";
 import { LAYOUT } from "../search/evaluate.ts";
 import type { Decided, From, Goal, IntentPlan, PartCard, Requirement, Viewing, Word } from "../types.ts";
 
@@ -70,11 +71,22 @@ export function momentLine(plan: IntentPlan, k: number): string {
   return bits.join("; ");
 }
 
+/** Where the plan's things are, for an agent: the author's lines and what the composer does with them (empty when none). */
+export function relationsText(plan: IntentPlan): string[] {
+  if (!plan.relations?.length) return [];
+  return [
+    "Where things are (the author's lines):",
+    ...plan.relations.map((r) => `- ${relationLine(r)}`),
+    "The composer stages related objects as one scene: each where its line puts it, all at one real scale, and the scene keeps one place while its things come and go (a thing stays while what rests on it or hangs from it is shown). A small thing in a big scene is never drawn out of scale: when it is a moment's subject the stage's window closes in on it and the rest runs past, as a closer shot. The scene.* style values (per moment as key@N) say how the scene is fitted to its box: scene.subjectShare 0 holds the whole scene, scene.bleed false shows a ground whole.",
+  ];
+}
+
 export function planText(plan: IntentPlan, words: Word[], holds: { id: string; afterWord: number; seconds: number; purpose?: string }[] = []): string {
   const lines: string[] = [];
   if (plan.feel || plan.audience) lines.push(`The author's top lines: ${[plan.feel && `feel ${plan.feel}`, plan.audience && `for ${plan.audience}`].filter(Boolean).join(", ")}`);
   lines.push("Things:");
   for (const t of plan.things) lines.push(`- ${t.id} (${t.kind}): ${t.kind === "object" ? t.desc : t.kind === "many" ? `${t.many?.n} ${t.many?.unit}` : t.kind === "material" ? `${t.material?.name}${t.material?.part ? `.${t.material.part}` : ""}` : `"${t.text}"`}`);
+  if (plan.relations?.length) lines.push("", ...relationsText(plan));
   lines.push("", "Moments (mK is the moment's number; answers name moments by K):");
   plan.moments.forEach((_, k) => {
     const w = momentWords(plan, k, words);
@@ -349,6 +361,7 @@ export function styleFor(values: Record<string, { value: unknown; why: string }>
     chart: cards.some((c) => c.data),
     picture: cards.length > 0,
     apparatus: kinds.has("object"),
+    scene: !!plan.relations?.length,
     flow: verbs.has("flows") || verbs.has("flashes") || verbs.has("fills"),
     fall: verbs.has("falls"),
     turns: verbs.has("turns"),

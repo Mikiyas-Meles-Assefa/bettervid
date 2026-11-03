@@ -202,6 +202,8 @@ export function makeDepiction(def: KindDef, spec: PropSpec, theme: Theme, look: 
     size: spec.size ? { w: spec.size.w, h: spec.size.h, unit: spec.size.unit } : undefined,
     nodes,
     parts: k.parts,
+    // The depicter's points, from 0 to 1 of the box (x from the left, y from the top) to local units.
+    ...(spec.points ? { points: Object.fromEntries(Object.entries(spec.points).map(([n, [x, y]]) => [n, [(x - 0.5) * k.box.w, (y - 1) * k.box.h] as Pt])) } : {}),
     states,
     state,
     verbs,

@@ -72,7 +72,30 @@ export type Moment = {
   plain?: boolean; // the author refused the agents' proposals for this moment
 };
 
-export type IntentPlan = { feel?: string; audience?: string; things: Thing[]; moments: Moment[]; notes: string[] };
+/**
+ * Where one object is relative to another, as the author says it ("cup on table", "sign tied to post"). A closed set
+ * of kinds the composer can stage: geometry, not taste.
+ *   on      a rests on b's top          over    a above b (a gap when the author gives a distance)
+ *   under   a below b                   in      a inside b
+ *   to      a attached to b (tied to, hangs from, fixed to)    at      a at a place on b
+ *   beside  a next to b on one ground   left / right   a to that side of b   against   beside, touching
+ *   behind / front   a behind or in front of b, on one ground   around   a around b
+ */
+export type RelationKind = "on" | "over" | "under" | "in" | "to" | "at" | "beside" | "left" | "right" | "against" | "behind" | "front" | "around";
+export type Relation = {
+  a: string;
+  kind: RelationKind;
+  b: string;
+  /** The author's own words between the two things ("sits on", "tied to"). */
+  words: string;
+  /** A place on b the author names ("far end", "near shore", or a part as in b.part), when they name one. */
+  at?: string;
+  /** A distance the author gives ("1 m" above), in centimetres. */
+  gapCm?: number;
+  line: number;
+};
+
+export type IntentPlan = { feel?: string; audience?: string; things: Thing[]; moments: Moment[]; notes: string[]; /** Where things are relative to each other: standing facts of the scene. */ relations?: Relation[] };
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Instruments: one interface. An instrument takes a compiled scene (or a stretch of it) and returns numbers and, where

@@ -9,7 +9,7 @@
 // A pinned line may also make a thing a kit computes (a line that starts with a kind the scene language's kits make: a
 // sort, a graph, a formula). Its id, and every dotted part of it, is then a name the rest of the plan may show, keep or
 // reveal, in any moment.
-import type { Act, IntentPlan, Moment, Pace, PartCard, Thing, Word } from "../types.ts";
+import type { Act, IntentPlan, Moment, Pace, PartCard, Relation, RelationKind, Thing, Word } from "../types.ts";
 import { kindsOf } from "../../kits/index.ts";
 import { SCENE_WORDS } from "../../language/syntax.ts";
 
@@ -107,6 +107,53 @@ export function readAct(line: string, isThing: (t: string) => boolean): Omit<Act
   return { verb: verb.join(" "), ids, ...(to ? { to } : {}), ...(q !== undefined ? { arg: q } : left ? { arg: left } : {}), ...(speed ? { speed } : {}) };
 }
 
+// Where things are: the relation words of the language, longest first, each to the one kind of placement the composer
+// stages. Words before them say how the thing is there ("sits", "tied", "hangs") and are kept as the author's words.
+const RELATION_WORDS: [string, RelationKind][] = [
+  ["in front of", "front"], ["on top of", "on"], ["to the left of", "left"], ["to the right of", "right"], ["left of", "left"], ["right of", "right"],
+  ["next to", "beside"], ["close to", "beside"], ["beside", "beside"], ["alongside", "beside"], ["near", "beside"], ["by", "beside"], ["against", "against"],
+  ["behind", "behind"], ["underneath", "under"], ["beneath", "under"], ["below", "under"], ["under", "under"], ["above", "over"], ["over", "over"],
+  ["onto", "on"], ["upon", "on"], ["atop", "on"], ["on", "on"], ["inside", "in"], ["within", "in"], ["into", "in"], ["in", "in"], ["around", "around"],
+  ["to", "to"], ["from", "to"], ["at", "at"],
+];
+const PLACE_OF = /\b(at|on|in) the ([\p{L}\p{N} -]+?) of$/u; // "at the end of", "on the edge of", "in the middle of"
+const LENGTH = /^\s*(\d+(?:\.\d+)?)\s*(mm|cm|m|km|in|ft)\s*$/i;
+const LENGTH_CM: Record<string, number> = { mm: 0.1, cm: 1, m: 100, km: 100000, in: 2.54, ft: 30.48 };
+
+/**
+ * A relation line: a thing, the author's words ending in a relation ("sits on", "tied to", "in front of", "at the end
+ * of"), another thing (or a part of it, as b.part), then a quoted place on the other thing or a distance. "cup on
+ * table", "sign tied to post "top"", "lamp above table "1 m"".
+ */
+export function readRelation(line: string, isThing: (t: string) => boolean): Omit<Relation, "line"> | undefined {
+  const q = quoted(line);
+  const toks = line.replace(/"[^"]*"/g, " ").trim().split(/\s+/).filter(Boolean);
+  if (toks.length < 3) return undefined;
+  const a = toks[0]!;
+  const last = toks.at(-1)!;
+  const [bRoot, ...bPart] = last.split(".");
+  if (!ID.test(a) || !isThing(a) || !ID.test(last) || !isThing(bRoot!)) return undefined;
+  const words = toks.slice(1, -1).join(" ").toLowerCase();
+  let kind: RelationKind | undefined;
+  let at = bPart.length ? bPart.join(".").replace(/[_-]+/g, " ") : undefined;
+  const place = PLACE_OF.exec(words);
+  if (place) {
+    kind = place[1] === "at" ? "at" : place[1] === "on" ? "on" : "in";
+    at ??= place[2]!.trim();
+  } else {
+    const hit = RELATION_WORDS.find(([w]) => words === w || words.endsWith(` ${w}`));
+    if (!hit) return undefined;
+    kind = hit[1];
+  }
+  const len = q !== undefined ? LENGTH.exec(q) : null;
+  const gapCm = len ? Number(len[1]) * LENGTH_CM[len[2]!.toLowerCase()]! : undefined;
+  if (q !== undefined && !len && q.trim()) at = q.trim().replace(/^(at|on|in|by) the /i, "").replace(/^the /i, "");
+  return { a, kind, b: bRoot!, words, ...(at ? { at } : {}), ...(gapCm !== undefined ? { gapCm } : {}) };
+}
+
+/** A relation as the plan's line, in the author's words: `rope tied to post "top"`, `lamp above table "100 cm"`. */
+export const relationLine = (r: Omit<Relation, "line">) => `${r.a} ${r.words} ${r.b}${r.at ? ` "${r.at}"` : r.gapCm !== undefined ? ` "${r.gapCm} cm"` : ""}`;
+
 export function parseIntent(src: string, kinds: Iterable<string> = kindsOf()): IntentPlan {
   const kits = new Set(kinds);
   const computed = new Set<string>();
@@ -114,6 +161,7 @@ export function parseIntent(src: string, kinds: Iterable<string> = kindsOf()): I
   const things: Thing[] = [];
   const moments: Moment[] = [];
   const declared = new Map<string, Thing>();
+  const relations: Relation[] = [];
   let feel: string | undefined;
   let audience: string | undefined;
   let cur: Moment | undefined;
@@ -162,7 +210,12 @@ export function parseIntent(src: string, kinds: Iterable<string> = kindsOf()): I
       if (!m) return void notes.push(`line ${ln}: many needs an id, a count and a unit, ignored`);
       return declare({ id: m[1]!, kind: "many", many: { n: Math.max(1, Number(m[2])), unit: quoted(m[3]!) ?? (m[3]!.trim() || m[1]!) }, line: ln });
     }
-    if (!cur) return void notes.push(`line ${ln}: "${line}" comes before the first moment, kept out of the plan`);
+    if (!cur) {
+      // Where things are: a standing fact of the scene, said once before the moments.
+      const r = readRelation(line, (t) => declared.has(t));
+      if (r) return void relations.push({ ...r, line: ln });
+      return void notes.push(`line ${ln}: "${line}" comes before the first moment, kept out of the plan`);
+    }
     if ((SCENE.has(key) || kits.has(key)) && !INTENT.has(key) && !declared.has(head) && !ARROW_START.test(line) && !/\s+(becomes|from)\s+/.test(line)) {
       // Today's scene language: pinned to this moment, with any lines indented under it. A line that makes a computed
       // thing names it for the rest of the plan.
@@ -214,7 +267,7 @@ export function parseIntent(src: string, kinds: Iterable<string> = kindsOf()): I
       else notes.push(`line ${ln}: "${line}" names no thing it is about: kept out of the plan`);
     }
   });
-  return { feel, audience, things, moments, notes };
+  return { feel, audience, things, moments, notes, ...(relations.length ? { relations } : {}) };
 }
 
 // Every id a moment names, with where it is named (for the author repair loop and the composer).
@@ -251,6 +304,16 @@ export function checkIntent(plan: IntentPlan, words: Word[], material: PartCard[
     for (const b of m.becomes) if (cards.has(b.id.split(".")[0]!)) out.push({ line: m.line, message: `@${m.word}: ${b.id} is the user's material and cannot become something else.` });
     for (const b of m.becomes) if (things.get(b.id)?.kind === "many" && b.n === undefined) out.push({ line: m.line, message: `@${m.word}: ${b.id} is a many thing: it becomes a count, as in ${b.id} becomes 12.` });
     for (const a of m.acts) for (const id of a.ids) if (things.has(id) && things.get(id)!.kind !== "object") out.push({ line: a.line, message: `${id} ${a.verb}: only an object does things; declare ${id} as an object, or say how it changes with becomes.` });
+  }
+  // Where things are: both ends are objects (what is drawn as itself stands somewhere), never one thing twice.
+  for (const r of plan.relations ?? []) {
+    for (const id of [r.a, r.b]) if (things.get(id)?.kind !== "object") out.push({ line: r.line, message: `${r.a} ${r.words} ${r.b}: ${id} is ${things.has(id) ? `a ${things.get(id)!.kind}, not an object` : "not declared"}; only objects stand in a scene, so declare it as an object or leave the line out.` });
+    if (r.a === r.b) out.push({ line: r.line, message: `${r.a} ${r.words} ${r.b}: a thing is not placed relative to itself.` });
+  }
+  const placedBy = new Map<string, number>();
+  for (const r of plan.relations ?? []) if (["on", "over", "under", "in", "to", "at"].includes(r.kind)) {
+    if (placedBy.has(`${r.a}|${r.b}`)) out.push({ line: r.line, message: `${r.a} is placed relative to ${r.b} again (line ${placedBy.get(`${r.a}|${r.b}`)}): say where it is once.` });
+    placedBy.set(`${r.a}|${r.b}`, r.line);
   }
   for (const c of computed.values()) if (things.has(c.id) || cards.has(c.id)) out.push({ line: c.line, message: `${c.id} is made here by a ${c.kind} line and is also ${cards.has(c.id) ? "the user's material" : `declared at line ${things.get(c.id)!.line}`}: one name is one thing, so give one of them another id.` });
   return out;

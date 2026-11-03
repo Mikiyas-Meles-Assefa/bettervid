@@ -107,8 +107,9 @@ Most people bring their own material: files, docs, slides, screenshots, photos, 
 The author states intent per moment; the agents and the engine do the rest. The vocabulary is small and about the viewer, not the screen (`prompts/intent.md`, 5.3 KB against 40 KB for today's language guide):
 - **Things**: `thing` (words or a value), `many` (countable marks), `object` (a real thing to see, described in plain words), and the user's material by name and part (`slide.login`).
 - **Per moment** (`@N` on a spoken word): `show` (the one subject), `keep` (what stays as support), relations (`compare`, `A -> B`, `A from B`, `becomes`), direction (`ask`, `reveal`, `wrong`, `stress`, `pace`), and plain verbs for what objects do (`drips into`, `turns`, `flashes`, `swirls`, `falls`, `fills`, `reads`, `runs`, `moves to`).
+- **Where things are** (before the moments, one line each): `cup on table`, `lamp above table "1 m"`, `cat under chair`, `coin in jar`, `sign tied to post`, `flag at the top of pole`, `bike beside wall` (also left of, right of, against), `tree behind house`, `in front of`, `around`, with a quoted place on the other thing (`mug on desk "left corner"`) or a part (`tag hangs from lamp.arm`). The depicter names the points each line joins (a seat, a post's top, a rope's end) and the composer stages related objects as one scene at one real scale (`engine/design/abilities/scene.ts`): relations held, back to front by relation, a support kept on screen while what rests on it is shown, a ground allowed to run past the stage's sides, and the stage's window closing in on a small subject as a closer shot (`scene.*` style values).
 - **Top lines**: `feel`, `for new|familiar`.
-- Nothing about position, size, color, easing or frames.
+- Nothing about position, size, color, easing or frames: a relation says what touches what, never where on screen.
 
 Strong authors lose nothing: any line of today's language inside a moment wins for that thing in that moment, and the agents compose the rest around it (section 6).
 
