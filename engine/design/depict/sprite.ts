@@ -16,6 +16,8 @@ export type SpriteChange = "tint" | "move" | "turn" | "hide";
 export type SpriteRequest = {
   key: string;
   desc: string;
+  /** What the thing is, in a few words (the spec's label): the phrase that finds the whole thing in the picture. */
+  label: string;
   style: string;
   /** The image prompt (for Muse Image in production), written from the style's own art description. */
   prompt: string;
@@ -52,7 +54,7 @@ export function spriteRequest(spec: PropSpec, desc: string, style: { name: strin
     parts.length ? `Its ${parts.map((p) => p.phrase).join(", ")} must be clearly separate and fully visible.` : "",
     "No text, no labels, no shadow on the background.",
   ].filter(Boolean).join(" ");
-  return { key: spriteKey(desc, style.name), desc, style: style.name, prompt, parts };
+  return { key: spriteKey(desc, style.name), desc, label: spec.label, style: style.name, prompt, parts };
 }
 
 export function loadSprite(desc: string, style: string, root = SPRITE_CACHE): LoadedSprite | undefined {
