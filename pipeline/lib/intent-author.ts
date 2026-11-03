@@ -1,5 +1,5 @@
 // The intent author's prompts and checks, shared by the scene stage and the bench, so both ask and check the same way.
-// The author writes an intent plan (scripts/design-brain/intent-prompt.md): what matters at each moment, never where,
+// The author writes an intent plan (prompts/intent.md): what matters at each moment, never where,
 // how big, what color or how it moves. Where the engine already has the exact thing a moment needs (a computed
 // demonstration, a library program), a line of today's scene language inside the moment pins it, and the composer keeps
 // it as written.
@@ -11,7 +11,7 @@ import type { IntentPlan, PartCard, Requirement, Word } from "../../engine/desig
 import { numbered } from "../../engine/language/author.ts";
 import type { LibraryEntry } from "../../engine/language/library.ts";
 
-export const INTENT_GUIDE = join(import.meta.dirname, "..", "..", "scripts", "design-brain", "intent-prompt.md");
+export const INTENT_GUIDE = join(import.meta.dirname, "..", "..", "prompts", "intent.md");
 
 /** The author's system prompt: the intent guide, then what may be pinned, each as a line to copy. */
 export function intentSystem(o: { kits: Kit[]; programs: LibraryEntry[]; truth?: string[] }): string {
