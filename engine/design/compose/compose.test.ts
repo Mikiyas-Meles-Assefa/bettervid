@@ -64,8 +64,10 @@ object blue "a small blue ball"
   keep red
 `);
 const view = (width: number, height: number, uiZones: Viewing["uiZones"] = []) => viewingFrom({ width, height, fps: 30, screen: "a test screen", frameWidthMm: 300, distanceMm: 600, watch: "on purpose", uiZones, why: "a test" });
+/** The style's proposals as a designer who kept them all (a style's proposal alone is a suggestion, never drawn). */
+const kept = (d: Design) => (d.moments.forEach((m) => (m.proposals = m.proposals.map((p) => (p.from === "style" ? { ...p, from: "designer" as const } : p)))), d);
 const run = (v: Viewing, edit?: (d: Design) => void, plan = PLAN, cards: PartCard[] = [], props = PROPS) => {
-  const d = suggestDesign(plan, v, theme, cards, words, props);
+  const d = kept(suggestDesign(plan, v, theme, cards, words, props));
   edit?.(d);
   return { d, out: compose(plan, d, { theme, words, frames, cards, props }) };
 };

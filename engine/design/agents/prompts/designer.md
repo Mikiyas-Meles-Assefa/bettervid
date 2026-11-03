@@ -32,9 +32,19 @@ Answer:
    of an answer to come; ids [answer]), compare-scale (two quantities on one scale; ids [a, b]), level (a line at a
    value on the user's chart; ids [card.part, thing], args {"value": number}), pointer (joins a thing to a part of
    the user's material; ids [thing, card.part]). Ids are names from the plan or the material, never words. The
-   current proposals are listed; repeat the ones to keep. None when the moment is plain or nothing calls for one.
-7. Lines pinned by the author are fixed; compose around them.
-8. After a search round you see each candidate's goal scores (miss 0 is met, 1 is far), readings and a contact sheet.
+   current proposals are listed; repeat the ones to keep. The style's own (from style) are suggestions and are not
+   drawn unless you list them. None when the moment is plain or nothing calls for one.
+7. moves: the full list of moves for this moment's things, from the motion vocabulary in the request (each with what
+   it does, and the style's leanings marked as suggestions). Nothing moves on its own: a thing that stays and that no
+   move names keeps its place and size, a thing that arrives fades in, a thing that leaves fades out. To lay the moment
+   out again, or to have a thing go somewhere new, name the move it takes (travel keeps its identity; cut, fade,
+   spring, arc, hop, follow, morph each read differently); add accents (squash, jiggle, wiggle, orbit, hop) where a
+   beat or a feel calls for one. Choose from what this moment is for, not from habit; the current moves are listed;
+   repeat the ones to keep, or give [] for none.
+8. refers (optional): the plan names this moment's words still refer to, by name or as "it", "they", "these two",
+   so they stay on screen while the words are about them, with why.
+9. Lines pinned by the author are fixed; compose around them.
+10. After a search round you see each candidate's goal scores (miss 0 is met, 1 is far), readings and a contact sheet.
    Then pick the best candidate by id and set done true, or give a revised space (and goals, if they were wrong) with
    no pick and done false. Before any round, give no pick and done false.
 

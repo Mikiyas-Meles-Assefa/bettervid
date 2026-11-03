@@ -117,9 +117,15 @@ test("the solver: each relation joins its points, at one real scale, with a back
   assert.ok(near.closer && near.spills && Math.max(tag.w / 800, tag.h / 600) >= 0.3 - 1e-6);
 });
 
+// The designer's moves: closing in on the cat at m2 and pulling back to the whole desk at m3 are changes of the scene's
+// framing, so each is asked for with a move (nothing reframes on its own).
+const reframe = (d: Design) => {
+  d.moments[2]!.moves = { value: [{ move: "travel", ids: ["desk"], why: "the scene glides closer on the cat as it is named" }], from: "designer" };
+  d.moments[3]!.moves = { value: [{ move: "travel", ids: ["desk"], why: "pull back to the whole desk" }], from: "designer" };
+};
 test("a related scene composes as one: relations hold in the frames, at true scale, upright, and a support stays with what rests on it", () => {
   for (const [W, H] of [[1080, 1920], [1920, 1080]] as const) {
-    const out = run(view(W, H));
+    const out = run(view(W, H), reframe);
     assert.ok(out.decisions.filter((d) => d.area === "staging" && / held$/.test(d.choice)).length === 5, out.decisions.filter((d) => d.area === "staging").map((d) => d.choice).join("; "));
     assert.deepEqual(out.problems, []);
     // Closer on a small thing (the cat), the rest of the scene runs past the stage and is cut to it.
@@ -161,6 +167,15 @@ test("a related scene composes as one: relations hold in the frames, at true sca
     const z = (id: string) => order.indexOf(`t.${id}`);
     assert.ok(z("rug") < z("desk") && z("cat") < z("desk") && z("desk") < z("lamp") && z("lamp") < z("tag"));
   }
+});
+
+test("a scene keeps its framing while no move asks: no closer shot on its own", () => {
+  const out = run(view(1080, 1920));
+  assert.ok(!out.decisions.some((d) => d.area === "staging" && /closes in on cat/.test(d.choice)));
+  const a = onScreen(nodesAt(out, late(4, 10)).all, "desk");
+  const b = onScreen(nodesAt(out, late(10, 16)).all, "desk");
+  close([a.x, a.y], [b.x, b.y]);
+  assert.ok(Math.abs(a.sx - b.sx) < 1e-6 * a.sx);
 });
 
 test("a scene keeps one place: a thing shown in two moments stays where it was while the scene holds", () => {

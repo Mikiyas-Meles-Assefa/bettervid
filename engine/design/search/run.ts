@@ -238,7 +238,7 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
     };
     const sheetOf = async (r: string, rows: Evaluated[], d: Design): Promise<string | undefined> => {
       if (!input.stills || !input.sheet || !rows.length) return undefined;
-      const window = windowOf(plan, withMoment(d, rows[0]!.design), words, k, input.frames);
+      const window = windowOf(plan, withMoment(d, rows[0]!.design), words, k, input.frames, composeCached(plan, withMoment(d, rows[0]!.design), ectx).onsets);
       const list = rows.map((c) => ({ label: `${c.id} ${c.label}: miss ${c.total.toFixed(2)}`, d: withMoment({ ...d, overrides: [...d.overrides, ...(extra.get(c.id) ?? [])] }, c.design) }));
       // A sheet of the same designs over the same window is not rendered again (a resumed run replays its rounds). Its
       // name carries what it shows, so a task names exactly the sheet of its own candidates: a later run whose round
@@ -316,7 +316,7 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
       const more = !ans.done;
       if (input.viewers && sheet && !viewed && left >= 2) {
         viewed = true;
-        const window = windowOf(plan, withMoment(L.design, best.design), words, k, input.frames);
+        const window = windowOf(plan, withMoment(L.design, best.design), words, k, input.frames, composeCached(plan, withMoment(L.design, best.design), ectx).onsets);
         const vInput: ViewerInput = { sheets: finalists.map((c) => ({ candidate: c.id, image: sheet! })), transcript: transcriptOf(words, window, fps), seats: input.director.seats, goals, styleKeys: Object.keys(S), moments: plan.moments.length, designs: Object.fromEntries(finalists.map((c) => [c.id, c.design])) };
         const v = await ask<ViewerAnswer>((rep) => agents.viewerTask(vInput, rep), agents.checkViewer && ((a) => agents.checkViewer!(vInput, a)), "viewer panel");
         if (!v) break;

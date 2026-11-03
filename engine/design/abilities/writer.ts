@@ -39,6 +39,11 @@ export class Writer {
     kn[prop] = value;
     this.ops.push({ id, prop, value, at: Math.max(0, Math.round(at)), frames: Math.max(1, Math.round(frames)), ease });
   }
+  /** A behavior played on a node leaves this property at `value`: later changes start from there. */
+  moved(id: string, prop: string, value: Value) {
+    const kn = this.known.get(id);
+    if (kn) kn[prop] = value;
+  }
   would(id: string, prop: string, value: Value) {
     return !same(this.known.get(id)?.[prop], value);
   }

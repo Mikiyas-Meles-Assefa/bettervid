@@ -55,6 +55,22 @@
     }
   },
   "design": {
+    "moves": {
+      "leans": [
+        {
+          "move": "cut",
+          "why": "neon switches on and off: hard cuts and flickers suit a sign's electric look"
+        },
+        {
+          "move": "spring",
+          "why": "a snappy spring gives glowing shapes the energy the style is built on"
+        },
+        {
+          "move": "wiggle",
+          "why": "a faint restless buzz reads as a live electric glow"
+        }
+      ]
+    },
     "colors": {
       "glass": "#17132f",
       "tubeLow": "#0a9fc4",

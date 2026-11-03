@@ -54,6 +54,22 @@
     }
   },
   "design": {
+    "moves": {
+      "leans": [
+        {
+          "move": "travel",
+          "why": "ink on paper has a quiet, considered feel: gentle glides that ease in and out suit it"
+        },
+        {
+          "move": "fade",
+          "why": "ink that appears and dissolves like a wash fits a calm, literary tone"
+        },
+        {
+          "move": "arc",
+          "why": "a soft arc between places echoes a brush's curved stroke"
+        }
+      ]
+    },
     "colors": {
       "card": "#faf5e8",
       "wash": "#82776a",

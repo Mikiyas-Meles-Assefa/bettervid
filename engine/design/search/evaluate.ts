@@ -41,17 +41,21 @@ export const designHash = (d: Design) => hash({ v: d.viewing, t: d.tempo, m: d.m
 export const withMoment = (design: Design, md: MomentDesign): Design => ({ ...design, moments: design.moments.map((m) => (m.moment === md.moment ? md : m)) });
 
 /** Moment k's window in frames: from its onset (its word less its lead) to the next moment's onset. */
-export function windowOf(plan: IntentPlan, design: Design, words: Word[], k: number, frames: number): [number, number] {
+export function windowOf(plan: IntentPlan, design: Design, words: Word[], k: number, frames: number, composed?: number[]): [number, number] {
   const fps = design.viewing.fps;
   const at = (n: number) => words[Math.min(Math.max(0, n), words.length - 1)]!.start;
+  // With a composition, each moment starts where the composer started it (a moment that waits for the one before to
+  // hold, or that a shorter one merged into), so a window shows its own moment, not the end of the one before.
   const onset = (j: number) => {
+    if (composed?.[j] !== undefined) return composed[j]!;
     const md = design.moments.find((m) => m.moment === j);
     return Math.max(0, Math.round((at(plan.moments[j]!.word) - (md?.lead.value ?? 0)) * fps));
   };
   const order = plan.moments.map((m, j) => ({ w: m.word, j })).sort((a, b) => a.w - b.w || a.j - b.j);
   const pos = order.findIndex((o) => o.j === k);
   const a = Math.min(onset(k), frames - 1);
-  const next = order[pos + 1];
+  // The next moment that starts later (moments merged into one share its start, and its window).
+  const next = order.slice(pos + 1).find((o) => !composed || onset(o.j) > a);
   const b = next ? Math.max(a + 1, Math.min(frames, onset(next.j))) : frames;
   return [a, b];
 }
@@ -198,11 +202,11 @@ export function evaluate(design: Design, k: number, cands: Generated[], goals: G
   for (const g of cands) {
     const t = performance.now();
     const d = withMoment(design, g.design);
-    const window = windowOf(ctx.plan, d, words, k, frames);
-    const key = hash({ d: designHash(d), goals, window, k });
+    const key = hash({ d: designHash(d), goals, k, frames });
     let r = ctx.cache?.results.get(key);
     if (!r) {
       const c = composeCached(ctx.plan, d, ctx);
+      const window = windowOf(ctx.plan, d, words, k, frames, c.onsets);
       const m = measureGoals(c, ctx.plan, k, goals, { words, viewing: d.viewing, window, holds: ctx.holds }, g.design.camera.value);
       const notes = [...m.notes];
       // A stage shared by a stretch of moments moves for all of them: say which other moments this design changes.

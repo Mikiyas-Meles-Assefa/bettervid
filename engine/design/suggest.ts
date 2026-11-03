@@ -290,6 +290,10 @@ export function styleValues(theme: Theme, viewing: Viewing): Record<string, Styl
   // Motion
   set("motion.move", [Math.max(0.2, moveS * 0.7), 0.383, 0.93], `moves take ${Math.max(0.2, moveS * 0.7).toFixed(2)} s plus a little per distance, at most 0.93 s (the style's motion: ${feel ?? "default"})`);
   set("motion.stagger", 0.1, "things entering together start 0.1 s apart");
+  // The moves this style leans toward, as its design layer says (data in styles/*.json): shown to the agents beside the
+  // whole motion vocabulary as suggestions, never a limit on it.
+  const leans = (d as { moves?: { leans: { move: string; why: string }[] } } | undefined)?.moves?.leans ?? [];
+  set("motion.leans", leans, leans.length ? `this style leans toward ${leans.map((l) => l.move).join(", ")}: suggestions, any move may be chosen` : "this style leans toward no move in particular");
   set("motion.exitShare", 0.7, "exits are quicker than entrances");
   set("motion.reveal", 0.53, "a reveal pops in over 0.53 s");
   set("motion.pulse", [1.08, 0.47], "a thing that changes in place pulses once");
@@ -364,7 +368,14 @@ export function suggestMoment(plan: IntentPlan, k: number, viewing: Viewing, the
     dwell: dec(dwell, "style", `pace ${m.pace}${m.reveal || m.ask || m.stress ? ", and a payoff, a question or a stress holds longer" : ""}: at least ${dwell} s before the next moment takes the eye`),
     camera,
     proposals: m.plain ? [] : proposalsOf(plan, k, cards),
+    moves: dec([], "style", "no move is chosen: what stays keeps its place and size, what arrives fades in, what leaves fades out; the director or the designer chooses any move of the vocabulary"),
   };
+}
+
+/** The style's leanings among the moves, from its suggestions (styleValues "motion.leans"). */
+export function leansOf(values: Record<string, StyleValue>): { move: string; why: string }[] {
+  const v = values["motion.leans"]?.value;
+  return Array.isArray(v) ? v.filter((l): l is { move: string; why: string } => !!l && typeof l.move === "string" && typeof l.why === "string") : [];
 }
 
 function cameraOf(m: Moment, k: number, plan: IntentPlan, S: Record<string, StyleValue>, words: Word[] | undefined, kinds: ActKind[]): Decided<CameraPlan> {
