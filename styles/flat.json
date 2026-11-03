@@ -51,6 +51,26 @@
     }
   },
   "design": {
+    "moves": {
+      "leans": [
+        {
+          "move": "spring",
+          "why": "flat interface-like shapes come alive with springy motion, as in modern product animation"
+        },
+        {
+          "move": "squash",
+          "why": "simple flat shapes carry squash and stretch well: it gives them weight without detail"
+        },
+        {
+          "move": "drop",
+          "why": "a flat shape that drops in and settles with a bounce feels friendly and light"
+        },
+        {
+          "move": "jiggle",
+          "why": "a small wobble after a change is follow-through that suits playful flat graphics"
+        }
+      ]
+    },
     "colors": {
       "block": "#ebe1cc",
       "orangeDeep": "#a04512",

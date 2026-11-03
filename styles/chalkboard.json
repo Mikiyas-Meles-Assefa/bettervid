@@ -56,6 +56,22 @@
     }
   },
   "design": {
+    "moves": {
+      "leans": [
+        {
+          "move": "travel",
+          "why": "chalk on a slate is a calm, deliberate medium: a thing that glides to its new place keeps the lecture's pace"
+        },
+        {
+          "move": "fade",
+          "why": "chalk drawn and wiped reads naturally as things fading in and out, like a hand writing and erasing"
+        },
+        {
+          "move": "stay",
+          "why": "a board a teacher writes on keeps what is written where it is, so the eye can return to it"
+        }
+      ]
+    },
     "colors": {
       "deep": "#1b2622",
       "rubbed": "#a3ada5",

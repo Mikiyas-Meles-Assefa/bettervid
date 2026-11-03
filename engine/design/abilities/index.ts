@@ -15,3 +15,4 @@ export * from "./objects.ts";
 export * from "./reading.ts";
 export * from "./camera.ts";
 export * from "./ask.ts";
+export * from "./moves.ts";

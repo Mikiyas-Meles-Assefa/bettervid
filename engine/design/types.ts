@@ -172,6 +172,16 @@ export type Focus = "one" | "two" | "none" | "hidden" | "all";
 
 export type CameraPlan = { zoom: number; at: [number, number]; move: "hold" | "push" | "drift" | "cut" | "follow"; frames?: number };
 
+/** Where a move is used: a thing that stays and changes (change), arrives (enter), leaves (exit), or an accent on it while it is there. */
+export type MoveUse = "change" | "enter" | "exit" | "accent";
+
+/**
+ * One move an agent chooses for some of a moment's things (the vocabulary: engine/design/abilities/moves.ts). `ids` are
+ * plan names; empty means every thing of the moment the move can apply to. A thing that stays and that no move names
+ * keeps its place and size: nothing moves unless a move, the plan or a pinned line asks.
+ */
+export type MoveChoice = { move: string; ids: string[]; as?: MoveUse; args?: Record<string, unknown>; why?: string };
+
 export type MomentDesign = {
   moment: number;
   importance: Decided<number>; // 0..1, the director's: how much this moment carries the video (spends search budget)
@@ -188,6 +198,10 @@ export type MomentDesign = {
   camera: Decided<CameraPlan>;
   /** Proposals the agents add (a pointer, a level line, a compare-on-one-scale), each with its reason. */
   proposals: Decided<{ kind: string; ids: string[]; args?: Record<string, unknown> }>[];
+  /** How things change into this moment and what they do in it, as the director or the designer chose; none: everything that stays stays put. */
+  moves?: Decided<MoveChoice[]>;
+  /** Things the moment's words still refer to (by name or as "it", "these two"): they stay on screen while they are on it. */
+  refers?: Decided<string[]>;
 };
 
 /** How a demonstration plays: real speed, slowed, replayed; the director's call from physics and the viewer. */

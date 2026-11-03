@@ -60,6 +60,22 @@
     }
   },
   "design": {
+    "moves": {
+      "leans": [
+        {
+          "move": "travel",
+          "why": "a technical drawing moves with precision: straight, even glides suit its measured look"
+        },
+        {
+          "move": "cut",
+          "why": "a plan sheet changes by switching views, so a clean cut reads as turning to the next drawing"
+        },
+        {
+          "move": "morph",
+          "why": "drafted outlines that reshape into their new form show a design being revised, line by line"
+        }
+      ]
+    },
     "colors": {
       "deep": "#0a2b52",
       "faint": "#adc6e4",

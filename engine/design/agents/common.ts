@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { ARRANGEMENTS } from "../compose/pack.ts";
 import { instruments } from "../instruments/index.ts";
-import { relationLine } from "../intent/parse.ts";
+import { idsOf, relationLine } from "../intent/parse.ts";
 import { LAYOUT } from "../search/evaluate.ts";
 import type { Decided, From, Goal, IntentPlan, PartCard, Requirement, Viewing, Word } from "../types.ts";
 
@@ -91,6 +91,11 @@ export function planText(plan: IntentPlan, words: Word[], holds: { id: string; a
   plan.moments.forEach((_, k) => {
     const w = momentWords(plan, k, words);
     lines.push(`- m${k} (from word ${plan.moments[k]!.word}, ${w.from.toFixed(1)} to ${w.to.toFixed(1)} s): "${w.text}"`, `  ${momentLine(plan, k) || "nothing named"}`);
+    // What the plan stops naming here leaves the screen (unless its words still refer to it: a moment's refers).
+    const before = k ? new Set(idsOf(plan.moments[k - 1]!)) : new Set<string>();
+    const now = new Set(idsOf(plan.moments[k]!));
+    const leaves = [...before].filter((x) => !now.has(x));
+    if (leaves.length) lines.push(`  leaves the screen here: ${leaves.join(", ")}`);
   });
   if (holds.length) {
     lines.push("", "Silences in the narration:");
@@ -230,6 +235,13 @@ export function goalSchema(scope: "video" | "moment") {
   return { ...GOAL_SCHEMA, required, properties: { ...rest, scope: { type: "string", enum: [scope] }, ...(scope === "moment" ? { moment: { type: "integer" } } : {}) } };
 }
 
+/** One move of the motion vocabulary for some of a moment's things (abilities/moves.ts). */
+export const MOVE_SCHEMA = {
+  type: "object",
+  required: ["move", "ids", "why"],
+  properties: { move: { type: "string" }, ids: { type: "array", items: { type: "string" } }, as: { type: "string", enum: ["change", "enter", "exit", "accent"] }, args: { type: "object" }, why: { type: "string" } },
+} as const;
+
 export const GOAL_SCHEMA = {
   type: "object",
   required: ["id", "says", "instrument", "value", "want", "weight", "why"],
@@ -343,7 +355,9 @@ export function fieldValueProblem(field: string, v: unknown): string | undefined
 }
 
 export function styleText(values: Record<string, { value: unknown; why: string }>): string {
+  // The style's leanings among the moves are shown with the motion vocabulary itself (movesText).
   return Object.entries(values)
+    .filter(([k]) => k !== "motion.leans")
     .map(([k, v]) => `- ${k} = ${JSON.stringify(v.value)}: ${v.why}`)
     .join("\n");
 }

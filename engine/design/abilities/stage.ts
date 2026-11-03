@@ -31,8 +31,12 @@ export type ApparatusParams = {
   satelliteGap: number; // px between the vessel and a satellite
 };
 
-/** A source over the vessel it pours or drips into, in a box of w by h, with satellites beside the vessel. */
-export function apparatus(src: { id: string; shape: ObjShape }, dst: { id: string; shape: ObjShape }, sats: { id: string; shape: ObjShape }[], box: { w: number; h: number }, p: ApparatusParams) {
+/**
+ * A source over the vessel it pours or drips into, in a box of w by h, with satellites beside the vessel. A satellite
+ * given a `scale` keeps it (a source standing aside at the size it has over the mouth), as far as the room beside the
+ * vessel and the apparatus's height allow.
+ */
+export function apparatus(src: { id: string; shape: ObjShape }, dst: { id: string; shape: ObjShape }, sats: { id: string; shape: ObjShape; scale?: number }[], box: { w: number; h: number }, p: ApparatusParams) {
   const ps = src.shape;
   const pd = dst.shape;
   const ss = Math.min((p.sourceShare * box.h) / ps.h, (p.sourceWidth * box.w) / ps.w);
@@ -51,7 +55,7 @@ export function apparatus(src: { id: string; shape: ObjShape }, dst: { id: strin
   const vw = pd.w * sd;
   for (const s of sats) {
     const room = box.w / 2 - vw / 2 - p.satelliteGap;
-    const sc = Math.max(0, Math.min((p.satelliteShare * box.h) / s.shape.h, room / s.shape.w));
+    const sc = Math.max(0, Math.min(s.scale ?? (p.satelliteShare * box.h) / s.shape.h, room / s.shape.w, (hs + gap + hd) / s.shape.h));
     members.push({ id: s.id, dx: side * (vw / 2 + p.satelliteGap + (s.shape.w * sc) / 2), dy: hs + gap + hd, w: s.shape.w * sc, h: s.shape.h * sc, scale: sc });
     side = -side;
   }

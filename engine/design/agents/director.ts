@@ -3,10 +3,11 @@
 // viewer should know, feel and wait for after each moment, how demonstrations play, the video's goals with instrument
 // settings, style overrides, the search budget, corrections of the plan against the material (each a visible note) and
 // extra viewer seats. The prompt (prompts/director.md) gives knowledge, never recipes; the answer is checked strictly.
-import { styleValues, viewingFrom } from "../suggest.ts";
+import { moveChoiceProblems, movesText } from "../abilities/moves.ts";
+import { leansOf, styleValues, viewingFrom } from "../suggest.ts";
 import type { AgentTask, Box, DecisionRecord, Design, DemoPlan, Focus, IntentPlan, Viewing } from "../types.ts";
 import type { DirectorAnswer, DirectorInput } from "./api.ts";
-import { cardsText, checkGoals, dec, FOCI, goalSchema, instrumentInfo, instrumentsText, isNum, overrideProblem, planNames, planText, prompt, styleFor, styleText, viewingText } from "./common.ts";
+import { cardsText, checkGoals, dec, FOCI, MOVE_SCHEMA, goalSchema, instrumentInfo, instrumentsText, isNum, overrideProblem, planNames, planText, prompt, styleFor, styleText, viewingText } from "./common.ts";
 
 const BOX = { type: "array", items: { type: "number" } } as const;
 
@@ -40,7 +41,7 @@ export const DIRECTOR_SCHEMA = {
       items: {
         type: "object",
         required: ["moment", "importance", "know"],
-        properties: { moment: { type: "integer" }, importance: { type: "number" }, know: { type: "string" }, feel: { type: "string" }, waiting: { type: "string" }, focus: { type: "string", enum: [...FOCI] } },
+        properties: { moment: { type: "integer" }, importance: { type: "number" }, know: { type: "string" }, feel: { type: "string" }, waiting: { type: "string" }, focus: { type: "string", enum: [...FOCI] }, moves: { type: "array", items: MOVE_SCHEMA }, refers: { type: "array", items: { type: "string" } } },
       },
     },
     demos: {
@@ -93,6 +94,10 @@ export function directorTask(input: DirectorInput, repair?: { previous: unknown;
     "",
     "## The style's suggestions (keys you may override, with the reason each has now)",
     styleText(styleFor(S, input.plan, input.cards, start.moments.flatMap((m) => m.proposals.map((p) => p.value.kind)))),
+    "",
+    "## Moves (the motion vocabulary; a moment's moves may name any of them)",
+    "The style's leanings are marked and are only suggestions. A thing that stays and that no move names keeps its place and size; what arrives fades in; what leaves fades out.",
+    movesText(leansOf(S)),
   ];
   if (repair) lines.push("", "## Your previous answer could not be used", JSON.stringify(repair.previous), "", "Problems; answer again with all of them fixed:", ...repair.problems.map((p) => `- ${p}`));
   return { role: "director", id: repair ? `director.r${repair.round}` : "director", system: directorSystem(), request: lines.join("\n"), schema: DIRECTOR_SCHEMA as unknown as Record<string, unknown> };
@@ -151,6 +156,8 @@ export function checkDirector(input: DirectorInput, a: DirectorAnswer): string[]
     if (!isNum(m.importance) || m.importance < 0 || m.importance > 1) out.push(`${p}: importance should be from 0 to 1`);
     if (!m.know?.trim()) out.push(`${p}: know needs plain words (what the viewer should know after m${m.moment})`);
     if (m.focus !== undefined && !(FOCI as readonly string[]).includes(m.focus)) out.push(`${p}: focus "${m.focus}" should be one of ${FOCI.join(", ")}`);
+    out.push(...moveChoiceProblems(m.moves, planNames(plan, input.cards), `${p}.moves`));
+    if (m.refers !== undefined && (!Array.isArray(m.refers) || m.refers.some((x) => !planNames(plan, input.cards).has(x)))) out.push(`${p}.refers: a list of plan names the moment's words still refer to`);
   });
   const missing = plan.moments.map((_, k) => k).filter((k) => !seen.has(k));
   if (missing.length) out.push(`moments: every moment needs an entry; missing ${missing.map((k) => `m${k}`).join(", ")}`);
@@ -227,7 +234,15 @@ export function applyDirector(design: Design, a: DirectorAnswer): Design {
     if (!d) return md;
     const said = [`know: ${d.know}`, d.feel && `feel: ${d.feel}`, d.waiting && `waiting for: ${d.waiting}`].filter(Boolean).join("; ");
     rec("direction", `importance ${d.importance}${d.focus ? `, focus ${d.focus}` : ""}`, said, md.moment);
-    return { ...md, importance: dec(d.importance, "director", said), ...(d.focus ? { focus: dec(d.focus as Focus, "director", said) } : {}) };
+    if (d.moves?.length) rec("moves", d.moves.map((c) => `${c.move} ${c.ids.join(" ") || "(all)"}`).join("; "), d.moves.map((c) => c.why).filter(Boolean).join("; ") || said, md.moment);
+    if (d.refers?.length) rec("refers", d.refers.join(", "), said, md.moment);
+    return {
+      ...md,
+      importance: dec(d.importance, "director", said),
+      ...(d.focus ? { focus: dec(d.focus as Focus, "director", said) } : {}),
+      ...(d.moves ? { moves: dec(d.moves.map((c) => ({ ...c, ids: [...c.ids] })), "director", d.moves.map((c) => c.why).filter(Boolean).join("; ") || said) } : {}),
+      ...(d.refers ? { refers: dec([...d.refers], "director", said) } : {}),
+    };
   });
   const demos: DemoPlan[] = design.demos.filter((x) => !a.demos.some((d) => d.moment === x.moment && d.act === x.act));
   for (const d of a.demos) {

@@ -208,7 +208,7 @@ export async function runDesign(dir: string, inputs: DesignInputs, reasoner: Rea
     // and the designer's look at it (CALLS_PER_MOMENT calls), so no revised moment ends without the designer's pick.
     const per = design.moments
       .filter((m) => !P.moments[m.moment]!.plain)
-      .map((m) => ({ k: m.moment, imp: m.importance.value, miss: measureGoals(c, P, m.moment, videoGoals(), { words: said, viewing: design.viewing, holds, window: windowOf(P, design, said, m.moment, inputs.frames) }).total }))
+      .map((m) => ({ k: m.moment, imp: m.importance.value, miss: measureGoals(c, P, m.moment, videoGoals(), { words: said, viewing: design.viewing, holds, window: windowOf(P, design, said, m.moment, inputs.frames, c.onsets) }).total }))
       .filter((x) => x.miss > 0)
       .sort((a, b) => b.imp * b.miss - a.imp * a.miss || a.k - b.k)
       .slice(0, Math.floor(left / CALLS_PER_MOMENT));

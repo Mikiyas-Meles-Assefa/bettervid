@@ -16,6 +16,9 @@ Decide:
    spends its effort there, so make it uneven when the video is uneven), what the viewer should know after it, what
    they should feel, what they should be waiting for, and the focus it needs: one (a single subject), two (two things
    compared), none (no focal point), hidden (the subject must stay unseen), all (everything kept on screen together).
+   Optionally, moves: how its things change into it, arrive, leave or move while it holds, from the motion vocabulary
+   below (nothing moves unless a move names it; the designer refines them), and refers: the plan names its words
+   still refer to, by name or as "it", "these two", so they stay on screen while the words are about them.
 4. demos: for acts that demonstrate something physical or a process (listed as aN under a moment), how they play:
    "real", "slow", "fast" or a number (share of real speed: 0.25 is four times slower), and a replay when it helps.
    Reason from physics and the viewer: how long the real event takes, and whether the eye can see what matters at

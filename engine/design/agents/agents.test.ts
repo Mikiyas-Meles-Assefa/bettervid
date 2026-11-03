@@ -11,6 +11,7 @@ import type { Candidate, PartCard, Viewing } from "../types.ts";
 import type { DesignerAnswer, DesignerInput, DirectorAnswer, DirectorInput, ViewerAnswer, ViewerInput } from "./api.ts";
 import { checkGoals, planNames, valueNames } from "./common.ts";
 import { tiedBest } from "./designer.ts";
+import { MOVE_NAMES, MOVE_VOCABULARY } from "../abilities/moves.ts";
 import { agents, allocate, applyCorrections, checkDesigner, checkDirector, checkViewer, designerTask, directorTask, PROMPTS, prompt, seatsOf, instrumentInfo } from "./index.ts";
 
 // A small plan on a topic unlike the bench's: a kettle that boils, a question, a reveal.
@@ -274,4 +275,57 @@ test("a goal on a part of the material the composition does not draw is refused,
   // The designer's task lists what is drawn and what is not.
   const t = designerTask({ ...desInput(1), cards: [card], drawn: [...ctx.drawn.names] });
   assert.match(t.request, /Parts of the material it does not draw on their own.*slide\.label-a/);
+});
+
+test("every move of the vocabulary is offered to the director and the designer, with the style's leanings marked as suggestions", () => {
+  const board = themeFrom("whiteboard");
+  const S = styleValues(board, design.viewing);
+  const dTask = agents.designerTask({ ...desInput(1), styleValues: S });
+  const rTask = agents.directorTask({ ...dirInput, theme: board, styleName: "whiteboard" });
+  for (const m of MOVE_VOCABULARY) {
+    assert.ok(dTask.request.includes(`- ${m.name} (`), `the designer is offered ${m.name}`);
+    assert.ok(rTask.request.includes(`- ${m.name} (`), `the director is offered ${m.name}`);
+  }
+  // The whiteboard leans springy and squashy: marked, never instead of the rest.
+  assert.match(dTask.request, /- spring \([^)]*\) \[the style leans this way: /);
+  assert.match(dTask.request, /- squash \([^)]*\) \[the style leans this way: /);
+  assert.ok(!/- cut \([^)]*\) \[the style leans/.test(dTask.request));
+  // Every style's leanings are data in its file, each a move of the vocabulary with its reason.
+  for (const f of readdirSync(new URL("../../../styles/", import.meta.url)).filter((x) => x.endsWith(".json"))) {
+    const t = themeFrom(f.slice(0, -5));
+    for (const l of t.design.moves.leans) assert.ok(MOVE_NAMES.includes(l.move) && l.why.length > 20, `${f}: ${l.move}`);
+  }
+  assert.ok(themeFrom("whiteboard").design.moves.leans.length > 0);
+});
+
+test("moves and what the words refer to: checked, applied by the designer and the director", () => {
+  const a: DesignerAnswer = { ...goodDesigner(), moves: [{ move: "spring", ids: ["temp"], as: "enter", args: { damping: 10 }, why: "the answer lands with a bounce" }, { move: "squash", ids: [], why: "a beat on the word" }], refers: { ids: ["kettle"], why: "it still says the kettle" } };
+  assert.deepEqual(checkDesigner(desInput(), a), []);
+  assert.deepEqual(validate(a, agents.designerTask(desInput()).schema), []);
+  const bad: DesignerAnswer = { ...goodDesigner(), moves: [{ move: "teleport", ids: ["temp"], why: "x" }, { move: "spring", ids: ["lid"], args: { bend: 1 }, why: "" }, { move: "drop", ids: ["temp"], as: "exit", why: "x" }] };
+  const p = checkDesigner(desInput(), bad);
+  assert.ok(p.some((x) => /"teleport" is not a move/.test(x)));
+  assert.ok(p.some((x) => /"lid" is not a name/.test(x)));
+  assert.ok(p.some((x) => /spring has no setting "bend"/.test(x)));
+  assert.ok(p.some((x) => /drop cannot be used as exit/.test(x)));
+  assert.ok(p.some((x) => /moves\[1\]: why is needed/.test(x)));
+  const d = agents.applyDesigner(design, 1, a);
+  const md = d.moments.find((m) => m.moment === 1)!;
+  assert.equal(md.moves!.value[0]!.move, "spring");
+  assert.equal(md.moves!.from, "designer");
+  assert.deepEqual(md.refers!.value, ["kettle"]);
+  // The director may set moves and what the words refer to as well; the designer refines them.
+  const dir = goodDirector();
+  dir.moments[2] = { ...dir.moments[2]!, moves: [{ move: "fade", ids: ["kettle"], as: "exit", why: "it ends quietly" }], refers: ["kettle"] };
+  assert.deepEqual(checkDirector(dirInput, dir), []);
+  const dd = agents.applyDirector(start, dir);
+  assert.equal(dd.moments[2]!.moves!.value[0]!.move, "fade");
+  assert.deepEqual(dd.moments[2]!.refers!.value, ["kettle"]);
+  dir.moments[2] = { ...dir.moments[2]!, moves: [{ move: "zoom", ids: [], why: "x" }] };
+  assert.ok(checkDirector(dirInput, dir).some((x) => /"zoom" is not a move/.test(x)));
+});
+
+test("the style starts with no move: nothing moves unless an agent asks", () => {
+  for (const md of start.moments) assert.deepEqual(md.moves!.value, []);
+  assert.match(start.moments[0]!.moves!.why!, /what stays keeps its place and size/);
 });
