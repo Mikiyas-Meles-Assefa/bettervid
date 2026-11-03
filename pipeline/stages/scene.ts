@@ -2,7 +2,8 @@
 // first pass plans what carries from one section into the next, then Spark writes every section at the same time in the
 // scene language, with the video's own word numbers so the sections join into one document in order. Each section is
 // built by the engine and repaired from its errors, then rendered to a few still frames that Spark looks at beside the
-// words, and repaired again from what it sees. No fallback: a section that cannot be repaired is reported loudly.
+// words, and repaired again from what it sees; then the design brain's instruments read it and Spark reviews it with
+// their readings beside the frames, and the writer repairs it from both (reviewRound). No fallback: a section that cannot be repaired is reported loudly.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -30,12 +31,13 @@ import { hash } from "../lib/util.ts";
 import { designRunner, type DesignInputs } from "../lib/design-run.ts";
 import { checkPlan, INTENT_GUIDE, intentRepair, intentSystem, materialText, stripFence } from "../lib/intent-author.ts";
 import { metaReasoner } from "../lib/reasoner-meta.ts";
+import { frameReadings, partNotes, type PartNotes } from "../lib/instrument-notes.ts";
 import { readProject, type MaterialFile } from "../../engine/design/material/index.ts";
 import { suggestViewing, viewingFrom } from "../../engine/design/suggest.ts";
 import type { PartCard, Reasoner, Viewing } from "../../engine/design/types.ts";
 import { basename } from "node:path";
 
-const VERSION = 5; // bump when the way sections are written or checked changes, so cached sections are redone
+const VERSION = 6; // bump when the way sections are written or checked changes, so cached sections are redone
 const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
@@ -47,6 +49,7 @@ const LOOK_SCALE = 0.6; // frames Spark sees: 648 by 1152, near full size
 const PARALLEL = 6;
 export const MAX_PROBLEMS = 25;
 const JOIN_ROUNDS = 2; // repairs of the parts a joined scene that does not build names
+export const REVIEW_ROUNDS = 2; // repairs from the instruments and a reviewer, after the look
 
 export type Range = { id: string; firstWord: number; lastWord: number };
 // A thing one section hands to the next: what it is, the ids of its pieces (so they stay the same things on screen rather
@@ -566,8 +569,9 @@ export type Job = {
   opts: BuildOptions; // assets here are loadable sources, for stills
   folder: string;
   log: (line: string) => void;
+  review?: boolean; // false: no review round after the look (reviewRound)
 };
-type Written = { source: string; result: BuildResult; problems: string[]; warnings: string[]; usd: number; rounds: number };
+export type Written = { source: string; result: BuildResult; problems: string[]; warnings: string[]; usd: number; rounds: number };
 
 const endFrame = (job: Job) => (job.next ? when({ word: job.next.firstWord }, job.opts.ctx) - 2 : job.opts.ctx.frames - 1);
 
@@ -749,7 +753,7 @@ async function compose(job: Job, start: string | undefined, prior: string, revie
 // the engine, and judged by Spark with the words, the exact on-screen text and the research facts. A fix changes only
 // what was named, the changed version is kept only if it measures and looks better, and then the look stops.
 
-type Seen = { moments: Moment[]; files: string[]; measured: { frame: number; findings: Finding[]; words: string[] }[] };
+export type Seen = { moments: Moment[]; files: string[]; measured: { frame: number; findings: Finding[]; words: string[] }[] };
 
 const lookPart = (name: "Judge" | "Fix" | "Recheck") => (prompt("scene-look").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
 
@@ -788,12 +792,14 @@ function lookHeader(job: Job, w: Written): string {
   return `Topic: ${topic(p)}\nVisual style: ${p.input.style || "default"}\n\nResearch facts the video is built on:\n${facts || "(none listed)"}${steps}\n\nThis part's narration:\n${said}`;
 }
 
-function frameContent(seen: Seen, only?: Set<number>, label = "Frame"): unknown[] {
+// `extra`: more lines for frame k (from 0), such as what the instruments read on it.
+function frameContent(seen: Seen, only?: Set<number>, label = "Frame", extra?: (k: number) => string): unknown[] {
   return seen.moments.flatMap((m, k) => {
     if (only && !only.has(k + 1)) return [];
     const found = seen.measured[k]!.findings.map((f) => `[${f.severity}] ${f.note}`);
+    const more = extra?.(k);
     return [
-      { type: "input_text", text: `${label} ${k + 1}, at ${(m.frame / FPS).toFixed(1)} s (${m.why}). Words around it: ${m.words ? `"${m.words}"` : "(a pause)"}\nOn screen: ${seen.measured[k]!.words.join(" / ") || "(no writing)"}\nMeasured: ${found.join("; ") || "nothing found"}` },
+      { type: "input_text", text: `${label} ${k + 1}, at ${(m.frame / FPS).toFixed(1)} s (${m.why}). Words around it: ${m.words ? `"${m.words}"` : "(a pause)"}\nOn screen: ${seen.measured[k]!.words.join(" / ") || "(no writing)"}\nMeasured: ${found.join("; ") || "nothing found"}${more ? `\nInstruments on this frame:\n${more}` : ""}` },
       { type: "input_image", image_url: `data:image/jpeg;base64,${readFileSync(seen.files[k]!).toString("base64")}` },
     ];
   });
@@ -928,6 +934,120 @@ export async function gate(job: Job, before: string, after: Written, named: Issu
 // What still breaks a frame in a version: severe issues seen, and severe measured findings.
 export const severeOf = (judged: Judged["issues"], measured: Seen["measured"]): Issue[] => issuesFrom(judged, measured).filter((x) => x.severity >= 3);
 
+// ---------------------------------------------------------------------------------------------------------------------
+// The review round (path A): after the build, the look and its fix, the part is read by the design brain's instruments
+// (pipeline/lib/instrument-notes.ts, with their suggestions for this project's viewing) and reviewed by Spark looking at
+// its stills with those readings beside each frame. Both go back to the writer as notes, and it repairs its own part.
+// A repair is kept only when it builds, keeps what it promised the parts around it, and the gate finds it no worse;
+// otherwise the version before stays and the round stops. Code decides nothing about layout, motion or timing here: the
+// instruments report, the reviewer says what it sees and what matters for this video, the writer decides what changes.
+
+// The model calls and renders of a review round, so it can run with stand-ins (scene.test.ts) and live.
+export type ReviewCalls = {
+  see: (w: Written, folder: string) => Promise<Seen>;
+  review: (w: Written, seen: Seen, notes: PartNotes) => Promise<{ judged: Judged; usd: number }>;
+  write: (user: unknown[]) => Promise<{ value: string; usd: number }>;
+  compose: (reply: string) => Promise<Written>;
+  gate: (before: string, after: Written, named: Issue[], label: string) => Promise<{ keep: boolean; usd: number; why: string }>;
+};
+
+const reviewPart = (name: "Review" | "Repair") => (prompt("scene-review").split(/^# /m).find((x) => x.startsWith(name)) ?? "").slice(name.length).trim();
+
+/** What the instruments read on a built part: its window of the video, the project's viewing, the words and silences. */
+export function measurePart(job: Job, scene: Scene): PartNotes {
+  const words = job.p.narration!.words.map((w) => ({ text: w.text, start: w.start, ...("end" in w && typeof w.end === "number" ? { end: w.end } : {}) }));
+  const holds = (job.opts.holds ?? []).map((h) => ({ id: h.id, from: h.start, to: h.start + h.seconds }));
+  return partNotes({ scene, words, viewing: projectViewing(job.p), window: [when({ word: job.range.firstWord }, job.opts.ctx), endFrame(job) + 1], holds });
+}
+
+const readingsOn = (job: Job, scene: Scene, seen: Seen) => (k: number) => frameReadings(scene, projectViewing(job.p), seen.moments[k]!.frame);
+const NOTES_HEAD = "The instruments' readings over your part (times are seconds of the video, places are shares of the frame):";
+
+/** What goes back to the writer from a review: its part, the reviewer's issues, the instruments' notes, and the frames named. */
+export function reviewRepairRequest(job: Job, w: Written, issues: Issue[], notes: PartNotes, seen: Seen): unknown[] {
+  const shown = new Set(issues.flatMap((x) => x.frames).filter((f) => f >= 1 && f <= seen.moments.length).slice(0, 4));
+  return [
+    { type: "input_text", text: `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(w.source)}\n\n${reviewPart("Repair")}\n\nIssues the reviewer saw:\n${issueText(issues)}\n\n${NOTES_HEAD}\n${notes.lines.join("\n")}\n\nThe frames the issues name, with what the instruments read on each:` },
+    ...frameContent(seen, shown, "Frame", readingsOn(job, w.result.scene!, seen)),
+  ];
+}
+
+const liveReview = (job: Job): ReviewCalls => ({
+  see: (w, folder) => see(job, w.result.scene!, w.source, folder),
+  review: async (w, seen, notes) => {
+    const user = [{ type: "input_text", text: `${lookHeader(job, w)}\n\n${NOTES_HEAD}\n${notes.lines.join("\n")}` }, ...frameContent(seen, undefined, "Frame", readingsOn(job, w.result.scene!, seen))];
+    const r = await json<Judged>({ system: reviewPart("Review"), user, schema: judgeSchema, schemaName: "review", effort: "medium" });
+    return { judged: r.value, usd: r.usd };
+  },
+  write: (user) => text({ system: job.system, user, effort: "medium", maxOutput: 32000 }),
+  compose: (reply) => compose(job, reply, `${job.request}\n\nYour part:\n${reply}`),
+  gate: (before, after, named, label) => gate(job, before, after, named, label),
+});
+
+// Warnings that are about the join (hand-offs, the direction's demonstrations), which a repair must not add to.
+const joinWarnings = (w: Written) => w.warnings.filter((x) => !x.startsWith("severe on screen") && !x.startsWith("hold ")).length;
+
+/** At most REVIEW_ROUNDS rounds of instruments, reviewer and writer on a built part; returns the version kept. */
+export async function reviewRound(job: Job, start: Written, calls: ReviewCalls = liveReview(job)): Promise<{ w: Written; usd: number; rounds: number; log: string[] }> {
+  let w = start;
+  let usd = 0;
+  let rounds = 0;
+  const log: string[] = [];
+  for (let round = 1; round <= REVIEW_ROUNDS && w.result.scene; round++) {
+    const folder = join(job.folder, `review${round}`);
+    mkdirSync(folder, { recursive: true });
+    const notes = measurePart(job, w.result.scene);
+    writeFileSync(join(folder, "instruments.txt"), `${notes.lines.join("\n")}\n`);
+    const seen = await calls.see(w, folder);
+    const r = await calls.review(w, seen, notes);
+    usd += r.usd;
+    writeFileSync(join(folder, "review.json"), JSON.stringify(r.judged, null, 1));
+    // The reviewer read the instruments beside the frames and says what matters for this video; blemishes stay.
+    const issues: Issue[] = r.judged.issues.filter((x) => x.severity >= 2).map((x, i) => ({ ...x, id: `r${i + 1}`, source: "seen" }));
+    job.log(`  ${job.range.id} review ${round}: design ${r.judged.design}/5, ${issues.length} issues${issues.length ? `: ${issues.map((x) => x.what.slice(0, 80)).join(" | ")}` : ""}`);
+    if (!issues.length) {
+      log.push("fine");
+      break;
+    }
+    let reply: string;
+    try {
+      const x = await calls.write(reviewRepairRequest(job, w, issues, notes, seen));
+      usd += x.usd;
+      reply = x.value;
+    } catch (e) {
+      usd += (e as { usd?: number }).usd ?? 0;
+      log.push(`repair failed: ${(e as Error).message.slice(0, 120)}`);
+      break;
+    }
+    if (reply.trim() === w.source.trim()) {
+      log.push("the writer kept it as it was");
+      break;
+    }
+    const fixed = await calls.compose(reply);
+    usd += fixed.usd;
+    rounds += fixed.rounds;
+    if (fixed.problems.length || !fixed.result.scene) {
+      job.log(`  ${job.range.id} review ${round}: the repair does not build (${fixed.problems.slice(0, 2).join(" | ").slice(0, 200)}); kept the version before`);
+      log.push("repair did not build, kept before");
+      break;
+    }
+    if (joinWarnings(fixed) > joinWarnings(w)) {
+      log.push("repair missed a hand-off, kept before");
+      break;
+    }
+    const g = await calls.gate(w.source, fixed, issues, `review${round}`);
+    usd += g.usd;
+    job.log(`  ${job.range.id} review ${round}: ${g.keep ? "kept the repair" : "kept the version before"} (${g.why})`);
+    if (!g.keep) {
+      log.push("repair not better, kept before");
+      break;
+    }
+    log.push("repaired");
+    w = fixed;
+  }
+  return { w, usd, rounds, log };
+}
+
 // `start`: an answer already written in the scene language (an intent author who wrote today's language instead), which
 // is checked, repaired and looked at as a first answer would be.
 async function writeSection(job: Job, draft: string, start?: string): Promise<Written & { looks: string[] }> {
@@ -966,6 +1086,19 @@ async function writeSection(job: Job, draft: string, start?: string): Promise<Wr
       usd += (e as { usd?: number }).usd ?? 0;
       job.log(`  ${job.range.id} look: FAILED to look: ${(e as Error).message.slice(0, 200)}`);
       looks.push(`failed: ${(e as Error).message.slice(0, 200)}`);
+    }
+    if (job.review !== false) {
+      try {
+        const r = await reviewRound(job, w);
+        // What the look left severe stays reported on a repaired version: the review does not say it is gone.
+        const severe = w.warnings.filter((x) => x.startsWith("severe on screen"));
+        [w, usd, rounds] = [r.w === w ? w : { ...r.w, warnings: [...r.w.warnings, ...severe] }, usd + r.usd, rounds + r.rounds];
+        looks.push(...r.log.map((x) => `review: ${x}`));
+      } catch (e) {
+        usd += (e as { usd?: number }).usd ?? 0;
+        job.log(`  ${job.range.id} review: FAILED: ${(e as Error).message.slice(0, 200)}`);
+        looks.push(`review failed: ${(e as Error).message.slice(0, 200)}`);
+      }
     }
   }
   return { ...w, usd, rounds, looks };
