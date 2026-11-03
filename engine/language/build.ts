@@ -1235,7 +1235,8 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
 
     // The camera keeps words whole: words partly in the frame, or under the captions, are cut. A camera that moves in
     // this state shifts as little as it must so each cut thing is wholly in or wholly out, keeping what it frames.
-    const keyWords = [...laidWords, ...slotWords, ...drawnWords].filter((w) => Number(parts.get(w.id)?.props.opacity ?? 1) > 0.05);
+    // A formula is read whole: its symbols count as words for the camera, one piece in or out together.
+    const keyWords = [...laidWords, ...slotWords, ...drawnWords, ...glyphWords.map((g) => ({ ...g, item: g.slot }))].filter((w) => Number(parts.get(w.id)?.props.opacity ?? 1) > 0.05);
     // Words of a thing that arrives in this state, none of which were on screen before.
     const stayed = new Set(laidWords.filter((w) => before.has(w.id)).map((w) => w.item));
     // Words that change what they say are new too: they are there to be read.
@@ -1939,6 +1940,19 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     // of them in view when that camera frames the thing: read from the built scene at each step, camera moves and
     // drift included.
     const aimed = new Map(doc.states.flatMap((st) => st.commands.flatMap((c) => (c.do === "camera" ? [[c.line, c.target ?? ""] as const] : []))));
+    // What a camera line frames stays whole in its view for as long as that view holds, however it changes meanwhile
+    // (a formula taking a longer form, a drawing growing): read from the built scene a few times a second.
+    shots.forEach((shot, k) => {
+      const target = aimed.get(shot.line);
+      if (!target || shot.view.zoom <= 1.0001) return;
+      const until = Math.min(shots[k + 1]?.at ?? ctx.frames - 1, ctx.frames - 1);
+      for (let t = shot.at + shot.frames; t < until; t += Math.max(1, Math.round(ctx.fps / 3))) {
+        const cut = subjectOff(scene, t, target, ctx);
+        if (!cut) continue;
+        report(shot.line, `The camera on line ${shot.line} frames ${target}, but at ${(t / ctx.fps).toFixed(1)} s ${target} runs past the edge of that view (${cut}), so part of it is cut. Frame it with a lower zoom or no drift, or frame it as it is at its largest.`);
+        break;
+      }
+    });
     for (const f of follows) {
       if (!f.still || typeof f.root.truth !== "string" || typeof f.root.spec !== "string") continue;
       let n = 0;
@@ -1980,6 +1994,36 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }
+}
+
+// Whether a thing and everything visible in it sits whole on screen at a frame; when it does not, which edge it crosses.
+function subjectOff(scene: Scene, frame: number, target: string, ctx: CompileContext): string | undefined {
+  let [l, r, t, d] = [Infinity, -Infinity, Infinity, -Infinity];
+  const walk = (list: Resolved[], x: number, y: number, k: number, o: number, inside: boolean) => {
+    for (const n of list) {
+      const op = o * Number(n.props.opacity ?? 1);
+      if (op <= 0.05) continue;
+      const [nx, ny, nk] = [x + Number(n.props.x ?? 0) * k, y + Number(n.props.y ?? 0) * k, k * Number(n.props.scaleX ?? 1)];
+      const mine = inside || n.id === target;
+      if (mine && n.kind === "text" && String(n.props.text ?? "").trim()) {
+        const w = estimate(String(n.props.text), Number(n.props.size ?? 40)) * nk;
+        const h = Number(n.props.size ?? 40) * nk;
+        [l, r, t, d] = [Math.min(l, nx - w / 2), Math.max(r, nx + w / 2), Math.min(t, ny - h / 2), Math.max(d, ny + h / 2)];
+      }
+      const pts = n.props.points;
+      if (mine && n.kind === "path" && Array.isArray(pts) && (n.props.fill ?? "none") !== "none") {
+        for (let i = 0; i + 1 < pts.length; i += 2) {
+          const [px, py] = [nx + Number(pts[i]) * nk, ny + Number(pts[i + 1]) * nk];
+          [l, r, t, d] = [Math.min(l, px), Math.max(r, px), Math.min(t, py), Math.max(d, py)];
+        }
+      }
+      walk(n.children, nx, ny, nk, op, mine);
+    }
+  };
+  walk(evaluate(scene, frame), 0, 0, 1, 1, false);
+  if (!Number.isFinite(l)) return undefined;
+  const edges = [l < -2 ? "left" : "", r > ctx.width + 2 ? "right" : "", t < -2 ? "top" : "", d > ctx.height + 2 ? "bottom" : ""].filter(Boolean);
+  return edges.length ? `past the ${edges.join(" and ")} edge` : undefined;
 }
 
 // Values of a computed thing that are off the screen at a frame: cut by its edge, or, when `whole`, out of it at all.

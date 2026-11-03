@@ -28,7 +28,7 @@ import { shotsToScene } from "../lib/shots-scene.ts";
 import { hash } from "../lib/util.ts";
 
 const VERSION = 5; // bump when the way sections are written or checked changes, so cached sections are redone
-const CHECKS = 7; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
+const CHECKS = 8; // bump when the engine checks a built scene differently: the stage joins and checks again, sections stay cached
 const FPS = 30;
 const [WIDTH, HEIGHT] = [1080, 1920];
 export const SIZE = { target: 55, max: 85, min: 20 }; // words per section: about 15 to 30 seconds of speech
@@ -796,9 +796,17 @@ async function look(job: Job, start: Written, log: string[]): Promise<{ w: Writt
 // so a repair that does not converge never ships a worse part.
 export async function gate(job: Job, before: string, after: Written, named: Issue[] | undefined, label: string): Promise<{ keep: boolean; usd: number; why: string }> {
   const was = await check(job, before);
-  // A version that does not build cannot ship: the other one wins, and with neither building nothing changes here.
-  if (!was.result.scene || !after.result.scene) return { keep: !was.result.scene, usd: 0, why: !was.result.scene && !after.result.scene ? "neither version builds" : "one version does not build" };
+  // A version that does not build cannot ship. With neither building nothing changes here; with only the changed one
+  // building there is nothing to compare it with, so it is kept only when a fresh look finds nothing severe in it.
+  if (!after.result.scene) return { keep: !was.result.scene, usd: 0, why: was.result.scene ? "the changed version does not build" : "neither version builds" };
   const folder = join(job.folder, `gate-${label}`);
+  if (!was.result.scene) {
+    const a = await see(job, after.result.scene, after.source, join(folder, "after"));
+    const j = await judge(job, after, a);
+    const left = severeOf(j.judged.issues, a.measured);
+    writeFileSync(join(folder, "judged.json"), JSON.stringify(j.judged, null, 1));
+    return { keep: !left.length, usd: j.usd, why: `the version before does not build; the changed one has ${left.length} severe problems${left.length ? `: ${left.map((x) => x.what).join(" | ").slice(0, 160)}` : ""}` };
+  }
   const [b, a] = await Promise.all([see(job, was.result.scene, before, join(folder, "before")), see(job, after.result.scene, after.source, join(folder, "after"))]);
   const heavy = (x: Seen) => weight(x.measured.flatMap((m) => m.findings.filter((f) => f.severity >= 2)));
   const severe = (x: Seen) => x.measured.flatMap((m) => m.findings.filter((f) => f.severity >= 3)).length;
@@ -1196,6 +1204,16 @@ export function sceneTickets(p: Project, ranges: Range[]): SceneTicket[] {
   });
 }
 
+// A cached part has no notes from this run; a repair keeps the ones it was written with.
+const notesOf = (folder: string, now: string[]): string[] => {
+  if (now.length) return now;
+  try {
+    return JSON.parse(readFileSync(join(folder, "section.json"), "utf8")).notes ?? [];
+  } catch {
+    return [];
+  }
+};
+
 const doneTickets = (p: Project): string[] => {
   const file = join(dir(p), "scene", TICKETS_DONE);
   return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : [];
@@ -1303,6 +1321,12 @@ export async function scene(p: Project, force = false) {
         console.log(`  ${tickets.length} tickets from watching the video send back ${[...byPart.keys()].map((i) => ranges[i]!.id).join(", ")}`);
         await Promise.all([...byPart].map(async ([i, list]) => {
           const job = jobs[i]!;
+          // A part that does not build as it stands is mended by the joined repair, which fixes just that; a rewrite for
+          // the tickets has nothing to be compared with.
+          if (!(await check(job, sections[i]!.source)).result.scene) {
+            job.log(`  ${job.range.id}: does not build as it stands, so its tickets wait for the joined repair`);
+            return;
+          }
           const named: Issue[] = list.map((what, k) => ({ id: `t${k + 1}`, frames: [], kind: "measured", what, want: "what the direction and the words ask for here", severity: 2, source: "seen" }));
           const ask = `${job.request}\n\nYour part, with line numbers added for reference. Do not include the numbers:\n${numbered(sections[i]!.source)}\n\nThe finished video was rendered and watched. These problems were seen in your part (times in seconds of the video):\n${list.map((x) => `- ${x}`).join("\n")}\n\nChange your part so each of them is fixed, as the direction above asks, and keep everything else as it is. Return the whole part, with no commentary.`;
           const w = await compose(job, undefined, ask, false);
@@ -1318,7 +1342,7 @@ export async function scene(p: Project, force = false) {
           if (!g.keep) return;
           sections[i] = { ...sections[i]!, source: plainMoments(w.source, opts), rounds: sections[i]!.rounds + w.rounds, usd: +(sections[i]!.usd + w.usd).toFixed(4) };
           writeFileSync(join(job.folder, "scene.txt"), w.source);
-          writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notes[i] }, null, 1));
+          writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notesOf(job.folder, notes[i]!) }, null, 1));
         }));
         writeFileSync(join(root, TICKETS_DONE), JSON.stringify([...done, ...tickets.map((t) => t.key)], null, 1));
       }
@@ -1352,7 +1376,7 @@ export async function scene(p: Project, force = false) {
           if (!g.keep) return;
           sections[i] = { ...sections[i]!, source: plainMoments(w.source, opts), rounds: sections[i]!.rounds + w.rounds, usd: +(sections[i]!.usd + w.usd).toFixed(4) };
           writeFileSync(join(job.folder, "scene.txt"), w.source);
-          writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notes[i] }, null, 1));
+          writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notesOf(job.folder, notes[i]!) }, null, 1));
         }));
         joined = joinWithSpans(sections);
         whole = await build(joined.text, opts);
