@@ -442,7 +442,7 @@ function styleCard(s, onPick) {
   const play = () => {
     if (STILL || !s.loop) return;
     if (!loop) {
-      loop = el("video", { src: s.loop, muted: true, loop: true, playsinline: true, preload: "auto", "aria-hidden": "true" });
+      loop = el("video", { src: s.loop, poster: s.still, muted: true, loop: true, playsinline: true, preload: "auto", "aria-hidden": "true" });
       loop.muted = true;
       pic.append(loop);
     }

@@ -292,13 +292,19 @@ function summary(p: Project) {
   };
 }
 
+// What a list (gallery, showcase, the line) needs of a project: enough for a card, without its script or captions.
+function listed(p: Project) {
+  const s = summary(p);
+  return { id: s.id, createdAt: s.createdAt, madeAt: s.madeAt, prompt: s.prompt, style: s.style, styleName: s.styleName, title: s.title, seconds: s.seconds, video: s.video, thumb: s.thumb, files: s.files, running: s.running, queued: s.queued, stage: s.stage };
+}
+
 function projects() {
   if (!existsSync(ROOT)) return [];
   return readdirSync(ROOT, { withFileTypes: true })
     .filter((d) => (d.isDirectory() || d.isSymbolicLink()) && existsSync(join(ROOT, d.name, "project.json")))
     .flatMap((d) => {
       try {
-        return [summary(load(d.name))];
+        return [listed(load(d.name))];
       } catch {
         return []; // a project file mid-write; it shows on the next refresh
       }
@@ -315,7 +321,7 @@ function showcase() {
   return list.flatMap((s) => {
     if (!ID.test(s.id) || !existsSync(join(ROOT, s.id, "video.mp4"))) return [];
     try {
-      return [{ ...summary(load(s.id)), why: s.why }];
+      return [{ ...listed(load(s.id)), why: s.why }];
     } catch {
       return [];
     }
@@ -373,7 +379,7 @@ const server = createServer(async (req, res) => {
     if (path === "/api/showcase") return send(res, 200, showcase());
     if (path === "/api/queue" && req.method === "GET") {
       const q = queueState();
-      return send(res, 200, { ...q, controls: !PUBLIC_SITE, running: running?.id, items: q.items.flatMap((id) => (existsSync(join(ROOT, id, "project.json")) ? [summary(load(id))] : [])) });
+      return send(res, 200, { ...q, controls: !PUBLIC_SITE, running: running?.id, items: q.items.flatMap((id) => (existsSync(join(ROOT, id, "project.json")) ? [listed(load(id))] : [])) });
     }
     if (path === "/api/queue" && req.method === "POST") {
       if (PUBLIC_SITE) return send(res, 403, { error: "The line can only be paused on the machine that runs it." });
