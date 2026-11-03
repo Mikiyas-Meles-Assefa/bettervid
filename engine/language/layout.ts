@@ -58,7 +58,7 @@ const MIN_SCALE = 0.4;
 
 const n = (v: string | undefined, d: number) => (v === undefined || !Number.isFinite(Number(v)) ? d : Number(v));
 const SHAPE_KINDS = ["box", "circle", "pill", "diamond", "dot", "tri"];
-const CONTAINER_KINDS = ["row", "stack", "grid", "ring", "chain", "free", "stage"];
+const CONTAINER_KINDS = ["row", "stack", "grid", "ring", "chain", "free", "stage", "board"];
 const LEAF_KINDS = ["atoms", "text", "code", "space"];
 // How far the gaps of the outer stack may open to spread a state over the frame, as a share of the safe height.
 const SPREAD = 0.22;
@@ -340,6 +340,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
         return { w: n(item.attrs.w, 900) * s, h: n(item.attrs.h, 900) * s };
       case "stage":
         return { w: n(item.attrs.w, 900) * s, h: n(item.attrs.h, 1100) * s };
+      case "board":
+        return boardSize(item);
       case "run":
         if (overlay(item)) return { w: 0, h: 0 };
       // falls through
@@ -351,6 +353,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
       }
     }
   };
+  // A board is measured in screens (the safe area at rest), not scaled: it is larger than the frame on purpose.
+  const boardSize = (item: Item) => ({ w: Math.max(0.1, n(item.attrs.w, 1)) * env.safe.w, h: Math.max(0.1, n(item.attrs.h, 1)) * env.safe.h });
   const ringRadius = (item: Item, cell: number, s: number) => {
     const count = Math.max(1, item.children.length);
     return item.attrs.size ? (n(item.attrs.size, 700) * s) / 2 : Math.max(cell * 0.85, (cell * 1.25) / (2 * Math.sin(Math.PI / Math.max(3, count))));
@@ -370,6 +374,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   // Things that fill the frame take no room in the arrangement. They sit behind it, centered on the frame. Roles pass
   // down here, and a role that writes in capitals changes the words before anything is measured.
   const framed: Item[] = [];
+  const problemsEarly: Problem[] = [];
   // A grid of words is a table, and with a design layer it is drawn the style's way: a header row, rules, stripes.
   const cols = (item: Item) => Math.max(1, n(item.attrs.cols, 2));
   const isTable = (item: Item, kids = item.children) => !!design && item.kind === "grid" && kids.length > cols(item) && kids.every((c) => (c.kind === "text" || c.kind === "atoms") && !c.attrs.back);
@@ -411,6 +416,14 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
       return [];
     });
   items = pull(items);
+  // The board of this state, when there is one. It is the whole frame, so it stands alone at the top of the state.
+  const boardOf = (list: Item[]): Item | undefined => {
+    const top = list.find((c) => c.kind === "board");
+    const deep = (c: Item): Item | undefined => c.children.find((x) => x.kind === "board") ?? c.children.map(deep).find(Boolean);
+    const nested = list.map(deep).find(Boolean);
+    if (nested || (top && list.length > 1)) problemsEarly.push({ line: (nested ?? top)!.line, message: `A board is the whole frame: write it at the top of the state with nothing beside it, and put everything else inside it.` });
+    return top && list.length === 1 && !nested ? top : undefined;
+  };
   // The stretch, united: every thing any of its states shows, in order, each holding the room of its largest version.
   // Things that are never on the board together may share a place (one replaces the other); what this state does not
   // show is only room. A container whose things come in a different order in some state is laid out as it is.
@@ -462,9 +475,10 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   const versions = stretch && stretch.length > 1 ? stretch.map((b) => pull(b)) : undefined;
   framed.length = kept;
   const root: Item = { kind: "stack", id: "board", line: 0, attrs: {}, children: versions ? unite(items, versions) : items };
-  let s = cap;
+  const sheet = boardOf(root.children);
+  let s = sheet ? Math.min(1, cap) : cap;
   let box = sizeOf(root, s);
-  while ((box.w > env.safe.w || box.h > env.safe.h) && s > MIN_SCALE) box = sizeOf(root, (s = Math.round((s - 0.02) * 100) / 100));
+  while (!sheet && (box.w > env.safe.w || box.h > env.safe.h) && s > MIN_SCALE) box = sizeOf(root, (s = Math.round((s - 0.02) * 100) / 100));
 
   // The subject grows: kits, graphs, programs and pictures down the main column take the room the words leave, as far
   // as the width allows, and then the words may grow a little, so a phone frame is used by what carries the idea.
@@ -483,7 +497,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
     }
   };
   along(root);
-  if (grown.size && box.w <= env.safe.w && box.h <= env.safe.h) {
+  if (!sheet && grown.size && box.w <= env.safe.w && box.h <= env.safe.h) {
     const reserve = Math.max(members > 1 ? env.safe.h * BREATHE : 0, spare);
     const fits = (b: { w: number; h: number }) => b.w <= env.safe.w && b.h <= env.safe.h - reserve;
     // The largest value in steps of 0.01 from lo to hi that still fits, or lo when even lo does not.
@@ -504,8 +518,8 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
     box = sizeOf(root, s);
   }
 
-  const out: Laid = { parts: [], boxes: new Map(), members: new Map(), slots: [], links: [], problems: [], scale: s, smallest: Infinity, texts: [], fields: [], held: [] };
-  if (box.w > env.safe.w || box.h > env.safe.h) {
+  const out: Laid = { parts: [], boxes: new Map(), members: new Map(), slots: [], links: [], problems: [...problemsEarly], scale: s, smallest: Infinity, texts: [], fields: [], held: [] };
+  if (!sheet && (box.w > env.safe.w || box.h > env.safe.h)) {
     const at = items[0]?.line ?? 0;
     out.problems.push({ line: at, message: `This state does not fit even at ${Math.round(MIN_SCALE * 100)}% size: it needs ${Math.round(box.w)} by ${Math.round(box.h)} of ${Math.round(env.safe.w)} by ${Math.round(env.safe.h)}. Remove something or split it.` });
   }
@@ -523,7 +537,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   down(root);
   const gaps = column.reduce((sum, x) => sum + x.children.length - 1, 0);
   const room = env.safe.h - box.h - spare;
-  if (gaps && room > 1) {
+  if (!sheet && gaps && room > 1) {
     // Outer gaps open more than inner ones, so groups still read as groups.
     const weight = (x: Item) => (x === root || (root.children.length === 1 && root.children[0] === x) ? 2 : 1);
     const total = column.reduce((sum, x) => sum + (x.children.length - 1) * weight(x), 0);
@@ -564,6 +578,37 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   };
   const rule = (id: string, points: number[], line: number, color: string) => out.parts.push({ id, kind: "path", line, props: { points: points.map(round), stroke: color, strokeWidth: 6 } });
 
+  // A board: each child at at=X,Y (percent of the board from its top left, its center there, as in free), and the
+  // others written down it in reading order, top to bottom like a stack, each at the size it has on a frame. Writing
+  // that runs past the board's edges is reported, since a board never shrinks or reshuffles to make room.
+  const placeBoard = (item: Item, cx: number, cy: number, size: { w: number; h: number }, s: number, back?: string) => {
+    const [l, t] = [cx - size.w / 2, cy - size.h / 2];
+    const gap = n(item.attrs.gap, 44) * s;
+    let y = t;
+    const spills: string[] = [];
+    const inside = (c: Item, x: number, y: number) => {
+      const b = ownSize(c, s);
+      if (x - b.w / 2 < l - 1 || x + b.w / 2 > l + size.w + 1 || y - b.h / 2 < t - 1 || y + b.h / 2 > t + size.h + 1) spills.push(c.id);
+    };
+    for (const c of item.children) {
+      const m = /^(-?[\d.]+),(-?[\d.]+)$/.exec(c.attrs.at ?? "");
+      if (c.attrs.at !== undefined && !m) out.problems.push({ line: c.line, message: `On a board, at= is X,Y in percent of the board from its top left, as in at=30,70, not ${c.attrs.at}.` });
+      if (m) {
+        const [x, yy] = [l + (Number(m[1]) / 100) * size.w, t + (Number(m[2]) / 100) * size.h];
+        if (!ghost.has(c)) inside(c, x, yy);
+        place(c, x, yy, s, back);
+        continue;
+      }
+      const b = sizeOf(c, s);
+      const own = ownSize(c, s);
+      const x = item.attrs.align === "left" ? l + own.w / 2 : item.attrs.align === "right" ? l + size.w - own.w / 2 : cx;
+      const at = y + Math.min(b.h, own.h) / 2;
+      if (!ghost.has(c)) inside(c, x, at);
+      place(c, x, at, s, back);
+      y += b.h + gap;
+    }
+    if (spills.length) out.problems.push({ line: item.line, message: `On the board ${item.id}, ${spills.slice(0, 3).join(", ")} ${spills.length > 1 ? "run" : "runs"} past its edge. A board keeps everything at the size it has on a frame and never reshuffles: make it larger (w= and h= are in screens), put the writing at another at=, or put less on it.` });
+  };
   const place = (item: Item, cx: number, cy: number, s: number, behind?: string) => {
     // What this state does not show only holds its room. What it shows is drawn at its own size in the room it holds.
     if (ghost.has(item)) {
@@ -772,6 +817,9 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
         if (item.attrs.arrows) shown.forEach((c, i) => out.links.push({ from: c.id, to: shown[(i + 1) % shown.length]!.id, line: item.line }));
         return;
       }
+      case "board":
+        placeBoard(item, cx, cy, size, s, back);
+        return;
       case "free": {
         for (const c of item.children) {
           const m = /^(-?[\d.]+),(-?[\d.]+)$/.exec(c.attrs.at ?? "");
@@ -891,7 +939,7 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
   // toward the edges of the frame (never onto them) and the subject keeps the middle.
   const holds = (item: Item): boolean => item === main || item.children.some(holds);
   const holder = root.children.findIndex(holds);
-  if (anchor() && holder >= 0) {
+  if (!sheet && anchor() && holder >= 0) {
     const [free0, free1] = [cy - box.h / 2 - (safe.y - safe.h / 2), safe.y + safe.h / 2 - (cy + box.h / 2)];
     const keep = Math.min(1, spare / Math.max(1, free0 + free1));
     const [above, below] = [free0 * (1 - keep), free1 * (1 - keep)];
@@ -907,8 +955,10 @@ export function layout(items: Item[], env: Env, cap = MAX_SCALE, stretch?: Item[
       anchor();
     }
   }
-  place(root, safe.x, cy, s);
-  for (const id of ["board", "board.space0", "board.space1"]) out.boxes.delete(id);
+  // A board's top left screen is the frame at rest: the camera finds the rest of it.
+  if (sheet) place(root, safe.x - safe.w / 2 + box.w / 2, safe.y - safe.h / 2 + box.h / 2, s);
+  else place(root, safe.x, cy, s);
+  for (const id of ["board", "board.space0", "board.space1"]) if (id !== sheet?.id) out.boxes.delete(id);
   const leaves = (item: Item): string[] => (item.kind === "atoms" ? out.members.get(item.id) ?? [] : item.children.length ? item.children.flatMap(leaves) : [item.id]);
   const walk = (item: Item) => {
     if (item.children.length) out.members.set(item.id, leaves(item));

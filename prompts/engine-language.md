@@ -119,6 +119,7 @@ Indent to put things inside an arrangement, which can nest. Everything goes in `
     free id w=900 h=900                         by percent: each child has at=X,Y from the top left
 [[toolbox]]
     stage id w=900 h=1300                       one scene: things where they really are, by relations (below)
+    board id w=1 h=3                            a canvas larger than the frame, written over states (see A board)
 [[/toolbox]]
 
 [[toolbox]]
@@ -130,8 +131,8 @@ A stage is one scene: things where they really are relative to each other, at th
       depict bench "a lab bench top"
       burette above flask "3 cm"
       flask sits on bench
-      box sign "EXIT" cm=40,15
-      sign hangs from wall "the far end"
+      box label "0.1 M NaOH" cm=12,4
+      label tied to burette "the top"
 
 Relation words: on, on top of, over, above, under, below, beneath, in, inside, into, beside, next to, near, left of, right of, against, behind, in front of, around, to, tied to, hangs from, at, and at/on/in the PLACE of ("at the end of", "on the edge of"). The words before them ("sits", "tied", "hangs") are yours. `cm=W,H` gives a shape or picture its real size; a depicted thing knows its own. What everything else rests on (a floor, a field, the sea) may run past the stage's sides so the rest stays big enough to see; `bleed=no` keeps all of it inside. `focus=ID share=0.5` closes in on one thing until it fills that share of the stage, the rest of the scene around it. A stage keeps every thing's place for the whole stretch of keep states, so things can join it, change and leave while the rest holds still. Relations that cannot all hold at once are reported, so say only where things really are.
 
@@ -217,6 +218,35 @@ The camera starts at rest, showing the frame as laid out. It keeps its view thro
 
 `frames` is how long the move takes (in a cut, it is there at once). `drift` keeps it pushing closer by that much each second after it lands, until its next move: the slow push-in that keeps a still picture alive. When a picture fills the frame, the camera never shows past its edges. Anything can be framed: a part of a diagram, a node of a graph, a word.
 
+[[toolbox]]
+# A board
+
+A board is one canvas larger than the frame, written a piece at a time while the camera travels over it, like a teacher's whiteboard or a planning wall. Nothing on it ever shrinks, moves or reshuffles: each thing keeps the place and size it got when it was written, and at the end the whole board can be seen at once.
+
+    board b1 w=1 h=3 follow=writing             one screen wide, three screens tall
+
+`w` and `h` are in screens (default 1 each), so `w=2 h=2` is four screens in a square. A board is the whole frame: write it alone at the top of a state and put everything else inside it. Inside, a thing with `at=X,Y` has its center there, in percent of the board from its top left (as in `free`); things with no `at=` are written down the board in reading order, top to bottom, `gap=` apart, centered or at `align=left|right`. Everything on a board is laid out at the size it would have on a normal frame, so it reads when the camera is on it. Write the board in one plain state and add to it in keep states with `into=b1`, so what is already written stays. Writing that would run past the board's edge is reported: make the board larger or place the writing elsewhere.
+
+At rest the camera shows the board's top left screen. `follow=` says what moves it, and the default is `no`: the camera stays where your camera lines put it, and writing that lands out of view is reported. With `follow=writing` the camera goes to what each state writes on the board, moving as little as it must to show it whole and never past the board's edges; a camera line in a state takes over for that state. `camera ID` frames any part of the board, and `camera b1` shows the whole board. The whole view is an overview: its words are small there, which is fine for looking back over what was built, so show it when the writing is done, not while new words arrive.
+
+    @0
+    board b1 w=1 h=3 follow=writing
+      text q "How does a letter cross the world?" role=title
+    @5 keep
+    stack step1 into=b1 at=50,30
+      box post "post box"
+      text p1 "collected in the evening"
+    @11 keep
+    stack step2 into=b1 at=50,60
+      box sort "sorting hall"
+      text p2 "read by machine, bagged by city"
+    arrow post -> sort
+    @18 keep
+    text end "delivered by hand" role=answer into=b1 at=50,90
+    @24 keep
+    camera b1
+
+[[/toolbox]]
 # Readable
 
 Nothing the engine places (tags, labels, the words of a graph or a program) is drawn smaller than the style's readable size; laid-out text that would come out smaller is reported, so put less on screen. `dim` and `focus` never fade the rest below a level that stays readable. A scene can change both for itself with a line before its first state: `read text=0.04 dim=0.5` (text is the smallest text as a share of the frame's width; dim is the lowest opacity). Every word is checked against what is behind it: a color that does not stand out from its panel, shape or the surface is reported (with no color, the engine picks one that reads), words straight on a photo need a card, words never sit on other words or on pictures, and a camera that would cut words at the frame's edge or put them under the captions is reported. A plain state and the keep states after it are laid out together: everything any of them shows has its room from the first, so what stays keeps its place and size while other things arrive and leave (a growing table never shrinks, a question added under a diagram does not push it up), and something that replaces a dropped thing takes its place, so write the later things of a stretch as keep states rather than a new plain state when the board should hold still. A kit, graph, program or picture in the main column is the subject: it grows into the height the words leave and sits at the middle, with a title above and what comes under it below; the words keep their role sizes. A kit whose process unfolds in levels picks a form for the frame it is in and for its data: on a tall frame a merge sort is drawn by level (its split tree going down, or across when that lets the values be clearly larger), and its steps are the same in every form, so leave the form to it unless the scene needs one; `form=` asks for one. When a computed demonstration's values come out small (many values on a phone), the camera follows its work on its own: it shows the whole when the steps begin, moves in on what the steps work on (step by step at pace=slow, a few steps at a time and wider when quicker), and pulls back to the whole when a `do steps` stretch ends; it never cuts a tag or words that just arrived, and it leaves the camera alone wherever the scene moves it. `follow=no` on the kit keeps it still. Words attached to things (tags, labels) get room the layout leaves free for them, never sit on writing or on a formula's symbols, and go to the smallest readable size or to a free place with a line back before they would cover any.
