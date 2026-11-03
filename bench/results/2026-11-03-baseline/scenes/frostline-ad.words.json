@@ -1,7 +1,10 @@
 [
   {"q": 1, "answer": "Iced coffee has become warm coffee."},
   {"q": 2, "answer": "Ice left in a Frostline bottle in a hot car all day."},
-  {"q": 3, "answer": "Twenty-four hours later, the ice is still clinking."},
+  {"q": 3, "answer": "The ice was still clinking twenty-four hours later."},
   {"q": 4, "answer": "Frostline."},
-  {"q": 5, "answer": "Twenty-four hours later,"}
+  {"q": 5, "answer": "not in the clip"},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"},
+  {"q": 8, "answer": "not in the clip"}
 ]

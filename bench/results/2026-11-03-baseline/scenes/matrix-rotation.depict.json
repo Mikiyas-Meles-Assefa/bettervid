@@ -1,0 +1,12 @@
+{"things":[
+{"thing":"the rotation matrix","as":"itself","sheet":1,"note":"the 2x2 matrix [0 -1; 1 0] is written out as such"},
+{"thing":"the point (3, 1)","as":"itself","sheet":2,"note":"first as a column vector with a 'point three, one' label; later a dot on a coordinate grid labelled (3, 1)"},
+{"thing":"top row times the vector","as":"itself","sheet":4,"note":"top row and vector highlighted in yellow, with the sum 0 x 3 + (-1) x 1 = -1 written below"},
+{"thing":"bottom row times the vector","as":"itself","sheet":7,"note":"bottom row highlighted, sum 1 x 3 + 0 x 1 = 3 written"},
+{"thing":"the result vector (-1, 3)","as":"itself","sheet":9,"note":"result column filled in with -1 and 3, highlighted"},
+{"thing":"the point after the turn at (-1, 3)","as":"itself","sheet":12,"note":"a pink dot on the grid at (-1, 3), labelled"}],
+"changes":[
+{"change":"the top entry of the answer is computed as -1","as":"told","sheet":4,"note":"the -1 fades into the result bracket and the sum is written; numbers, not motion"},
+{"change":"the bottom entry becomes 3","as":"told","sheet":7,"note":"a 3 appears in the result bracket with the sum written"},
+{"change":"(3, 1) lands on (-1, 3)","as":"shown","sheet":12,"note":"a pink dot appears on the grid at (-1, 3)"},
+{"change":"the point is turned a quarter turn","as":"shown","sheet":12,"note":"the pink dot travels along an arc from (3, 1) to (-1, 3) on the grid"}]}

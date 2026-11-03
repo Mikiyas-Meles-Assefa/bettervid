@@ -1,7 +1,10 @@
 [
-  {"q": 1, "answer": "Zero"},
-  {"q": 2, "answer": "Three, seven, then two"},
-  {"q": 3, "answer": "Nothing changes; best stays seven"},
-  {"q": 4, "answer": "not in the clip"},
-  {"q": 5, "answer": "not in the clip"}
+  {"q": 1, "answer": "Zero."},
+  {"q": 2, "answer": "not in the clip (the values the loop takes, in order, are three, seven, then two)."},
+  {"q": 3, "answer": "Two doesn't beat seven, so nothing changes."},
+  {"q": 4, "answer": "not in the clip (the words say only that best becomes the bigger number)."},
+  {"q": 5, "answer": "not in the clip (the words say best holds the biggest number: seven)."},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"},
+  {"q": 8, "answer": "Two (zero to three, then three to seven)."}
 ]

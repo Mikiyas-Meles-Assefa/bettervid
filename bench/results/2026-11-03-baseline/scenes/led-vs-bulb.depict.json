@@ -1,0 +1,16 @@
+{"things":[
+{"thing":"incandescent bulb","as":"word","sheet":1,"note":"a plain circle labelled old bulb; later a labelled bar; no bulb shape"},
+{"thing":"LED","as":"word","sheet":1,"note":"a plain circle labelled LED, later a small box labelled LED"},
+{"thing":"light","as":"absent","sheet":1,"note":"no glow or light drawn; only the title Same light"},
+{"thing":"power","as":"symbol","sheet":4,"note":"a horizontal bar standing for the old bulb's power and a small box for the LED; sizes carry the idea but the unit and what the bar means are only hinted"},
+{"thing":"heat","as":"word","sheet":4,"note":"inside the bar is the word heat; no flame, glow or heat colour"},
+{"thing":"ninety percent","as":"word","sheet":6,"note":"green handwritten text only; the bar is not divided into a ninety percent part"},
+{"thing":"a quarter of the power","as":"symbol","sheet":7,"note":"small LED box sits next to the long bar so it reads as smaller, with a quarter written; the box is not a quarter of the bar length"},
+{"thing":"lifespan, 25 times longer","as":"absent","sheet":9,"note":"nothing in the picture shows lifetime"}
+],
+"changes":[
+{"change":"old bulb turns about ninety percent of its power into heat","as":"told","sheet":4,"note":"a bar labelled heat appears with the words ninety percent; nothing turns into heat or changes colour"},
+{"change":"LED makes the same light from a quarter of the power","as":"told","sheet":6,"note":"a small LED box appears and the words a quarter are added; no light shown"},
+{"change":"LED lasts up to twenty-five times longer","as":"missing","sheet":9,"note":"the picture does not change at all while this is said"},
+{"change":"same light, a quarter of the energy (closing summary)","as":"told","sheet":11,"note":"title text is rewritten to A quarter of the energy and a red box is drawn around the heat bar; no visual quantity change"}
+]}

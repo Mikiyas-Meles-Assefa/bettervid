@@ -1,7 +1,10 @@
 [
-{"q":1,"answer":"Twelve (6 ÷ 1/2 = 12, not three).","from":"both"},
+{"q":1,"answer":"Twelve (not three).","from":"both"},
 {"q":2,"answer":"How many halves fit into six?","from":"both"},
 {"q":3,"answer":"Two halves per whole.","from":"both"},
-{"q":4,"answer":"Slower. The first whole took about two seconds to cut and the rest were cut quickly one after another. The narration did not mention this.","from":"picture"},
-{"q":5,"answer":"The same as multiplying by two (6 x 2 = 12).","from":"both"}
+{"q":4,"answer":"Slower: the first circle was cut gradually and the gap opened up over a couple of seconds, while the others were cut in quick succession.","from":"picture"},
+{"q":5,"answer":"Multiplying by two (6 x 2 = 12).","from":"both"},
+{"q":6,"answer":"No. The question '6 / 1/2 = ?' stayed on screen with a '?' and no answer for several seconds before 12 appeared.","from":"picture"},
+{"q":7,"answer":"A small word beside it: 'key' at first, which then changed to 'answer'.","from":"picture"},
+{"q":8,"answer":"The counter stayed at 0 ('0 halves') the whole time; it never counted up, so no count number was lit after the last half. The number 12 stayed in the equation at the top.","from":"picture"}
 ]

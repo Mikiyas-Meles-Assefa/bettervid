@@ -145,6 +145,24 @@
    "q": "Where does the point (3, 1) land?",
    "a": "At (−1, 3).",
    "needs": "words"
+  },
+  {
+   "q": "Where in the matrix is the entry -1?",
+   "a": "Top row, second column.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Where in the matrix is the entry 1?",
+   "a": "Bottom row, first column.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "After the top row was worked, how many entries of the answer were filled in?",
+   "a": "One.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

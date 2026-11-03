@@ -1,6 +1,9 @@
 [
-  {"q": 1, "answer": "Ice is about nine percent less dense than water, because its open hexagon lattice takes more room than the liquid, so it floats."},
+  {"q": 1, "answer": "Ice floats because its open hexagon lattice takes more room than the liquid, so ice is about nine percent less dense."},
   {"q": 2, "answer": "Four."},
-  {"q": 3, "answer": "About nine percent."},
-  {"q": 4, "answer": "In liquid water the molecules tumble close together; in ice they lock into an open hexagon pattern."}
+  {"q": 3, "answer": "About nine percent less dense."},
+  {"q": 4, "answer": "In liquid water the molecules tumble close together; in ice they lock into an open hexagon pattern."},
+  {"q": 5, "answer": "not in the clip"},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"}
 ]

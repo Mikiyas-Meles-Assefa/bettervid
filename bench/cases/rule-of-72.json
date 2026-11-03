@@ -100,6 +100,24 @@
    "q": "What was on screen during the pause?",
    "a": "The question 72 ÷ 8 = ? with no answer.",
    "needs": "picture"
+  },
+  {
+   "q": "During the pause, which part of the equation was missing?",
+   "a": "The result after the equals sign.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "In the opening picture, what stood on the right of the division sign?",
+   "a": "The rate.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which answer was on screen at the very end?",
+   "a": "9.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

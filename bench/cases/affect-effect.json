@@ -98,6 +98,24 @@
    "q": "What sentence was on screen during the pause?",
    "a": "The noise ___ my sleep.",
    "needs": "picture"
+  },
+  {
+   "q": "During the pause, what sat in the gap of the sentence?",
+   "a": "Nothing: an empty blank.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Where did the answer appear when it was revealed?",
+   "a": "Inside the blank of the sentence.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How many words were on screen when the clip began?",
+   "a": "Two.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

@@ -1,0 +1,18 @@
+{"things":[
+{"thing":"Trailhead","as":"symbol","sheet":1,"note":"a small circle at the lower end of the path with a TRAILHEAD label"},
+{"thing":"Creek crossing with stones","as":"word","sheet":1,"note":"a small marker with text 'creek crossing - stones'; no creek or stones drawn"},
+{"thing":"Trail path","as":"itself","sheet":1,"note":"a hand-drawn sketch map with line path and branches"},
+{"thing":"Ridge junction","as":"symbol","sheet":5,"note":"a fork in the path with a red circle drawn around it and a text label"},
+{"thing":"Right fork to the road","as":"symbol","sheet":7,"note":"a branch line with 'to road (wrong way)' text; crossed with a red X"},
+{"thing":"Summit","as":"symbol","sheet":1,"note":"a triangle at the top labelled SUMMIT 5.6 km"},
+{"thing":"The road","as":"word","sheet":1,"note":"only the words 'to road'; no road drawn"},
+{"thing":"Distances (2.1, 4.0, 5.6 km)","as":"word","sheet":1,"note":"written labels; the route is not drawn to scale"}
+],
+"changes":[
+{"change":"Walker progresses along the trail to the creek, then the junction","as":"shown","sheet":2,"note":"a thick red line grows up from the trailhead along the path to the junction"},
+{"change":"Cross on the stones","as":"told","sheet":3,"note":"a text note 'cross on the stones' pops up; no crossing action drawn"},
+{"change":"Junction is marked as where people go wrong","as":"shown","sheet":5,"note":"a red circle is drawn around the junction and a red stroke toward the wrong branch"},
+{"change":"Keep left chosen","as":"shown","sheet":7,"note":"a blue stroke is drawn up and left from the junction, and the wrong branch is crossed out with a red X; the stroke does not follow the drawn trail line to the summit"},
+{"change":"Right fork drops back down to the road","as":"told","sheet":8,"note":"label 'Right fork: back to the road' appears; no motion downward"},
+{"change":"Continue to the summit at 5.6 km","as":"shown","sheet":11,"note":"a red line extends up to the top and a green circle appears near the summit"}
+]}

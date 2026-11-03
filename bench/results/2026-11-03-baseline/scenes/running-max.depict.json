@@ -1,0 +1,17 @@
+{"things":[
+{"thing":"the program","as":"itself","sheet":1,"note":"The five lines of code are on screen as code."},
+{"thing":"the variable best","as":"itself","sheet":5,"note":"Shown in a pink box as 'best = 0' in the variables area, as data in its own form; its value is only a typed number, though."},
+{"thing":"the loop","as":"itself","sheet":4,"note":"The for line is in the code and a highlight bar moves line by line."},
+{"thing":"the list of numbers 3, 7, 2","as":"itself","sheet":1,"note":"Written as [3, 7, 2] in the code. The list is never drawn as separate items or boxes."},
+{"thing":"x (the number the loop takes)","as":"itself","sheet":5,"note":"A line 'x = 3', later 'x = 7' and 'x = 2', appears under best as plain text."},
+{"thing":"the output (printed result)","as":"itself","sheet":12,"note":"The number 7 appears under the output label and is circled."}
+],
+"changes":[
+{"change":"best starts at zero","as":"told","sheet":4,"note":"Line 1 is highlighted and 'best = 0' appears in the box; only text appears."},
+{"change":"Loop takes three; x becomes 3","as":"told","sheet":5,"note":"The highlight moves to the for line and a text line 'x = 3' appears; the list itself does not show which item is current."},
+{"change":"Best becomes three (three beats zero)","as":"told","sheet":6,"note":"The digit in the box changes from 0 to 3 by text rewrite after a long delay with nothing changing; the comparison itself is not drawn."},
+{"change":"Seven beats three, best becomes seven","as":"told","sheet":8,"note":"x text changes to 7 and the digit in best changes from 3 to 7."},
+{"change":"Two does not beat seven, nothing changes","as":"missing","sheet":9,"note":"x text changes to 2 and the if line is lit, but best stays 7; nothing on screen shows why the assignment is skipped."},
+{"change":"The program reaches the end and best holds the biggest number","as":"told","sheet":11,"note":"The highlight jumps to the print line; the box keeps best = 7."},
+{"change":"Seven is printed","as":"told","sheet":12,"note":"The text 7 appears under output and is circled."}
+]}

@@ -1,0 +1,14 @@
+{"things":[
+{"thing":"bowling ball","as":"symbol","sheet":1,"note":"A plain dark circle with the word 'bowling' inside; no holes or ball detail. Larger than the other circle."},
+{"thing":"tennis ball","as":"symbol","sheet":1,"note":"A smaller plain circle labelled 'tennis'; no felt or seam."},
+{"thing":"the ground / landing","as":"absent","sheet":6,"note":"No floor or surface is ever drawn."},
+{"thing":"gravity","as":"word","sheet":7,"note":"Only the written word; no arrow or force drawn."},
+{"thing":"air resistance","as":"word","sheet":9,"note":"Only the written words 'Only air resistance can split them'; no air or drag drawn."}
+],
+"changes":[
+{"change":"both balls are dropped from the same height at the same moment","as":"missing","sheet":2,"note":"The circles sit still side by side at the same level; no drop occurs."},
+{"change":"the balls fall and land together","as":"missing","sheet":6,"note":"Circles still; only the caption 'They land together' appears. Later the circles drift upward, the opposite of falling, and no landing is seen."},
+{"change":"gravity speeds up every object at the same rate","as":"missing","sheet":7,"note":"The circles slide up the screen slowly together, which does not show speeding up or falling."},
+{"change":"air resistance splits them apart","as":"missing","sheet":9,"note":"The circles stay together; text overlaps them."},
+{"change":"the text on the board changes (question, then answer, then notes)","as":"told","sheet":6,"note":"Only words are rewritten."}
+]}

@@ -1,6 +1,9 @@
 [
-{"q":1,"answer":"About a third of the oxygen found at sea level.","from":"both"},
-{"q":2,"answer":"No. Your body can't adapt up there; it is slowly dying, hour by hour.","from":"both"},
+{"q":1,"answer":"About a third of the oxygen at sea level.","from":"both"},
+{"q":2,"answer":"No: the body can't adapt up there; it is slowly dying, hour by hour.","from":"both"},
 {"q":3,"answer":"The death zone.","from":"both"},
-{"q":4,"answer":"Nothing new happened. The mountain picture with the 8,000 m label and the red line stayed still, the dot sat on the red line, and the red text faded out, leaving the lower part of the screen empty with no caption.","from":"picture"}
+{"q":4,"answer":"Almost nothing: the mountain drawing with the climber dot sat still on the red 8,000 m line and the text above and below had been cleared away (about 12.5 to 14.5 s), no caption.","from":"picture"},
+{"q":5,"answer":"No steps were shown. A dot climbed the slope until about 6 s, then it sat still on the red line and did not move during the pause.","from":"picture"},
+{"q":6,"answer":"Nothing: no draining was shown. Only the words 'slowly dying' were said and written before the pause.","from":"not in the clip"},
+{"q":7,"answer":"The summit is higher up, above and to the right of the climber dot, which still sits at the red line; a thin red line was drawn from the dot up to the peak, and the text says it is still hours away.","from":"both"}
 ]

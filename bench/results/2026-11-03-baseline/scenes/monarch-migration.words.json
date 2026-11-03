@@ -1,6 +1,9 @@
 [
-  {"q": 1, "answer": "Starts in southern Canada and ends at the same mountain forests in central Mexico"},
-  {"q": 2, "answer": "Up to four thousand kilometers"},
-  {"q": 3, "answer": "None of the butterflies making the trip has ever been there; their great-grandparents made the last trip"},
-  {"q": 4, "answer": "South"}
+  {"q": 1, "answer": "It starts in southern Canada and ends at the same mountain forests in central Mexico."},
+  {"q": 2, "answer": "Up to four thousand kilometers."},
+  {"q": 3, "answer": "None of the butterflies making the trip has ever been there; their great-grandparents made the last trip."},
+  {"q": 4, "answer": "South."},
+  {"q": 5, "answer": "Above, since they fly south from Canada to Mexico."},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"}
 ]

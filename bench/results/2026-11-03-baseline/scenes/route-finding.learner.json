@@ -1,7 +1,10 @@
 [
 {"q":1,"answer":"8 minutes","from":"both"},
-{"q":2,"answer":"Home to park to cafe to work (home -> park -> cafe -> work)","from":"both"},
-{"q":3,"answer":"Going through the park is shorter than the direct road: home to park is 2 and park to cafe is 1 (the 1 edge between them), so 3, which is better than the direct 4.","from":"both"},
-{"q":4,"answer":"8 minutes (the road between park and work is labeled 8)","from":"picture"},
-{"q":5,"answer":"Home","from":"both"}
+{"q":2,"answer":"Home to Park, then Park to Cafe, then Cafe to Work (through the park and the cafe)","from":"both"},
+{"q":3,"answer":"Going through the park is shorter: home to park is 2 minutes, plus park to cafe 1 minute = 3, which beats the direct 4-minute road from home to the cafe.","from":"both"},
+{"q":4,"answer":"8 minutes (the road between Park and Work is labelled 8)","from":"picture"},
+{"q":5,"answer":"Home","from":"both"},
+{"q":6,"answer":"10 (Work changes from infinity to 10 once the park is settled, via the 8-minute road from the park)","from":"picture"},
+{"q":7,"answer":"0","from":"picture"},
+{"q":8,"answer":"No. The lit route is Home-Park, Park-Cafe, Cafe-Work; the Park-Work road is dimmed and not lit.","from":"picture"}
 ]

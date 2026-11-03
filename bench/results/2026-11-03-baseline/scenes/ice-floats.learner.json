@@ -1,6 +1,9 @@
 [
-{"q":1,"answer":"As water freezes, hydrogen bonds lock the molecules into an open hexagon lattice that takes more room than the liquid, so ice is about 9% less dense than water and therefore floats.","from":"both"},
-{"q":2,"answer":"Four neighbors (narration says each molecule is locked to four neighbors; the picture shows a hexagon lattice with bonds, but the count itself comes from the words).","from":"words"},
-{"q":3,"answer":"About 9% (nine percent) less dense.","from":"both"},
-{"q":4,"answer":"In liquid, the molecules were scattered dots tumbling around close together with no pattern or bonds, jostling randomly. In ice they sit in a regular, open hexagon lattice linked by bonds with gaps between, taking more room.","from":"both"}
+{"q":1,"answer":"Because the molecules lock into an open hexagon lattice that takes more room than the liquid, so ice is about 9% less dense than water and floats.","from":"both"},
+{"q":2,"answer":"Four neighbors.","from":"words"},
+{"q":3,"answer":"About 9% less dense.","from":"both"},
+{"q":4,"answer":"In the liquid the molecules were loose dots tumbling around randomly and bunching close together; in ice they sat in a fixed regular hexagon pattern joined by orange bond lines, spaced out with open gaps.","from":"both"},
+{"q":5,"answer":"Not in the clip: no water surface was ever drawn. A box labelled ICE just rose from the bottom to the upper middle of the screen with no water to compare against.","from":"picture"},
+{"q":6,"answer":"One bond at a time: bond lines grew gradually from the centre outward, adding hexagons bit by bit until the whole lattice was joined.","from":"picture"},
+{"q":7,"answer":"Nothing: the hexagon cells in the middle were empty open space between the dots and bond lines.","from":"picture"}
 ]

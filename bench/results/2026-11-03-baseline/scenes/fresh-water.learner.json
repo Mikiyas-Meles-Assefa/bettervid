@@ -1,7 +1,10 @@
 [
-  {"q": 1, "answer": "97 glasses are salty ocean", "from": "both"},
-  {"q": 2, "answer": "Frozen in ice caps (two of the three fresh glasses)", "from": "both"},
-  {"q": 3, "answer": "Underground (most of the last fresh glass)", "from": "both"},
-  {"q": 4, "answer": "Less than 1% of one glass", "from": "both"},
-  {"q": 5, "answer": "The last (third, rightmost) of the three fresh glasses, the one left after the two ice glasses", "from": "both"}
+{"q":1,"answer":"97 of the 100 glasses are salty ocean (shown pink, with the text 97 of 100 are salty ocean).","from":"both"},
+{"q":2,"answer":"Frozen in ice caps: two of the three fresh glasses (the two that went dark).","from":"both"},
+{"q":3,"answer":"Underground: most of the last glass is underground.","from":"words"},
+{"q":4,"answer":"Less than one percent of one glass.","from":"both"},
+{"q":5,"answer":"The last of the three fresh glasses, the rightmost one in the bottom row, which is the one that was partly filled with a small sliver left.","from":"picture"},
+{"q":6,"answer":"The three fresh glasses at the bottom right of the bottom row, shown in yellow against the pink ocean glasses. They were picked out earlier and stayed highlighted through the pause.","from":"picture"},
+{"q":7,"answer":"No. During the first pause only the question How much is lakes and rivers? was on screen; no share was shown and nothing changed in the picture.","from":"picture"},
+{"q":8,"answer":"The single last glass at the bottom right with a small glowing cyan sliver and yellow glow, next to two dark glasses, plus the yellow caption Less than 1% of one glass, against the pink glasses.","from":"picture"}
 ]

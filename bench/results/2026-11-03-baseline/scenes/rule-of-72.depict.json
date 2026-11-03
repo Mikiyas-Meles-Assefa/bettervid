@@ -1,0 +1,17 @@
+{"things":[
+{"thing":"money","as":"word","sheet":1,"note":"Only the written words 'How long does money take to double?'; no coins, notes or any picture of money."},
+{"thing":"the rule: 72 divided by the rate","as":"itself","sheet":2,"note":"Shown as the handwritten formula 72 ÷ rate, which is the thing the moment is about."},
+{"thing":"yearly interest rate","as":"word","sheet":2,"note":"Only the word 'rate' in the formula; later the number 6 and the label 'at 8%'. No growth or interest picture."},
+{"thing":"six percent calculation (72 ÷ 6 = 12)","as":"itself","sheet":5,"note":"The equation is written out and solved on screen."},
+{"thing":"twelve years to double","as":"word","sheet":6,"note":"Red text 'twelve years to double'; no timeline, calendar or growing money."},
+{"thing":"eight percent calculation (72 ÷ 8 = 9)","as":"itself","sheet":8,"note":"Written equation with the 9 circled in red, though the 8 was covered by overlapping text for several seconds first."},
+{"thing":"estimate being close for everyday rates","as":"word","sheet":9,"note":"Only a small line of text 'an estimate, but close for everyday rates'."}
+],
+"changes":[
+{"change":"Money doubles","as":"missing","sheet":1,"note":"Money is never drawn, so its doubling is never shown; only the formula and the numbers change."},
+{"change":"6 replaces 'rate' and the answer 12 appears (72 ÷ 6 = 12)","as":"told","sheet":5,"note":"Written symbols are swapped and a number is filled in (the 12 turns from red to black); it is a counter-like change, not a visual change of money."},
+{"change":"Twelve years to double","as":"told","sheet":6,"note":"A text line 'twelve years to double' fades in under the equation."},
+{"change":"Switch to eight percent","as":"told","sheet":7,"note":"A label changes to 'at 8%' and the old heading collides with the equation, producing a cluttered overlap for about 3 seconds."},
+{"change":"Nine years answer","as":"told","sheet":8,"note":"The 9 is written and circled in red; it is only a written number."},
+{"change":"It is an estimate, close for everyday rates","as":"told","sheet":9,"note":"A text line appears; nothing shows how close the estimate is."}
+]}

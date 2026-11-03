@@ -2,5 +2,8 @@
   {"q": 1, "answer": "Affect"},
   {"q": 2, "answer": "A for action: affect is the action. E for end: effect is the end result."},
   {"q": 3, "answer": "Affected"},
-  {"q": 4, "answer": "blank my sleep."}
+  {"q": 4, "answer": "not in the clip"},
+  {"q": 5, "answer": "not in the clip"},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"}
 ]

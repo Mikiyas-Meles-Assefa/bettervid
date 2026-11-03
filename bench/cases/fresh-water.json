@@ -116,6 +116,24 @@
    "q": "Which glass was the lakes-and-rivers sliver taken from?",
    "a": "One of the three fresh glasses, the last one, not the ice ones.",
    "needs": "picture"
+  },
+  {
+   "q": "Which glasses were picked out from the rest during the first pause?",
+   "a": "The three fresh glasses.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "During the first pause, was the lakes and rivers share shown?",
+   "a": "No.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "At the end, what stayed lit against all the glasses?",
+   "a": "A tiny sliver of one glass.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

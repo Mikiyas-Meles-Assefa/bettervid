@@ -1,0 +1,18 @@
+{"things":[
+{"thing":"Vaccine","as":"word","sheet":1,"note":"only the words 'A vaccine'; no syringe or vial"},
+{"thing":"Immune system","as":"word","sheet":1,"note":"only text"},
+{"thing":"Harmless piece of a germ","as":"symbol","sheet":2,"note":"a plain yellow circle labelled 'harmless piece'; no germ parts or shape"},
+{"thing":"B cells","as":"symbol","sheet":3,"note":"a grid of identical dots labelled B CELLS; no cell shape or surface"},
+{"thing":"Matching B cells whose shape fits","as":"symbol","sheet":4,"note":"three orange dots among navy ones, labelled MATCHING; the fit of shape is not drawn"},
+{"thing":"Antibodies","as":"absent","sheet":6,"note":"words only; small orange dots above and below the matching cells are unlabelled"},
+{"thing":"Memory cells","as":"symbol","sheet":8,"note":"navy dots with a MEMORY CELL label"},
+{"thing":"Real germ","as":"symbol","sheet":10,"note":"a plain yellow circle labelled 'real germ', the same style as the harmless piece"}
+],
+"changes":[
+{"change":"Few B cells whose shape fits start multiplying","as":"shown","sheet":5,"note":"the three matching dots grow and orange dots appear above and below in their column; the dots do not form new cells in a real sense"},
+{"change":"Antibodies are made","as":"told","sheet":6,"note":"narration only; orange dots around matching cells are not named"},
+{"change":"Some matching cells stay behind as memory cells","as":"shown","sheet":7,"note":"the orange extras fade, the rest of the grid greys, and the matching dots turn navy with a MEMORY CELL label"},
+{"change":"Real germ shows up","as":"shown","sheet":10,"note":"a large yellow circle labelled real germ pops in and settles below the grid"},
+{"change":"Matching cells strike quickly","as":"shown","sheet":12,"note":"the three navy dots turn orange and shrink; fast response only indicated by colour"},
+{"change":"Response takes days, not weeks","as":"told","sheet":12,"note":"text 'days, not weeks' fills the screen; no timeline"}
+]}

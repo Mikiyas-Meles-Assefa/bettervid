@@ -1,7 +1,10 @@
 [
-{"q":1,"answer":"Foot pushes the pedal, the pedal pushes a piston, the piston pushes the brake fluid, pressure goes down the brake line to the caliper, the caliper's pistons then squeeze the pads onto the disc at the wheel.","from":"both"},
-{"q":2,"answer":"Because fluid can't be squeezed (it can't be compressed), so the pressure travels along.","from":"both"},
-{"q":3,"answer":"A spinning metal disc (labelled DISC, the wheel).","from":"both"},
-{"q":4,"answer":"Two pads, one on each side, side by side with the disc between them under the caliper. The picture shows two pads placed apart; the words say two pads squeeze against the disc. Which sides of the disc is not clearly shown.","from":"both"},
-{"q":5,"answer":"It is turned into heat by friction; the disc turns hot and can glow after a hard stop.","from":"both"}
+{"q":1,"answer":"Pedal, then piston, then brake fluid, then the brake line (pressure), then the caliper (with its pistons), then the pads, which press on the disc at the wheel.","from":"both"},
+{"q":2,"answer":"Because fluid can't be squeezed, so the pressure travels down the lines to every wheel.","from":"both"},
+{"q":3,"answer":"A spinning metal disc.","from":"both"},
+{"q":4,"answer":"Two pads were drawn side by side with a gap between them, stacked in a row under the caliper and above the disc, not on either side of the disc. The picture never showed the pads closing onto the disc.","from":"picture"},
+{"q":5,"answer":"Into heat: friction turns the car's motion into heat.","from":"both"},
+{"q":6,"answer":"Far: the pedal box is at the top of the screen and the wheel circle is in the lower part, with empty space between them.","from":"picture"},
+{"q":7,"answer":"A box labelled CALIPER (with pistons) at the end of the brake line, above the wheel.","from":"both"},
+{"q":8,"answer":"The disc, filled pink/salmon with the word HEAT under it.","from":"both"}
 ]

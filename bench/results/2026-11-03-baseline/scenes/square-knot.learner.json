@@ -1,6 +1,9 @@
 [
-  {"q": 1, "answer": "Right end over left, then tuck it under, and pull snug.", "from": "both"},
-  {"q": 2, "answer": "Left over right, then tuck under, and pull both ends.", "from": "both"},
-  {"q": 3, "answer": "If you cross the same way twice, you have tied a granny knot, and it slips.", "from": "both"},
-  {"q": 4, "answer": "Pause was 6.7 to 8.0 s after the first crossing. The picture showed the same stick drawing held still, with the left crossing circled in orange. The caption was gone and no new words appeared. The right-hand copy of the drawing stayed faint.", "from": "picture"}
+{"q":1,"answer":"Right end over left, then tuck it under, then pull snug","from":"both"},
+{"q":2,"answer":"Left over right, then tuck under, then pull both ends","from":"both"},
+{"q":3,"answer":"You tie a granny knot instead of a square knot, and it slips","from":"both"},
+{"q":4,"answer":"The picture held still on the first X-shaped drawing with a thin red ring around where the strands cross, with no spoken words and the second drawing faint on the right. No new action happened.","from":"picture"},
+{"q":5,"answer":"Not clear from the clip. The first crossing (right over left) was labelled with 'Right end over' and 'tuck under' and looks held longer, but I cannot tell that it was actually played slower than the second.","from":"not in the clip"},
+{"q":6,"answer":"It stayed essentially still: the strands barely drifted while a red ring sat around the crossing. It did not visibly tighten even though the words said 'pull snug' (a slight shift in the strand ends only).","from":"picture"},
+{"q":7,"answer":"Two (two similar X-shaped strand drawings side by side, a left one and a right one)","from":"picture"}
 ]

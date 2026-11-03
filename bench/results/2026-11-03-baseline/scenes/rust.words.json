@@ -2,6 +2,9 @@
   {"q": 1, "answer": "Iron, water, and oxygen."},
   {"q": 2, "answer": "Electrons."},
   {"q": 3, "answer": "Oxygen from the air."},
-  {"q": 4, "answer": "Not in the clip. The words only say the air takes those electrons."},
-  {"q": 5, "answer": "Rust is flaky and porous, so water gets through and the rusting keeps going."}
+  {"q": 4, "answer": "To the oxygen from the air, which took those electrons."},
+  {"q": 5, "answer": "Rust is flaky and porous, so water gets through and the rusting keeps going."},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "The drop of water."},
+  {"q": 8, "answer": "not in the clip"}
 ]

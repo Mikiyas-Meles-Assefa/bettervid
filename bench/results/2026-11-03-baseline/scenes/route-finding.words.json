@@ -1,7 +1,10 @@
 [
-  {"q": 1, "answer": "Eight minutes"},
-  {"q": 2, "answer": "Through the park, then the cafe"},
-  {"q": 3, "answer": "Going through the park, the cafe is only three minutes, better than four"},
+  {"q": 1, "answer": "Eight minutes."},
+  {"q": 2, "answer": "Through the park, then the cafe."},
+  {"q": 3, "answer": "Going through the park, the cafe is only three minutes, better than four."},
   {"q": 4, "answer": "not in the clip"},
-  {"q": 5, "answer": "Home"}
+  {"q": 5, "answer": "Home."},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"},
+  {"q": 8, "answer": "No."}
 ]

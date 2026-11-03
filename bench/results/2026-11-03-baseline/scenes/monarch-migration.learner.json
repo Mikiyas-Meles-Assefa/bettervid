@@ -1,6 +1,9 @@
 [
-{"q": 1, "answer": "It starts in southern Canada and ends at mountain forests in central Mexico. The words name both places. The map labels SOUTHERN CANADA and CENTRAL MEXICO, though the labels sit in odd places: SOUTHERN CANADA is near the bottom of the landmass and CENTRAL MEXICO is at the top.", "from": "both"},
-{"q": 2, "answer": "Up to four thousand kilometers (4,000 km).", "from": "both"},
-{"q": 3, "answer": "None of the butterflies making the trip has ever been there before. Their great-grandparents made the last trip.", "from": "both"},
-{"q": 4, "answer": "The red route line is drawn from the upper right of the map, near the Canada end, curving down and to the left (southwest) to the lower left of the landmass. The words say they fly south. The map's own geography is hard to read, since it is a black silhouette with no other labels.", "from": "both"}
+{"q":1,"answer":"Starts in southern Canada and ends in the mountain forests of central Mexico.","from":"both"},
+{"q":2,"answer":"Up to 4,000 kilometers.","from":"both"},
+{"q":3,"answer":"None of the butterflies making the trip has ever been there; their great-grandparents made the last trip.","from":"both"},
+{"q":4,"answer":"It was drawn as a red line curving from the upper right of the map (northeast) down and to the left, toward the bottom left (southwest), i.e. south.","from":"picture"},
+{"q":5,"answer":"The start is above the end: it begins near the top right of the map and ends lower down on the left.","from":"picture"},
+{"q":6,"answer":"The map with the red route line and its labels (MONARCH MIGRATION, CENTRAL MEXICO, SOUTHERN CANADA, UP TO 4,000 KM) plus the yellow note 'Their great-grandparents made the last trip.'","from":"picture"},
+{"q":7,"answer":"As small white dots spaced along the red route line, from start to end.","from":"picture"}
 ]

@@ -1,7 +1,10 @@
 [
 {"q":1,"answer":"June 1215, at Runnymede.","from":"both"},
-{"q":2,"answer":"Rebel barons forced King John.","from":"both"},
-{"q":3,"answer":"Feudal fees and forests.","from":"words"},
-{"q":4,"answer":"No free man shall be imprisoned except by the lawful judgment of his peers or the law of the land.","from":"both"},
-{"q":5,"answer":"A charter page with a seal and many ruled lines, zooming in as one line was highlighted, after a silent pause. Just before the words appeared, the clause was shown as a highlighted line on the charter that the view then zoomed into.","from":"picture"}
+{"q":2,"answer":"Rebel barons forced King John to seal it.","from":"both"},
+{"q":3,"answer":"Feudal fees and forests.","from":"both"},
+{"q":4,"answer":"That no free man shall be imprisoned except by the lawful judgment of his peers or the law of the land.","from":"both"},
+{"q":5,"answer":"A charter page with a seal and many lines of ruled text bars; one line got a bold outline and the page zoomed and tilted in toward it.","from":"picture"},
+{"q":6,"answer":"'or the law of the land.' on a yellow highlight block.","from":"picture"},
+{"q":7,"answer":"No. The lines on the page were blank bars with no readable writing; only 'CHARTER' and 'seal' were readable. The words became readable only after the cut to the large text.","from":"picture"},
+{"q":8,"answer":"A charter page (a document with a yellow seal marked 'seal') and the word RUNNYMEDE in red.","from":"picture"}
 ]

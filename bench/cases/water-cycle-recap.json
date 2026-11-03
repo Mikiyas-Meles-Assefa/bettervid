@@ -99,6 +99,24 @@
    "q": "What did the picture do at the very end?",
    "a": "It showed the whole loop and lit each stage in order once more.",
    "needs": "picture"
+  },
+  {
+   "q": "How many places were waiting at the start, and in what arrangement?",
+   "a": "Four, in a loop.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "In the final replay, which stage lit first?",
+   "a": "Evaporation.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which way does the vapor move in the first stage?",
+   "a": "Upward.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

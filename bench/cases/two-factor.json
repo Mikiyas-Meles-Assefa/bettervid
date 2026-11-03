@@ -92,6 +92,24 @@
    "q": "Per the notice, what does the site send after the password?",
    "a": "A six-digit code to your registered phone.",
    "needs": "words"
+  },
+  {
+   "q": "How many keys were drawn?",
+   "a": "Two.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What state was the lock in at the end?",
+   "a": "Shut.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What was shown first in the clip?",
+   "a": "The stolen password.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

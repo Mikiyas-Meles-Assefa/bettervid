@@ -153,6 +153,7 @@ function writeWatchTasks(run: string, id: string, p: Project) {
   writeFileSync(join(folder, "watch-words.md"), `${WORDS_ONLY}\n\nThe narration, by 2 second stretch:\n${words}\nThe quiz:\n${quiz}\n\nWrite your answers to ${join(folder, "words.json")} as a JSON list of {"q": number, "answer": string}.\n`);
   writeFileSync(join(folder, "watch-follow.md"), `${FOLLOW}\n\nThe sheets, in order (open every one, in this order):\n${sheets.join("\n")}\n\nThe narration, by sheet:\n${words}\nWrite ${join(folder, "follow.json")} as a JSON list with one entry per sheet: {"sheet": number, "looking": string, "waiting": string, "confusing": string}.\n`);
   writeFileSync(join(folder, "watch-designer.md"), `${DESIGNER}\n\nWhat the clip is for: ${c.goal}\nThe user asked: ${c.request}\n\nThe sheets, in order (open every one, in this order):\n${sheets.join("\n")}\n\nThe narration, by sheet:\n${words}\nWrite ${join(folder, "designer.json")} as one JSON object: {"composition": 1-10, "type": 1-10, "motion": 1-10, "hierarchy": 1-10, "consistency": 1-10, "overall": 1-10, "issues": [the worst problems, most serious first, each with its sheet number]}.\n`);
+  writeFileSync(join(folder, "watch-depict.md"), `${DEPICT}\n\nThe sheets, in order (open every one, in this order):\n${sheets.join("\n")}\n\nThe narration, by sheet:\n${words}\nWrite ${join(folder, "depict.json")} as one JSON object: {"things": [{"thing": string, "as": "itself" | "symbol" | "word" | "absent", "sheet": number, "note": string}], "changes": [{"change": string, "as": "shown" | "told" | "missing", "sheet": number, "note": string}]}.\n`);
   writeFileSync(join(folder, "watch-scroll.md"), `${SCROLLER}\n\nThe sheets, in order:\n${sheets.join("\n")}\n\nThe narration, by sheet (you half hear it):\n${words}\nWrite ${join(folder, "scroll.json")} as one JSON object: {"sheets": [{"sheet": number, "watching": true|false, "noticed": string}], "swiped_at": sheet number or null, "remembers": "what you would tell a friend this clip said, in one or two sentences"}.\n`);
   void p;
 }
@@ -166,6 +167,10 @@ const LEARNER = `You are a first-time learner. You know nothing about this topic
 const DESIGNER = `You are a demanding motion designer and art director who makes top short-form explainers. You judge a short vertical video (9:16, for phones) from sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions at the bottom are the video's own. Go through every sheet in order. Judge as you would a colleague's cut before it ships: composition and use of the frame, type (size, weight, line length, readability on a phone), motion (does change carry meaning, is it smooth, purposeful, well timed with the words), hierarchy (is it always clear what matters now), and consistency. Score each from 1 (amateur) to 10 (best in the field); 5 is competent but forgettable. Be specific and strict; do not grade on effort.`;
 const SCROLLER = `You are an ordinary person scrolling short videos on your phone, a little tired and distracted. You did not choose this video; it came up in your feed. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds. Glance at each sheet the way a scroller would, for a moment, noticing only what grabs you; you half hear the words. After each sheet, say honestly whether you would still be watching, and what you noticed. Once you would have swiped away, stop watching (mark the rest as not watching). At the end, say what you would tell a friend the clip said.`;
 const WORDS_ONLY = `You are a first-time learner who only hears a short clip's narration, with no picture. You know nothing about this topic beyond the words below. Answer the quiz from the words alone. Do not use outside knowledge: if the words do not say it, answer "not in the clip".`;
+const DEPICT = `You check whether a short vertical video shows what it talks about, or only names it. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions at the bottom are the narration (ignore the captions themselves). Go through every sheet in order with the words beside it.
+1. Things: list every concrete thing the narration names that the moment is about (an object, substance, creature, body part, place, device, person, a piece of data). For each, say how the picture gives it, at its best moment: "itself" when it is drawn so you would know it with its label covered (its shape, colour, parts, material: a flask with liquid in it, a heart shape, a map, a chart's real bars); "symbol" when a generic shape or icon stands in that you only know by convention or with help from its label (a plain circle for a cell, a dot for a drop); "word" when only its name is written (as text, or in a box or circle); "absent" when it is not on screen at all. Code, a formula or a sentence the moment is about is "itself" when it is shown as such.
+2. Changes: list every change of state the narration says happens (something moves, falls, fills, turns a colour, grows, breaks, joins, stops, wins). For each: "shown" when the picture makes the change visibly (it moves, recolours, fills, the drawing changes), "told" when only words on screen change (a label rewritten, a tag "pink" added, a counter), "missing" when the picture does not change at all.
+Be strict and literal: a box labelled FLASK is a word, not a flask; a tag that says "pink" on a grey shape is told, not shown.`;
 const FOLLOW = `You are a first-time viewer of a short vertical video. You know nothing about its topic. You see it as sheets of frames: each sheet holds 8 frames, 4 a second, left to right then top to bottom, covering 2 seconds; a clock in the corner gives the time and the captions are the narration. Go through the sheets in order. For each sheet, say, as the viewer in that moment and knowing only what came before: what you are looking at (the one thing your eye goes to, in a few words), what you are waiting for (the open question or what you expect next, or "nothing"), and anything confusing (what you could not tell or follow, or "" when nothing). Be honest and plain; a clear clip gets short answers.`;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -217,6 +222,15 @@ Be strict and consistent. Do not reward an answer for being plausible: it must m
 
 type Graded = { video?: number[]; words?: number[]; follow?: { sheet: number; on_look: number; waiting_ok: number; confused: boolean }[]; remembers?: number };
 type Designer = { composition: number; type: number; motion: number; hierarchy: number; consistency: number; overall: number; issues: string[] };
+type DepictWatch = { things?: { as: string }[]; changes?: { as: string }[] };
+// The watch test's depiction score: things drawn as themselves 1, as a symbol 0.5, as a word or not at all 0; changes
+// shown 1, told or missing 0; the mean of the two lists that have entries.
+export function depictWatch(d: DepictWatch): number | undefined {
+  const things = (d.things ?? []).map((t) => (t.as === "itself" ? 1 : t.as === "symbol" ? 0.5 : 0));
+  const changes = (d.changes ?? []).map((c) => (c.as === "shown" ? 1 : 0));
+  const parts = [things, changes].filter((x) => x.length).map(mean);
+  return parts.length ? mean(parts) : undefined;
+}
 type Scroll = { sheets: { sheet: number; watching: boolean }[]; swiped_at: number | null; remembers: string };
 
 export const report: Step = async (run, ids) => {
@@ -232,21 +246,31 @@ export const report: Step = async (run, ids) => {
       const xs = c.quiz.map((q, i) => (q.needs === needs ? arm?.[i] : undefined)).filter((x): x is number => x !== undefined);
       return xs.length ? mean(xs) : undefined;
     };
+    const hardOf = (arm: number[] | undefined) => {
+      const xs = c.quiz.map((q, i) => (q.hard ? arm?.[i] : undefined)).filter((x): x is number => x !== undefined);
+      return xs.length ? mean(xs) : undefined;
+    };
     const learner = g.video?.length ? mean(g.video) : undefined;
     const wordsOnly = g.words?.length ? mean(g.words) : undefined;
     const follow = g.follow?.length ? { onLook: mean(g.follow.map((f) => f.on_look)), waiting: mean(g.follow.map((f) => f.waiting_ok)), confused: mean(g.follow.map((f) => (f.confused ? 1 : 0))) } : undefined;
     const folder = folderOf(run, id);
     const designer = existsSync(join(folder, "designer.json")) ? json<Designer>(join(folder, "designer.json")) : undefined;
     const scroll = existsSync(join(folder, "scroll.json")) ? json<Scroll>(join(folder, "scroll.json")) : undefined;
+    // Depiction: the free signals and the watch test, the watch weighing more (it sees the finished picture).
+    const depictFree = (m?.scores as Record<string, number> | undefined)?.depict;
+    const depictSeen = existsSync(join(folder, "depict.json")) ? depictWatch(json<DepictWatch>(join(folder, "depict.json"))) : undefined;
+    const depict = depictSeen === undefined ? depictFree : depictFree === undefined ? depictSeen : 0.4 * depictFree + 0.6 * depictSeen;
     // Retention: the share of the clip's sheets the distracted viewer was still watching.
     const kept = scroll ? (scroll.swiped_at ? (scroll.swiped_at - 1) / Math.max(1, scroll.sheets.length) : 1) : undefined;
-    for (const f of ["scene.txt", "map.json", "learner.json", "words.json", "follow.json", "designer.json", "scroll.json"]) if (existsSync(join(folder, f))) copyFileSync(join(folder, f), join(out, "scenes", `${id}.${f}`));
+    for (const f of ["scene.txt", "map.json", "learner.json", "words.json", "follow.json", "designer.json", "scroll.json", "depict.json"]) if (existsSync(join(folder, f))) copyFileSync(join(folder, f), join(out, "scenes", `${id}.${f}`));
     const author = existsSync(join(folder, "author.json")) ? json<{ round: number; reviewed?: string; ok?: boolean }>(join(folder, "author.json")) : undefined;
     return {
       id, use: c.use, style: c.style, built: m?.built ?? false, passed: author?.ok ?? false, rounds: author?.round ?? 0, reviewed: author?.reviewed ?? "",
       overall: m?.overall ?? 0, scores: m?.scores ?? {},
       learner, wordsOnly, gain: learner !== undefined && wordsOnly !== undefined ? learner - wordsOnly : undefined,
       pictureQuestions: byNeeds(g.video, "picture"), pictureQuestionsWordsOnly: byNeeds(g.words, "picture"),
+      hard: hardOf(g.video), hardWordsOnly: hardOf(g.words),
+      depictFree, depictSeen, depict,
       follow,
       designer: designer ? { overall: designer.overall, composition: designer.composition, type: designer.type, motion: designer.motion, hierarchy: designer.hierarchy, consistency: designer.consistency, issues: designer.issues.slice(0, 3) } : undefined,
       scroller: scroll ? { kept, remembers: g.remembers } : undefined,
@@ -267,6 +291,8 @@ export const report: Step = async (run, ids) => {
     overall: avg((r) => r.overall),
     ...Object.fromEntries(keys.map((k) => [k, avg((r) => (r.scores as Record<string, number>)[k])])),
     learner: avg((r) => r.learner), wordsOnly: avg((r) => r.wordsOnly), gain: avg((r) => r.gain),
+    hard: avg((r) => r.hard), hardWordsOnly: avg((r) => r.hardWordsOnly), hardGap: avg((r) => (r.hard !== undefined && r.hardWordsOnly !== undefined ? r.hard - r.hardWordsOnly : undefined)),
+    depictFree: avg((r) => r.depictFree), depictSeen: avg((r) => r.depictSeen), depict: avg((r) => r.depict),
     pictureQuestions: avg((r) => r.pictureQuestions), pictureQuestionsWordsOnly: avg((r) => r.pictureQuestionsWordsOnly),
     followOnLook: avg((r) => r.follow?.onLook), followWaiting: avg((r) => r.follow?.waiting), followConfused: avg((r) => r.follow?.confused),
     designer: avg((r) => r.designer?.overall), scrollKept: avg((r) => r.scroller?.kept), scrollRemembers: avg((r) => r.scroller?.remembers),
@@ -274,13 +300,14 @@ export const report: Step = async (run, ids) => {
   };
   writeFileSync(join(out, "summary.json"), JSON.stringify({ run, overall, cases: rows }, null, 1));
   const f2 = (x: number | undefined | null) => (x === undefined || x === null ? "-" : x.toFixed(2));
+  const gap = (a?: number | null, b?: number | null) => (a === undefined || a === null || b === undefined || b === null ? undefined : a - b);
   const table = [
-    `| case | use | style | built | free | eye | lag | pace | load | holds | reveal | read | quiz (video) | quiz (words) | picture Qs | follow on look | confused | designer /10 | scroll kept | scroll remembers |`,
-    `|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|`,
-    ...rows.map((r) => `| ${r.id} | ${r.use} | ${r.style.replace(/^custom\//, "").replace(/-[0-9a-f]{4}$/, "")} | ${r.built ? `yes (${r.rounds}${r.passed ? "" : ", checks fail"})` : "NO"} | ${f2(r.overall)} | ${keys.map((k) => f2((r.scores as Record<string, number>)[k])).join(" | ")} | ${f2(r.learner)} | ${f2(r.wordsOnly)} | ${f2(r.pictureQuestions)} | ${f2(r.follow?.onLook)} | ${f2(r.follow?.confused)} | ${r.designer ? r.designer.overall : "-"} | ${f2(r.scroller?.kept)} | ${f2(r.scroller?.remembers)} |`),
-    `| **all** | | | ${overall.built}/${overall.cases} | ${f2(overall.overall)} | ${keys.map((k) => f2((overall as Record<string, number | null>)[k])).join(" | ")} | ${f2(overall.learner)} | ${f2(overall.wordsOnly)} | ${f2(overall.pictureQuestions)} | ${f2(overall.followOnLook)} | ${f2(overall.followConfused)} | ${f2(overall.designer)} | ${f2(overall.scrollKept)} | ${f2(overall.scrollRemembers)} |`,
+    `| case | use | style | built | teach gap | hard gap | free | eye | lag | pace | load | holds | reveal | read | depict (free) | depict (watch) | depict | quiz (video) | quiz (words) | hard Qs (video) | hard Qs (words) | follow on look | confused | designer /10 | scroll kept | scroll remembers |`,
+    `|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|`,
+    ...rows.map((r) => `| ${r.id} | ${r.use} | ${r.style.replace(/^custom\//, "").replace(/-[0-9a-f]{4}$/, "")} | ${r.built ? `yes (${r.rounds}${r.passed ? "" : ", checks fail"})` : "NO"} | ${f2(r.gain)} | ${f2(gap(r.hard, r.hardWordsOnly))} | ${f2(r.overall)} | ${keys.map((k) => f2((r.scores as Record<string, number>)[k])).join(" | ")} | ${f2(r.depictFree)} | ${f2(r.depictSeen)} | ${f2(r.depict)} | ${f2(r.learner)} | ${f2(r.wordsOnly)} | ${f2(r.hard)} | ${f2(r.hardWordsOnly)} | ${f2(r.follow?.onLook)} | ${f2(r.follow?.confused)} | ${r.designer ? r.designer.overall : "-"} | ${f2(r.scroller?.kept)} | ${f2(r.scroller?.remembers)} |`),
+    `| **all** | | | ${overall.built}/${overall.cases} | ${f2(overall.gain)} | ${f2(overall.hardGap)} | ${f2(overall.overall)} | ${keys.map((k) => f2((overall as Record<string, number | null>)[k])).join(" | ")} | ${f2(overall.depictFree)} | ${f2(overall.depictSeen)} | ${f2(overall.depict)} | ${f2(overall.learner)} | ${f2(overall.wordsOnly)} | ${f2(overall.hard)} | ${f2(overall.hardWordsOnly)} | ${f2(overall.followOnLook)} | ${f2(overall.followConfused)} | ${f2(overall.designer)} | ${f2(overall.scrollKept)} | ${f2(overall.scrollRemembers)} |`,
   ];
   const notes = rows.filter((r) => r.tickets.length).map((r) => `- **${r.id}**: ${r.tickets.slice(0, 3).join(" / ").slice(0, 600)}`);
-  writeFileSync(join(out, "scores.md"), `# Bench run ${run}\n\nFree measures (0 to 1) and watch tests. "free" is the mean of the free measures; quiz scores are the share right; "picture Qs" are the questions only the picture can answer; "confused" is the share of 2 s windows where the follow viewer reported confusion. Columns are explained in bench/README.md.\n\n${table.join("\n")}\n\n## Direction tickets (severity 2 and 3)\n\n${notes.join("\n")}\n`);
+  writeFileSync(join(out, "scores.md"), `# Bench run ${run}\n\nThe main teaching number is the **teach gap**: the video learner minus the words-only learner over the whole quiz, what the picture teaches beyond the narration. "hard gap" is the same over the hard, picture-dependent questions. Free measures are 0 to 1; "free" is their mean (depict there is the free signal only); "depict" blends the free signal (0.4) with the watch test (0.6); quiz scores are the share right; "confused" is the share of 2 s windows where the follow viewer reported confusion. Columns are explained in bench/README.md.\n\n${table.join("\n")}\n\n## Direction tickets (severity 2 and 3)\n\n${notes.join("\n")}\n`);
   console.log(join(out, "scores.md"));
 };

@@ -1,6 +1,7 @@
-[
-  {"q": 1, "answer": "The sun heats the ocean, which makes the water rise as vapor.", "from": "both"},
-  {"q": 2, "answer": "High up, the vapor cools into clouds (the Condensation stage).", "from": "both"},
-  {"q": 3, "answer": "Evaporation, then Condensation, then Precipitation, then Collection (and then back around).", "from": "both"},
-  {"q": 4, "answer": "At the very end the diagram stayed on screen under the title 'One endless loop'. The stage boxes lit up red one after another in turn (Evaporation, Condensation, Precipitation, Collection), and then all four were red together, as the loop kept going around.", "from": "picture"}
-]
+[{"q":1,"answer":"The sun heats the ocean.","from":"words"},
+{"q":2,"answer":"It cools into clouds (condensation).","from":"both"},
+{"q":3,"answer":"Evaporation, then condensation, then precipitation, then collection.","from":"both"},
+{"q":4,"answer":"All four stages turned red together as 'One endless loop', then lit one after another in a quick replay and ended with all four lit red.","from":"picture"},
+{"q":5,"answer":"Four boxes arranged in a diamond (top, right, bottom, left), joined by red arrows going around clockwise, all present from the start.","from":"picture"},
+{"q":6,"answer":"Evaporation (the top box).","from":"picture"},
+{"q":7,"answer":"Upward: the text says vapor rises, and the arrow into the Evaporation box points up from the left. No vapor itself is drawn.","from":"both"}]

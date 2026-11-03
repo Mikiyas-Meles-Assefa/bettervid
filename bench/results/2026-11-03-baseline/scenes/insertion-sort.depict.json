@@ -1,0 +1,14 @@
+{"things":[
+{"thing":"cards (playing cards)","as":"symbol","sheet":1,"note":"plain square outlines with a number each; no playing card faces or hand drawn"},
+{"thing":"sorted hand / sorted part","as":"symbol","sheet":2,"note":"a SORTED label with a bracket or outline over the first cards; no hand"},
+{"thing":"the numbers 4, 1, 3, 2 (data)","as":"itself","sheet":1,"note":"the actual values shown in the squares"},
+{"thing":"comparison between cards","as":"symbol","sheet":4,"note":"orange highlight on the two cards being compared; no explicit greater-than shown"},
+{"thing":"final sorted order 1 2 3 4","as":"itself","sheet":12,"note":"squares in order, then recoloured yellow with the word sorted"}
+],
+"changes":[
+{"change":"the 1 slides in front of the 4","as":"shown","sheet":4,"note":"squares swap positions with an animation"},
+{"change":"the 3 passes the 4 and stops at the 1","as":"shown","sheet":7,"note":"the 3 and 4 swap places and 3 sits after the 1"},
+{"change":"the 2 does the same","as":"shown","sheet":10,"note":"the 4 jumps past the 2 with little motion between frames, then 3 and 2 swap; the steps are quick and the compare against 1 is not visible"},
+{"change":"the hand is sorted","as":"shown","sheet":12,"note":"cards turn yellow and read 1 2 3 4 with the word sorted"},
+{"change":"every card compared only with already sorted cards","as":"told","sheet":12,"note":"narration claim only; the sorted section bracket is not shown during the later insertions"}
+]}

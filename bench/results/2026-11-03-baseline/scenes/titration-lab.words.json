@@ -1,7 +1,10 @@
 [
-  {"q": 1, "answer": "Sodium hydroxide goes in the burette. The flask holds the acid with a few drops of phenolphthalein."},
+  {"q": 1, "answer": "Sodium hydroxide is in the burette; the flask holds the acid with a few drops of phenolphthalein."},
   {"q": 2, "answer": "Pink flashes where it lands, then fades as you swirl."},
   {"q": 3, "answer": "When the pink starts to linger."},
   {"q": 4, "answer": "A faint pink that lasts thirty seconds."},
-  {"q": 5, "answer": "Read the volume."}
+  {"q": 5, "answer": "Read the volume."},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"},
+  {"q": 8, "answer": "Above, since the base drips down from the burette into the flask."}
 ]

@@ -1,7 +1,10 @@
 [
-{"q":1,"answer":"Zero (best starts at 0)","from":"both"},
-{"q":2,"answer":"The list [3, 7, 2]","from":"both"},
-{"q":3,"answer":"When x is 2, it does not beat best (which is 7), so nothing changes and best stays 7","from":"both"},
-{"q":4,"answer":"Line 3: if (x > best) best = x","from":"picture"},
-{"q":5,"answer":"7","from":"both"}
+{"q":1,"answer":"0 (let best = 0; the narration says it starts at zero)","from":"both"},
+{"q":2,"answer":"The list [3, 7, 2]: the loop takes 3, then 7, then 2","from":"both"},
+{"q":3,"answer":"Nothing changes: 2 does not beat 7, so best stays 7. The picture shows x = 2 and best still 7.","from":"both"},
+{"q":4,"answer":"Line 3, 'if (x > best) best = x' (the highlighted line where best went from 0 to 3 and then 3 to 7). The clip does not separate the check from the assignment: the whole line is lit.","from":"both"},
+{"q":5,"answer":"7 (it prints best, and 7 appears in the output area, circled)","from":"both"},
+{"q":6,"answer":"7. The yellow text 'Next is 7. What happens to best?' was on screen during that pause (while the old state, best = 0 and x = 3, still showed).","from":"picture"},
+{"q":7,"answer":"Yes, the whole line 3 'if (x > best) best = x' was lit (highlighted) while x was 2, even though best did not change. The picture does not show the assignment part being skipped; only the words say nothing changes.","from":"picture"},
+{"q":8,"answer":"Two times: from 0 to 3, then from 3 to 7. It stayed 7 when x was 2.","from":"both"}
 ]

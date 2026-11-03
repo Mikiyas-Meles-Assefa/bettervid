@@ -3,5 +3,8 @@
   {"q": 2, "answer": "B cells, the few whose shape fits that piece."},
   {"q": 3, "answer": "Memory cells."},
   {"q": 4, "answer": "The matching cells are already waiting, so they strike in days, not weeks."},
-  {"q": 5, "answer": "Not in the clip."}
+  {"q": 5, "answer": "not in the clip (the words say only 'the few')."},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"},
+  {"q": 8, "answer": "not in the clip"}
 ]

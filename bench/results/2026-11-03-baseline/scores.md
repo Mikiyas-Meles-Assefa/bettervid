@@ -1,38 +1,38 @@
 # Bench run 2026-11-03-baseline
 
-Free measures (0 to 1) and watch tests. "free" is the mean of the free measures; quiz scores are the share right; "picture Qs" are the questions only the picture can answer; "confused" is the share of 2 s windows where the follow viewer reported confusion. Columns are explained in bench/README.md.
+The main teaching number is the **teach gap**: the video learner minus the words-only learner over the whole quiz, what the picture teaches beyond the narration. "hard gap" is the same over the hard, picture-dependent questions. Free measures are 0 to 1; "free" is their mean (depict there is the free signal only); "depict" blends the free signal (0.4) with the watch test (0.6); quiz scores are the share right; "confused" is the share of 2 s windows where the follow viewer reported confusion. Columns are explained in bench/README.md.
 
-| case | use | style | built | free | eye | lag | pace | load | holds | reveal | read | quiz (video) | quiz (words) | picture Qs | follow on look | confused | designer /10 | scroll kept | scroll remembers |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| affect-effect | a language tip for social media | neon | yes (1) | 0.79 | 0.73 | 0.96 | 1.00 | 1.00 | 0.50 | 1.00 | 0.35 | 1.00 | 0.88 | 1.00 | 1.00 | 0.67 | 4 | 1.00 | 1.00 |
-| ball-drop | predict, then reveal | chalkboard | yes (3) | 0.61 | 0.24 | 0.66 | 0.94 | 1.00 | 0.00 | 1.00 | 0.46 | 0.88 | 0.75 | 0.50 | 0.79 | 1.00 | 3 | 0.33 | 0.00 |
-| death-zone | a suspense beat | ink | yes (1) | 0.89 | 0.88 | 0.84 | 0.52 | 1.00 | 1.00 | 1.00 | 1.00 | 0.75 | 0.63 | 0.00 | 0.68 | 0.64 | 4 | 0.45 | 1.00 |
-| disc-brake | a mechanism, one link at a time | blueprint | yes (4) | 0.88 | 0.80 | 0.72 | 0.62 | 1.00 | 1.00 | 1.00 | 1.00 | 0.90 | 0.80 | 0.50 | 0.81 | 0.94 | 3 | 0.56 | 0.50 |
-| fraction-division | a worked math step | chalkboard | yes (2) | 0.66 | 0.56 | 0.83 | 0.67 | 0.74 | 0.00 | 1.00 | 0.84 | 1.00 | 0.80 | 1.00 | 0.96 | 0.79 | 4 | 1.00 | 1.00 |
-| fresh-water | a chart reveal of a surprising number | neon | yes (2) | 0.76 | 0.86 | 0.79 | 0.64 | 1.00 | 0.00 | 1.00 | 1.00 | 1.00 | 0.80 | 1.00 | 0.78 | 0.81 | 4 | 0.44 | 0.50 |
-| frostline-ad | an ad hook for a product | late-night-synthwave-arcade | yes (1) | 0.91 | 0.63 | 0.73 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.90 | 0.80 | 0.50 | 0.94 | 0.67 | 3 | 1.00 | 1.00 |
-| ice-floats | why something happens, at the scale of molecules | a-1970s-science | yes (2) | 0.80 | 0.77 | 0.92 | 0.94 | 1.00 | 0.00 | 1.00 | 1.00 | 1.00 | 1.00 | - | 0.81 | 0.92 | 5 | 1.00 | 1.00 |
-| insertion-sort | an algorithm's first instance slow, then faster | flat | yes (1) | 0.89 | 0.84 | 0.93 | 0.49 | 1.00 | 1.00 | 1.00 | 0.96 | 0.80 | 0.30 | 0.67 | 0.75 | 0.71 | 4 | 0.14 | 1.00 |
-| led-vs-bulb | a comparison of two options | whiteboard | yes (1) | 0.85 | 0.64 | 0.86 | 0.45 | 1.00 | 1.00 | 1.00 | 0.97 | 1.00 | 0.88 | 1.00 | 0.92 | 0.83 | 3 | 0.08 | 1.00 |
-| life-expectancy | a data story from a pasted CSV | ink | yes (1) | 0.75 | 0.60 | 0.76 | 0.92 | 1.00 | 1.00 | 0.00 | 0.96 | 1.00 | 1.00 | - | 0.92 | 0.42 | 4 | 0.25 | 1.00 |
-| magna-carta | a history turning point, from a teacher's notes | collage | yes (1) | 0.91 | 0.68 | 0.88 | 0.90 | 0.92 | 1.00 | 1.00 | 1.00 | 1.00 | 0.80 | 1.00 | 0.92 | 0.85 | 6 | 0.23 | 0.50 |
-| matrix-rotation | a worked step: a matrix acting on a vector | chalkboard | yes (1) | 0.86 | 0.65 | 0.83 | 0.53 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.88 | 0.77 | 3 | 0.15 | 1.00 |
-| monarch-migration | a map journey | collage | yes (1) | 0.91 | 0.81 | 0.69 | 0.88 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | - | 0.85 | 1.00 | 3 | 1.00 | 1.00 |
-| octopus-hearts | a social-media fact | late-night-synthwave-arcade | yes (1) | 0.86 | 0.59 | 0.84 | 0.83 | 0.93 | - | 1.00 | 0.97 | 1.00 | 1.00 | - | 0.94 | 0.75 | 4 | 1.00 | 1.00 |
-| off-by-one | a bug fix explained, from a code file | neon | NO | 0.00 | - | 0.00 | 0.00 | 0.00 | - | - | 0.00 | - | - | - | - | - | - | - | - |
-| offside | a sports rule, explained in space | whiteboard | NO | 0.00 | - | 0.00 | 0.00 | 0.00 | - | - | 0.00 | - | - | - | - | - | - | - | - |
-| route-finding | a worked algorithm on a graph | blueprint | yes (1) | 0.79 | 0.88 | 0.83 | 0.83 | 1.00 | 1.00 | 1.00 | 0.00 | 1.00 | 0.80 | 1.00 | 0.84 | 0.56 | 4 | 0.31 | 0.50 |
-| rule-of-72 | a quick money rule with a guess, from personal notes | sticky-notes-on-a | yes (1) | 0.64 | 0.47 | 0.82 | 0.63 | 1.00 | 0.50 | 0.50 | 0.60 | 1.00 | 0.75 | 1.00 | 0.77 | 0.45 | 3 | 0.55 | 1.00 |
-| running-max | a line of code changing state, from a code file | neon | yes (4, checks fail) | 0.91 | 0.86 | 0.88 | 0.61 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.60 | 1.00 | 0.85 | 0.46 | 4 | 0.69 | 1.00 |
-| rust | a chemistry process | a-1970s-science | yes (1) | 0.80 | 0.97 | 0.77 | 0.88 | 0.96 | 0.00 | 1.00 | 0.98 | 0.90 | 0.80 | - | 0.75 | 0.86 | 4 | 0.29 | 1.00 |
-| square-knot | a how-to step | flat | yes (1) | 0.92 | 0.91 | 0.91 | 0.66 | 1.00 | 1.00 | 1.00 | 0.99 | 0.88 | 0.75 | 0.50 | 0.75 | 1.00 | 3 | 1.00 | 1.00 |
-| support-tickets | a meeting slide turned into a clip | flat | yes (1) | 0.74 | 0.41 | 0.86 | 0.46 | 0.94 | 0.50 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.89 | 0.44 | 5 | 0.89 | 1.00 |
-| titration-lab | a lab procedure step, from a handout | chalkboard | yes (1) | 0.88 | 0.36 | 0.84 | 1.00 | 1.00 | 1.00 | 1.00 | 0.99 | 1.00 | 1.00 | - | 0.81 | 1.00 | 3 | 0.54 | 0.50 |
-| trail-directions | directions from a hand-drawn sketch | whiteboard | yes (2) | 0.73 | 0.52 | 0.83 | 0.29 | 1.00 | 0.50 | 1.00 | 1.00 | 1.00 | 0.83 | 1.00 | 0.96 | 0.77 | 5 | 0.85 | 1.00 |
-| two-factor | how a safeguard works, from a company notice | blueprint | yes (1) | 0.79 | 0.62 | 0.73 | 0.50 | 1.00 | 1.00 | 1.00 | 0.65 | 0.80 | 0.60 | 1.00 | 0.82 | 0.64 | 4 | 1.00 | 1.00 |
-| vaccine-memory | a biology process, from a class handout | flat | yes (1) | 0.66 | 0.82 | 0.70 | 0.23 | 1.00 | 1.00 | 0.00 | 0.90 | 1.00 | 0.80 | 1.00 | 0.73 | 0.92 | 5 | 0.38 | 0.50 |
-| water-cycle-recap | a recap of something built in pieces | sticky-notes-on-a | yes (1) | 0.83 | 0.63 | 0.88 | 0.50 | 0.82 | 1.00 | 1.00 | 1.00 | 1.00 | 0.63 | 1.00 | 0.91 | 0.91 | 5 | 0.18 | 0.50 |
-| **all** | | | 26/28 | 0.75 | 0.68 | 0.76 | 0.64 | 0.90 | 0.72 | 0.90 | 0.81 | 0.95 | 0.81 | 0.83 | 0.85 | 0.76 | 3.92 | 0.59 | 0.83 |
+| case | use | style | built | teach gap | hard gap | free | eye | lag | pace | load | holds | reveal | read | depict (free) | depict (watch) | depict | quiz (video) | quiz (words) | hard Qs (video) | hard Qs (words) | follow on look | confused | designer /10 | scroll kept | scroll remembers |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| affect-effect | a language tip for social media | neon | yes (1) | 0.50 | 0.83 | 0.77 | 0.73 | 0.96 | 1.00 | 1.00 | 0.00 | 1.00 | 0.49 | 1.00 | 0.63 | 0.78 | 0.93 | 0.43 | 0.83 | 0.00 | 0.94 | 0.67 | 4 | 1.00 | 1.00 |
+| ball-drop | predict, then reveal | chalkboard | yes (3) | 0.36 | 0.67 | 0.61 | 0.24 | 0.66 | 0.94 | 1.00 | 0.00 | 1.00 | 0.55 | 0.50 | 0.10 | 0.26 | 0.79 | 0.43 | 0.67 | 0.00 | 0.67 | 1.00 | 3 | 0.33 | 0.00 |
+| death-zone | a suspense beat | ink | yes (1) | 0.07 | 0.17 | 0.83 | 0.88 | 0.84 | 0.52 | 1.00 | 0.45 | 1.00 | 0.98 | 1.00 | 0.39 | 0.63 | 0.57 | 0.50 | 0.33 | 0.17 | 0.64 | 0.64 | 4 | 0.45 | 1.00 |
+| disc-brake | a mechanism, one link at a time | blueprint | yes (4) | 0.25 | 0.50 | 0.71 | 0.80 | 0.72 | 0.62 | 1.00 | 1.00 | 1.00 | 0.38 | 0.17 | 0.22 | 0.20 | 0.88 | 0.63 | 1.00 | 0.50 | 0.83 | 0.94 | 3 | 0.56 | 0.50 |
+| fraction-division | a worked math step | chalkboard | yes (2) | 0.31 | 0.50 | 0.64 | 0.56 | 0.83 | 0.67 | 0.74 | 0.00 | 1.00 | 0.78 | 0.50 | 0.67 | 0.60 | 0.81 | 0.50 | 0.50 | 0.00 | 0.96 | 0.79 | 4 | 1.00 | 1.00 |
+| fresh-water | a chart reveal of a surprising number | neon | yes (2) | 0.50 | 1.00 | 0.77 | 0.86 | 0.79 | 0.64 | 1.00 | 0.00 | 1.00 | 0.87 | 1.00 | 0.64 | 0.78 | 1.00 | 0.50 | 1.00 | 0.00 | 0.91 | 0.81 | 4 | 0.44 | 0.50 |
+| frostline-ad | an ad hook for a product | late-night-synthwave-arcade | yes (1) | 0.31 | 0.67 | 0.74 | 0.63 | 0.73 | 1.00 | 1.00 | 1.00 | 1.00 | 0.55 | 0.00 | 0.06 | 0.03 | 0.81 | 0.50 | 0.67 | 0.00 | 0.94 | 0.67 | 3 | 1.00 | 1.00 |
+| ice-floats | why something happens, at the scale of molecules | a-1970s-science | yes (2) | 0.29 | 0.67 | 0.78 | 0.77 | 0.92 | 0.94 | 1.00 | 0.00 | 1.00 | 0.71 | 0.88 | 0.52 | 0.66 | 0.86 | 0.57 | 0.67 | 0.00 | 0.85 | 0.92 | 5 | 1.00 | 1.00 |
+| insertion-sort | an algorithm's first instance slow, then faster | flat | yes (1) | 0.50 | 0.50 | 0.83 | 0.84 | 0.93 | 0.49 | 1.00 | 0.67 | 1.00 | 0.76 | 1.00 | 0.75 | 0.85 | 0.81 | 0.31 | 0.83 | 0.33 | 0.79 | 0.71 | 4 | 0.14 | 0.50 |
+| led-vs-bulb | a comparison of two options | whiteboard | yes (1) | 0.07 | 0.00 | 0.63 | 0.64 | 0.86 | 0.45 | 1.00 | 0.50 | 1.00 | 0.51 | 0.05 | 0.06 | 0.06 | 0.71 | 0.64 | 0.33 | 0.33 | 0.92 | 0.83 | 3 | 0.08 | 1.00 |
+| life-expectancy | a data story from a pasted CSV | ink | yes (1) | 0.00 | 0.00 | 0.72 | 0.60 | 0.76 | 0.92 | 1.00 | 0.77 | 0.00 | 0.70 | 1.00 | 0.27 | 0.56 | 0.67 | 0.67 | 0.00 | 0.00 | 1.00 | 0.42 | 4 | 0.25 | 1.00 |
+| magna-carta | a history turning point, from a teacher's notes | collage | yes (1) | 0.44 | 0.83 | 0.74 | 0.68 | 0.88 | 0.90 | 0.92 | 0.40 | 1.00 | 0.65 | 0.47 | 0.42 | 0.44 | 0.94 | 0.50 | 0.83 | 0.00 | 0.92 | 0.85 | 6 | 0.23 | 1.00 |
+| matrix-rotation | a worked step: a matrix acting on a vector | chalkboard | yes (1) | 0.00 | 0.00 | 0.82 | 0.65 | 0.83 | 0.53 | 1.00 | 0.77 | 1.00 | 0.78 | 1.00 | 0.75 | 0.85 | 1.00 | 1.00 | 1.00 | 1.00 | 0.88 | 0.77 | 3 | 0.15 | 1.00 |
+| monarch-migration | a map journey | collage | yes (1) | 0.29 | 0.67 | 0.78 | 0.81 | 0.69 | 0.88 | 1.00 | 0.33 | 1.00 | 0.53 | 1.00 | 0.39 | 0.64 | 1.00 | 0.71 | 1.00 | 0.33 | 0.85 | 1.00 | 3 | 1.00 | 1.00 |
+| octopus-hearts | a social-media fact | late-night-synthwave-arcade | yes (1) | 0.29 | 0.67 | 0.69 | 0.59 | 0.84 | 0.83 | 0.93 | - | 1.00 | 0.65 | 0.00 | 0.47 | 0.28 | 1.00 | 0.71 | 1.00 | 0.33 | 0.88 | 0.75 | 4 | 1.00 | 1.00 |
+| off-by-one | a bug fix explained, from a code file | neon | NO | - | - | 0.00 | - | 0.00 | 0.00 | 0.00 | - | - | 0.00 | - | - | - | - | - | - | - | - | - | - | - | - |
+| offside | a sports rule, explained in space | whiteboard | NO | - | - | 0.00 | - | 0.00 | 0.00 | 0.00 | - | - | 0.00 | - | - | - | - | - | - | - | - | - | - | - | - |
+| route-finding | a worked algorithm on a graph | blueprint | yes (1) | 0.44 | 0.67 | 0.80 | 0.88 | 0.83 | 0.83 | 1.00 | 0.67 | 1.00 | 0.21 | 1.00 | 0.63 | 0.78 | 1.00 | 0.56 | 1.00 | 0.33 | 0.88 | 0.63 | 4 | 0.31 | 0.50 |
+| rule-of-72 | a quick money rule with a guess, from personal notes | sticky-notes-on-a | yes (1) | 0.43 | 0.67 | 0.50 | 0.47 | 0.82 | 0.63 | 1.00 | 0.00 | 0.50 | 0.63 | 0.00 | 0.21 | 0.13 | 1.00 | 0.57 | 1.00 | 0.33 | 0.77 | 0.45 | 3 | 0.55 | 1.00 |
+| running-max | a line of code changing state, from a code file | neon | yes (4, checks fail) | 0.50 | 0.33 | 0.74 | 0.86 | 0.88 | 0.61 | 1.00 | 0.19 | 1.00 | 0.39 | 1.00 | 0.50 | 0.70 | 0.88 | 0.38 | 0.67 | 0.33 | 0.85 | 0.46 | 4 | 0.69 | 1.00 |
+| rust | a chemistry process | a-1970s-science | yes (1) | 0.25 | 0.67 | 0.73 | 0.97 | 0.77 | 0.88 | 0.96 | 0.00 | 1.00 | 0.50 | 0.75 | 0.42 | 0.55 | 1.00 | 0.75 | 1.00 | 0.33 | 0.82 | 0.86 | 4 | 0.29 | 1.00 |
+| square-knot | a how-to step | flat | yes (1) | 0.21 | 0.33 | 0.88 | 0.91 | 0.91 | 0.66 | 1.00 | 1.00 | 1.00 | 0.54 | 1.00 | 0.40 | 0.64 | 0.64 | 0.43 | 0.33 | 0.00 | 0.71 | 1.00 | 3 | 1.00 | 1.00 |
+| support-tickets | a meeting slide turned into a clip | flat | yes (1) | 0.25 | 0.67 | 0.59 | 0.41 | 0.86 | 0.46 | 0.94 | 0.29 | 1.00 | 0.49 | 0.25 | 0.47 | 0.38 | 0.88 | 0.63 | 0.67 | 0.00 | 0.83 | 0.44 | 5 | 0.89 | 1.00 |
+| titration-lab | a lab procedure step, from a handout | chalkboard | yes (1) | 0.00 | 0.00 | 0.78 | 0.36 | 0.84 | 1.00 | 1.00 | 1.00 | 1.00 | 0.58 | 0.45 | 0.17 | 0.28 | 0.75 | 0.75 | 0.33 | 0.33 | 0.85 | 1.00 | 3 | 0.54 | 0.50 |
+| trail-directions | directions from a hand-drawn sketch | whiteboard | yes (2) | 0.28 | 1.00 | 0.63 | 0.52 | 0.83 | 0.29 | 1.00 | 0.00 | 1.00 | 0.46 | 0.93 | 0.52 | 0.68 | 0.94 | 0.67 | 1.00 | 0.00 | 1.00 | 0.77 | 5 | 0.85 | 1.00 |
+| two-factor | how a safeguard works, from a company notice | blueprint | yes (1) | 0.13 | 0.33 | 0.66 | 0.62 | 0.73 | 0.50 | 1.00 | 0.53 | 1.00 | 0.36 | 0.50 | 0.17 | 0.30 | 0.69 | 0.56 | 0.67 | 0.33 | 0.82 | 0.64 | 4 | 1.00 | 1.00 |
+| vaccine-memory | a biology process, from a class handout | flat | yes (1) | 0.38 | 0.67 | 0.52 | 0.82 | 0.70 | 0.23 | 1.00 | 0.47 | 0.00 | 0.26 | 0.67 | 0.49 | 0.56 | 0.88 | 0.50 | 0.67 | 0.00 | 0.81 | 0.92 | 5 | 0.38 | 0.50 |
+| water-cycle-recap | a recap of something built in pieces | sticky-notes-on-a | yes (1) | 0.43 | 0.67 | 0.63 | 0.63 | 0.88 | 0.50 | 0.82 | 1.00 | 1.00 | 0.21 | 0.00 | 0.14 | 0.08 | 1.00 | 0.57 | 1.00 | 0.33 | 0.77 | 0.91 | 5 | 0.18 | 0.50 |
+| **all** | | | 26/28 | 0.29 | 0.53 | 0.66 | 0.68 | 0.76 | 0.64 | 0.90 | 0.44 | 0.90 | 0.52 | 0.62 | 0.40 | 0.49 | 0.86 | 0.58 | 0.73 | 0.20 | 0.85 | 0.76 | 3.92 | 0.59 | 0.83 |
 
 ## Direction tickets (severity 2 and 3)
 

@@ -1,6 +1,9 @@
 [
-{"q":1,"answer":"Three hearts.","from":"both"},
-{"q":2,"answer":"Two of them pump blood through the gills (the two small hearts were labeled GILLS).","from":"both"},
-{"q":3,"answer":"It stops: when the octopus swims, that third heart stops (marked with a pink X and STOPPED).","from":"both"},
-{"q":4,"answer":"The third heart, the larger one labeled BODY on the right, the one that pumps blood to the rest of the body.","from":"both"}
+{"q":1,"answer":"Three.","from":"both"},
+{"q":2,"answer":"Two of the hearts pump blood through the gills.","from":"both"},
+{"q":3,"answer":"It stops.","from":"both"},
+{"q":4,"answer":"The third heart, the single one on the right labelled BODY: it got a pink X and the word STOPPED.","from":"picture"},
+{"q":5,"answer":"The two left hearts (labelled GILLS): they swelled first.","from":"picture"},
+{"q":6,"answer":"The third heart on the right (labelled BODY), which lit in cyan with a glow.","from":"picture"},
+{"q":7,"answer":"The single one (the body heart), not the pair.","from":"both"}
 ]

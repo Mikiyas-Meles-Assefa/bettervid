@@ -1,8 +1,11 @@
 [
-  {"q": 1, "answer": "About thirty-two years, on average worldwide"},
-  {"q": 2, "answer": "The average was dragged down by children: more than one in three died before age five"},
-  {"q": 3, "answer": "Vaccines, clean water and antibiotics"},
-  {"q": 4, "answer": "Over seventy"},
-  {"q": 5, "answer": "It more than doubled, rising, in a little over a century"},
-  {"q": 6, "answer": "About thirty-two years in 1900 compared with over seventy today"}
+  {"q": 1, "answer": "About thirty-two years, on average worldwide."},
+  {"q": 2, "answer": "The average was dragged down by children: more than one in three died before age five."},
+  {"q": 3, "answer": "Vaccines, clean water and antibiotics."},
+  {"q": 4, "answer": "Over seventy."},
+  {"q": 5, "answer": "It more than doubled over a little over a century."},
+  {"q": 6, "answer": "About thirty-two years in 1900, compared with over seventy today."},
+  {"q": 7, "answer": "not in the clip"},
+  {"q": 8, "answer": "not in the clip"},
+  {"q": 9, "answer": "not in the clip"}
 ]

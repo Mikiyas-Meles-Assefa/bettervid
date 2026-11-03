@@ -1,0 +1,16 @@
+{"things":[
+{"thing":"The sun","as":"absent","sheet":2,"note":"never drawn"},
+{"thing":"The ocean","as":"absent","sheet":2,"note":"only a small text line 'Vapor rises from the ocean'; no sea drawn"},
+{"thing":"Water vapor","as":"word","sheet":3,"note":"the word Evaporation in a box; no vapor drawn"},
+{"thing":"Clouds","as":"word","sheet":4,"note":"a box labelled Condensation; no cloud shape"},
+{"thing":"Rain or snow","as":"word","sheet":5,"note":"a box labelled Precipitation; no drops"},
+{"thing":"Water running back to the sea","as":"word","sheet":6,"note":"a box labelled Collection; no river or water drawn"},
+{"thing":"The water cycle loop","as":"symbol","sheet":1,"note":"four labelled boxes joined by red arrows in a diamond; a diagram of the idea, not the real cycle"}
+],
+"changes":[
+{"change":"Vapor rises from the ocean","as":"told","sheet":3,"note":"the Evaporation box turns red and a caption appears; nothing rises"},
+{"change":"Vapor cools into clouds","as":"told","sheet":4,"note":"the highlight moves to the Condensation box"},
+{"change":"Clouds drop it as rain or snow","as":"told","sheet":5,"note":"the highlight moves to the Precipitation box"},
+{"change":"It runs back to the sea","as":"told","sheet":6,"note":"the highlight moves to the Collection box"},
+{"change":"Same water goes around for billions of years","as":"shown","sheet":8,"note":"all four boxes light red together, then light one at a time around the loop in a quick replay; the water itself is not drawn"}
+]}

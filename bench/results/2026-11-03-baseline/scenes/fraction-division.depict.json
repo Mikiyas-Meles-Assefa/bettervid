@@ -1,0 +1,16 @@
+{"things":[
+{"thing":"six wholes","as":"itself","sheet":7,"note":"Six plain circles in two rows of three, countable as six wholes."},
+{"thing":"halves","as":"itself","sheet":9,"note":"Each circle is cut into two half-discs that visibly separate; twelve halves appear."},
+{"thing":"one half (the number 1/2)","as":"itself","sheet":1,"note":"Shown as written '1/2' in the equation."},
+{"thing":"the equation 6 / 1/2 = 12","as":"itself","sheet":5,"note":"Written as such on the board."},
+{"thing":"the counter of halves","as":"word","sheet":7,"note":"'0 halves' with a number that stays at 0 and never counts."},
+{"thing":"multiplying by two (6 x 2 = 12)","as":"itself","sheet":11,"note":"Written as an equation on the board."}
+],
+"changes":[
+{"change":"each of the six wholes is cut into halves","as":"shown","sheet":7,"note":"Circles split into two half-discs with a gap, one after another."},
+{"change":"every whole gives two halves","as":"shown","sheet":9,"note":"Each cut circle shows exactly two pieces."},
+{"change":"six wholes give twelve halves","as":"shown","sheet":10,"note":"All six circles end up cut, giving twelve pieces; they are not counted."},
+{"change":"the halves are counted as they are made","as":"missing","sheet":10,"note":"The counter reads '0 halves' throughout and never changes."},
+{"change":"the answer 12 replaces the '?'","as":"told","sheet":4,"note":"Only the text changes in the equation."},
+{"change":"dividing by a half becomes multiplying by two","as":"told","sheet":11,"note":"A sentence and '6 x 2 = 12' appear as text."}
+]}

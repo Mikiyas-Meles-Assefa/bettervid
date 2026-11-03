@@ -2,5 +2,8 @@
   {"q": 1, "answer": "The sun heats the ocean."},
   {"q": 2, "answer": "It cools into clouds."},
   {"q": 3, "answer": "Water rises as vapor, cools into clouds, falls as rain or snow, then runs back to the sea."},
-  {"q": 4, "answer": "Not in the clip."}
+  {"q": 4, "answer": "not in the clip"},
+  {"q": 5, "answer": "not in the clip"},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "Upward; it rises as vapor."}
 ]

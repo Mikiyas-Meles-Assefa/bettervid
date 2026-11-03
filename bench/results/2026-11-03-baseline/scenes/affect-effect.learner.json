@@ -1,6 +1,9 @@
 [
-{"q": 1, "answer": "Affect is the action (shown as Affect -> action).", "from": "both"},
-{"q": 2, "answer": "A for action (Affect = action) and E for end (Effect = end result).", "from": "both"},
-{"q": 3, "answer": "affected (the noise affected my sleep)", "from": "both"},
-{"q": 4, "answer": "The noise ____ my sleep, with the prompts 'Try it:' and 'Which word fits?'", "from": "picture"}
+{"q":1,"answer":"Affect is the action.","from":"both"},
+{"q":2,"answer":"A for action (Affect = action); E for end (Effect = end result).","from":"both"},
+{"q":3,"answer":"Affected (the noise affected my sleep).","from":"both"},
+{"q":4,"answer":"The noise ____ my sleep, with a pink 'TRY IT:' label above and 'WHICH WORD FITS?' below.","from":"picture"},
+{"q":5,"answer":"A plain thin horizontal line (a blank); nothing else was in the gap.","from":"picture"},
+{"q":6,"answer":"In the gap in the sentence, replacing the line: 'affected' appeared in the middle of the sentence in yellow, then 'THE ACTION' appeared under it. The caption at the bottom also said 'Affected'.","from":"both"},
+{"q":7,"answer":"None on the main stage in the very first frame (0.23 s, blank apart from the 3-word caption 'Affect or effect?'); two words, 'Affect' and 'Effect', appeared by 0.47 s.","from":"picture"}
 ]

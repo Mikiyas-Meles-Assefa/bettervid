@@ -93,6 +93,24 @@
    "q": "What did the screen show during the pause before the result?",
    "a": "Time passing (a clock spinning forward) while the bottle sat in the car, with the question 24 hours later?",
    "needs": "picture"
+  },
+  {
+   "q": "What moved forward on screen during the pause?",
+   "a": "A clock, spinning through the day.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "During the pause, could you see what was inside the bottle?",
+   "a": "No, it was held back.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What question was written on screen during the pause?",
+   "a": "24 hours later?",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

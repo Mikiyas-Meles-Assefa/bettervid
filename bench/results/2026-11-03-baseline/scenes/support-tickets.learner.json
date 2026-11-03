@@ -1,7 +1,8 @@
-[
-{"q": 1, "answer": "840", "from": "both"},
-{"q": 2, "answer": "412 (almost half of all tickets)", "from": "both"},
-{"q": 3, "answer": "Billing, 268", "from": "both"},
-{"q": 4, "answer": "160 (shipping 97 and other 63)", "from": "both"},
-{"q": 5, "answer": "Login (412)", "from": "both"}
-]
+[{"q":1,"answer":"840","from":"both"},
+{"q":2,"answer":"412","from":"both"},
+{"q":3,"answer":"Billing, 268","from":"both"},
+{"q":4,"answer":"160 together (97 shipping and 63 other)","from":"both"},
+{"q":5,"answer":"Login","from":"picture"},
+{"q":6,"answer":"Other (63)","from":"picture"},
+{"q":7,"answer":"97","from":"picture"},
+{"q":8,"answer":"During the pause no bars were drawn for them; the text 'Shipping + other = ?' with a question mark was shown. Only afterwards (about 11.7 s) did bars appear labelled SHIPPING and OTHER.","from":"picture"}]

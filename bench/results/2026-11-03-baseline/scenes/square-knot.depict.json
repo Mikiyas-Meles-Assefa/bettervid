@@ -1,0 +1,18 @@
+{"things":[
+{"thing":"the two ends (ropes or cords)","as":"symbol","sheet":2,"note":"Plain straight dark bars stand in for cords; no rope texture, and two ends cannot be told apart from the other strands."},
+{"thing":"square knot","as":"symbol","sheet":1,"note":"A cluster of crossing straight lines; it never looks like a tied knot and no loop or tuck is drawn."},
+{"thing":"first half knot (right over left)","as":"symbol","sheet":3,"note":"One bar gets thicker and a small red ring marks the crossing; the over/under is not visible as a weave."},
+{"thing":"second half knot (left over right)","as":"symbol","sheet":5,"note":"A different bar gets thicker with a label LEFT OVER; again just crossing lines."},
+{"thing":"granny knot","as":"symbol","sheet":10,"note":"A second similar line cluster labelled GRANNY KNOT; it looks the same as the square knot, so the difference is not shown."},
+{"thing":"the slipping","as":"absent","sheet":11,"note":"Only the words SLIPS and a yellow caption; the knot does not visibly come loose or move."}
+],
+"changes":[
+{"change":"Right end goes over the left","as":"shown","sheet":2,"note":"One bar becomes thicker and darker over the other; it does not travel across, it only restyles."},
+{"change":"Tuck it under","as":"told","sheet":3,"note":"A label TUCK UNDER appears over the lines; no bar moves under anything."},
+{"change":"Pull snug","as":"missing","sheet":4,"note":"A thin red ring appears at the crossing and the drawing holds still; nothing tightens."},
+{"change":"Left goes over the right","as":"shown","sheet":5,"note":"Another bar becomes thicker; no movement."},
+{"change":"Tuck under and pull both ends","as":"told","sheet":6,"note":"The label TUCK UNDER reappears and fades; the picture does not tighten."},
+{"change":"Right over left then left over right, shown together as a full square knot","as":"shown","sheet":7,"note":"The second cluster fills in alongside the first and the bars are alternately thickened."},
+{"change":"Crossing the same way twice gives a granny knot","as":"told","sheet":9,"note":"Labels SAME WAY and GRANNY KNOT appear on the second cluster; the two clusters look alike, so the difference between the knots is never drawn."},
+{"change":"The granny knot slips","as":"missing","sheet":11,"note":"The word SLIPS and a yellow banner 'Same way twice slips' appear; the strands only shift slightly and nothing visibly slips."}
+]}

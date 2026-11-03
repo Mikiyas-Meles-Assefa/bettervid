@@ -1,0 +1,16 @@
+{"things":[
+{"thing":"the word 'affect'","as":"itself","sheet":2,"note":"The moment is about words; the word is shown as text, which is the thing itself."},
+{"thing":"the word 'effect'","as":"itself","sheet":4,"note":"Shown as text."},
+{"thing":"the sentence 'The noise ___ my sleep'","as":"itself","sheet":5,"note":"Shown as written text with a line for the blank."},
+{"thing":"the word 'affected' in the sentence","as":"itself","sheet":7,"note":"Appears in the gap in the sentence."},
+{"thing":"action (meaning)","as":"word","sheet":3,"note":"Only the word 'action' and 'A FOR ACTION' with an arrow; no picture of an action."},
+{"thing":"end result (meaning)","as":"word","sheet":4,"note":"Only the words 'end result' and 'E FOR END'; no picture of a result."},
+{"thing":"noise","as":"word","sheet":5,"note":"Only the word in the sentence; no sound or noise drawn."},
+{"thing":"sleep","as":"word","sheet":5,"note":"Only the word in the sentence; nothing drawn."}
+],
+"changes":[
+{"change":"'Affect' separates from 'Effect' and pairs with 'action'","as":"shown","sheet":2,"note":"The words move and 'Effect' fades while 'action' fades in beside 'Affect'; this is text moving, not the action itself."},
+{"change":"an arrow links Affect to action, then Effect to end result","as":"shown","sheet":3,"note":"A pink arrow appears between the words."},
+{"change":"the blank in the sentence is filled with 'affected'","as":"shown","sheet":7,"note":"The line is replaced by the word 'affected', which turns yellow, with 'THE ACTION' appearing under it."},
+{"change":"the noise affects sleep (the action happens)","as":"missing","sheet":7,"note":"Nothing shows noise acting on sleep; only words change."}
+]}

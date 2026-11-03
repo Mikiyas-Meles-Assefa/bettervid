@@ -154,6 +154,24 @@
    "q": "Which place does the method start from?",
    "a": "Home.",
    "needs": "words"
+  },
+  {
+   "q": "What number does Work show right after the park is settled?",
+   "a": "10.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What number does Home show?",
+   "a": "0.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Is the road straight from Park to Work part of the lit final route?",
+   "a": "No.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

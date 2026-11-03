@@ -1,0 +1,18 @@
+{"things":[
+{"thing":"Earth's water","as":"symbol","sheet":1,"note":"100 glowing circles in a 10 by 10 grid stand for all the water; no Earth or water drawn"},
+{"thing":"glasses","as":"symbol","sheet":2,"note":"plain glowing circles, only the title says glasses"},
+{"thing":"salty ocean","as":"symbol","sheet":3,"note":"97 circles turn pink; ocean is not drawn, only a text label"},
+{"thing":"fresh glasses (three)","as":"symbol","sheet":4,"note":"three circles at bottom right turn yellow"},
+{"thing":"lakes and rivers","as":"word","sheet":7,"note":"only named in the on-screen question; no lake or river drawn"},
+{"thing":"ice caps / frozen water","as":"symbol","sheet":9,"note":"two circles go dark; no ice depicted, label says 2 of the 3 are ice"},
+{"thing":"underground water","as":"symbol","sheet":11,"note":"last circle partly filled with cyan like a level; no ground depicted, label says underground"},
+{"thing":"less than one percent sliver of a glass","as":"symbol","sheet":13,"note":"thin cyan sliver in the last circle, only hinted; text says less than 1%"}
+],
+"changes":[
+{"change":"All glasses appear","as":"shown","sheet":1,"note":"rows fade in from top"},
+{"change":"97 glasses turn salty ocean","as":"shown","sheet":3,"note":"circles recolour cyan to pink in a wave"},
+{"change":"Three glasses left fresh","as":"shown","sheet":4,"note":"three stay cyan then turn yellow"},
+{"change":"Two of the three fresh glasses are frozen in ice caps","as":"shown","sheet":9,"note":"two yellow circles go dark, though ice itself not shown"},
+{"change":"Most of the last glass is underground","as":"shown","sheet":10,"note":"last circle shows a partial cyan fill"},
+{"change":"Lakes and rivers hold less than one percent of a glass","as":"told","sheet":13,"note":"the label changes to Less than 1% of one glass; the picture shows only the same sliver, no separate lakes and rivers portion"}
+]}

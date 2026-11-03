@@ -1,6 +1,9 @@
 [
-  {"q": 1, "answer": "Three"},
-  {"q": 2, "answer": "They pump blood through the gills"},
-  {"q": 3, "answer": "It stops"},
-  {"q": 4, "answer": "The third heart"}
+  {"q": 1, "answer": "Three."},
+  {"q": 2, "answer": "Two pump blood through the gills."},
+  {"q": 3, "answer": "It stops."},
+  {"q": 4, "answer": "The third heart."},
+  {"q": 5, "answer": "not in the clip"},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "The single one (the third heart)."}
 ]

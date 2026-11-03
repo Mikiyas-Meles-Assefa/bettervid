@@ -19,7 +19,9 @@ export type CaseEvent = Omit<DirectionEvent, "firstWord" | "lastWord" | "holds" 
 // one of the video's pictures, which the scene's author can show by name.
 export type Material = { kind: "notes" | "doc" | "csv" | "code" | "image"; name: string; about: string; text?: string; file?: string; size?: [number, number] };
 // `needs`: what a viewer must have taken in to answer: the words, the picture, or both.
-export type Question = { q: string; a: string; needs: "words" | "picture" | "both" };
+// `hard`: a question only a picture that does what the plan asks can answer (where a thing is after a step, what changed
+// colour, which moved first). The words-only learner should miss these; the gap is what the picture teaches.
+export type Question = { q: string; a: string; needs: "words" | "picture" | "both"; hard?: boolean };
 export type Case = {
   id: string;
   use: string; // the kind of moment, in a few words, for the score sheet

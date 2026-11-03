@@ -89,6 +89,24 @@
    "q": "How did the molecules in the liquid look different from those in ice?",
    "a": "In the liquid they tumbled close together; in ice they were locked in an open hexagon pattern with space in the middle.",
    "needs": "both"
+  },
+  {
+   "q": "At the start, was the ice above or below the water surface?",
+   "a": "Floating, with part above the water.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Were the molecules locked in all at once or one bond at a time?",
+   "a": "One bond at a time.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "While the lattice held still, what was visible in its middle?",
+   "a": "Open space.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

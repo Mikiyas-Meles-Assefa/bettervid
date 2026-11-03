@@ -1,7 +1,8 @@
-[
-{"q":1,"answer":"A harmless piece of a germ.","from":"both"},
-{"q":2,"answer":"B cells, but only the few whose shape fits the piece; they multiply and make antibodies.","from":"both"},
-{"q":3,"answer":"Memory cells: some of the responding B cells stay behind as memory cells.","from":"both"},
-{"q":4,"answer":"When the real germ shows up, the matching memory cells are already waiting, so they strike in days, not weeks.","from":"both"},
-{"q":5,"answer":"About 3 matching (orange) B cells out of roughly 36 dots shown (4 rows of 9), one matching cell in each of the top three rows. I counted the dots by eye; the clip gave no number.","from":"picture"}
-]
+[{"q":1,"answer":"A harmless piece of a germ.","from":"both"},
+{"q":2,"answer":"The B cells whose shape fits that piece (the matching ones).","from":"both"},
+{"q":3,"answer":"Memory cells.","from":"both"},
+{"q":4,"answer":"Because the matching cells (memory cells) are already waiting, so they strike in days rather than weeks.","from":"both"},
+{"q":5,"answer":"Three orange matching dots out of about 36 dots in a grid of four rows of nine (the three are in the same column, top three rows, none in the bottom row).","from":"picture"},
+{"q":6,"answer":"They faded to light grey and stayed there; they were not removed.","from":"picture"},
+{"q":7,"answer":"Quiet: they sat as still dark dots with a MEMORY CELL label, not moving, while the real germ appeared.","from":"picture"},
+{"q":8,"answer":"The words 'A vaccine' (then 'shows your immune system') on a plain cream background; no picture at first.","from":"picture"}]

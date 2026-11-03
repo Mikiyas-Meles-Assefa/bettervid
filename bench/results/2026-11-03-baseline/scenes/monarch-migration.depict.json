@@ -1,0 +1,13 @@
+{"things":[
+{"thing":"monarch butterflies","as":"absent","sheet":1,"note":"no butterfly is drawn anywhere; only the title text MONARCH MIGRATION"},
+{"thing":"southern Canada","as":"word","sheet":2,"note":"a red label SOUTHERN CANADA with a line to a spot at the bottom of the map; the map is a plain black silhouette with no borders"},
+{"thing":"the United States","as":"absent","sheet":3,"note":"no country is marked; the route crosses the black silhouette"},
+{"thing":"the route of about 4,000 km","as":"symbol","sheet":3,"note":"a red curved line drawn on the map; the label UP TO 4,000 KM is text"},
+{"thing":"mountain forests in central Mexico","as":"word","sheet":6,"note":"label CENTRAL MEXICO at the top of the screen with a line to the route end; no forest drawn"},
+{"thing":"the map of North America","as":"itself","sheet":1,"note":"a recognisable black silhouette of the continent"},
+{"thing":"great-grandparents generations","as":"symbol","sheet":9,"note":"small white dots along the route; no butterflies"}],
+"changes":[
+{"change":"butterflies fly south from Canada to Mexico","as":"shown","sheet":3,"note":"a red line is drawn progressively from the upper right to the lower left of the map; no butterflies move, only the line"},
+{"change":"they reach the same forests in central Mexico","as":"shown","sheet":6,"note":"the red line reaches its end and a CENTRAL MEXICO label appears with a line"},
+{"change":"none of them has ever been there","as":"told","sheet":7,"note":"a yellow note with that sentence appears; the map does not change"},
+{"change":"great-grandparents made the last trip","as":"told","sheet":9,"note":"the note text is replaced and white dots appear on the route; the dots mark nothing that is explained"}]}

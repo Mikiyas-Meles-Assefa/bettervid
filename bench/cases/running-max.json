@@ -171,6 +171,24 @@
    "q": "What does the program print?",
    "a": "7.",
    "needs": "both"
+  },
+  {
+   "q": "During the first pause, which value was shown as coming next in the list?",
+   "a": "7.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "When x was 2, was the line that assigns best lit?",
+   "a": "No, it was skipped.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How many times did best change in total?",
+   "a": "Twice.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

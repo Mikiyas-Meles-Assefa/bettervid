@@ -1,0 +1,18 @@
+{"things":[
+{"thing":"Password","as":"word","sheet":5,"note":"a rounded box with the word PASSWORD, labelled 'something you know'"},
+{"thing":"Phone","as":"word","sheet":6,"note":"a rounded box with the word PHONE, labelled 'something you have'; no phone shape"},
+{"thing":"Thief","as":"word","sheet":7,"note":"only the word THIEF; no person drawn"},
+{"thing":"The site","as":"word","sheet":8,"note":"only the words THE SITE"},
+{"thing":"Code sent to the phone","as":"word","sheet":9,"note":"small yellow word CODE with a thin line toward the phone box; no code digits"},
+{"thing":"Stolen key","as":"absent","sheet":12,"note":"no key drawn anywhere"},
+{"thing":"Lock","as":"word","sheet":12,"note":"a box reading STILL LOCKED; no lock shape"},
+{"thing":"Thief's login attempt","as":"word","sheet":11,"note":"a pink box reading THIEF'S LOGIN"}
+],
+"changes":[
+{"change":"Password gets stolen","as":"told","sheet":1,"note":"only a text line says it"},
+{"change":"Two things appear in the login","as":"shown","sheet":5,"note":"the password box then the phone box slide in"},
+{"change":"Thief takes the password","as":"told","sheet":7,"note":"a thin arrow runs from the word THIEF to the password box; nothing is taken"},
+{"change":"Site sends code to phone","as":"shown","sheet":9,"note":"a thin line draws from THE SITE to the phone box with a CODE label, and a spark moves along it"},
+{"change":"Thief fails to log in","as":"told","sheet":11,"note":"THIEF'S LOGIN box appears and then disappears; no block or rejection drawn"},
+{"change":"Lock stays locked","as":"told","sheet":12,"note":"a STILL LOCKED text box appears; nothing changes state"}
+]}

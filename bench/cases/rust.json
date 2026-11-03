@@ -94,6 +94,24 @@
    "q": "Why does rusting keep going?",
    "a": "Rust is flaky and porous, so water gets through to fresh iron.",
    "needs": "words"
+  },
+  {
+   "q": "Where did the rust build up while the picture held?",
+   "a": "At the edge of the drop.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What appeared first: the drop or the atoms losing electrons?",
+   "a": "The drop.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How were the three ingredients arranged in the first scene?",
+   "a": "Side by side.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

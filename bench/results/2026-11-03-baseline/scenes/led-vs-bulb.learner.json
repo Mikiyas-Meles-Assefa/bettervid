@@ -1,6 +1,9 @@
 [
-  {"q": 1, "answer": "About ninety percent of the old bulb's power becomes heat.", "from": "both"},
-  {"q": 2, "answer": "About a quarter of the power the old bulb uses.", "from": "both"},
-  {"q": 3, "answer": "Up to twenty-five times longer.", "from": "words"},
-  {"q": 4, "answer": "An old bulb and an LED, shown as two labeled circles and later as an old bulb heat bar next to an LED box, under the title 'Same light'; the comparison is of power use and heat (ninety percent heat vs a quarter).", "from": "both"}
+{"q":1,"answer":"About ninety percent (written ninety percent under the old bulb's heat bar).","from":"both"},
+{"q":2,"answer":"About a quarter of the power the old bulb uses (written a quarter next to the small LED box).","from":"both"},
+{"q":3,"answer":"Up to twenty-five times longer. Only said; lifespan was not shown in the picture.","from":"words"},
+{"q":4,"answer":"First an old bulb and an LED as two labelled circles; later the old bulb's power bar (heat, ninety percent) beside a much smaller LED box (a quarter), comparing power use.","from":"picture"},
+{"q":5,"answer":"Not shown: the two circles were plain outlines labelled old bulb and LED with no glow or brightness difference; only the title Same light and the words say the light is the same.","from":"both"},
+{"q":6,"answer":"A red rectangle was drawn around the old bulb's heat bar (and the grey end beside it), highlighting the old bulb's big share. Nothing explicit was marked between the two amounts, such as an arrow or a marked difference.","from":"picture"},
+{"q":7,"answer":"Side by side, old bulb on the left and LED on the right, as two equal blue circles in a row in the middle of the screen.","from":"picture"}
 ]

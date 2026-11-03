@@ -98,6 +98,24 @@
    "q": "In the example, where was the last outfield defender compared with the striker?",
    "a": "Farther from the goal than the striker (the striker was past him).",
    "needs": "picture"
+  },
+  {
+   "q": "During the pause, was the call shown?",
+   "a": "No.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "During the pause, were the positions moving or frozen?",
+   "a": "Frozen at the moment of the pass.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which defender's line was picked out?",
+   "a": "The second defender's.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

@@ -14,7 +14,7 @@ npm run -s bench -- prepare 2026-11-03-baseline     # prompts for the authors
 npm run -s bench -- map 2026-11-03-baseline         # id-map requests (map.md); an agent answers map.json
 npm run -s bench -- measure 2026-11-03-baseline     # free measures -> work/<run>/scores.json
 npm run -s bench -- render 2026-11-03-baseline      # clip.mp4, watch sheets, transcript, watch tasks
-#   agents watch: watch-learner.md, watch-words.md, watch-follow.md, watch-designer.md, watch-scroll.md
+#   agents watch: watch-learner.md, watch-words.md, watch-follow.md, watch-designer.md, watch-scroll.md, watch-depict.md
 npm run -s bench -- grade 2026-11-03-baseline       # grading requests (grade-N.md); an agent answers grades-N.json
 npm run -s bench -- report 2026-11-03-baseline      # bench/results/<run>/scores.md and summary.json
 npm run -s bench -- status 2026-11-03-baseline      # where every author stands
@@ -46,24 +46,29 @@ All are 0 to 1, computed from the built scene sampled frame by frame and the nar
 - **lag**: when the narration names something the screen writes, does it arrive or change from 0.5 s before to 1 s after the word (late within 3 s is half); and does each event's look, and each reveal, start moving near its first word (temporal contiguity).
 - **pace**: rate of change varies across events (not a metronome), long events are not busier than short ones, demonstrations are not rushed, still or unsettled, and slow phases are slower than later fast ones (slow first, then faster).
 - **load**: share of seconds where more than 6 new things arrive within 2 s, or more than 3 independent changes pull at once.
-- **holds**: each silence keeps the picture working on its event (not frozen, nothing unrelated pulling), and a predict hold never shows its answer.
+- **holds**: dead air costs. Per hold, the share of its frames in which something tied to its purpose is changing (the event's look, its demonstration, what the hold's `does` names, the prompt it shows); half the hold working is full marks, none is 0, so a frozen frame, a lone pulse in a three second silence or a clock ticking beside a still picture all score low. Unrelated change outweighing related change halves it; a predict hold that shows its answer scores 0.
 - **reveal**: withheld things stay off screen until their moment, and the opening shows the promise.
-- **read**: layout checks every half second: text cut by the frame, under the style's readable size, writing on writing, a covered picture, a mostly empty frame.
+- **read**: the frame as a tired viewer sees it on a phone at arm's length, every settled half second (`phoneRead`). A 1080 px frame is about 65 mm across on a phone, so text reads at a glance from 7% of the frame's width (75 px) and not at all under 3.5% (38 px), well above the style's hard floor. Per frame: **words**, each line weighted by its length, scores size times contrast against what is drawn behind it (WCAG 1.5:1 to 4.5:1 after its fade), and a picture shown narrower than the frame counts as a short line legible at 95% of the width, nothing at half (its detail shrinks with it); **density**, characters on screen (140 reads at a glance, 360 is a page); **subject**, the share of the usable frame the event's look covers (30% is full marks); **space**, the share of the usable frame in use and the tallest empty band. The frame scores words x (0.5 + 0.5 x (0.3 density + 0.35 subject + 0.35 space)), times 0.4 when words are cut by the frame, written over each other or a picture is covered: words that cannot be read are not saved by a good layout. The old layout-only score stays in `summary.json` as `raw.read.layout`.
+- **depict** (free signal): does the picture show the thing or a box with its name in it (`depictFree`, from the scene source). Drawn: each thing is itself (a program's drawing, a picture, a graph, a kit's notation, code) 1, a bare symbol (an unnamed shape) 0.5, or a word in a shape (a box, circle, pill, diamond or triangle whose label or tag names it in a few words) 0; a scene with no picture at all is 0. Changes: each change of state is shown (a move, a recolour, a level, a drawing growing, a kit step) or told (a label rewritten, a tag added to a thing already on screen, a counter); emphasis (pulse, shake) is neither. The free signal is the mean of the two. It cannot tell a dot from a drawn climber, so the watch test weighs more.
 
-`free` is their mean. A case that does not build scores 0 on all of them and counts in the averages.
+`free` is their mean (depict counts its free signal only). A case that does not build scores 0 on all of them and counts in the averages.
 
 ## Watch tests (Claude subagents; `render` writes their tasks)
 
 Clips are 360 by 640 MP4s with the video's own captions and a clock. Watchers see them as sheets of 8 frames (2 s at 4 frames a second) with the narration cut to the same windows.
 
 - **Learner** (`watch-learner.md`): a first-time learner watches every sheet with the words, then takes the quiz without outside knowledge, saying where each answer came from.
-- **Words only** (`watch-words.md`): the same quiz from the narration alone. The gap between the two is what the picture adds; "picture Qs" are the questions only the picture can answer.
+- **Words only** (`watch-words.md`): the same quiz from the narration alone. The **teach gap**, video learner minus words only over the whole quiz, is the bench's main teaching number: what the picture teaches beyond the narration.
+- **Hard questions**: every case's quiz ends with three questions marked `"hard": true` that only a picture doing what the plan asks can answer (where a thing is after a step, what changed colour, which moved first, what the picture holds during a silence). The words-only learner should score near 0 on them; "hard gap" is the same difference on them alone. A hard question the words-only learner gets right is a weak question; replace it.
+- **Depict** (`watch-depict.md`): a viewer lists every concrete thing the narration names and says how the picture gives it: itself (you would know it with its label covered), a symbol, only a word, or absent; and every change of state the narration names: shown as a visual change, told by words on screen, or missing. Score: things itself 1, symbol 0.5, word or absent 0; changes shown 1, told or missing 0; the mean of the two lists. The learner agent runs it after writing its quiz answers, from the sheets it already watched. The report's **depict** is 0.4 x the free signal + 0.6 x the watch score.
 - **Follow** (`watch-follow.md`): per 2 s sheet, what the viewer looks at, what they wait for, and what confuses them.
 - **Designer** (`watch-designer.md`): a demanding motion designer scores composition, type, motion, hierarchy and consistency from 1 to 10 and lists the worst issues by sheet.
 - **Scroller** (`watch-scroll.md`): a tired phone viewer glances at each sheet, says whether they would still be watching, and what they would tell a friend.
 
 A grader agent that never saw the clips (`grade-N.md`) marks quiz answers against the references, the follow entries against the plan's look and open question per window, and the scroller's retelling against the clip's goal. Scores are 1, 0.5 or 0.
 
-Report columns: **quiz (video)** and **quiz (words)** are the share right; **follow on look** is how often the viewer's eye was on the plan's target; **confused** is the share of windows where the follow viewer reported confusion; **scroll kept** is the share of sheets watched before swiping; **scroll remembers** is whether the retelling carries the point.
+Report columns: **teach gap** and **hard gap** lead; **depict (free)**, **depict (watch)** and **depict** as above; **hard Qs (video)** and **hard Qs (words)** are the share right on the hard questions; **quiz (video)** and **quiz (words)** are the share right; **follow on look** is how often the viewer's eye was on the plan's target; **confused** is the share of windows where the follow viewer reported confusion; **scroll kept** is the share of sheets watched before swiping; **scroll remembers** is whether the retelling carries the point.
 
 Models for the 2026-11-03 baseline: Haiku authored every scene and sat in the scroller seat; Sonnet sat in the designer seat, wrote 9 of the 26 follow tests and graded. The learner and words-only tests and the other 17 follow tests were run by an earlier session that did not record its model.
+
+The 2026-11-03 baseline was rescored with these measures: the hard questions, learner and depict tests by Sonnet, words only by Haiku, grading by Sonnet; designer, scroller and follow answers are from the first run.

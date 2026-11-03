@@ -1,0 +1,24 @@
+{"things":[
+{"thing":"foot","as":"absent","sheet":1,"note":"No foot drawn."},
+{"thing":"brake pedal","as":"word","sheet":1,"note":"A small box labelled PEDAL."},
+{"thing":"wheel","as":"symbol","sheet":1,"note":"A plain circle labelled WHEEL; no tyre, spokes or car."},
+{"thing":"two ton car","as":"word","sheet":4,"note":"Only the text 'TWO TONS' beside the wheel circle."},
+{"thing":"piston","as":"word","sheet":5,"note":"A box labelled PISTON."},
+{"thing":"cylinder full of brake fluid","as":"word","sheet":6,"note":"A box labelled BRAKE FLUID; no cylinder or liquid drawn."},
+{"thing":"brake lines","as":"word","sheet":9,"note":"A small box labelled BRAKE LINE; no tube."},
+{"thing":"caliper","as":"word","sheet":9,"note":"Box labelled CALIPER."},
+{"thing":"caliper's pistons","as":"word","sheet":12,"note":"Only the word PISTONS beside the caliper box."},
+{"thing":"two pads","as":"symbol","sheet":13,"note":"Two small rounded rectangles labelled PAD, side by side above the disc."},
+{"thing":"spinning metal disc","as":"symbol","sheet":14,"note":"The wheel circle is relabelled DISC; a plain circle that does not spin."},
+{"thing":"the car's motion","as":"word","sheet":15,"note":"Only the text CAR'S MOTION beside the disc."},
+{"thing":"heat","as":"symbol","sheet":15,"note":"The disc circle fills salmon-pink with the word HEAT; colour suggests heat but only by convention and label."}
+],
+"changes":[
+{"change":"foot pushes the pedal about five centimeters","as":"told","sheet":2,"note":"A '5 CM' tag appears beside the pedal box; the box does not move."},
+{"change":"pedal pushes a piston into the cylinder","as":"told","sheet":5,"note":"A PISTON box and a small arrow with 'PUSH' appear; nothing moves in."},
+{"change":"pressure travels down the lines to the wheel","as":"told","sheet":9,"note":"Labelled boxes and 'PRESSURE' tags are added one after another; nothing flows."},
+{"change":"fluid can't be squeezed","as":"told","sheet":7,"note":"Only the words 'CAN'T BE SQUEEZED' appear."},
+{"change":"caliper pistons squeeze two pads against the disc","as":"missing","sheet":13,"note":"The pads appear but stay apart and never move to touch the disc."},
+{"change":"friction turns motion into heat","as":"shown","sheet":15,"note":"The disc circle recolours from plain to pink, though the friction itself is not drawn."},
+{"change":"the disc glows after a hard stop","as":"shown","sheet":16,"note":"Disc stays pink; a colour change only, no glow effect."}
+]}

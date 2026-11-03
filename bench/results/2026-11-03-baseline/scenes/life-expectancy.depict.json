@@ -1,0 +1,12 @@
+{"things":[
+{"thing":"newborn","as":"word","sheet":1,"note":"only the text 'a newborn could expect to live'; no baby drawn"},
+{"thing":"the year 1900","as":"word","sheet":1,"note":"large text 1900; later a dot labelled 1900 on a chart axis"},
+{"thing":"life expectancy of 32 years","as":"word","sheet":3,"note":"big red text '32 years'; later small '32' by the chart dot"},
+{"thing":"children who died before age five","as":"symbol","sheet":6,"note":"a 1/3 fraction (with stray word 'key') and text; no children or people shown"},
+{"thing":"vaccines, clean water, antibiotics","as":"word","sheet":7,"note":"red text heading only; no vaccine, water or pill shown"},
+{"thing":"life expectancy over time (the line)","as":"itself","sheet":7,"note":"a real line chart drawn from the 1900 dot to the today dot, rising"},
+{"thing":"today's value over seventy","as":"word","sheet":9,"note":"label 'over 70' at the end dot of the line; the dot also sits high on the chart"}],
+"changes":[
+{"change":"life expectancy rises from about 32 to over 70","as":"shown","sheet":7,"note":"the line is drawn growing upward from the 1900 dot to the today dot"},
+{"change":"children's deaths stop being so common after vaccines, clean water and antibiotics","as":"missing","sheet":7,"note":"child mortality is not shown changing; only the life expectancy line rises"},
+{"change":"the average more than doubled","as":"told","sheet":10,"note":"text 'more than doubled' appears under the chart; the line itself was already finished"}]}

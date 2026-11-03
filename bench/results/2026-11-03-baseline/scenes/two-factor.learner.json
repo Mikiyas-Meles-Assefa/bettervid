@@ -1,7 +1,8 @@
-[
-{"q":1,"answer":"Something you know (your password) and something you have (your phone).","from":"both"},
+[{"q":1,"answer":"Something you know (your password) and something you have (your phone).","from":"both"},
 {"q":2,"answer":"To your phone.","from":"both"},
-{"q":3,"answer":"The thief has the password but not the phone, so does not get the code the site sends to the phone. One stolen key is not enough; they would need both.","from":"both"},
-{"q":4,"answer":"A box labelled 'Thief's login' appeared under the thief and the site, then a 'Still locked' box replaced it: the login did not get in and stayed locked.","from":"picture"},
-{"q":5,"answer":"No notice was shown in the clip. (The narration and a 'code' label said the site sends a code to your phone.)","from":"not in the clip"}
-]
+{"q":3,"answer":"The thief has the password but not the phone, so cannot receive the code the site sends.","from":"both"},
+{"q":4,"answer":"A small pinkish box labelled THIEF'S LOGIN appeared below the thief and site labels during the 'doesn't have' line, then vanished when the 'STILL LOCKED' box appeared. Nothing showed it being blocked or rejected.","from":"picture"},
+{"q":5,"answer":"A code. There was no notice on screen; the word CODE appears next to the phone box and the narration says the site sends a code to your phone.","from":"both"},
+{"q":6,"answer":"None. No keys were drawn; only the words 'one stolen key' were spoken.","from":"picture"},
+{"q":7,"answer":"Still locked: a box reading STILL LOCKED, not a drawn lock.","from":"picture"},
+{"q":8,"answer":"The words 'SOMEONE STEALS YOUR PASSWORD.' on a blue grid background.","from":"picture"}]

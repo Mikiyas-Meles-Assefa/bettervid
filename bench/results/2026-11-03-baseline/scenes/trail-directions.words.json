@@ -4,5 +4,8 @@
   {"q": 3, "answer": "Keep left."},
   {"q": 4, "answer": "It drops back down to the road."},
   {"q": 5, "answer": "5.6 kilometers."},
-  {"q": 6, "answer": "Not in the clip. The words say keep left leads to the summit, but nothing about the sketch."}
+  {"q": 6, "answer": "The left fork."},
+  {"q": 7, "answer": "not in the clip"},
+  {"q": 8, "answer": "not in the clip"},
+  {"q": 9, "answer": "not in the clip"}
 ]

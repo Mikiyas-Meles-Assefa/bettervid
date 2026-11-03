@@ -1,0 +1,14 @@
+{"things":[
+{"thing":"octopus","as":"absent","sheet":1,"note":"only the words 'AN OCTOPUS HAS'; no octopus drawn at any point"},
+{"thing":"three hearts","as":"symbol","sheet":1,"note":"three plain circles each labelled HEART; no heart shape"},
+{"thing":"the two hearts that pump to the gills","as":"symbol","sheet":2,"note":"two circles tagged GILLS; they swell once"},
+{"thing":"gills","as":"word","sheet":2,"note":"only the small text GILLS above two circles; no gills drawn"},
+{"thing":"blood","as":"absent","sheet":2,"note":"no blood or flow is shown"},
+{"thing":"the third heart","as":"symbol","sheet":3,"note":"a larger circle labelled HEART, tagged BODY, glowing cyan"},
+{"thing":"the rest of the body","as":"word","sheet":4,"note":"only the tag BODY"},
+{"thing":"swimming","as":"absent","sheet":5,"note":"the words 'when it swims' only; nothing swims"}],
+"changes":[
+{"change":"two hearts pump blood through the gills","as":"shown","sheet":2,"note":"the two left circles swell once, but no blood flows to anything"},
+{"change":"the third heart pumps to the rest of the body","as":"shown","sheet":3,"note":"the third circle lights cyan and pulses; no flow to a body"},
+{"change":"the third heart stops when it swims","as":"shown","sheet":6,"note":"a pink X is drawn over the circle with the word STOPPED, after the other two circles fade away; nothing swims"},
+{"change":"octopuses would rather crawl","as":"told","sheet":7,"note":"text 'THEY WOULD RATHER CRAWL' appears; no crawling shown"}]}

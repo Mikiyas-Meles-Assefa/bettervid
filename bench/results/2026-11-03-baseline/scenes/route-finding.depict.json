@@ -1,0 +1,20 @@
+{"things":[
+{"thing":"map app","as":"symbol","sheet":3,"note":"A blueprint-style node-and-line diagram stands in; no app interface or real map."},
+{"thing":"home","as":"word","sheet":3,"note":"A circle with the label HOME."},
+{"thing":"work","as":"word","sheet":3,"note":"A circle with the label WORK."},
+{"thing":"park","as":"word","sheet":3,"note":"A circle with the label PARK."},
+{"thing":"cafe","as":"word","sheet":3,"note":"A circle with the label CAFE."},
+{"thing":"minutes between places","as":"symbol","sheet":4,"note":"Numbers (4, 2, 1, 5, 8) beside plain lines; the lines are all the same length-agnostic strokes, so minutes are known only by the numerals."},
+{"thing":"roads/routes between places","as":"symbol","sheet":4,"note":"Thin straight lines connecting circles; no road look."},
+{"thing":"fastest route","as":"symbol","sheet":13,"note":"Lines Home-Park, Park-Cafe, Cafe-Work light up in yellow with a text line HOME > PARK > CAFE > WORK = 8."}
+],
+"changes":[
+{"change":"Home is set as start with distance 0 (others start at infinity)","as":"shown","sheet":5,"note":"Infinity marks appear on the other places, Home gets 0 and a yellow ring/fill."},
+{"change":"Park becomes 2 minutes away","as":"shown","sheet":6,"note":"A yellow pulse travels along the Home-Park line and the park tag changes from infinity to 2."},
+{"change":"Cafe becomes 4 minutes away","as":"shown","sheet":7,"note":"A pulse travels along the Home-Cafe line and the cafe tag changes from infinity to 4."},
+{"change":"Park is settled","as":"shown","sheet":8,"note":"The Park circle fills yellow."},
+{"change":"Cafe drops from 4 to 3 via the park","as":"shown","sheet":9,"note":"A pulse moves along the Park-Cafe line, then the cafe tag changes 4 to 3; the shortcut line lights yellow."},
+{"change":"Work gets 10 via the park, then drops to 8 via the cafe","as":"shown","sheet":11,"note":"Pulse along Park-Work gives Work 10, later a pulse along Cafe-Work changes it to 8. Number changes are partly just tags but pulses and fills show the flow."},
+{"change":"Each closest place is settled in turn (cafe, then work)","as":"shown","sheet":12,"note":"Cafe circle pops and fills yellow, then Work fills yellow."},
+{"change":"Fastest route appears","as":"shown","sheet":13,"note":"Route lines stay bright yellow while unused roads (Home-Cafe, Park-Work) fade dim; an 8 MINUTES label and the route text appear."}
+]}

@@ -110,6 +110,24 @@
    "q": "Which cause had the longest bar?",
    "a": "Login (password) problems.",
    "needs": "picture"
+  },
+  {
+   "q": "Which cause has the smallest bar?",
+   "a": "Other.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How many tickets does the shipping bar show?",
+   "a": "97.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "During the pause, how were the shipping and other bars labelled?",
+   "a": "They were unlabeled.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

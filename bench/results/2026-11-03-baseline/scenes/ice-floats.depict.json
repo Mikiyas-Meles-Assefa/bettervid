@@ -1,0 +1,20 @@
+{"things":[
+{"thing":"solid sinking in its own liquid","as":"absent","sheet":1,"note":"only text ALMOST EVERY SOLID SINKS; no solid or liquid drawn"},
+{"thing":"ice","as":"word","sheet":2,"note":"a rounded box labelled ICE; later the lattice stands for ice with ICE label"},
+{"thing":"liquid water molecules","as":"symbol","sheet":3,"note":"loose dark dots jostling at random; generic dots, known only with the label"},
+{"thing":"hydrogen bonds","as":"symbol","sheet":5,"note":"orange lines joining dots; label helps, no explanation of what bond is"},
+{"thing":"ice crystal lattice (open hexagon pattern)","as":"itself","sheet":7,"note":"dots joined by lines into a honeycomb of hexagons, drawn as the pattern itself"},
+{"thing":"four neighbors per molecule","as":"symbol","sheet":6,"note":"each dot links to its neighbours by lines but picture is dense and not marked with a count of four; the dots show three bonds each in the hexagon grid"},
+{"thing":"liquid water (as a substance, for density comparison)","as":"symbol","sheet":9,"note":"cloud of dots beside the lattice"},
+{"thing":"water surface / floating ice","as":"absent","sheet":12,"note":"no water body or ice floating on it is ever drawn; the ice is a box and then a lattice"},
+{"thing":"9% less dense","as":"word","sheet":11,"note":"written as text; density not drawn as a quantity"}
+],
+"changes":[
+{"change":"ice floats","as":"shown","sheet":2,"note":"the ICE box slides up the screen, but no water surface, so it does not show floating on water"},
+{"change":"molecules tumble close together in liquid","as":"shown","sheet":4,"note":"dots move randomly and cluster"},
+{"change":"water freezes: molecules lock into hexagon lattice by hydrogen bonds","as":"shown","sheet":5,"note":"dots drift into a grid and bond lines draw one by one, growing outward"},
+{"change":"each molecule bonds to four neighbors","as":"shown","sheet":6,"note":"bond lines are added progressively until each dot is linked; the count of four is not marked"},
+{"change":"open lattice takes more room than the liquid","as":"shown","sheet":9,"note":"liquid and ice side by side, with the lattice appearing wider spaced; the comparison of volume is not directly demonstrated, e.g. no equal amounts compared"},
+{"change":"ice is about nine percent less dense","as":"told","sheet":11,"note":"only the text ABOUT 9% LESS DENSE appears; the picture does not change to show density"},
+{"change":"ice floats because less dense","as":"told","sheet":12,"note":"headline changes to SO IT FLOATS. but nothing is seen floating"}
+]}

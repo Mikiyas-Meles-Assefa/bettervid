@@ -1,0 +1,17 @@
+{"things":[
+{"thing":"June 1215 (date)","as":"word","sheet":1,"note":"text only"},
+{"thing":"rebel barons","as":"word","sheet":1,"note":"text 'Rebel barons force King John'; no people drawn"},
+{"thing":"King John","as":"word","sheet":1,"note":"text only; no king drawn"},
+{"thing":"the charter","as":"symbol","sheet":2,"note":"a parchment-coloured sheet labelled CHARTER with a yellow circle; later ruled bars stand for clauses with no real writing"},
+{"thing":"the seal","as":"symbol","sheet":2,"note":"a plain yellow circle with the word 'seal' on it"},
+{"thing":"Runnymede","as":"word","sheet":3,"note":"red capital text; no place drawn"},
+{"thing":"feudal fees and forests","as":"absent","sheet":4,"note":"spoken only; the charter shows generic bars"},
+{"thing":"the key clause","as":"itself","sheet":7,"note":"the clause is shown as written text on screen, 'No free man shall be imprisoned except by the lawful judgment of his peers or the law of the land.'"},
+{"thing":"free man / peers","as":"word","sheet":9,"note":"only the words in the quote"},
+{"thing":"a king placed under the law","as":"symbol","sheet":12,"note":"text 'A king, in writing' with a red arrow up to the clause labelled UNDER THE LAW; no king figure"}],
+"changes":[
+{"change":"barons force the king to seal the charter","as":"missing","sheet":2,"note":"no force or sealing action; a charter with a seal circle just appears"},
+{"change":"the clause stands out from the rest of the charter","as":"shown","sheet":7,"note":"one bar is outlined heavily and the page zooms and tilts toward it, then cuts to the clause text"},
+{"change":"the clause outlives everything else","as":"missing","sheet":6,"note":"nothing else fades or lasts; the other clauses simply disappear on the cut"},
+{"change":"the clause is blacked out and restored","as":"shown","sheet":11,"note":"the yellow block turns black and then returns, though the narration says nothing of it"},
+{"change":"the king is placed under the law","as":"shown","sheet":12,"note":"a red arrow is drawn from the king text up into the law block, with label UNDER THE LAW"}]}

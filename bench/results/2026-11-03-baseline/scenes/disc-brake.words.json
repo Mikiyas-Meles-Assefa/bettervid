@@ -1,7 +1,10 @@
 [
-  {"q": 1, "answer": "Foot pushes the brake pedal, which pushes a piston into a cylinder of brake fluid; the pressure travels down the lines to each wheel, where it pushes the caliper's pistons, which squeeze two pads against a spinning metal disc."},
+  {"q": 1, "answer": "Foot, to brake pedal, to piston, to brake fluid in the cylinder, down the lines, to the caliper's pistons at the wheel."},
   {"q": 2, "answer": "Fluid can't be squeezed, so the pressure travels down the lines."},
   {"q": 3, "answer": "A spinning metal disc."},
   {"q": 4, "answer": "not in the clip"},
-  {"q": 5, "answer": "Into heat. Friction turns the car's motion into heat."}
+  {"q": 5, "answer": "Into heat. Friction turns the car's motion into heat."},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "The caliper's pistons."},
+  {"q": 8, "answer": "The disc (the metal disc)."}
 ]

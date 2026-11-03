@@ -1,7 +1,8 @@
-[
-{"q":1,"answer":"Sodium hydroxide (NaOH) goes in the burette; the flask holds the acid plus a few drops of phenolphthalein indicator.","from":"both"},
-{"q":2,"answer":"Early on, pink flashes where the sodium hydroxide lands, then fades as you swirl, so you can add it quickly.","from":"both"},
-{"q":3,"answer":"Slow down to drop by drop when the pink starts to linger instead of fading.","from":"both"},
-{"q":4,"answer":"The endpoint is a faint pink that lasts thirty seconds.","from":"both"},
-{"q":5,"answer":"Stop adding sodium hydroxide, then read the volume (on the burette; the picture shows a 0 reading marker, but the clip does not say how to read it).","from":"both"}
-]
+[{"q":1,"answer":"Sodium hydroxide (NaOH) is in the burette; the flask holds the acid with a few drops of phenolphthalein (indicator).","from":"both"},
+{"q":2,"answer":"It flashes where the base lands, then fades as you swirl. On screen only a small word 'pink' appears beside the flask box and then fades; the liquid itself is never seen turning pink.","from":"both"},
+{"q":3,"answer":"When the pink starts to linger rather than fade.","from":"words"},
+{"q":4,"answer":"A faint pink that lasts thirty seconds.","from":"both"},
+{"q":5,"answer":"Stop adding, then read the volume.","from":"words"},
+{"q":6,"answer":"Not in the clip. The flask is a box labelled 'acid + phenolphthalein'; no liquid colour is shown.","from":"not in the clip"},
+{"q":7,"answer":"A small yellow chalk number 0 appeared below the flask during the thirty seconds; it did not visibly count up in the frames.","from":"picture"},
+{"q":8,"answer":"Above: the burette (NaOH) is drawn above the flask box.","from":"picture"}]

@@ -98,6 +98,24 @@
    "q": "Where were the balls during the pause before the answer?",
    "a": "Held at the top, side by side, not yet falling.",
    "needs": "picture"
+  },
+  {
+   "q": "During the pause, were the balls moving or still?",
+   "a": "Still, held at the top.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which ball is drawn larger?",
+   "a": "The bowling ball.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How fast was the fall shown: slowed down or normal speed?",
+   "a": "Slowed down.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

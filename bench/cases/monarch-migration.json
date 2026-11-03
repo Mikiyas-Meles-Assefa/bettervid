@@ -83,6 +83,24 @@
    "q": "Which way did the route move on the map?",
    "a": "South, down from Canada through the United States to Mexico.",
    "needs": "both"
+  },
+  {
+   "q": "On the map, is the start above or below the end?",
+   "a": "Above it.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "At the end of the drawing, what stayed in view?",
+   "a": "The whole path.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Where along the picture were the generations placed?",
+   "a": "Along the route.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

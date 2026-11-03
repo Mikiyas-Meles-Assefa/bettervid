@@ -111,6 +111,24 @@
    "q": "According to the data, how long could a newborn expect to live in 1900 compared with today?",
    "a": "About 32 years then, over 70 (71) now.",
    "needs": "words"
+  },
+  {
+   "q": "What value does the line show for the year 1950?",
+   "a": "About 46.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What value does the line show for the year 2000?",
+   "a": "About 66.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which stretch of the line is steeper: 1900 to 1950, or 1950 to 2000?",
+   "a": "1950 to 2000.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

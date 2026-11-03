@@ -1,6 +1,9 @@
 [
-{"q":1,"answer":"Neither: they land together (said \"They land together\"). The picture never showed a landing, only the balls sitting still and then moving down the screen as the camera/view shifted.","from":"words"},
-{"q":2,"answer":"Gravity speeds up every object at the same rate, whatever its mass (the on-screen text said 'mass up alike').","from":"both"},
-{"q":3,"answer":"Air resistance can split them (make them land at different times), though for these two balls it barely matters.","from":"both"},
-{"q":4,"answer":"They sat still, side by side at the same height (bowling larger on the left, tennis smaller on the right), at the bottom of the screen under the 'Which lands first?' question, not yet dropped.","from":"picture"}
+{"q":1,"answer":"Neither: they land together (said and captioned). The picture never showed a landing.","from":"words"},
+{"q":2,"answer":"Gravity speeds up every object at the same rate, whatever its mass.","from":"words"},
+{"q":3,"answer":"Air resistance (but for these two it barely matters).","from":"words"},
+{"q":4,"answer":"Side by side in the lower part of the screen, bowling on the left and tennis on the right, under the question 'Which lands first?'.","from":"picture"},
+{"q":5,"answer":"Still, they did not move during the pause (about 8 to 10.5 s).","from":"picture"},
+{"q":6,"answer":"The bowling ball is drawn larger (tennis is the smaller circle).","from":"picture"},
+{"q":7,"answer":"Not in the clip: no fall was shown. The circles only drifted upward slowly while the narration talked about gravity, and never reached any ground.","from":"picture"}
 ]

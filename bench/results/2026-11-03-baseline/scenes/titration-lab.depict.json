@@ -1,0 +1,19 @@
+{"things":[
+{"thing":"Sodium hydroxide / burette","as":"symbol","sheet":1,"note":"a tall rounded chalk rectangle labelled NaOH; no tick marks or tip shape, known by its label"},
+{"thing":"Acid in the flask","as":"word","sheet":1,"note":"a box labelled 'acid + phenolphthalein'; no flask shape or liquid"},
+{"thing":"Phenolphthalein indicator drops","as":"word","sheet":1,"note":"only the name inside the flask box"},
+{"thing":"Drops of base falling","as":"symbol","sheet":4,"note":"a tiny yellow dot under the burette tip"},
+{"thing":"Pink colour","as":"word","sheet":5,"note":"the word 'pink' written beside the box; nothing is coloured pink"},
+{"thing":"Faint pink endpoint","as":"word","sheet":10,"note":"box text becomes 'faint pink' in yellow chalk; no pink colour drawn"},
+{"thing":"Thirty seconds timer","as":"symbol","sheet":11,"note":"a small 0 numeral appears and stays at 0"},
+{"thing":"Volume reading","as":"absent","sheet":13,"note":"no scale or reading shown; burette outline only gets thicker"}
+],
+"changes":[
+{"change":"Base drips from burette into acid","as":"shown","sheet":4,"note":"a small dot appears at tip and drops intermittently, never reaching the liquid"},
+{"change":"Pink flashes where base lands","as":"told","sheet":5,"note":"the word 'pink' appears beside the box"},
+{"change":"Pink fades as you swirl","as":"told","sheet":7,"note":"the word 'pink' fades out; no swirl drawn"},
+{"change":"Pink starts to linger, slow to drop by drop","as":"missing","sheet":8,"note":"picture unchanged apart from occasional dot"},
+{"change":"Flask turns faint pink at endpoint","as":"told","sheet":10,"note":"label changes to 'faint pink' and box shrinks; no colour change"},
+{"change":"Faint pink lasts thirty seconds","as":"told","sheet":11,"note":"a 0 counter appears but does not count up"},
+{"change":"Read the volume","as":"missing","sheet":12,"note":"burette outline thickens only; no reading"}
+]}

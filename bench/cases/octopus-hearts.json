@@ -68,6 +68,24 @@
    "q": "Which heart stopped on screen?",
    "a": "The third one, the one that pumps blood to the rest of the body.",
    "needs": "both"
+  },
+  {
+   "q": "Which hearts were lit first in the second scene?",
+   "a": "The two at the gills.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which heart was lit after the gill hearts?",
+   "a": "The third one, for the body.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which heart stopped: the pair or the single one?",
+   "a": "The single third heart.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

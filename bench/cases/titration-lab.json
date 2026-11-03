@@ -112,6 +112,24 @@
    "q": "What do you do at the endpoint?",
    "a": "Read (record) the volume.",
    "needs": "words"
+  },
+  {
+   "q": "What colour is the flask liquid before any base lands?",
+   "a": "Colourless.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What ran on screen while the faint pink held?",
+   "a": "A timer.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Is the burette above or below the flask?",
+   "a": "Above it.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

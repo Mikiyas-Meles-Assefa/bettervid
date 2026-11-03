@@ -96,6 +96,24 @@
    "q": "What was the name of the function in the code?",
    "a": "sum_to.",
    "needs": "picture"
+  },
+  {
+   "q": "Which number was missing from the loop's numbers?",
+   "a": "5.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How fast were the loop's numbers counted out: slowly or quickly?",
+   "a": "Slowly, one at a time.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What stayed lit during the last pause?",
+   "a": "The fixed line and the 15.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

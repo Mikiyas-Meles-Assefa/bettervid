@@ -42,3 +42,39 @@ Material cases learn as well as prompt cases (quiz 0.98 vs 0.94) and look no bet
 - worst: `bench/work/2026-11-03-baseline/ball-drop/clip.mp4` (the drop never happens; designer 3)
 - worst: `bench/work/2026-11-03-baseline/titration-lab/clip.mp4` (a lab step with no liquid; designer 3)
 - worst: `bench/work/2026-11-03-baseline/fraction-division/clip.mp4` (counter stuck at 0, stray "key" label)
+
+## Rescored with the new measures
+
+The same clips, scored again after the measures were changed (bench/README.md has the definitions). `scores.md` and `summary.json` now hold the rescored numbers; the first run's table is in git history. Watch tests for the rescore: the learner and depict tests by Sonnet, words only by Haiku, grading by Sonnet. Designer, scroller and follow answers are from the first run. Meta spend $0, ElevenLabs none.
+
+| measure | first run | rescored |
+|---|---|---|
+| teach gap (video minus words, whole quiz) | 0.15 (0.95 vs 0.81) | **0.29** (0.86 vs 0.58) |
+| hard picture questions, video vs words | none | 0.73 vs 0.21 (gap 0.53) |
+| read | 0.81 | 0.52 |
+| holds | 0.72 | 0.44 |
+| depict (free / watch / blend) | none | 0.62 / 0.40 / 0.49 |
+| free measures, mean | 0.75 | 0.66 |
+
+Part of the drop in the words-only score is the change of model (Haiku now, stricter about "not in the clip"); the hard questions are what widens the gap: the words-only learner gets 0.21 of them.
+
+Read, before and after, on the clips the designer judged:
+
+| case | read before | read after | why, from raw.read |
+|---|---|---|---|
+| water-cycle-recap | 1.00 | 0.21 | stage labels 39 px, grey on grey boxes; 80% of its words are under the phone size |
+| running-max | 1.00 | 0.39 | the code, the whole lesson, is 49 px; 79% of the words small |
+| trail-directions | 1.00 | 0.46 | the sketch is shown 64% wide (its labels shrink with it), route labels 40 to 47 px; the 114 px title scores full |
+| magna-carta | 1.00 | 0.65 | the clause at 69 to 94 px reads well; it loses on the charter card (CHARTER at 36 px, seal at 48 px) and on the moment the key phrase sits at 1:1 contrast under a dark bar, both on the designer's list |
+| death-zone | 1.00 | 0.98 | large words on a plain field |
+
+Holds now catch dead air the old check passed: running-max's predict hold 1.00 to 0.19 (a question sits still for 2 s; the designer said the same), magna-carta 1.00 to 0.40, monarch-migration 1.00 to 0.33, death-zone 1.00 to 0.45. Frozen holds stay 0; a hold that keeps working stays 1 (disc-brake, square-knot, titration's running timer).
+
+Depict (blend) lowest: frostline-ad 0.03 (a box labelled BOTTLE), led-vs-bulb 0.06, water-cycle-recap 0.08, rule-of-72 0.13, disc-brake 0.20, ball-drop 0.26, octopus-hearts 0.28, titration-lab 0.28 (labelled boxes, a tag reading "pink", no liquid). Highest: insertion-sort and matrix-rotation 0.85 (the notation is the thing), affect-effect, fresh-water and route-finding 0.78.
+
+## Do the measures agree with the two seats?
+
+- read: yes on the named cases, and it now separates (0.21 to 0.98) where it sat at 0.96 or more for 19 of 26. The designer names text too small for a phone on 24 of 26 clips, so the designer's type score (4 to 7) barely ranks the clips and the rank correlation is near zero (-0.06); read is the finer instrument here. Its space term is lenient (0.80 mean while the designer names empty frames on 24 clips); that is the next thing to tighten.
+- depict: the watch test agrees with the designer (rank correlation 0.31 with the designer's overall; their issue lists name the same boxes and labels). The free signal agrees with the watch test (0.55) but overrates any program drawing (a climbing dot counts as drawn), which is why the watch weighs more.
+- holds: agrees with the designer on each dead hold it names; against the scroller's swipe point it does not rank (-0.20), because people swipe for many reasons besides a hold, and several clips have no hold near where they swiped.
+- quiz: no longer at the ceiling (0.86), and the hard questions separate clips that do the plan's demonstration (fresh-water, route-finding, water-cycle-recap's ordered replay: 1.00) from those that do not (death-zone, led-vs-bulb, titration-lab, square-knot: 0.33; life-expectancy 0, its chart has no year ticks). A few hard questions are weak (the words imply the answer: matrix-rotation's are answered from the narration too); the words-only column shows which, and they should be replaced.

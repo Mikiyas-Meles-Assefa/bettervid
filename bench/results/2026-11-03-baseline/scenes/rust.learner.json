@@ -1,7 +1,10 @@
 [
-{"q":1,"answer":"Iron, water, and oxygen.","from":"both"},
-{"q":2,"answer":"Electrons.","from":"words"},
-{"q":3,"answer":"Oxygen from the air takes the electrons.","from":"both"},
-{"q":4,"answer":"Small dots (electrons) leave the iron atoms, drift up through the dark drop and then off to the side or fade out; they are never clearly shown arriving at the oxygen pairs above the drop. The narration says oxygen takes them, but the picture does not show the transfer.","from":"picture"},
-{"q":5,"answer":"Rust is flaky and porous, so water gets through it to reach more iron, and the rusting keeps going.","from":"both"}
+{"q":1,"answer":"Iron, water and oxygen","from":"both"},
+{"q":2,"answer":"Electrons","from":"words"},
+{"q":3,"answer":"Oxygen from the air takes the electrons","from":"words"},
+{"q":4,"answer":"Small orange dots left the row of iron atoms, drifted up through the dark drop and toward the pairs of dark dots above it (the oxygen). In the first attempt (about 8 to 10 s) they drifted off to the right and faded, so the picture was not very clear about where they ended up.","from":"picture"},
+{"q":5,"answer":"Because rust is flaky and porous, so water gets through it to reach more iron and the rusting continues.","from":"both"},
+{"q":6,"answer":"In grey-brown blobs along the lower edge of the dark drop, sitting on top of the row of iron atoms (between the drop and the FE circles). It spreads along the whole bottom edge.","from":"picture"},
+{"q":7,"answer":"The drop appeared first (about 4 s, together with the row of FE atoms under it); the atoms losing electrons (orange dots leaving them) started a moment later, around 4.5 to 5 s.","from":"picture"},
+{"q":8,"answer":"As three labelled boxes side by side in one row, left to right: IRON, WATER, OXYGEN. They are only words in boxes, not drawn objects.","from":"picture"}
 ]

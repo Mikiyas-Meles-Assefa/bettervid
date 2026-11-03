@@ -92,6 +92,24 @@
    "q": "In the picture, how many B cells matched the piece compared with all those shown?",
    "a": "Only a few out of many.",
    "needs": "picture"
+  },
+  {
+   "q": "What happened to the other cells while the memory cells stayed?",
+   "a": "They faded.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How did the memory cells wait: moving or quiet?",
+   "a": "Quietly.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What was shown first in the clip?",
+   "a": "A harmless piece of a germ.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

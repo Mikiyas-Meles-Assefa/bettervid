@@ -101,6 +101,24 @@
    "q": "On the sketch, which fork from the junction leads up to the summit?",
    "a": "The left one (going up); the other goes down and right to the road.",
    "needs": "picture"
+  },
+  {
+   "q": "What was done to the right fork while the left fork lit?",
+   "a": "It was crossed out.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What was at the bottom of the sketch?",
+   "a": "The trailhead (car park).",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What was at the top of the sketch?",
+   "a": "The summit.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

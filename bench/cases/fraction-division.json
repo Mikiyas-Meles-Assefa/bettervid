@@ -117,6 +117,24 @@
    "q": "Dividing by a half is the same as what?",
    "a": "Multiplying by two.",
    "needs": "words"
+  },
+  {
+   "q": "While the question was on screen alone, was any answer shown?",
+   "a": "No.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "When the answer 12 first appeared, what stood beside it?",
+   "a": "The reworded question.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "After the last half was counted, what number stayed lit?",
+   "a": "12.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

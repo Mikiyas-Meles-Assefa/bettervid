@@ -4,28 +4,34 @@
   "cases": 28,
   "built": 26,
   "passed": 25,
-  "overall": 0.751,
+  "overall": 0.661,
   "eye": 0.682,
   "lag": 0.76,
   "pace": 0.639,
   "load": 0.904,
-  "holds": 0.72,
+  "holds": 0.442,
   "reveal": 0.904,
-  "read": 0.808,
-  "learner": 0.954,
-  "wordsOnly": 0.807,
-  "gain": 0.147,
-  "pictureQuestions": 0.833,
-  "pictureQuestionsWordsOnly": 0.175,
-  "followOnLook": 0.848,
-  "followWaiting": 0.861,
-  "followConfused": 0.761,
+  "read": 0.519,
+  "learner": 0.862,
+  "wordsOnly": 0.576,
+  "gain": 0.287,
+  "hard": 0.731,
+  "hardWordsOnly": 0.205,
+  "hardGap": 0.526,
+  "depictFree": 0.619,
+  "depictSeen": 0.401,
+  "depict": 0.489,
+  "pictureQuestions": 0.728,
+  "pictureQuestionsWordsOnly": 0.195,
+  "followOnLook": 0.849,
+  "followWaiting": 0.912,
+  "followConfused": 0.764,
   "designer": 3.923,
   "scrollKept": 0.589,
   "scrollRemembers": 0.827,
   "materialCases": 10,
-  "learnerMaterial": 0.978,
-  "learnerPrompt": 0.941
+  "learnerMaterial": 0.846,
+  "learnerPrompt": 0.871
  },
  "cases": [
   {
@@ -36,24 +42,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.792,
+   "overall": 0.774,
    "scores": {
     "lag": 0.962,
     "pace": 1,
     "load": 1,
-    "read": 0.35,
+    "read": 0.495,
+    "depict": 1,
     "eye": 0.734,
-    "holds": 0.5,
+    "holds": 0,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 0.875,
-   "gain": 0.125,
-   "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0.5,
+   "learner": 0.9285714285714286,
+   "wordsOnly": 0.42857142857142855,
+   "gain": 0.5,
+   "pictureQuestions": 0.875,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 0.8333333333333334,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.625,
+   "depict": 0.775,
    "follow": {
-    "onLook": 1,
-    "waiting": 0.7777777777777778,
+    "onLook": 0.9444444444444444,
+    "waiting": 1,
     "confused": 0.6666666666666666
    },
    "designer": {
@@ -189,16 +201,107 @@
      "peakPull": 3,
      "newPerSecond": 0.92
     },
+    "depict": {
+     "drawn": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "blank",
+       "kind": "math",
+       "as": "itself"
+      }
+     ],
+     "shown": [],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 2.5,
+      "work": 0,
+      "other": 0.09,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
-     "frames": 32,
-     "severe": 18,
-     "mild": 7,
-     "kinds": {
-      "empty": 25
-     },
+     "frames": 30,
+     "score": 0.495,
+     "words": 0.697,
+     "density": 1,
+     "subject": 0.285,
+     "space": 0.027,
+     "broken": 0,
+     "smallShare": 0.378,
+     "faintShare": 0,
      "examples": [
-      "empty at 1.5 s: 17% of the usable frame has anything in it; the largest empty band is 63% of its height"
-     ]
+      "small \"HERE'S THE TRICK.\" 55 px",
+      "small \"A FOR ACTION\" 48 px",
+      "small \"E FOR END\" 41 px",
+      "small \"TRY IT:\" 34 px",
+      "small \"WHICH WORD FITS?\" 34 px",
+      "small \"THE ACTION\" 41 px"
+     ],
+     "worst": [
+      {
+       "t": 11.5,
+       "words": 0.35,
+       "density": 1,
+       "subject": 0.16,
+       "space": 0,
+       "broken": false,
+       "score": 0.24,
+       "chars": 40,
+       "small": [
+        "\"TRY IT:\" 34 px",
+        "\"WHICH WORD FITS?\" 34 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12,
+       "words": 0.35,
+       "density": 1,
+       "subject": 0.16,
+       "space": 0,
+       "broken": false,
+       "score": 0.24,
+       "chars": 40,
+       "small": [
+        "\"TRY IT:\" 34 px",
+        "\"WHICH WORD FITS?\" 34 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12.5,
+       "words": 0.35,
+       "density": 1,
+       "subject": 0.16,
+       "space": 0,
+       "broken": false,
+       "score": 0.24,
+       "chars": 40,
+       "small": [
+        "\"TRY IT:\" 34 px",
+        "\"WHICH WORD FITS?\" 34 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.35,
+      "frames": 32,
+      "severe": 18,
+      "mild": 7,
+      "kinds": {
+       "empty": 25
+      },
+      "examples": [
+       "empty at 1.5 s: 17% of the usable frame has anything in it; the largest empty band is 63% of its height"
+      ]
+     }
     }
    }
   },
@@ -210,24 +313,30 @@
    "passed": true,
    "rounds": 3,
    "reviewed": "nothing to say",
-   "overall": 0.614,
+   "overall": 0.611,
    "scores": {
     "lag": 0.662,
     "pace": 0.941,
     "load": 1,
-    "read": 0.457,
+    "read": 0.549,
+    "depict": 0.5,
     "eye": 0.236,
     "holds": 0,
     "reveal": 1
    },
-   "learner": 0.875,
-   "wordsOnly": 0.75,
-   "gain": 0.125,
-   "pictureQuestions": 0.5,
+   "learner": 0.7857142857142857,
+   "wordsOnly": 0.42857142857142855,
+   "gain": 0.35714285714285715,
+   "pictureQuestions": 0.625,
    "pictureQuestionsWordsOnly": 0,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0,
+   "depictFree": 0.5,
+   "depictSeen": 0.1,
+   "depict": 0.26,
    "follow": {
-    "onLook": 0.7916666666666666,
-    "waiting": 0.5833333333333334,
+    "onLook": 0.6666666666666666,
+    "waiting": 0.75,
     "confused": 1
    },
    "designer": {
@@ -353,20 +462,118 @@
      "peakPull": 2,
      "newPerSecond": 0.13
     },
+    "depict": {
+     "drawn": 0,
+     "changes": 1,
+     "free": 0.5,
+     "units": [
+      {
+       "id": "bowl",
+       "kind": "circle",
+       "as": "word",
+       "text": "bowling"
+      },
+      {
+       "id": "tennis",
+       "kind": "circle",
+       "as": "word",
+       "text": "tennis"
+      }
+     ],
+     "shown": [
+      "set bowl",
+      "set tennis"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 3,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
-     "frames": 46,
-     "severe": 17,
-     "mild": 20,
-     "kinds": {
-      "empty": 30,
-      "off_frame": 6,
-      "overlap": 6
-     },
+     "frames": 36,
+     "score": 0.549,
+     "words": 0.771,
+     "density": 1,
+     "subject": 0.51,
+     "space": 0.312,
+     "broken": 0.167,
+     "smallShare": 0.344,
+     "faintShare": 0,
      "examples": [
-      "off_frame at 13.0 s: cut by the frame edge: \"Gravity speeds every\" (22% outside)",
-      "empty at 16.5 s: 30% of the usable frame has anything in it; the largest empty band is 50% of its height",
-      "overlap at 18.0 s: writing on top of writing: \"can split\" and \"bowling\" (100% of the smaller); \"can split\" and \"tennis\" (86% of the smaller)"
-     ]
+      "small \"bowling\" 54 px",
+      "small \"tennis\" 54 px"
+     ],
+     "worst": [
+      {
+       "t": 18,
+       "words": 0.83,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.09,
+       "broken": true,
+       "score": 0.25,
+       "chars": 44,
+       "small": [
+        "\"bowling\" 54 px",
+        "\"tennis\" 54 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 18.5,
+       "words": 0.83,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.09,
+       "broken": true,
+       "score": 0.25,
+       "chars": 44,
+       "small": [
+        "\"bowling\" 54 px",
+        "\"tennis\" 54 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 19,
+       "words": 0.83,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.09,
+       "broken": true,
+       "score": 0.25,
+       "chars": 44,
+       "small": [
+        "\"bowling\" 54 px",
+        "\"tennis\" 54 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.457,
+      "frames": 46,
+      "severe": 17,
+      "mild": 20,
+      "kinds": {
+       "empty": 30,
+       "off_frame": 6,
+       "overlap": 6
+      },
+      "examples": [
+       "off_frame at 13.0 s: cut by the frame edge: \"Gravity speeds every\" (22% outside)",
+       "empty at 16.5 s: 30% of the usable frame has anything in it; the largest empty band is 50% of its height",
+       "overlap at 18.0 s: writing on top of writing: \"can split\" and \"bowling\" (100% of the smaller); \"can split\" and \"tennis\" (86% of the smaller)"
+      ]
+     }
     }
    }
   },
@@ -378,24 +585,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.892,
+   "overall": 0.834,
    "scores": {
     "lag": 0.842,
     "pace": 0.523,
     "load": 1,
-    "read": 1,
+    "read": 0.979,
+    "depict": 1,
     "eye": 0.879,
-    "holds": 1,
+    "holds": 0.45,
     "reveal": 1
    },
-   "learner": 0.75,
-   "wordsOnly": 0.625,
-   "gain": 0.125,
-   "pictureQuestions": 0,
-   "pictureQuestionsWordsOnly": 0,
+   "learner": 0.5714285714285714,
+   "wordsOnly": 0.5,
+   "gain": 0.0714285714285714,
+   "pictureQuestions": 0.25,
+   "pictureQuestionsWordsOnly": 0.125,
+   "hard": 0.3333333333333333,
+   "hardWordsOnly": 0.16666666666666666,
+   "depictFree": 1,
+   "depictSeen": 0.3875,
+   "depict": 0.6325000000000001,
    "follow": {
-    "onLook": 0.6818181818181818,
-    "waiting": 0.5,
+    "onLook": 0.6363636363636364,
+    "waiting": 0.5909090909090909,
     "confused": 0.6363636363636364
    },
    "designer": {
@@ -498,12 +711,101 @@
      "peakPull": 3,
      "newPerSecond": 0.29
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_mount",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_mount runs s1_ridge_prog"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2.5,
+      "work": 0.23,
+      "other": 0,
+      "answered": false,
+      "score": 0.45
+     }
+    ],
     "read": {
      "frames": 40,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "score": 0.979,
+     "words": 0.979,
+     "density": 1,
+     "subject": 1,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0,
+     "faintShare": 0.062,
+     "examples": [
+      "faint \"Your body can't\" 3.0:1",
+      "faint \"adapt\" 3.0:1",
+      "faint \"It is slowly dying,\" 3.0:1",
+      "faint \"hour by hour\" 3.0:1"
+     ],
+     "worst": [
+      {
+       "t": 9.5,
+       "words": 0.59,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.59,
+       "chars": 38,
+       "small": [],
+       "faint": [
+        "\"It is slowly dying,\" 3.0:1",
+        "\"hour by hour\" 3.0:1"
+       ]
+      },
+      {
+       "t": 7,
+       "words": 0.62,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.62,
+       "chars": 27,
+       "small": [],
+       "faint": [
+        "\"Your body can't\" 3.0:1",
+        "\"adapt\" 3.0:1"
+       ]
+      },
+      {
+       "t": 19,
+       "words": 0.95,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.95,
+       "chars": 43,
+       "small": [],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 40,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -515,24 +817,30 @@
    "passed": true,
    "rounds": 4,
    "reviewed": "nothing to say",
-   "overall": 0.876,
+   "overall": 0.71,
    "scores": {
     "lag": 0.72,
     "pace": 0.618,
     "load": 1,
-    "read": 1,
+    "read": 0.382,
+    "depict": 0.167,
     "eye": 0.796,
     "holds": 1,
     "reveal": 1
    },
-   "learner": 0.9,
-   "wordsOnly": 0.8,
-   "gain": 0.09999999999999998,
-   "pictureQuestions": 0.5,
-   "pictureQuestionsWordsOnly": 0,
+   "learner": 0.875,
+   "wordsOnly": 0.625,
+   "gain": 0.25,
+   "pictureQuestions": 0.75,
+   "pictureQuestionsWordsOnly": 0.375,
+   "hard": 1,
+   "hardWordsOnly": 0.5,
+   "depictFree": 0.167,
+   "depictSeen": 0.21978021978021978,
+   "depict": 0.19866813186813187,
    "follow": {
-    "onLook": 0.8055555555555556,
-    "waiting": 0.6666666666666666,
+    "onLook": 0.8333333333333334,
+    "waiting": 0.7777777777777778,
     "confused": 0.9444444444444444
    },
    "designer": {
@@ -666,12 +974,158 @@
      "peakPull": 3,
      "newPerSecond": 0.52
     },
+    "depict": {
+     "drawn": 0,
+     "changes": 0.333,
+     "free": 0.167,
+     "units": [
+      {
+       "id": "pedal",
+       "kind": "box",
+       "as": "word",
+       "text": "pedal"
+      },
+      {
+       "id": "wheel",
+       "kind": "circle",
+       "as": "word",
+       "text": "wheel"
+      },
+      {
+       "id": "piston",
+       "kind": "box",
+       "as": "word",
+       "text": "piston"
+      },
+      {
+       "id": "fluid",
+       "kind": "box",
+       "as": "word",
+       "text": "brake fluid"
+      },
+      {
+       "id": "line",
+       "kind": "box",
+       "as": "word",
+       "text": "brake line"
+      },
+      {
+       "id": "caliper",
+       "kind": "box",
+       "as": "word",
+       "text": "caliper"
+      },
+      {
+       "id": "padL",
+       "kind": "box",
+       "as": "word",
+       "text": "pad"
+      },
+      {
+       "id": "padR",
+       "kind": "box",
+       "as": "word",
+       "text": "pad"
+      }
+     ],
+     "shown": [
+      "do flow arrow.fluid.line",
+      "do flow arrow.line.caliper",
+      "set wheel"
+     ],
+     "told": [
+      "tag \"5 cm\" on pedal",
+      "tag \"two tons\" on wheel",
+      "tag \"can't be squeezed\" on fluid",
+      "tag \"pistons\" on caliper",
+      "wheel relabelled \"disc\"",
+      "tag \"car's motion\" on wheel"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 1.5,
+      "work": 0.53,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
     "read": {
-     "frames": 69,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "frames": 66,
+     "score": 0.382,
+     "words": 0.468,
+     "density": 1,
+     "subject": 0.324,
+     "space": 0.638,
+     "broken": 0,
+     "smallShare": 0.444,
+     "faintShare": 0,
+     "examples": [
+      "small \"5 CM\" 43 px",
+      "small \"TWO TONS\" 43 px",
+      "small \"PUSH\" 43 px",
+      "small \"CAN'T BE SQUEEZED\" 43 px",
+      "small \"BRAKE LINE\" 47 px",
+      "small \"PRESSURE\" 43 px"
+     ],
+     "worst": [
+      {
+       "t": 6.5,
+       "words": 0.37,
+       "density": 1,
+       "subject": 0.42,
+       "space": 0.6,
+       "broken": false,
+       "score": 0.31,
+       "chars": 22,
+       "small": [
+        "\"5 CM\" 43 px",
+        "\"TWO TONS\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 7,
+       "words": 0.37,
+       "density": 1,
+       "subject": 0.42,
+       "space": 0.6,
+       "broken": false,
+       "score": 0.31,
+       "chars": 22,
+       "small": [
+        "\"5 CM\" 43 px",
+        "\"TWO TONS\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 7.5,
+       "words": 0.37,
+       "density": 1,
+       "subject": 0.49,
+       "space": 0.6,
+       "broken": false,
+       "score": 0.31,
+       "chars": 22,
+       "small": [
+        "\"5 CM\" 43 px",
+        "\"TWO TONS\" 43 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 69,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -683,21 +1137,27 @@
    "passed": true,
    "rounds": 2,
    "reviewed": "kept",
-   "overall": 0.664,
+   "overall": 0.636,
    "scores": {
     "lag": 0.833,
     "pace": 0.667,
     "load": 0.741,
-    "read": 0.844,
+    "read": 0.783,
+    "depict": 0.5,
     "eye": 0.565,
     "holds": 0,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 0.8,
-   "gain": 0.19999999999999996,
-   "pictureQuestions": 1,
+   "learner": 0.8125,
+   "wordsOnly": 0.5,
+   "gain": 0.3125,
+   "pictureQuestions": 0.625,
    "pictureQuestionsWordsOnly": 0,
+   "hard": 0.5,
+   "hardWordsOnly": 0,
+   "depictFree": 0.5,
+   "depictSeen": 0.6666666666666667,
+   "depict": 0.6000000000000001,
    "follow": {
     "onLook": 0.9642857142857143,
     "waiting": 0.8928571428571429,
@@ -842,14 +1302,146 @@
      "peakPull": 5,
      "newPerSecond": 0.88
     },
-    "read": {
-     "frames": 54,
-     "severe": 0,
-     "mild": 21,
-     "kinds": {
-      "empty": 21
+    "depict": {
+     "drawn": 0.5,
+     "changes": 0.5,
+     "free": 0.5,
+     "units": [
+      {
+       "id": "s1_w1",
+       "kind": "circle",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_w2",
+       "kind": "circle",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_w3",
+       "kind": "circle",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_w4",
+       "kind": "circle",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_w5",
+       "kind": "circle",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_w6",
+       "kind": "circle",
+       "as": "symbol"
+      }
+     ],
+     "shown": [
+      "do split s1_w1.shape",
+      "do split s1_w2.shape",
+      "do split s1_w3.shape",
+      "do split s1_w4.shape",
+      "do split s1_w5.shape",
+      "do split s1_w6.shape"
+     ],
+     "told": [
+      "do count s1_cnt",
+      "do count s1_cnt",
+      "do count s1_cnt",
+      "do count s1_cnt",
+      "do count s1_cnt",
+      "do count s1_cnt"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 3,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
      },
-     "examples": []
+     {
+      "id": "h2",
+      "purpose": "settle",
+      "seconds": 2,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
+    "read": {
+     "frames": 49,
+     "score": 0.783,
+     "words": 0.908,
+     "density": 1,
+     "subject": 0.482,
+     "space": 0.697,
+     "broken": 0,
+     "smallShare": 0.158,
+     "faintShare": 0,
+     "examples": [
+      "small \"dividing by a half is mu\" 40 px"
+     ],
+     "worst": [
+      {
+       "t": 22.5,
+       "words": 0.56,
+       "density": 1,
+       "subject": 0.23,
+       "space": 0.48,
+       "broken": false,
+       "score": 0.43,
+       "chars": 58,
+       "small": [
+        "\"dividing by a half is mu\" 40 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 23,
+       "words": 0.56,
+       "density": 1,
+       "subject": 0.23,
+       "space": 0.48,
+       "broken": false,
+       "score": 0.43,
+       "chars": 58,
+       "small": [
+        "\"dividing by a half is mu\" 40 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 23.5,
+       "words": 0.56,
+       "density": 1,
+       "subject": 0.23,
+       "space": 0.48,
+       "broken": false,
+       "score": 0.43,
+       "chars": 58,
+       "small": [
+        "\"dividing by a half is mu\" 40 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.844,
+      "frames": 54,
+      "severe": 0,
+      "mild": 21,
+      "kinds": {
+       "empty": 21
+      },
+      "examples": []
+     }
     }
    }
   },
@@ -861,24 +1453,30 @@
    "passed": true,
    "rounds": 2,
    "reviewed": "nothing to say",
-   "overall": 0.755,
+   "overall": 0.769,
    "scores": {
     "lag": 0.787,
     "pace": 0.639,
     "load": 1,
-    "read": 1,
+    "read": 0.867,
+    "depict": 1,
     "eye": 0.862,
     "holds": 0,
     "reveal": 1
    },
    "learner": 1,
-   "wordsOnly": 0.8,
-   "gain": 0.19999999999999996,
+   "wordsOnly": 0.5,
+   "gain": 0.5,
    "pictureQuestions": 1,
    "pictureQuestionsWordsOnly": 0,
+   "hard": 1,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.6354166666666667,
+   "depict": 0.78125,
    "follow": {
-    "onLook": 0.78125,
-    "waiting": 0.90625,
+    "onLook": 0.90625,
+    "waiting": 1,
     "confused": 0.8125
    },
    "designer": {
@@ -1020,12 +1618,110 @@
      "peakPull": 2,
      "newPerSecond": 0.1
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_gl",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_gl runs s1_glasses"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 2.5,
+      "work": 0.03,
+      "other": 0,
+      "answered": true,
+      "score": 0
+     },
+     {
+      "id": "h2",
+      "purpose": "settle",
+      "seconds": 2,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
      "frames": 60,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "score": 0.867,
+     "words": 0.867,
+     "density": 1,
+     "subject": 1,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0.129,
+     "faintShare": 0,
+     "examples": [
+      "small \"How much is lakes and ri\" 56 px",
+      "small \"2 of the 3 are ice\" 48 px",
+      "small \"Most of the last one is \" 48 px",
+      "small \"Most of the last one is \" 56 px"
+     ],
+     "worst": [
+      {
+       "t": 20.5,
+       "words": 0.59,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.59,
+       "chars": 64,
+       "small": [
+        "\"Most of the last one is \" 48 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 21,
+       "words": 0.59,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.59,
+       "chars": 64,
+       "small": [
+        "\"Most of the last one is \" 48 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 21.5,
+       "words": 0.59,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.59,
+       "chars": 64,
+       "small": [
+        "\"Most of the last one is \" 48 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 60,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -1037,24 +1733,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.909,
+   "overall": 0.74,
    "scores": {
     "lag": 0.733,
     "pace": 1,
     "load": 1,
-    "read": 1,
+    "read": 0.554,
+    "depict": 0,
     "eye": 0.629,
     "holds": 1,
     "reveal": 1
    },
-   "learner": 0.9,
-   "wordsOnly": 0.8,
-   "gain": 0.09999999999999998,
-   "pictureQuestions": 0.5,
+   "learner": 0.8125,
+   "wordsOnly": 0.5,
+   "gain": 0.3125,
+   "pictureQuestions": 0.625,
    "pictureQuestionsWordsOnly": 0,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0,
+   "depictFree": 0,
+   "depictSeen": 0.05555555555555555,
+   "depict": 0.03333333333333333,
    "follow": {
     "onLook": 0.9444444444444444,
-    "waiting": 0.6666666666666666,
+    "waiting": 0.8333333333333334,
     "confused": 0.6666666666666666
    },
    "designer": {
@@ -1176,12 +1878,109 @@
      "peakPull": 2,
      "newPerSecond": 0.66
     },
+    "depict": {
+     "drawn": 0,
+     "changes": 0,
+     "free": 0,
+     "units": [
+      {
+       "id": "shell",
+       "kind": "box",
+       "as": "word",
+       "text": "bottle"
+      },
+      {
+       "id": "ice",
+       "kind": "circle",
+       "as": "word",
+       "text": "ice"
+      }
+     ],
+     "shown": [],
+     "told": [
+      "do count hrs"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 2,
+      "work": 0.75,
+      "other": 0.08,
+      "answered": false,
+      "score": 1
+     }
+    ],
     "read": {
-     "frames": 33,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "frames": 31,
+     "score": 0.554,
+     "words": 0.619,
+     "density": 1,
+     "subject": 0.582,
+     "space": 0.807,
+     "broken": 0,
+     "smallShare": 0.402,
+     "faintShare": 0,
+     "examples": [
+      "small \"BOTTLE\" 33 px",
+      "small \"ALL DAY.\" 33 px",
+      "small \"24 HOURS LATER?\" 42 px",
+      "small \"ICE\" 52 px"
+     ],
+     "worst": [
+      {
+       "t": 11.5,
+       "words": 0,
+       "density": 1,
+       "subject": 0.49,
+       "space": 0.86,
+       "broken": false,
+       "score": 0,
+       "chars": 6,
+       "small": [
+        "\"BOTTLE\" 33 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12,
+       "words": 0,
+       "density": 1,
+       "subject": 0.49,
+       "space": 0.86,
+       "broken": false,
+       "score": 0,
+       "chars": 6,
+       "small": [
+        "\"BOTTLE\" 33 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12.5,
+       "words": 0.15,
+       "density": 1,
+       "subject": 0.49,
+       "space": 0.86,
+       "broken": false,
+       "score": 0.13,
+       "chars": 9,
+       "small": [
+        "\"BOTTLE\" 33 px",
+        "\"ICE\" 52 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 33,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -1193,22 +1992,30 @@
    "passed": true,
    "rounds": 2,
    "reviewed": "nothing to say",
-   "overall": 0.804,
+   "overall": 0.777,
    "scores": {
     "lag": 0.917,
     "pace": 0.937,
     "load": 1,
-    "read": 1,
+    "read": 0.713,
+    "depict": 0.875,
     "eye": 0.774,
     "holds": 0,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 1,
-   "gain": 0,
+   "learner": 0.8571428571428571,
+   "wordsOnly": 0.5714285714285714,
+   "gain": 0.2857142857142857,
+   "pictureQuestions": 0.6666666666666666,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0,
+   "depictFree": 0.875,
+   "depictSeen": 0.5238095238095238,
+   "depict": 0.6642857142857144,
    "follow": {
-    "onLook": 0.8076923076923077,
-    "waiting": 0.9230769230769231,
+    "onLook": 0.8461538461538461,
+    "waiting": 0.9615384615384616,
     "confused": 0.9230769230769231
    },
    "designer": {
@@ -1332,12 +2139,130 @@
      "peakPull": 3,
      "newPerSecond": 0.4
     },
+    "depict": {
+     "drawn": 0.75,
+     "changes": 1,
+     "free": 0.875,
+     "units": [
+      {
+       "id": "s1_water",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "ice",
+       "kind": "box",
+       "as": "word",
+       "text": "ice"
+      },
+      {
+       "id": "s1_liq",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_lat",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_liq2",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_lat2",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_liq runs s1_liquid",
+      "s1_lat runs s1_lattice",
+      "s1_liq2 runs s1_liquid",
+      "s1_lat2 runs s1_lattice"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
      "frames": 49,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "score": 0.713,
+     "words": 0.766,
+     "density": 1,
+     "subject": 0.591,
+     "space": 0.94,
+     "broken": 0,
+     "smallShare": 0.344,
+     "faintShare": 0,
+     "examples": [
+      "small \"ALMOST EVERY SOLID SINKS\" 45 px",
+      "small \"ALMOST EVERY SOLID SINKS\" 48 px",
+      "small \"LIQUID WATER\" 35 px",
+      "small \"ICE\" 35 px"
+     ],
+     "worst": [
+      {
+       "t": 1,
+       "words": 0.2,
+       "density": 1,
+       "subject": 0.16,
+       "space": 1,
+       "broken": false,
+       "score": 0.17,
+       "chars": 24,
+       "small": [
+        "\"ALMOST EVERY SOLID SINKS\" 45 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 1.5,
+       "words": 0.2,
+       "density": 1,
+       "subject": 0.16,
+       "space": 1,
+       "broken": false,
+       "score": 0.17,
+       "chars": 24,
+       "small": [
+        "\"ALMOST EVERY SOLID SINKS\" 45 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 2,
+       "words": 0.2,
+       "density": 1,
+       "subject": 0.16,
+       "space": 1,
+       "broken": false,
+       "score": 0.17,
+       "chars": 24,
+       "small": [
+        "\"ALMOST EVERY SOLID SINKS\" 45 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 49,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -1349,23 +2274,29 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.887,
+   "overall": 0.834,
    "scores": {
     "lag": 0.925,
     "pace": 0.486,
     "load": 1,
-    "read": 0.962,
+    "read": 0.756,
+    "depict": 1,
     "eye": 0.837,
-    "holds": 1,
+    "holds": 0.67,
     "reveal": 1
    },
-   "learner": 0.8,
-   "wordsOnly": 0.3,
+   "learner": 0.8125,
+   "wordsOnly": 0.3125,
    "gain": 0.5,
-   "pictureQuestions": 0.6666666666666666,
-   "pictureQuestionsWordsOnly": 0,
+   "pictureQuestions": 0.75,
+   "pictureQuestionsWordsOnly": 0.16666666666666666,
+   "hard": 0.8333333333333334,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 1,
+   "depictSeen": 0.75,
+   "depict": 0.85,
    "follow": {
-    "onLook": 0.75,
+    "onLook": 0.7857142857142857,
     "waiting": 0.8928571428571429,
     "confused": 0.7142857142857143
    },
@@ -1384,7 +2315,7 @@
    },
    "scroller": {
     "kept": 0.14285714285714285,
-    "remembers": 1
+    "remembers": 0.5
    },
    "material": false,
    "tickets": [
@@ -1509,16 +2440,116 @@
      "peakPull": 2,
      "newPerSecond": 0.23
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "demo1",
+       "kind": "sort",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "do steps demo1",
+      "do steps demo1",
+      "do steps demo1"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 1.5,
+      "work": 0.33,
+      "other": 0,
+      "answered": false,
+      "score": 0.67
+     }
+    ],
     "read": {
-     "frames": 53,
-     "severe": 2,
-     "mild": 0,
-     "kinds": {
-      "overlap": 2
-     },
+     "frames": 52,
+     "score": 0.756,
+     "words": 0.854,
+     "density": 1,
+     "subject": 0.509,
+     "space": 0.892,
+     "broken": 0.019,
+     "smallShare": 0.037,
+     "faintShare": 0.141,
      "examples": [
-      "overlap at 7.0 s: writing on top of writing: \"4\" and \"1\" (40% of the smaller)"
-     ]
+      "small \"SORTED\" 50 px",
+      "faint \"4\" 2.3:1",
+      "faint \"3\" 2.3:1",
+      "faint \"1\" 2.3:1",
+      "faint \"2\" 2.3:1",
+      "faint \"4\" 1.2:1"
+     ],
+     "worst": [
+      {
+       "t": 13.5,
+       "words": 0.81,
+       "density": 1,
+       "subject": 0.49,
+       "space": 0.9,
+       "broken": true,
+       "score": 0.29,
+       "chars": 18,
+       "small": [],
+       "faint": [
+        "\"4\" 2.3:1",
+        "\"3\" 2.3:1"
+       ]
+      },
+      {
+       "t": 25.5,
+       "words": 0.47,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.39,
+       "broken": false,
+       "score": 0.38,
+       "chars": 18,
+       "small": [],
+       "faint": [
+        "\"4\" 1.2:1",
+        "\"1\" 1.2:1",
+        "\"3\" 1.2:1",
+        "\"2\" 1.2:1"
+       ]
+      },
+      {
+       "t": 23.5,
+       "words": 0.47,
+       "density": 1,
+       "subject": 0.51,
+       "space": 0.9,
+       "broken": false,
+       "score": 0.42,
+       "chars": 18,
+       "small": [],
+       "faint": [
+        "\"4\" 1.2:1",
+        "\"1\" 1.2:1",
+        "\"3\" 1.2:1",
+        "\"2\" 1.2:1"
+       ]
+      }
+     ],
+     "layout": {
+      "score": 0.962,
+      "frames": 53,
+      "severe": 2,
+      "mild": 0,
+      "kinds": {
+       "overlap": 2
+      },
+      "examples": [
+       "overlap at 7.0 s: writing on top of writing: \"4\" and \"1\" (40% of the smaller)"
+      ]
+     }
     }
    }
   },
@@ -1530,21 +2561,27 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.847,
+   "overall": 0.627,
    "scores": {
     "lag": 0.859,
     "pace": 0.454,
     "load": 1,
-    "read": 0.975,
+    "read": 0.513,
+    "depict": 0.05,
     "eye": 0.642,
-    "holds": 1,
+    "holds": 0.5,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 0.875,
-   "gain": 0.125,
-   "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0.5,
+   "learner": 0.7142857142857143,
+   "wordsOnly": 0.6428571428571429,
+   "gain": 0.0714285714285714,
+   "pictureQuestions": 0.5,
+   "pictureQuestionsWordsOnly": 0.375,
+   "hard": 0.3333333333333333,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 0.05,
+   "depictSeen": 0.0625,
+   "depict": 0.0575,
    "follow": {
     "onLook": 0.9166666666666666,
     "waiting": 0.9583333333333334,
@@ -1660,14 +2697,131 @@
      "peakPull": 2,
      "newPerSecond": 0.41
     },
+    "depict": {
+     "drawn": 0.1,
+     "changes": 0,
+     "free": 0.05,
+     "units": [
+      {
+       "id": "oldb",
+       "kind": "circle",
+       "as": "word",
+       "text": "old bulb"
+      },
+      {
+       "id": "ledb",
+       "kind": "circle",
+       "as": "word",
+       "text": "LED"
+      },
+      {
+       "id": "heat",
+       "kind": "box",
+       "as": "word",
+       "text": "heat"
+      },
+      {
+       "id": "lt",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "ledbar",
+       "kind": "box",
+       "as": "word",
+       "text": "LED"
+      }
+     ],
+     "shown": [],
+     "told": [
+      "tag \"ninety percent\" on heat",
+      "tag \"a quarter\" on ledbar"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0.25,
+      "other": 0,
+      "answered": false,
+      "score": 0.5
+     }
+    ],
     "read": {
-     "frames": 48,
-     "severe": 0,
-     "mild": 3,
-     "kinds": {
-      "empty": 3
-     },
-     "examples": []
+     "frames": 47,
+     "score": 0.513,
+     "words": 0.645,
+     "density": 1,
+     "subject": 0.439,
+     "space": 0.368,
+     "broken": 0,
+     "smallShare": 0.35,
+     "faintShare": 0,
+     "examples": [
+      "small \"old bulb\" 42 px",
+      "small \"LED\" 42 px",
+      "small \"heat\" 42 px",
+      "small \"old bulb\" 41 px"
+     ],
+     "worst": [
+      {
+       "t": 5.5,
+       "words": 0.5,
+       "density": 1,
+       "subject": 0.39,
+       "space": 0.2,
+       "broken": false,
+       "score": 0.38,
+       "chars": 22,
+       "small": [
+        "\"heat\" 42 px",
+        "\"old bulb\" 41 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 6,
+       "words": 0.5,
+       "density": 1,
+       "subject": 0.39,
+       "space": 0.2,
+       "broken": false,
+       "score": 0.38,
+       "chars": 22,
+       "small": [
+        "\"heat\" 42 px",
+        "\"old bulb\" 41 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 6.5,
+       "words": 0.5,
+       "density": 1,
+       "subject": 0.39,
+       "space": 0.2,
+       "broken": false,
+       "score": 0.38,
+       "chars": 22,
+       "small": [
+        "\"heat\" 42 px",
+        "\"old bulb\" 41 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.975,
+      "frames": 48,
+      "severe": 0,
+      "mild": 3,
+      "kinds": {
+       "empty": 3
+      },
+      "examples": []
+     }
     }
    }
   },
@@ -1679,21 +2833,29 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.749,
+   "overall": 0.719,
    "scores": {
     "lag": 0.764,
     "pace": 0.917,
     "load": 1,
-    "read": 0.958,
+    "read": 0.697,
+    "depict": 1,
     "eye": 0.603,
-    "holds": 1,
+    "holds": 0.77,
     "reveal": 0
    },
-   "learner": 1,
-   "wordsOnly": 1,
+   "learner": 0.6666666666666666,
+   "wordsOnly": 0.6666666666666666,
    "gain": 0,
+   "pictureQuestions": 0,
+   "pictureQuestionsWordsOnly": 0,
+   "hard": 0,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.2738095238095238,
+   "depict": 0.5642857142857143,
    "follow": {
-    "onLook": 0.9166666666666666,
+    "onLook": 1,
     "waiting": 0.9166666666666666,
     "confused": 0.4166666666666667
    },
@@ -1824,14 +2986,107 @@
      "peakPull": 3,
      "newPerSecond": 0.66
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_chart",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_chart runs s1_curve"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "settle",
+      "seconds": 2,
+      "work": 0.38,
+      "other": 0,
+      "answered": false,
+      "score": 0.77
+     }
+    ],
     "read": {
-     "frames": 48,
-     "severe": 0,
-     "mild": 5,
-     "kinds": {
-      "empty": 5
-     },
-     "examples": []
+     "frames": 47,
+     "score": 0.697,
+     "words": 0.788,
+     "density": 1,
+     "subject": 0.715,
+     "space": 0.711,
+     "broken": 0,
+     "smallShare": 0.133,
+     "faintShare": 0.013,
+     "examples": [
+      "small \"1900\" 44 px",
+      "small \"today\" 44 px",
+      "small \"32\" 50 px",
+      "faint \"in a little over a centu\" 2.6:1"
+     ],
+     "worst": [
+      {
+       "t": 16.5,
+       "words": 0.16,
+       "density": 1,
+       "subject": 0.79,
+       "space": 1,
+       "broken": false,
+       "score": 0.16,
+       "chars": 9,
+       "small": [
+        "\"1900\" 44 px",
+        "\"today\" 44 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 17,
+       "words": 0.29,
+       "density": 1,
+       "subject": 0.79,
+       "space": 1,
+       "broken": false,
+       "score": 0.28,
+       "chars": 16,
+       "small": [
+        "\"1900\" 44 px",
+        "\"today\" 44 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 18,
+       "words": 0.38,
+       "density": 1,
+       "subject": 0.79,
+       "space": 1,
+       "broken": false,
+       "score": 0.37,
+       "chars": 18,
+       "small": [
+        "\"1900\" 44 px",
+        "\"today\" 44 px",
+        "\"32\" 50 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.958,
+      "frames": 48,
+      "severe": 0,
+      "mild": 5,
+      "kinds": {
+       "empty": 5
+      },
+      "examples": []
+     }
     }
    }
   },
@@ -1843,24 +3098,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.912,
+   "overall": 0.737,
    "scores": {
     "lag": 0.875,
     "pace": 0.9,
     "load": 0.923,
-    "read": 1,
+    "read": 0.646,
+    "depict": 0.467,
     "eye": 0.683,
-    "holds": 1,
+    "holds": 0.4,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 0.8,
-   "gain": 0.19999999999999996,
-   "pictureQuestions": 1,
+   "learner": 0.9375,
+   "wordsOnly": 0.5,
+   "gain": 0.4375,
+   "pictureQuestions": 0.875,
    "pictureQuestionsWordsOnly": 0,
+   "hard": 0.8333333333333334,
+   "hardWordsOnly": 0,
+   "depictFree": 0.467,
+   "depictSeen": 0.425,
+   "depict": 0.4418,
    "follow": {
     "onLook": 0.9230769230769231,
-    "waiting": 0.8846153846153846,
+    "waiting": 0.9230769230769231,
     "confused": 0.8461538461538461
    },
    "designer": {
@@ -1878,7 +3139,7 @@
    },
    "scroller": {
     "kept": 0.23076923076923078,
-    "remembers": 0.5
+    "remembers": 1
    },
    "material": true,
    "tickets": [],
@@ -1978,12 +3239,174 @@
      "peakPull": 3,
      "newPerSecond": 0.96
     },
+    "depict": {
+     "drawn": 0.467,
+     "free": 0.467,
+     "units": [
+      {
+       "id": "s1_seal",
+       "kind": "circle",
+       "as": "word",
+       "text": "seal"
+      },
+      {
+       "id": "s1_l1",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l2",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l3",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l4",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l5",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l6",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l7",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_bar",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l8",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l9",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l10",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l11",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l12",
+       "kind": "box",
+       "as": "symbol"
+      },
+      {
+       "id": "s1_l13",
+       "kind": "box",
+       "as": "symbol"
+      }
+     ],
+     "shown": [],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 1.5,
+      "work": 0.2,
+      "other": 0,
+      "answered": false,
+      "score": 0.4
+     }
+    ],
     "read": {
-     "frames": 52,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "frames": 50,
+     "score": 0.646,
+     "words": 0.68,
+     "density": 1,
+     "subject": 0.786,
+     "space": 0.987,
+     "broken": 0,
+     "smallShare": 0.089,
+     "faintShare": 0.022,
+     "examples": [
+      "small \"CHARTER\" 36 px",
+      "small \"seal\" 48 px",
+      "small \"CHARTER\" 42 px",
+      "small \"seal\" 56 px",
+      "small \"CHARTER\" 53 px",
+      "faint \"or the law of the\" 1.0:1"
+     ],
+     "worst": [
+      {
+       "t": 12.5,
+       "words": 0.1,
+       "density": 1,
+       "subject": 1,
+       "space": 0.48,
+       "broken": false,
+       "score": 0.09,
+       "chars": 11,
+       "small": [
+        "\"CHARTER\" 36 px",
+        "\"seal\" 48 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 7.5,
+       "words": 0.1,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.1,
+       "chars": 11,
+       "small": [
+        "\"CHARTER\" 36 px",
+        "\"seal\" 48 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 8,
+       "words": 0.1,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.1,
+       "chars": 11,
+       "small": [
+        "\"CHARTER\" 36 px",
+        "\"seal\" 48 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 52,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -1995,14 +3418,15 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.859,
+   "overall": 0.82,
    "scores": {
     "lag": 0.833,
     "pace": 0.525,
     "load": 1,
-    "read": 1,
+    "read": 0.782,
+    "depict": 1,
     "eye": 0.652,
-    "holds": 1,
+    "holds": 0.77,
     "reveal": 1
    },
    "learner": 1,
@@ -2010,6 +3434,11 @@
    "gain": 0,
    "pictureQuestions": 1,
    "pictureQuestionsWordsOnly": 1,
+   "hard": 1,
+   "hardWordsOnly": 1,
+   "depictFree": 1,
+   "depictSeen": 0.75,
+   "depict": 0.85,
    "follow": {
     "onLook": 0.8846153846153846,
     "waiting": 0.9615384615384616,
@@ -2146,12 +3575,110 @@
      "peakPull": 2,
      "newPerSecond": 0.15
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "demo1",
+       "kind": "matvec",
+       "as": "itself"
+      },
+      {
+       "id": "s1_plane_run",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "do steps demo1",
+      "do steps demo1",
+      "s1_plane_run runs s1_plane"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0.38,
+      "other": 0,
+      "answered": false,
+      "score": 0.77
+     }
+    ],
     "read": {
-     "frames": 51,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "frames": 50,
+     "score": 0.782,
+     "words": 0.863,
+     "density": 1,
+     "subject": 0.476,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0.053,
+     "faintShare": 0,
+     "examples": [
+      "small \"point three, one\" 49 px",
+      "small \"(3, 1)\" 43 px",
+      "small \"(-1, 3)\" 43 px"
+     ],
+     "worst": [
+      {
+       "t": 23.5,
+       "words": 0.76,
+       "density": 1,
+       "subject": 0.16,
+       "space": 1,
+       "broken": false,
+       "score": 0.65,
+       "chars": 62,
+       "small": [
+        "\"(3, 1)\" 43 px",
+        "\"(-1, 3)\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 24,
+       "words": 0.76,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": false,
+       "score": 0.66,
+       "chars": 62,
+       "small": [
+        "\"(3, 1)\" 43 px",
+        "\"(-1, 3)\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 24.5,
+       "words": 0.76,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": false,
+       "score": 0.66,
+       "chars": 62,
+       "small": [
+        "\"(3, 1)\" 43 px",
+        "\"(-1, 3)\" 43 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 51,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -2163,19 +3690,27 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.91,
+   "overall": 0.779,
    "scores": {
     "lag": 0.686,
     "pace": 0.875,
     "load": 1,
-    "read": 1,
+    "read": 0.53,
+    "depict": 1,
     "eye": 0.808,
-    "holds": 1,
+    "holds": 0.33,
     "reveal": 1
    },
    "learner": 1,
-   "wordsOnly": 1,
-   "gain": 0,
+   "wordsOnly": 0.7142857142857143,
+   "gain": 0.2857142857142857,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0.3333333333333333,
+   "hard": 1,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 1,
+   "depictSeen": 0.39285714285714285,
+   "depict": 0.6357142857142857,
    "follow": {
     "onLook": 0.85,
     "waiting": 0.95,
@@ -2290,12 +3825,106 @@
      "peakPull": 3,
      "newPerSecond": 0.36
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "s1_mp",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_mp runs s1_map"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0.17,
+      "other": 0,
+      "answered": false,
+      "score": 0.33
+     }
+    ],
     "read": {
      "frames": 39,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "score": 0.53,
+     "words": 0.53,
+     "density": 1,
+     "subject": 1,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0.487,
+     "faintShare": 0,
+     "examples": [
+      "small \"SOUTHERN CANADA\" 43 px",
+      "small \"UP TO 4,000 KM\" 43 px",
+      "small \"CENTRAL MEXICO\" 43 px"
+     ],
+     "worst": [
+      {
+       "t": 11.5,
+       "words": 0.35,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.35,
+       "chars": 60,
+       "small": [
+        "\"SOUTHERN CANADA\" 43 px",
+        "\"UP TO 4,000 KM\" 43 px",
+        "\"CENTRAL MEXICO\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12,
+       "words": 0.35,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.35,
+       "chars": 60,
+       "small": [
+        "\"SOUTHERN CANADA\" 43 px",
+        "\"UP TO 4,000 KM\" 43 px",
+        "\"CENTRAL MEXICO\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12.5,
+       "words": 0.35,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0.35,
+       "chars": 60,
+       "small": [
+        "\"SOUTHERN CANADA\" 43 px",
+        "\"UP TO 4,000 KM\" 43 px",
+        "\"CENTRAL MEXICO\" 43 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 39,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -2307,20 +3936,28 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.86,
+   "overall": 0.692,
    "scores": {
     "lag": 0.839,
     "pace": 0.83,
     "load": 0.933,
-    "read": 0.968,
+    "read": 0.647,
+    "depict": 0,
     "eye": 0.592,
     "reveal": 1
    },
    "learner": 1,
-   "wordsOnly": 1,
-   "gain": 0,
+   "wordsOnly": 0.7142857142857143,
+   "gain": 0.2857142857142857,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0.3333333333333333,
+   "hard": 1,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 0,
+   "depictSeen": 0.46875,
+   "depict": 0.28125,
    "follow": {
-    "onLook": 0.9375,
+    "onLook": 0.875,
     "waiting": 1,
     "confused": 0.75
    },
@@ -2431,16 +4068,119 @@
      "peakPull": 3,
      "newPerSecond": 0.76
     },
-    "read": {
-     "frames": 31,
-     "severe": 1,
-     "mild": 0,
-     "kinds": {
-      "overlap": 1
-     },
-     "examples": [
-      "overlap at 11.5 s: writing on top of writing: \"HEART\" and \"BODY\" (46% of the smaller)"
+    "depict": {
+     "drawn": 0,
+     "changes": 0,
+     "free": 0,
+     "units": [
+      {
+       "id": "g1",
+       "kind": "circle",
+       "as": "word",
+       "text": "heart"
+      },
+      {
+       "id": "g2",
+       "kind": "circle",
+       "as": "word",
+       "text": "heart"
+      },
+      {
+       "id": "b1",
+       "kind": "circle",
+       "as": "word",
+       "text": "heart"
+      }
+     ],
+     "shown": [],
+     "told": [
+      "tag \"gills\" on g1",
+      "tag \"gills\" on g2",
+      "tag \"body\" on b1",
+      "tag \"stopped\" on b1"
      ]
+    },
+    "holds": [],
+    "read": {
+     "frames": 28,
+     "score": 0.647,
+     "words": 0.707,
+     "density": 1,
+     "subject": 0.529,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0.39,
+     "faintShare": 0,
+     "examples": [
+      "small \"HEART\" 51 px",
+      "small \"GILLS\" 43 px",
+      "small \"HEART\" 56 px",
+      "small \"BODY\" 43 px",
+      "small \"HEART\" 49 px",
+      "small \"WHEN IT SWIMS,\" 37 px"
+     ],
+     "worst": [
+      {
+       "t": 12,
+       "words": 0.56,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": false,
+       "score": 0.49,
+       "chars": 52,
+       "small": [
+        "\"HEART\" 51 px",
+        "\"STOPPED\" 45 px",
+        "\"WHEN IT SWIMS,\" 37 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 12.5,
+       "words": 0.56,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": false,
+       "score": 0.49,
+       "chars": 52,
+       "small": [
+        "\"HEART\" 51 px",
+        "\"STOPPED\" 45 px",
+        "\"WHEN IT SWIMS,\" 37 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 13,
+       "words": 0.56,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": false,
+       "score": 0.49,
+       "chars": 52,
+       "small": [
+        "\"HEART\" 51 px",
+        "\"STOPPED\" 45 px",
+        "\"WHEN IT SWIMS,\" 37 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.968,
+      "frames": 31,
+      "severe": 1,
+      "mild": 0,
+      "kinds": {
+       "overlap": 1
+      },
+      "examples": [
+       "overlap at 11.5 s: writing on top of writing: \"HEART\" and \"BODY\" (46% of the smaller)"
+      ]
+     }
     }
    }
   },
@@ -2494,25 +4234,31 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.792,
+   "overall": 0.803,
    "scores": {
     "lag": 0.833,
     "pace": 0.833,
     "load": 1,
-    "read": 0,
+    "read": 0.214,
+    "depict": 1,
     "eye": 0.875,
-    "holds": 1,
+    "holds": 0.67,
     "reveal": 1
    },
    "learner": 1,
-   "wordsOnly": 0.8,
-   "gain": 0.19999999999999996,
+   "wordsOnly": 0.5625,
+   "gain": 0.4375,
    "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0,
+   "pictureQuestionsWordsOnly": 0.25,
+   "hard": 1,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 1,
+   "depictSeen": 0.625,
+   "depict": 0.775,
    "follow": {
-    "onLook": 0.84375,
-    "waiting": 0.78125,
-    "confused": 0.5625
+    "onLook": 0.875,
+    "waiting": 0.8125,
+    "confused": 0.625
    },
    "designer": {
     "overall": 4,
@@ -2662,16 +4408,116 @@
      "peakPull": 1,
      "newPerSecond": 0.1
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "demo1",
+       "kind": "dijkstra",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "do steps demo1",
+      "do steps demo1",
+      "do steps demo1"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 1.5,
+      "work": 0.33,
+      "other": 0,
+      "answered": false,
+      "score": 0.67
+     }
+    ],
     "read": {
      "frames": 60,
-     "severe": 60,
-     "mild": 0,
-     "kinds": {
-      "off_frame": 60
-     },
+     "score": 0.214,
+     "words": 0.53,
+     "density": 1,
+     "subject": 1,
+     "space": 1,
+     "broken": 1,
+     "smallShare": 0.626,
+     "faintShare": 0,
      "examples": [
-      "off_frame at 0.5 s: cut by the frame edge: \"FASTEST WAY HOME TO\" (20% outside)"
-     ]
+      "small \"2\" 45 px",
+      "small \"4\" 45 px",
+      "small \"1\" 45 px",
+      "small \"5\" 45 px"
+     ],
+     "worst": [
+      {
+       "t": 14,
+       "words": 0.49,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": true,
+       "score": 0.19,
+       "chars": 48,
+       "small": [
+        "\"2\" 45 px",
+        "\"4\" 45 px",
+        "\"1\" 45 px",
+        "\"5\" 45 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 9,
+       "words": 0.49,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": true,
+       "score": 0.2,
+       "chars": 48,
+       "small": [
+        "\"2\" 45 px",
+        "\"4\" 45 px",
+        "\"1\" 45 px",
+        "\"5\" 45 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 9.5,
+       "words": 0.49,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": true,
+       "score": 0.2,
+       "chars": 48,
+       "small": [
+        "\"2\" 45 px",
+        "\"4\" 45 px",
+        "\"1\" 45 px",
+        "\"5\" 45 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0,
+      "frames": 60,
+      "severe": 60,
+      "mild": 0,
+      "kinds": {
+       "off_frame": 60
+      },
+      "examples": [
+       "off_frame at 0.5 s: cut by the frame edge: \"FASTEST WAY HOME TO\" (20% outside)"
+      ]
+     }
     }
    }
   },
@@ -2683,24 +4529,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.644,
+   "overall": 0.504,
    "scores": {
     "lag": 0.817,
     "pace": 0.626,
     "load": 1,
-    "read": 0.6,
+    "read": 0.626,
+    "depict": 0,
     "eye": 0.466,
-    "holds": 0.5,
+    "holds": 0,
     "reveal": 0.5
    },
    "learner": 1,
-   "wordsOnly": 0.75,
-   "gain": 0.25,
+   "wordsOnly": 0.5714285714285714,
+   "gain": 0.4285714285714286,
    "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0,
+   "pictureQuestionsWordsOnly": 0.25,
+   "hard": 1,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 0,
+   "depictSeen": 0.21428571428571427,
+   "depict": 0.12857142857142856,
    "follow": {
     "onLook": 0.7727272727272727,
-    "waiting": 0.7727272727272727,
+    "waiting": 0.8636363636363636,
     "confused": 0.45454545454545453
    },
    "designer": {
@@ -2830,19 +4682,93 @@
      "peakPull": 3,
      "newPerSecond": 0.81
     },
+    "depict": {
+     "drawn": 0,
+     "free": 0,
+     "units": [],
+     "shown": [],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 2.5,
+      "work": 0,
+      "other": 0.2,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
-     "frames": 41,
-     "severe": 8,
-     "mild": 21,
-     "kinds": {
-      "empty": 26,
-      "overlap": 8,
-      "off_frame": 7
-     },
+     "frames": 37,
+     "score": 0.626,
+     "words": 0.865,
+     "density": 1,
+     "subject": 0.464,
+     "space": 0.403,
+     "broken": 0.162,
+     "smallShare": 0.199,
+     "faintShare": 0,
      "examples": [
-      "overlap at 7.0 s: writing on top of writing: \"÷\" and \"rate\" (80% of the smaller)",
-      "off_frame at 12.5 s: cut by the frame edge: \"How long does\" (33% outside), \"money take to\" (32% outside), \"double?\" (20% outside)"
-     ]
+      "small \"an estimate, but close f\" 44 px",
+      "small \"an estimate, but close f\" 45 px"
+     ],
+     "worst": [
+      {
+       "t": 17,
+       "words": 0.43,
+       "density": 1,
+       "subject": 0.07,
+       "space": 0.25,
+       "broken": false,
+       "score": 0.3,
+       "chars": 52,
+       "small": [
+        "\"an estimate, but close f\" 44 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 13,
+       "words": 0.99,
+       "density": 1,
+       "subject": 0.39,
+       "space": 0.55,
+       "broken": true,
+       "score": 0.32,
+       "chars": 43,
+       "small": [],
+       "faint": []
+      },
+      {
+       "t": 13.5,
+       "words": 0.99,
+       "density": 1,
+       "subject": 0.39,
+       "space": 0.55,
+       "broken": true,
+       "score": 0.32,
+       "chars": 43,
+       "small": [],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.6,
+      "frames": 41,
+      "severe": 8,
+      "mild": 21,
+      "kinds": {
+       "empty": 26,
+       "overlap": 8,
+       "off_frame": 7
+      },
+      "examples": [
+       "overlap at 7.0 s: writing on top of writing: \"÷\" and \"rate\" (80% of the smaller)",
+       "off_frame at 12.5 s: cut by the frame edge: \"How long does\" (33% outside), \"money take to\" (32% outside), \"double?\" (20% outside)"
+      ]
+     }
     }
    }
   },
@@ -2854,24 +4780,30 @@
    "passed": false,
    "rounds": 4,
    "reviewed": "",
-   "overall": 0.908,
+   "overall": 0.741,
    "scores": {
     "lag": 0.883,
     "pace": 0.611,
     "load": 1,
-    "read": 1,
+    "read": 0.385,
+    "depict": 1,
     "eye": 0.859,
-    "holds": 1,
+    "holds": 0.19,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 0.6,
-   "gain": 0.4,
-   "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0.5,
+   "learner": 0.875,
+   "wordsOnly": 0.375,
+   "gain": 0.5,
+   "pictureQuestions": 0.8,
+   "pictureQuestionsWordsOnly": 0.2,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 1,
+   "depictSeen": 0.5,
+   "depict": 0.7,
    "follow": {
     "onLook": 0.8461538461538461,
-    "waiting": 0.9230769230769231,
+    "waiting": 0.9615384615384616,
     "confused": 0.46153846153846156
    },
    "designer": {
@@ -3015,12 +4947,112 @@
      "peakPull": 2,
      "newPerSecond": 0.2
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "demo1",
+       "kind": "trace",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "do steps demo1",
+      "do steps demo1",
+      "do steps demo1"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 2.5,
+      "work": 0.09,
+      "other": 0,
+      "answered": false,
+      "score": 0.19
+     }
+    ],
     "read": {
      "frames": 49,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "score": 0.385,
+     "words": 0.41,
+     "density": 0.989,
+     "subject": 0.678,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0.789,
+     "faintShare": 0,
+     "examples": [
+      "small \"let best = 0\" 49 px",
+      "small \"for (const x of [3, 7, 2\" 49 px",
+      "small \"  if (x > best) best = x\" 49 px",
+      "small \"}\" 49 px"
+     ],
+     "worst": [
+      {
+       "t": 0.5,
+       "words": 0.41,
+       "density": 1,
+       "subject": 0.6,
+       "space": 1,
+       "broken": false,
+       "score": 0.38,
+       "chars": 120,
+       "small": [
+        "\"let best = 0\" 49 px",
+        "\"for (const x of [3, 7, 2\" 49 px",
+        "\"  if (x > best) best = x\" 49 px",
+        "\"}\" 49 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 1,
+       "words": 0.41,
+       "density": 1,
+       "subject": 0.6,
+       "space": 1,
+       "broken": false,
+       "score": 0.38,
+       "chars": 120,
+       "small": [
+        "\"let best = 0\" 49 px",
+        "\"for (const x of [3, 7, 2\" 49 px",
+        "\"  if (x > best) best = x\" 49 px",
+        "\"}\" 49 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 1.5,
+       "words": 0.41,
+       "density": 1,
+       "subject": 0.6,
+       "space": 1,
+       "broken": false,
+       "score": 0.38,
+       "chars": 120,
+       "small": [
+        "\"let best = 0\" 49 px",
+        "\"for (const x of [3, 7, 2\" 49 px",
+        "\"  if (x > best) best = x\" 49 px",
+        "\"}\" 49 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 49,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -3032,22 +5064,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.795,
+   "overall": 0.729,
    "scores": {
     "lag": 0.771,
     "pace": 0.875,
     "load": 0.963,
-    "read": 0.981,
+    "read": 0.5,
+    "depict": 0.75,
     "eye": 0.975,
     "holds": 0,
     "reveal": 1
    },
-   "learner": 0.9,
-   "wordsOnly": 0.8,
-   "gain": 0.09999999999999998,
+   "learner": 1,
+   "wordsOnly": 0.75,
+   "gain": 0.25,
+   "pictureQuestions": 1,
+   "pictureQuestionsWordsOnly": 0.3333333333333333,
+   "hard": 1,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 0.75,
+   "depictSeen": 0.41666666666666663,
+   "depict": 0.55,
    "follow": {
-    "onLook": 0.75,
-    "waiting": 0.8571428571428571,
+    "onLook": 0.8214285714285714,
+    "waiting": 0.9285714285714286,
     "confused": 0.8571428571428571
    },
    "designer": {
@@ -3174,16 +5214,141 @@
      "peakPull": 4,
      "newPerSecond": 0.36
     },
+    "depict": {
+     "drawn": 0.5,
+     "changes": 1,
+     "free": 0.75,
+     "units": [
+      {
+       "id": "iron",
+       "kind": "box",
+       "as": "word",
+       "text": "iron"
+      },
+      {
+       "id": "water",
+       "kind": "box",
+       "as": "word",
+       "text": "water"
+      },
+      {
+       "id": "oxygen",
+       "kind": "box",
+       "as": "word",
+       "text": "oxygen"
+      },
+      {
+       "id": "s1_iron",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_rust",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_crack",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_iron runs s1_iron_drop",
+      "s1_rust runs s1_rust_build",
+      "s1_crack runs s1_rust_crack"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
-     "frames": 54,
-     "severe": 1,
-     "mild": 0,
-     "kinds": {
-      "empty": 1
-     },
+     "frames": 52,
+     "score": 0.5,
+     "words": 0.522,
+     "density": 1,
+     "subject": 0.874,
+     "space": 0.953,
+     "broken": 0,
+     "smallShare": 0.475,
+     "faintShare": 0,
      "examples": [
-      "empty at 2.0 s: 22% of the usable frame has anything in it; the largest empty band is 50% of its height"
-     ]
+      "small \"Fe\" 36 px"
+     ],
+     "worst": [
+      {
+       "t": 11.5,
+       "words": 0,
+       "density": 1,
+       "subject": 1,
+       "space": 1,
+       "broken": false,
+       "score": 0,
+       "chars": 12,
+       "small": [
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 4.5,
+       "words": 0.35,
+       "density": 1,
+       "subject": 0.79,
+       "space": 1,
+       "broken": false,
+       "score": 0.34,
+       "chars": 25,
+       "small": [
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 5,
+       "words": 0.35,
+       "density": 1,
+       "subject": 0.79,
+       "space": 1,
+       "broken": false,
+       "score": 0.34,
+       "chars": 25,
+       "small": [
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px",
+        "\"Fe\" 36 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.981,
+      "frames": 54,
+      "severe": 1,
+      "mild": 0,
+      "kinds": {
+       "empty": 1
+      },
+      "examples": [
+       "empty at 2.0 s: 22% of the usable frame has anything in it; the largest empty band is 50% of its height"
+      ]
+     }
     }
    }
   },
@@ -3195,23 +5360,29 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.924,
+   "overall": 0.877,
    "scores": {
     "lag": 0.906,
     "pace": 0.657,
     "load": 1,
-    "read": 0.991,
+    "read": 0.544,
+    "depict": 1,
     "eye": 0.911,
     "holds": 1,
     "reveal": 1
    },
-   "learner": 0.875,
-   "wordsOnly": 0.75,
-   "gain": 0.125,
-   "pictureQuestions": 0.5,
+   "learner": 0.6428571428571429,
+   "wordsOnly": 0.42857142857142855,
+   "gain": 0.21428571428571436,
+   "pictureQuestions": 0.375,
    "pictureQuestionsWordsOnly": 0,
+   "hard": 0.3333333333333333,
+   "hardWordsOnly": 0,
+   "depictFree": 1,
+   "depictSeen": 0.39583333333333337,
+   "depict": 0.6375000000000001,
    "follow": {
-    "onLook": 0.75,
+    "onLook": 0.7083333333333334,
     "waiting": 1,
     "confused": 1
    },
@@ -3348,14 +5519,108 @@
      "peakPull": 3,
      "newPerSecond": 0.62
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 1,
+     "free": 1,
+     "units": [
+      {
+       "id": "k1",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "k1 runs s1_knot"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0.7,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
     "read": {
-     "frames": 44,
-     "severe": 0,
-     "mild": 1,
-     "kinds": {
-      "dimmed": 1
-     },
-     "examples": []
+     "frames": 40,
+     "score": 0.544,
+     "words": 0.575,
+     "density": 1,
+     "subject": 0.701,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0.549,
+     "faintShare": 0,
+     "examples": [
+      "small \"TWO CROSSINGS\" 47 px",
+      "small \"TWO CROSSINGS\" 48 px",
+      "small \"RIGHT END OVER\" 42 px",
+      "small \"TUCK UNDER\" 42 px",
+      "small \"LEFT OVER\" 42 px",
+      "small \"RIGHT OVER\" 42 px"
+     ],
+     "worst": [
+      {
+       "t": 3.5,
+       "words": 0.46,
+       "density": 1,
+       "subject": 0.53,
+       "space": 1,
+       "broken": false,
+       "score": 0.42,
+       "chars": 41,
+       "small": [
+        "\"TWO CROSSINGS\" 48 px",
+        "\"RIGHT END OVER\" 42 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 4,
+       "words": 0.46,
+       "density": 1,
+       "subject": 0.53,
+       "space": 1,
+       "broken": false,
+       "score": 0.42,
+       "chars": 41,
+       "small": [
+        "\"TWO CROSSINGS\" 48 px",
+        "\"RIGHT END OVER\" 42 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 5,
+       "words": 0.5,
+       "density": 1,
+       "subject": 0.44,
+       "space": 1,
+       "broken": false,
+       "score": 0.45,
+       "chars": 37,
+       "small": [
+        "\"TWO CROSSINGS\" 48 px",
+        "\"TUCK UNDER\" 42 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.991,
+      "frames": 44,
+      "severe": 0,
+      "mild": 1,
+      "kinds": {
+       "dimmed": 1
+      },
+      "examples": []
+     }
     }
    }
   },
@@ -3367,23 +5632,29 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.74,
+   "overall": 0.588,
    "scores": {
     "lag": 0.863,
     "pace": 0.463,
     "load": 0.944,
-    "read": 1,
+    "read": 0.488,
+    "depict": 0.25,
     "eye": 0.409,
-    "holds": 0.5,
+    "holds": 0.29,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 1,
-   "gain": 0,
-   "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 1,
+   "learner": 0.875,
+   "wordsOnly": 0.625,
+   "gain": 0.25,
+   "pictureQuestions": 0.75,
+   "pictureQuestionsWordsOnly": 0.25,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0,
+   "depictFree": 0.25,
+   "depictSeen": 0.4666666666666667,
+   "depict": 0.38,
    "follow": {
-    "onLook": 0.8888888888888888,
+    "onLook": 0.8333333333333334,
     "waiting": 1,
     "confused": 0.4444444444444444
    },
@@ -3505,12 +5776,139 @@
      "peakPull": 4,
      "newPerSecond": 0.94
     },
+    "depict": {
+     "drawn": 0.5,
+     "changes": 0,
+     "free": 0.25,
+     "units": [
+      {
+       "id": "login",
+       "kind": "box",
+       "as": "symbol",
+       "text": "412"
+      },
+      {
+       "id": "billing",
+       "kind": "box",
+       "as": "symbol",
+       "text": "268"
+      },
+      {
+       "id": "ship",
+       "kind": "box",
+       "as": "symbol",
+       "text": "97"
+      },
+      {
+       "id": "other",
+       "kind": "box",
+       "as": "symbol",
+       "text": "63"
+      }
+     ],
+     "shown": [],
+     "told": [
+      "tag \"almost half\" on login",
+      "tag \"half of all tickets\" on login"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "predict",
+      "seconds": 1.5,
+      "work": 0.29,
+      "other": 0,
+      "answered": false,
+      "score": 0.58
+     },
+     {
+      "id": "h2",
+      "purpose": "settle",
+      "seconds": 2,
+      "work": 0,
+      "other": 0,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
-     "frames": 36,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "frames": 35,
+     "score": 0.488,
+     "words": 0.56,
+     "density": 1,
+     "subject": 0.299,
+     "space": 0.943,
+     "broken": 0,
+     "smallShare": 0.465,
+     "faintShare": 0.009,
+     "examples": [
+      "faint \"Last quarter we\" 2.5:1",
+      "faint \"got\" 2.5:1",
+      "small \"412\" 44 px",
+      "small \"LOGIN\" 49 px",
+      "small \"ALMOST HALF\" 41 px",
+      "small \"268\" 35 px"
+     ],
+     "worst": [
+      {
+       "t": 0.5,
+       "words": 0.25,
+       "density": 1,
+       "subject": 0.14,
+       "space": 1,
+       "broken": false,
+       "score": 0.21,
+       "chars": 18,
+       "small": [],
+       "faint": [
+        "\"Last quarter we\" 2.5:1",
+        "\"got\" 2.5:1"
+       ]
+      },
+      {
+       "t": 12.5,
+       "words": 0.38,
+       "density": 1,
+       "subject": 0.23,
+       "space": 0.63,
+       "broken": false,
+       "score": 0.3,
+       "chars": 56,
+       "small": [
+        "\"412\" 44 px",
+        "\"LOGIN\" 49 px",
+        "\"268\" 35 px",
+        "\"BILLING\" 49 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 13,
+       "words": 0.43,
+       "density": 1,
+       "subject": 0.23,
+       "space": 0.86,
+       "broken": false,
+       "score": 0.36,
+       "chars": 65,
+       "small": [
+        "\"412\" 44 px",
+        "\"LOGIN\" 49 px",
+        "\"268\" 35 px",
+        "\"BILLING\" 49 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 36,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -3522,21 +5920,29 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.884,
+   "overall": 0.779,
    "scores": {
     "lag": 0.838,
     "pace": 1,
     "load": 1,
-    "read": 0.992,
+    "read": 0.583,
+    "depict": 0.45,
     "eye": 0.36,
     "holds": 1,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 1,
+   "learner": 0.75,
+   "wordsOnly": 0.75,
    "gain": 0,
+   "pictureQuestions": 0.3333333333333333,
+   "pictureQuestionsWordsOnly": 0.3333333333333333,
+   "hard": 0.3333333333333333,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 0.45,
+   "depictSeen": 0.16517857142857142,
+   "depict": 0.2791071428571429,
    "follow": {
-    "onLook": 0.8076923076923077,
+    "onLook": 0.8461538461538461,
     "waiting": 0.8846153846153846,
     "confused": 1
    },
@@ -3669,14 +6075,128 @@
      "peakPull": 3,
      "newPerSecond": 0.31
     },
+    "depict": {
+     "drawn": 0.5,
+     "changes": 0.4,
+     "free": 0.45,
+     "units": [
+      {
+       "id": "buret",
+       "kind": "box",
+       "as": "word",
+       "text": "NaOH"
+      },
+      {
+       "id": "flask",
+       "kind": "box",
+       "as": "word",
+       "text": "acid + phenolphthalein"
+      },
+      {
+       "id": "s1_fast",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_slow",
+       "kind": "run",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "s1_fast runs drops",
+      "s1_slow runs drops"
+     ],
+     "told": [
+      "tag \"pink\" on flask",
+      "flask relabelled \"faint pink\"",
+      "do count clock"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0.52,
+      "other": 0.03,
+      "answered": false,
+      "score": 1
+     }
+    ],
     "read": {
-     "frames": 51,
-     "severe": 0,
-     "mild": 1,
-     "kinds": {
-      "overlap": 1
-     },
-     "examples": []
+     "frames": 47,
+     "score": 0.583,
+     "words": 0.729,
+     "density": 1,
+     "subject": 0.393,
+     "space": 0.506,
+     "broken": 0.021,
+     "smallShare": 0.329,
+     "faintShare": 0,
+     "examples": [
+      "small \"acid +\" 50 px",
+      "small \"phenolphthalein\" 50 px",
+      "small \"pink\" 49 px",
+      "small \"acid +\" 56 px"
+     ],
+     "worst": [
+      {
+       "t": 18.5,
+       "words": 0.61,
+       "density": 1,
+       "subject": 0.42,
+       "space": 0.33,
+       "broken": true,
+       "score": 0.19,
+       "chars": 41,
+       "small": [
+        "\"acid +\" 56 px",
+        "\"phenolphthalein\" 50 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 3.5,
+       "words": 0.58,
+       "density": 1,
+       "subject": 0.53,
+       "space": 0.41,
+       "broken": false,
+       "score": 0.48,
+       "chars": 38,
+       "small": [
+        "\"acid +\" 50 px",
+        "\"phenolphthalein\" 50 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 4,
+       "words": 0.58,
+       "density": 1,
+       "subject": 0.53,
+       "space": 0.41,
+       "broken": false,
+       "score": 0.48,
+       "chars": 38,
+       "small": [
+        "\"acid +\" 50 px",
+        "\"phenolphthalein\" 50 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.992,
+      "frames": 51,
+      "severe": 0,
+      "mild": 1,
+      "kinds": {
+       "overlap": 1
+      },
+      "examples": []
+     }
     }
    }
   },
@@ -3688,23 +6208,29 @@
    "passed": true,
    "rounds": 2,
    "reviewed": "nothing to say",
-   "overall": 0.734,
+   "overall": 0.628,
    "scores": {
     "lag": 0.829,
     "pace": 0.287,
     "load": 1,
-    "read": 1,
+    "read": 0.461,
+    "depict": 0.929,
     "eye": 0.521,
-    "holds": 0.5,
+    "holds": 0,
     "reveal": 1
    },
-   "learner": 1,
-   "wordsOnly": 0.8333333333333334,
-   "gain": 0.16666666666666663,
-   "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0,
+   "learner": 0.9444444444444444,
+   "wordsOnly": 0.6666666666666666,
+   "gain": 0.2777777777777778,
+   "pictureQuestions": 0.875,
+   "pictureQuestionsWordsOnly": 0.25,
+   "hard": 1,
+   "hardWordsOnly": 0,
+   "depictFree": 0.929,
+   "depictSeen": 0.5208333333333333,
+   "depict": 0.6840999999999999,
    "follow": {
-    "onLook": 0.9615384615384616,
+    "onLook": 1,
     "waiting": 1,
     "confused": 0.7692307692307693
    },
@@ -3822,12 +6348,116 @@
      "peakPull": 3,
      "newPerSecond": 0.19
     },
+    "depict": {
+     "drawn": 1,
+     "changes": 0.857,
+     "free": 0.929,
+     "units": [
+      {
+       "id": "sk",
+       "kind": "image",
+       "as": "itself"
+      }
+     ],
+     "shown": [
+      "set route",
+      "set rfork",
+      "set route",
+      "set route",
+      "set rfork",
+      "set route"
+     ],
+     "told": [
+      "tag \"cross on the stones\" on sk"
+     ]
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 1.5,
+      "work": 0,
+      "other": 0.42,
+      "answered": false,
+      "score": 0
+     }
+    ],
     "read": {
      "frames": 52,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "score": 0.461,
+     "words": 0.486,
+     "density": 1,
+     "subject": 0.721,
+     "space": 1,
+     "broken": 0,
+     "smallShare": 0.548,
+     "faintShare": 0,
+     "examples": [
+      "small \"trailhead\" 39 px",
+      "small picture sk 63% wide",
+      "small \"trailhead\" 40 px",
+      "small \"cross on the stones\" 45 px",
+      "small \"cross on the stones\" 40 px",
+      "small \"Keep left\" 47 px"
+     ],
+     "worst": [
+      {
+       "t": 16,
+       "words": 0.44,
+       "density": 1,
+       "subject": 0.39,
+       "space": 1,
+       "broken": false,
+       "score": 0.39,
+       "chars": 80,
+       "small": [
+        "\"Right fork: back to the \" 47 px",
+        "\"trailhead\" 40 px",
+        "picture sk 63% wide"
+       ],
+       "faint": []
+      },
+      {
+       "t": 16.5,
+       "words": 0.44,
+       "density": 1,
+       "subject": 0.39,
+       "space": 1,
+       "broken": false,
+       "score": 0.39,
+       "chars": 80,
+       "small": [
+        "\"Right fork: back to the \" 47 px",
+        "\"trailhead\" 40 px",
+        "picture sk 63% wide"
+       ],
+       "faint": []
+      },
+      {
+       "t": 17,
+       "words": 0.44,
+       "density": 1,
+       "subject": 0.39,
+       "space": 1,
+       "broken": false,
+       "score": 0.39,
+       "chars": 80,
+       "small": [
+        "\"Right fork: back to the \" 47 px",
+        "\"trailhead\" 40 px",
+        "picture sk 63% wide"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 52,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   },
@@ -3839,24 +6469,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "kept",
-   "overall": 0.785,
+   "overall": 0.655,
    "scores": {
     "lag": 0.734,
     "pace": 0.5,
     "load": 1,
-    "read": 0.646,
+    "read": 0.363,
+    "depict": 0.5,
     "eye": 0.617,
-    "holds": 1,
+    "holds": 0.53,
     "reveal": 1
    },
-   "learner": 0.8,
-   "wordsOnly": 0.6,
-   "gain": 0.20000000000000007,
-   "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0,
+   "learner": 0.6875,
+   "wordsOnly": 0.5625,
+   "gain": 0.125,
+   "pictureQuestions": 0.5,
+   "pictureQuestionsWordsOnly": 0.25,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 0.5,
+   "depictSeen": 0.16666666666666666,
+   "depict": 0.3,
    "follow": {
     "onLook": 0.8214285714285714,
-    "waiting": 0.9285714285714286,
+    "waiting": 0.9642857142857143,
     "confused": 0.6428571428571429
    },
    "designer": {
@@ -3971,17 +6607,128 @@
      "peakPull": 3,
      "newPerSecond": 0.49
     },
+    "depict": {
+     "drawn": 0,
+     "changes": 1,
+     "free": 0.5,
+     "units": [
+      {
+       "id": "pw",
+       "kind": "box",
+       "as": "word",
+       "text": "password"
+      },
+      {
+       "id": "ph",
+       "kind": "box",
+       "as": "word",
+       "text": "phone"
+      },
+      {
+       "id": "login",
+       "kind": "box",
+       "as": "word",
+       "text": "thief's login"
+      },
+      {
+       "id": "lock",
+       "kind": "box",
+       "as": "word",
+       "text": "still locked"
+      }
+     ],
+     "shown": [
+      "do flow codepath"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0.27,
+      "other": 0,
+      "answered": false,
+      "score": 0.53
+     }
+    ],
     "read": {
      "frames": 52,
-     "severe": 18,
-     "mild": 1,
-     "kinds": {
-      "off_frame": 18,
-      "empty": 1
-     },
+     "score": 0.363,
+     "words": 0.591,
+     "density": 1,
+     "subject": 0.576,
+     "space": 0.961,
+     "broken": 0.346,
+     "smallShare": 0.491,
+     "faintShare": 0,
      "examples": [
-      "off_frame at 0.5 s: cut by the frame edge: \"SOMEONE STEALS\" (11% outside), \"YOUR PASSWORD.\" (10% outside)"
-     ]
+      "small \"SOMETHING YOU KNOW\" 43 px",
+      "small \"SOMETHING YOU HAVE\" 43 px",
+      "small \"CODE\" 43 px",
+      "small \"THIEF'S LOGIN\" 49 px"
+     ],
+     "worst": [
+      {
+       "t": 25,
+       "words": 0.55,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": true,
+       "score": 0.19,
+       "chars": 77,
+       "small": [
+        "\"SOMETHING YOU KNOW\" 43 px",
+        "\"SOMETHING YOU HAVE\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 25.5,
+       "words": 0.55,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": true,
+       "score": 0.19,
+       "chars": 77,
+       "small": [
+        "\"SOMETHING YOU KNOW\" 43 px",
+        "\"SOMETHING YOU HAVE\" 43 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 26,
+       "words": 0.55,
+       "density": 1,
+       "subject": 0.28,
+       "space": 1,
+       "broken": true,
+       "score": 0.19,
+       "chars": 77,
+       "small": [
+        "\"SOMETHING YOU KNOW\" 43 px",
+        "\"SOMETHING YOU HAVE\" 43 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.646,
+      "frames": 52,
+      "severe": 18,
+      "mild": 1,
+      "kinds": {
+       "off_frame": 18,
+       "empty": 1
+      },
+      "examples": [
+       "off_frame at 0.5 s: cut by the frame edge: \"SOMEONE STEALS\" (11% outside), \"YOUR PASSWORD.\" (10% outside)"
+      ]
+     }
     }
    }
   },
@@ -3993,24 +6740,30 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.664,
+   "overall": 0.518,
    "scores": {
     "lag": 0.701,
     "pace": 0.229,
     "load": 1,
-    "read": 0.898,
+    "read": 0.258,
+    "depict": 0.667,
     "eye": 0.818,
-    "holds": 1,
+    "holds": 0.47,
     "reveal": 0
    },
-   "learner": 1,
-   "wordsOnly": 0.8,
-   "gain": 0.19999999999999996,
-   "pictureQuestions": 1,
+   "learner": 0.875,
+   "wordsOnly": 0.5,
+   "gain": 0.375,
+   "pictureQuestions": 0.75,
    "pictureQuestionsWordsOnly": 0,
+   "hard": 0.6666666666666666,
+   "hardWordsOnly": 0,
+   "depictFree": 0.667,
+   "depictSeen": 0.4895833333333333,
+   "depict": 0.56055,
    "follow": {
-    "onLook": 0.7307692307692307,
-    "waiting": 0.8076923076923077,
+    "onLook": 0.8076923076923077,
+    "waiting": 0.9230769230769231,
     "confused": 0.9230769230769231
    },
    "designer": {
@@ -4131,15 +6884,121 @@
      "peakPull": 3,
      "newPerSecond": 0.39
     },
+    "depict": {
+     "drawn": 0.333,
+     "changes": 1,
+     "free": 0.667,
+     "units": [
+      {
+       "id": "s1_piece",
+       "kind": "circle",
+       "as": "word",
+       "text": "harmless piece"
+      },
+      {
+       "id": "s1_field",
+       "kind": "run",
+       "as": "itself"
+      },
+      {
+       "id": "s1_germ",
+       "kind": "circle",
+       "as": "word",
+       "text": "real germ"
+      }
+     ],
+     "shown": [
+      "s1_field runs s1_cells"
+     ],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "look",
+      "seconds": 2,
+      "work": 0.23,
+      "other": 0,
+      "answered": false,
+      "score": 0.47
+     }
+    ],
     "read": {
      "frames": 51,
-     "severe": 0,
-     "mild": 13,
-     "kinds": {
-      "empty": 5,
-      "dimmed": 8
-     },
-     "examples": []
+     "score": 0.258,
+     "words": 0.292,
+     "density": 1,
+     "subject": 0.636,
+     "space": 0.877,
+     "broken": 0,
+     "smallShare": 0.799,
+     "faintShare": 0,
+     "examples": [
+      "small \"B CELLS\" 44 px",
+      "small \"only the few whose shape\" 33 px",
+      "small \"MATCHING\" 41 px",
+      "small \"MEMORY CELL\" 41 px"
+     ],
+     "worst": [
+      {
+       "t": 7.5,
+       "words": 0.02,
+       "density": 1,
+       "subject": 0.6,
+       "space": 1,
+       "broken": false,
+       "score": 0.02,
+       "chars": 44,
+       "small": [
+        "\"B CELLS\" 44 px",
+        "\"only the few whose shape\" 33 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 8,
+       "words": 0.03,
+       "density": 1,
+       "subject": 0.6,
+       "space": 1,
+       "broken": false,
+       "score": 0.03,
+       "chars": 52,
+       "small": [
+        "\"B CELLS\" 44 px",
+        "\"only the few whose shape\" 33 px",
+        "\"MATCHING\" 41 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 8.5,
+       "words": 0.03,
+       "density": 1,
+       "subject": 0.6,
+       "space": 1,
+       "broken": false,
+       "score": 0.03,
+       "chars": 52,
+       "small": [
+        "\"B CELLS\" 44 px",
+        "\"only the few whose shape\" 33 px",
+        "\"MATCHING\" 41 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 0.898,
+      "frames": 51,
+      "severe": 0,
+      "mild": 13,
+      "kinds": {
+       "empty": 5,
+       "dimmed": 8
+      },
+      "examples": []
+     }
     }
    }
   },
@@ -4151,23 +7010,29 @@
    "passed": true,
    "rounds": 1,
    "reviewed": "nothing to say",
-   "overall": 0.832,
+   "overall": 0.63,
    "scores": {
     "lag": 0.875,
     "pace": 0.5,
     "load": 0.818,
-    "read": 1,
+    "read": 0.212,
+    "depict": 0,
     "eye": 0.631,
     "holds": 1,
     "reveal": 1
    },
    "learner": 1,
-   "wordsOnly": 0.625,
-   "gain": 0.375,
+   "wordsOnly": 0.5714285714285714,
+   "gain": 0.4285714285714286,
    "pictureQuestions": 1,
-   "pictureQuestionsWordsOnly": 0,
+   "pictureQuestionsWordsOnly": 0.25,
+   "hard": 1,
+   "hardWordsOnly": 0.3333333333333333,
+   "depictFree": 0,
+   "depictSeen": 0.13571428571428573,
+   "depict": 0.08142857142857143,
    "follow": {
-    "onLook": 0.9090909090909091,
+    "onLook": 0.7727272727272727,
     "waiting": 0.9545454545454546,
     "confused": 0.9090909090909091
    },
@@ -4311,12 +7176,128 @@
      "peakPull": 4,
      "newPerSecond": 0.45
     },
+    "depict": {
+     "drawn": 0,
+     "free": 0,
+     "units": [
+      {
+       "id": "ev",
+       "kind": "pill",
+       "as": "word",
+       "text": "Evaporation"
+      },
+      {
+       "id": "co",
+       "kind": "pill",
+       "as": "word",
+       "text": "Condensation"
+      },
+      {
+       "id": "pr",
+       "kind": "pill",
+       "as": "word",
+       "text": "Precipitation"
+      },
+      {
+       "id": "cl",
+       "kind": "pill",
+       "as": "word",
+       "text": "Collection"
+      }
+     ],
+     "shown": [],
+     "told": []
+    },
+    "holds": [
+     {
+      "id": "h1",
+      "purpose": "recap",
+      "seconds": 2.5,
+      "work": 0.87,
+      "other": 0,
+      "answered": false,
+      "score": 1
+     }
+    ],
     "read": {
-     "frames": 44,
-     "severe": 0,
-     "mild": 0,
-     "kinds": {},
-     "examples": []
+     "frames": 37,
+     "score": 0.212,
+     "words": 0.244,
+     "density": 1,
+     "subject": 0.445,
+     "space": 0.757,
+     "broken": 0,
+     "smallShare": 0.804,
+     "faintShare": 0,
+     "examples": [
+      "small \"Evaporation\" 39 px",
+      "small \"Condensation\" 39 px",
+      "small \"Precipitation\" 39 px",
+      "small \"Collection\" 39 px",
+      "small \"Evaporation\" 48 px",
+      "small \"Condensation\" 48 px"
+     ],
+     "worst": [
+      {
+       "t": 4,
+       "words": 0.19,
+       "density": 1,
+       "subject": 0.25,
+       "space": 0.71,
+       "broken": false,
+       "score": 0.15,
+       "chars": 83,
+       "small": [
+        "\"Evaporation\" 48 px",
+        "\"Condensation\" 39 px",
+        "\"Precipitation\" 39 px",
+        "\"Collection\" 39 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 4.5,
+       "words": 0.19,
+       "density": 1,
+       "subject": 0.25,
+       "space": 0.71,
+       "broken": false,
+       "score": 0.15,
+       "chars": 83,
+       "small": [
+        "\"Evaporation\" 48 px",
+        "\"Condensation\" 39 px",
+        "\"Precipitation\" 39 px",
+        "\"Collection\" 39 px"
+       ],
+       "faint": []
+      },
+      {
+       "t": 5,
+       "words": 0.19,
+       "density": 1,
+       "subject": 0.25,
+       "space": 0.71,
+       "broken": false,
+       "score": 0.15,
+       "chars": 83,
+       "small": [
+        "\"Evaporation\" 48 px",
+        "\"Condensation\" 39 px",
+        "\"Precipitation\" 39 px",
+        "\"Collection\" 39 px"
+       ],
+       "faint": []
+      }
+     ],
+     "layout": {
+      "score": 1,
+      "frames": 44,
+      "severe": 0,
+      "mild": 0,
+      "kinds": {},
+      "examples": []
+     }
     }
    }
   }

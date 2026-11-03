@@ -1,0 +1,21 @@
+{"things":[
+{"thing":"iron","as":"symbol","sheet":4,"note":"A row of small circles labelled FE; no iron object or surface, only the chemical symbol in circles. Earlier a box with the word IRON."},
+{"thing":"water","as":"word","sheet":2,"note":"A box with the word WATER; later a plain dark ellipse stands in for the drop, with no water look (no shine, no transparency)."},
+{"thing":"oxygen","as":"symbol","sheet":6,"note":"Three pairs of dark dots above the drop; known only by convention, the narration and a heading says oxygen. Earlier a box with the word OXYGEN."},
+{"thing":"drop of water","as":"symbol","sheet":3,"note":"A flat dark brown ellipse sitting on the FE row, unlike a drop."},
+{"thing":"iron atoms","as":"symbol","sheet":3,"note":"Six circles marked FE."},
+{"thing":"electrons","as":"symbol","sheet":3,"note":"Small orange dots drifting from the atoms."},
+{"thing":"iron ions","as":"absent","sheet":5,"note":"The FE circles look identical before and after giving up electrons; nothing is drawn as an ion or marked charged."},
+{"thing":"rust (iron oxide)","as":"symbol","sheet":10,"note":"Grey-brown blobs gather along the lower edge of the drop; not recognisable as rust and not coloured orange-red."},
+{"thing":"porous rust letting water through","as":"absent","sheet":12,"note":"Only a headline of words; the picture does not change in a way that shows pores or water passing."}
+],
+"changes":[
+{"change":"Iron atoms give up electrons","as":"shown","sheet":3,"note":"Orange dots peel off the atoms and move away."},
+{"change":"Atoms become iron ions","as":"missing","sheet":5,"note":"The FE circles do not change at all."},
+{"change":"Oxygen takes the electrons","as":"shown","sheet":7,"note":"Electron dots drift up through the drop toward the pairs of dots above, though the transfer is hard to follow and the dots fade out."},
+{"change":"Ions join with oxygen and water","as":"shown","sheet":8,"note":"Grey blobs appear and slide in along the drop's lower edge, but nothing visibly joins together."},
+{"change":"Ions become rust","as":"shown","sheet":9,"note":"The grey blobs accumulate in a row along the lower edge of the drop; the change is a colour/blob build-up, not recognisable as rust."},
+{"change":"Rust is flaky and porous","as":"missing","sheet":11,"note":"Only text; the picture shows no flakes or pores."},
+{"change":"Water gets through the rust to more iron","as":"missing","sheet":12,"note":"Only text and a few tiny orange dots at the bottom; no visible water passing through."},
+{"change":"Rusting keeps going","as":"missing","sheet":13,"note":"The picture holds almost still from 20 to 28 s, so it does not show ongoing rusting."}
+]}

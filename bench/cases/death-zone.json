@@ -73,6 +73,24 @@
    "q": "What was happening on screen during the long pause?",
    "a": "The climber slowing down while the oxygen ran low.",
    "needs": "picture"
+  },
+  {
+   "q": "What did the climber's steps do during the long pause?",
+   "a": "They slowed down.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What was shown draining during the pause?",
+   "a": "The oxygen.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "At the end, where is the summit compared with the climber?",
+   "a": "Far above the climber.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

@@ -2,5 +2,8 @@
   {"q": 1, "answer": "Right end over left, and tuck it under."},
   {"q": 2, "answer": "Left over right, and tuck under."},
   {"q": 3, "answer": "You've tied a granny knot, and it slips."},
-  {"q": 4, "answer": "Not in the clip. The words only say there was a pause after the first crossing."}
+  {"q": 4, "answer": "not in the clip"},
+  {"q": 5, "answer": "not in the clip"},
+  {"q": 6, "answer": "not in the clip"},
+  {"q": 7, "answer": "not in the clip"}
 ]

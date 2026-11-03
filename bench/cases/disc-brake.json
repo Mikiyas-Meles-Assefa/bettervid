@@ -98,6 +98,24 @@
    "q": "Where does the car's motion go when it stops?",
    "a": "It becomes heat through friction.",
    "needs": "words"
+  },
+  {
+   "q": "In the opening picture, is the wheel near the pedal or far from it?",
+   "a": "Far from it.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "When the pressure reached the wheel end of the line, what was waiting there?",
+   "a": "The caliper.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "Which part of the wheel brake is shown turning hot at the end?",
+   "a": "The disc.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

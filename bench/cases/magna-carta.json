@@ -100,6 +100,24 @@
    "q": "What did the screen show just before the clause's words appeared?",
    "a": "The charter with one clause singled out but not yet readable.",
    "needs": "picture"
+  },
+  {
+   "q": "Which phrase of the clause stood out when its words appeared?",
+   "a": "The law of the land.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "As the view moved toward the clause, could its words be read?",
+   "a": "No, not yet.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What two things were shown along with the sealing of the charter?",
+   "a": "The date and the place.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

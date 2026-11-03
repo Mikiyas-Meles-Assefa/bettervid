@@ -18,13 +18,14 @@
 // - read: the layout measures from look.ts on a frame every half second: words cut by the frame, under the style's
 //   readable size, writing on writing, a covered picture, a mostly empty frame.
 import type { Scene } from "../../engine/core/types.ts";
-import { FLAT, activity, attachments, beats, cleanMap, members, pulls, runChecks, sample, sourceWords, spans, type IdMap, type Mapped, type Report, type Samples } from "../../pipeline/lib/direction-check.ts";
+import { FLAT, activity, attachments, beats, belongs, checkPredict, cleanMap, holds, members, says, pulls, runChecks, sample, sourceWords, spans, type IdMap, type Mapped, type Report, type Samples } from "../../pipeline/lib/direction-check.ts";
 import { inventory, keptAt, measureLayout, readOf } from "../../pipeline/lib/look.ts";
 import { kitKinds } from "../../pipeline/stages/scene.ts";
 import type { Project } from "../../schemas/project.ts";
 import type { Theme } from "../../engine/core/types.ts";
+import { parse, type Item } from "../../engine/language/syntax.ts";
 
-export type Scores = { eye?: number; lag: number; pace: number; load: number; holds?: number; reveal?: number; read: number };
+export type Scores = { eye?: number; lag: number; pace: number; load: number; holds?: number; reveal?: number; read: number; depict?: number };
 export type CaseMeasure = {
   id: string;
   built: boolean;
@@ -148,6 +149,45 @@ export function load(s: Samples): { seconds: number; overNew: number; overPull: 
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Holds: a silence is time the viewer gives the picture. It earns that time only while something on screen works toward
+// the hold's purpose: the event's look, its demonstration, the things the hold's `does` names, or the prompt it shows.
+// Per hold:
+// - work: the share of the hold's frames in which one of those things is changing. A frozen frame, a lone pulse in a
+//   three second hold, or a clock ticking beside a still picture is dead air. Half the hold working is full marks (a
+//   settle hold may rest once it has moved); none scores 0.
+// - focus: when unrelated things change more than the related ones, the eye is pulled off the purpose (x 0.5).
+// - a predict hold that shows its answer scores 0.
+// A hold the voice talks over is not a hold the viewer gets and is not judged here (the audio check reports it).
+
+export type HoldWork = { id: string; purpose: string; seconds: number; work: number; other: number; answered: boolean; score: number };
+
+export function holdWork(p: Project, s: Samples, ids: IdMap, attached: Map<string, string[]>): HoldWork[] {
+  const out: HoldWork[] = [];
+  const answered = new Set(checkPredict(s, holds(p.direction!, p.narration!), ids).map((t) => t.note.match(/Hold (\S+) /)?.[1]));
+  for (const h of holds(p.direction!, p.narration!).filter((x) => x.voiced)) {
+    const [from, to] = [Math.round(h.start * s.fps), Math.min(s.frames, Math.round(h.end * s.fps))];
+    if (to <= from) continue;
+    const ev = ids.events[h.event];
+    const prompts = h.shows ? s.ids.filter((id) => (s.reads.get(id) ?? []).some((r) => says(r.text, h.shows!))) : [];
+    const named = [...(ev?.look ?? []), ...(ev?.demo ?? []), ...(ev?.holds?.[h.id]?.does ?? []), ...prompts];
+    const related = s.ids.map((id, r) => ({ id, r })).filter((x) => belongs(x.id, named, attached));
+    const others = s.ids.map((id, r) => ({ id, r })).filter((x) => !belongs(x.id, named, attached));
+    let mine = 0;
+    let other = 0;
+    for (let f = from; f < to; f++) {
+      if (related.some((x) => s.active[x.r]![f])) mine++;
+      if (others.some((x) => s.active[x.r]![f])) other++;
+    }
+    const n = to - from;
+    const work = mine / n;
+    const isAnswered = answered.has(h.id);
+    const score = isAnswered ? 0 : clamp(work / 0.5) * (other > mine ? 0.5 : 1);
+    out.push({ id: h.id, purpose: h.purpose, seconds: round(n / s.fps, 1), work: round(work, 2), other: round(other / n, 2), answered: isAnswered, score: round(score, 2) });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Readability.
 
 export function readability(scene: Scene, theme: Theme, s: Samples): { frames: number; severe: number; mild: number; kinds: Record<string, number>; examples: string[] } {
@@ -168,6 +208,216 @@ export function readability(scene: Scene, theme: Theme, s: Samples): { frames: n
     for (const x of found.filter((y) => y.severity >= 3)) if (examples.length < 6 && !examples.some((e) => e.startsWith(x.kind))) examples.push(`${x.kind} at ${(f / s.fps).toFixed(1)} s: ${x.note.slice(0, 160)}`);
   }
   return { frames, severe, mild, kinds, examples };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phone reading: the frame as a tired viewer sees it, on a phone held at arm's length. A 1080 px wide frame is about
+// 65 mm across on a phone, so 1 px is about 0.06 mm. Words a viewer reads at a glance need a cap height of about 3 mm
+// at 40 cm: text of 7% of the frame's width (75 px at 1080) reads comfortably, 3.5% (38 px) not at all. The style's
+// own floor (`read.text`, 3%) is a hard limit for any text; this is the bar for text meant to be read in passing.
+//
+// Per sampled settled frame:
+// - words: every line of text, weighted by its length, scores its size (3.5% to 7% of the width) times its contrast
+//   against what is drawn behind it (WCAG ratio 1.5 to 4.5, after its fade), so a long line of small or faint text
+//   costs more than a one-word tag.
+// - density: how many characters are on screen at once (up to about 140 reads at a glance; 360 or more is a page).
+// - subject: the share of the usable frame the thing to look at covers (the event's look, from the id map; without a
+//   map, everything but the text). A main subject under a quarter of the frame reads as small on a phone.
+// - space: the share of the usable frame with anything in it, and the tallest empty band (a frame whose bottom half is
+//   empty under a small cluster looks unfinished and wastes the screen).
+// - broken: words cut by the frame edge, writing on writing, or a covered picture multiply the frame by 0.4.
+// - pictures: a picture shown narrower than the frame shrinks its detail with it; it counts as a short line of words,
+//   legible at 95% of the frame's width and not at all at half.
+// The frame scores words x (0.5 + 0.5 x (0.3 density + 0.35 subject + 0.35 space)), times 0.4 when broken: words that
+// cannot be read are not saved by a good layout. `read` is the mean over settled frames.
+
+export const PHONE = { small: 0.035, comfortable: 0.07, contrastLow: 1.5, contrastOk: 4.5, glance: 140, page: 360, subject: 0.3 };
+
+type RGB = [number, number, number];
+function rgbOf(c: string | undefined): RGB | undefined {
+  if (!c) return undefined;
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})([0-9a-f]{2})?$/i.exec(c.trim());
+  if (!m) return undefined;
+  const h = m[1]!.length === 3 ? m[1]!.split("").map((x) => x + x).join("") : m[1]!;
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+const lin = (c: number) => {
+  const s = c / 255;
+  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+};
+const lum = (c: RGB) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+const ratio = (a: RGB, b: RGB) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+const blend = (fg: RGB, bg: RGB, o: number): RGB => [0, 1, 2].map((i) => fg[i]! * o + bg[i]! * (1 - o)) as RGB;
+const boxArea = (r: { x0: number; y0: number; x1: number; y1: number }) => Math.max(0, r.x1 - r.x0) * Math.max(0, r.y1 - r.y0);
+const overlap = (a: { x0: number; y0: number; x1: number; y1: number }, b: typeof a) => boxArea({ x0: Math.max(a.x0, b.x0), y0: Math.max(a.y0, b.y0), x1: Math.min(a.x1, b.x1), y1: Math.min(a.y1, b.y1) });
+
+export type PhoneFrame = { t: number; words: number; density: number; subject: number; space: number; broken: boolean; score: number; chars: number; small: string[]; faint: string[] };
+
+export function phoneRead(scene: Scene, theme: Theme, s: Samples, lookAt?: (frame: number) => string[]): { frames: number; score: number; words: number; density: number; subject: number; space: number; broken: number; smallShare: number; faintShare: number; examples: string[]; worst: PhoneFrame[] } {
+  const W = scene.width;
+  const H = scene.height;
+  const paper = rgbOf(scene.background) ?? rgbOf(theme.colors.paper) ?? [255, 255, 255];
+  const read = readOf(theme);
+  const top = H * 0.047;
+  const bottom = H * 0.812; // the bottom is left for captions
+  const [cols, rows] = [9, 16];
+  const cells = Array.from({ length: rows * cols }, (_, k) => {
+    const [r, c] = [Math.floor(k / cols), k % cols];
+    return { x0: (c * W) / cols, x1: ((c + 1) * W) / cols, y0: top + (r * (bottom - top)) / rows, y1: top + ((r + 1) * (bottom - top)) / rows };
+  });
+  const cellArea = boxArea(cells[0]!);
+  const out: PhoneFrame[] = [];
+  let smallChars = 0;
+  let faintChars = 0;
+  let allChars = 0;
+  for (let f = Math.round(s.fps * 0.5); f < scene.frames; f += Math.round(s.fps / 2)) {
+    // A frame caught mid-change is not judged: a viewer reads what settles.
+    if (s.ids.filter((_, r) => s.active[r]![f]).length > 2) continue;
+    const things = inventory(scene, f).filter((t) => t.opacity >= 0.15 && !(t.kind === "shape" && boxArea(t.box) > W * H * 0.8));
+    const texts = things.filter((t) => t.kind === "text" && t.opacity >= 0.5 && (t.text ?? "").trim());
+    let wsum = 0;
+    let wscore = 0;
+    let chars = 0;
+    const small: string[] = [];
+    const faint: string[] = [];
+    for (const t of texts) {
+      const n = Math.max(4, (t.text ?? "").trim().length);
+      chars += (t.text ?? "").trim().length;
+      const size = clamp(((t.size ?? 0) / W - PHONE.small) / (PHONE.comfortable - PHONE.small));
+      const cx = (t.box.x0 + t.box.x1) / 2;
+      const cy = (t.box.y0 + t.box.y1) / 2;
+      const under = things.filter((u) => u.kind === "shape" && u.filled && u.order < t.order && cx >= u.box.x0 && cx <= u.box.x1 && cy >= u.box.y0 && cy <= u.box.y1).at(-1);
+      const bg = (under && rgbOf(under.color) ? blend(rgbOf(under.color)!, paper, under.opacity) : paper);
+      const fg = rgbOf(t.color);
+      const c = fg ? ratio(blend(fg, bg, t.opacity * (t.muted ? 0.6 : 1)), bg) : 4.5;
+      const con = clamp((c - PHONE.contrastLow) / (PHONE.contrastOk - PHONE.contrastLow));
+      if (size < 0.5) small.push(`"${(t.text ?? "").slice(0, 24)}" ${Math.round(((t.size ?? 0) * 1080) / W)} px`);
+      if (con < 0.5) faint.push(`"${(t.text ?? "").slice(0, 24)}" ${c.toFixed(1)}:1`);
+      wsum += n;
+      wscore += n * size * con;
+      allChars += n;
+      if (size < 0.5) smallChars += n;
+      if (con < 0.5) faintChars += n;
+    }
+    // A picture is read too: shown narrower than the frame, its detail (a sketch's labels, a slide's lines) shrinks with
+    // it. Each counts as much as a short line of words, full at 95% of the width, nothing at half.
+    for (const t of things.filter((u) => u.kind === "image" && u.opacity >= 0.5 && boxArea(u.box) > W * H * 0.02)) {
+      const share = clamp(((t.box.x1 - t.box.x0) / W - 0.5) / 0.45);
+      if (share < 0.5) small.push(`picture ${t.id} ${Math.round(((t.box.x1 - t.box.x0) / W) * 100)}% wide`);
+      wsum += 40;
+      wscore += 40 * share;
+      allChars += 40;
+      if (share < 0.5) smallChars += 40;
+    }
+    const words = wsum ? wscore / wsum : 1;
+    const density = clamp(1 - (chars - PHONE.glance) / (PHONE.page - PHONE.glance));
+    const covered = (list: typeof things) => cells.filter((cell) => list.some((t) => overlap(t.box, cell) > cellArea * 0.15)).length / cells.length;
+    const look = lookAt?.(f) ?? [];
+    const lookThings = look.length ? things.filter((t) => look.some((id) => t.id === id || t.id.startsWith(`${id}.`))) : things.filter((t) => t.kind !== "text");
+    const subject = clamp(covered(lookThings.length ? lookThings : things) / PHONE.subject);
+    const used = cells.map((cell) => things.some((t) => overlap(t.box, cell) > cellArea * 0.15) || keptAt(scene, f).some((k) => overlap(k, cell) > cellArea * 0.15));
+    const filled = used.filter(Boolean).length / cells.length;
+    let band = 0;
+    for (let r = 0, run = 0; r < rows; r++) {
+      run = used.slice(r * cols, (r + 1) * cols).some(Boolean) ? 0 : run + 1;
+      band = Math.max(band, run);
+    }
+    const space = clamp((filled - 0.12) / 0.33) * clamp(1 - Math.max(0, band / rows - 0.2) / 0.35);
+    const found = measureLayout(things, W, H, read, false, keptAt(scene, f));
+    const broken = found.some((x) => (x.kind === "off_frame" || x.kind === "overlap" || x.kind === "hidden_picture") && x.severity >= 3);
+    // Words that cannot be read are not saved by a good layout: the layout scales what the words give, from half to all.
+    const score = words * (0.5 + 0.5 * (0.3 * density + 0.35 * subject + 0.35 * space)) * (broken ? 0.4 : 1);
+    out.push({ t: round(f / s.fps, 1), words: round(words, 2), density: round(density, 2), subject: round(subject, 2), space: round(space, 2), broken, score: round(score, 2), chars, small: small.slice(0, 4), faint: faint.slice(0, 4) });
+  }
+  const avg = (k: keyof PhoneFrame) => round(mean(out.map((x) => Number(x[k]))), 3);
+  const examples = [...new Set(out.flatMap((x) => [...x.small.map((y) => `small ${y}`), ...x.faint.map((y) => `faint ${y}`)]))].slice(0, 6);
+  return {
+    frames: out.length,
+    score: out.length ? avg("score") : 0,
+    words: avg("words"), density: avg("density"), subject: avg("subject"), space: avg("space"),
+    broken: round(mean(out.map((x) => (x.broken ? 1 : 0))), 3),
+    smallShare: round(allChars ? smallChars / allChars : 0, 3), faintShare: round(allChars ? faintChars / allChars : 0, 3),
+    examples,
+    worst: [...out].sort((a, b) => a.score - b.score).slice(0, 3),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Depiction: does the picture show the thing, or a box with its name in it? Two signals from the scene source, the same
+// for every case; the watch test (`watch-depict.md`) asks a viewer the same question of the finished clip.
+//
+// - drawn: each thing the picture holds is scored as itself (1), a bare symbol (0.5) or a word in a shape (0). Itself:
+//   a drawing made by a program, a picture, a graph, a kit's notation or code (code and notation are the things they
+//   show). A symbol: a shape with no name on it (a dot for a drop, a ring for a cell). A word in a shape: a box, circle,
+//   pill, diamond or triangle whose label, or a tag on it, names it in a few words ("HEART", "flask"). Values are not
+//   names: a shape holding a number or a formula is a cell of a diagram, a symbol.
+// - changes: each change of state the scene makes is shown (a move, a recolor, a level, a drawing that grows, a kit's
+//   step) or told (a shape's label rewritten, a tag added to a thing already on screen, a counter). Emphasis (a pulse, a
+//   shake) is neither. The share shown is the signal.
+// `free` is their mean; a scene with no picture at all scores 0 on `drawn` (every thing is a word).
+
+const NAMED_SHAPES = new Set(["box", "circle", "pill", "diamond", "tri"]);
+const EMPHASIS = new Set(["pulse", "shake", "wiggle", "jiggle", "bounce", "nod", "glow", "flash", "blink"]);
+const TELLING = new Set(["count", "type", "write", "spell"]);
+const isName = (text: string | undefined) => {
+  const t = (text ?? "").trim();
+  if (!t || !/\p{L}{2}/u.test(t)) return false;
+  if (/[=×÷<>^]/.test(t) || /\d/.test(t.replace(/\d+(st|nd|rd|th)\b/g, ""))) return false;
+  return t.split(/\s+/).length <= 4;
+};
+
+export type Depict = { drawn?: number; changes?: number; free?: number; units: { id: string; kind: string; as: "itself" | "symbol" | "word"; text?: string }[]; shown: string[]; told: string[] };
+
+export function depictFree(source: string, kinds: string[]): Depict {
+  const { doc } = parse(source, kinds);
+  const units = new Map<string, Depict["units"][number]>();
+  const firstState = new Map<string, number>();
+  const lastText = new Map<string, string | undefined>();
+  const lastAttrs = new Map<string, string>();
+  const shown: string[] = [];
+  const told: string[] = [];
+  const LOOKS = ["fill", "color", "stroke", "w", "h", "x", "y", "at", "size", "rotate", "opacity", "scale"];
+  doc.states.forEach((st, k) => {
+    const walk = (items: Item[]) => {
+      for (const it of items) {
+        if (it.children?.length && !NAMED_SHAPES.has(it.kind)) walk(it.children);
+        const leaf = NAMED_SHAPES.has(it.kind) || it.kind === "dot" || ["image", "graph", "run", "code"].includes(it.kind) || kinds.includes(it.kind);
+        if (!leaf) continue;
+        const looks = LOOKS.map((a) => `${a}=${it.attrs[a] ?? ""}`).join(" ");
+        if (!units.has(it.id)) {
+          const as = NAMED_SHAPES.has(it.kind) ? (isName(it.text) ? "word" : "symbol") : it.kind === "dot" ? "symbol" : "itself";
+          units.set(it.id, { id: it.id, kind: it.kind, as, ...(it.text ? { text: it.text } : {}) });
+          firstState.set(it.id, k);
+        } else {
+          if ((it.text ?? "") !== (lastText.get(it.id) ?? "") && it.text) told.push(`${it.id} relabelled "${it.text}"`);
+          else if (looks !== lastAttrs.get(it.id)) shown.push(`${it.id} redrawn`);
+        }
+        if (it.kind === "run") shown.push(`${it.id} runs ${it.program ?? ""}`.trim());
+        lastText.set(it.id, it.text);
+        lastAttrs.set(it.id, looks);
+      }
+    };
+    walk(st.items);
+    for (const c of st.commands) {
+      if (c.do === "tag") {
+        const u = units.get(c.target);
+        if (u && u.as === "symbol" && NAMED_SHAPES.has(u.kind) && isName(c.text) && firstState.get(c.target) === k) u.as = "word";
+        else if (u && (firstState.get(c.target) ?? k) < k) told.push(`tag "${c.text}" on ${c.target}`);
+      } else if (c.do === "set") {
+        if (Object.keys(c.attrs).some((a) => a !== "text")) shown.push(`set ${c.targets.join(",")}`);
+        if (c.attrs.text) told.push(`set text on ${c.targets.join(",")}`);
+      } else if (c.do === "play") {
+        if (EMPHASIS.has(c.behavior)) continue;
+        (TELLING.has(c.behavior) ? told : shown).push(`do ${c.behavior} ${c.targets.join(",")}`);
+      }
+    }
+  });
+  const list = [...units.values()];
+  const score = { itself: 1, symbol: 0.5, word: 0 } as const;
+  const drawn = list.length ? mean(list.map((u) => score[u.as])) : source.trim() ? 0 : undefined;
+  const changes = shown.length + told.length ? shown.length / (shown.length + told.length) : undefined;
+  const parts = [drawn, changes].filter((x): x is number => x !== undefined);
+  return { drawn: drawn === undefined ? undefined : round(drawn), changes: changes === undefined ? undefined : round(changes), free: parts.length ? round(mean(parts)) : undefined, units: list, shown: shown.slice(0, 12), told: told.slice(0, 12) };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -230,12 +480,8 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
   const loadScore = clamp(1 - (ld.overNew + ld.overPull) / ld.seconds);
 
   // holds
-  const holdIds = (plan.events.flatMap((e) => e.holds ?? [])).map((h) => h.id);
-  const holdTickets = ["hold_frozen", "hold_competing", "predict_answered"].flatMap(has);
-  const holdScore = report && holdIds.length ? mean(holdIds.map((h) => {
-    const ts = holdTickets.filter((t) => t.note.includes(`Hold ${h} `) || t.note.includes(`hold ${h} `));
-    return ts.some((t) => t.kind !== "hold_competing") ? 0 : ts.length ? 0.5 : 1;
-  })) : undefined;
+  const hw = ids ? holdWork(p, s, ids, attached) : [];
+  const holdScore = hw.length ? mean(hw.map((h) => h.score)) : undefined;
 
   // reveal
   const withholds = plan.events.filter((e) => e.withhold).length;
@@ -243,11 +489,17 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
   const promise = has("promise_missing");
   const reveal = report ? mean([...(withholds ? [clamp(1 - early.filter((t) => t.severity >= 3).length / withholds)] : []), promise.length ? 0 : 1]) : undefined;
 
-  // read
+  // read: the layout checks (kept as `layout` for comparison) and the phone reading, which is the score.
   const rd = readability(scene, theme, s);
-  const read = clamp(1 - (rd.severe + 0.4 * rd.mild) / Math.max(1, rd.frames));
+  const layoutScore = clamp(1 - (rd.severe + 0.4 * rd.mild) / Math.max(1, rd.frames));
+  const eventAt = (f: number) => list.find((x) => f >= x.from && f < x.to)?.event.id;
+  const phone = phoneRead(scene, theme, s, ids ? (f) => ids.events[eventAt(f) ?? ""]?.look ?? [] : undefined);
+  const read = phone.score;
 
-  const scores: Scores = { lag: round(lag), pace: round(pace), load: round(loadScore), read: round(read), ...(eye !== undefined ? { eye: round(eye) } : {}), ...(holdScore !== undefined ? { holds: round(holdScore) } : {}), ...(reveal !== undefined ? { reveal: round(reveal) } : {}) };
+  // depict (the free signals; the report blends in the watch test)
+  const dp = depictFree(source, kinds);
+
+  const scores: Scores = { lag: round(lag), pace: round(pace), load: round(loadScore), read: round(read), ...(dp.free !== undefined ? { depict: dp.free } : {}), ...(eye !== undefined ? { eye: round(eye) } : {}), ...(holdScore !== undefined ? { holds: round(holdScore) } : {}), ...(reveal !== undefined ? { reveal: round(reveal) } : {}) };
   return {
     id: p.id,
     built: true,
@@ -264,7 +516,9 @@ export function measureCase(p: Project, scene: Scene, source: string, theme: The
       demo: demoRows.map((r) => ({ ...r, seconds: round(r.seconds, 2), ...(r.settled !== undefined ? { settled: round(r.settled, 2) } : {}) })),
       slowThenFaster: order ?? null,
       load: ld,
-      read: rd,
+      depict: dp,
+      holds: hw,
+      read: { ...phone, layout: { score: round(layoutScore), ...rd } },
     },
     tickets: (report?.tickets ?? []).map((t) => ({ kind: t.kind, severity: t.severity, note: t.note })),
   };

@@ -1,0 +1,17 @@
+{"things":[
+{"thing":"mountain","as":"itself","sheet":1,"note":"A grey mountain silhouette with a peak and slope, recognizable without a label."},
+{"thing":"8,000 meter level","as":"symbol","sheet":1,"note":"A red horizontal line across the mountain with '8,000 m' written above."},
+{"thing":"climber","as":"symbol","sheet":1,"note":"A plain black dot on the slope; no person drawn."},
+{"thing":"oxygen / a third of it at sea level","as":"word","sheet":3,"note":"Only the red text 'a third of the oxygen'; no gauge or air drawn."},
+{"thing":"breath","as":"absent","sheet":2,"note":"Nothing drawn for a breath."},
+{"thing":"the body dying","as":"word","sheet":5,"note":"Only text 'It is slowly dying, hour by hour'."},
+{"thing":"the summit","as":"itself","sheet":9,"note":"The peak of the mountain drawing, with a thin red path from the dot to it."},
+{"thing":"the death zone","as":"word","sheet":8,"note":"Only the title text changes to 'the death zone'; the zone is not marked on the picture."}
+],
+"changes":[
+{"change":"each breath holds a third of the oxygen","as":"told","sheet":2,"note":"Only text appears; nothing in the picture shows less oxygen."},
+{"change":"the climber goes up above 8,000 m","as":"shown","sheet":2,"note":"The dot climbs the slope up to the red line, though it stops at the line."},
+{"change":"the body can't adapt / is slowly dying hour by hour","as":"told","sheet":5,"note":"Words only; the dot and mountain do not change."},
+{"change":"the climber is slowly dying over time","as":"missing","sheet":6,"note":"Picture frozen during the pause; nothing drains or fades."},
+{"change":"the summit is still hours away","as":"shown","sheet":9,"note":"A red path is drawn from the dot to the summit, with the text; the dot does not move along it."}
+]}

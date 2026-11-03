@@ -1,0 +1,17 @@
+{"things":[
+{"thing":"3 p.m.","as":"word","sheet":1,"note":"only written text, no clock"},
+{"thing":"iced coffee","as":"word","sheet":1,"note":"only the words ICED COFFEE in large text, no cup or drink"},
+{"thing":"warm coffee","as":"word","sheet":2,"note":"text recoloured pink and reading WARM COFFEE; no drink drawn"},
+{"thing":"ice","as":"symbol","sheet":7,"note":"circle labelled ICE appears in the bottle frame; a circle with a label, not ice cubes"},
+{"thing":"Frostline bottle","as":"symbol","sheet":3,"note":"rounded box labelled BOTTLE inside a frame; not drawn as a bottle"},
+{"thing":"hot car","as":"word","sheet":3,"note":"only the heading HOT CAR; no car or heat shown"},
+{"thing":"all day / 24 hours passing","as":"word","sheet":5,"note":"written 24 HOURS LATER? with a counter stuck at 0; no clock or time passing drawn"},
+{"thing":"clinking","as":"absent","sheet":7,"note":"sound only, no motion of ice shown"},
+{"thing":"Frostline product name","as":"word","sheet":7,"note":"large glowing wordmark text"}
+],
+"changes":[
+{"change":"iced coffee becomes warm coffee","as":"told","sheet":2,"note":"the words ICED turn pink and are replaced by WARM; no drink changes"},
+{"change":"ice left in bottle in hot car","as":"told","sheet":3,"note":"box labelled BOTTLE appears with HOT CAR heading; no ice is put in"},
+{"change":"time passes all day / 24 hours","as":"missing","sheet":5,"note":"counter stays at 0 and the picture does not change over the pause"},
+{"change":"ice still clinking after 24 hours","as":"told","sheet":7,"note":"a circle labelled ICE appears in the frame; it does not move or clink"}
+]}

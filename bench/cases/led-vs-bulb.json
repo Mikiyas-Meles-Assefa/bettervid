@@ -79,6 +79,24 @@
    "q": "What did the picture compare side by side?",
    "a": "How much power each bulb uses for the same light (and the old bulb's share going to heat).",
    "needs": "picture"
+  },
+  {
+   "q": "How did the brightness of the two bulbs compare at the start?",
+   "a": "Equally bright.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What was marked between the two power amounts during the pause?",
+   "a": "The difference between them.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How were the two bulbs arranged at the start?",
+   "a": "Side by side.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }

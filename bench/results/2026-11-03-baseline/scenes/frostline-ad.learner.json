@@ -1,7 +1,10 @@
 [
-{"q":1,"answer":"At 3 p.m. your iced coffee has become warm coffee. The screen showed '3 P.M.', then 'ICED COFFEE' turning pink and changing to 'WARM COFFEE'.","from":"both"},
-{"q":2,"answer":"They left ice in a Frostline bottle in a hot car all day. The screen showed 'HOT CAR' and a bottle icon.","from":"both"},
-{"q":3,"answer":"Twenty-four hours later the ice was still clinking. The screen showed an ICE circle appear in the bottle, but no temperature or measurement of the ice.","from":"both"},
-{"q":4,"answer":"Frostline","from":"both"},
-{"q":5,"answer":"A glowing '0' with '24 HOURS LATER?' under the bottle, beneath 'HOT CAR' and the bottle icon. The caption 'ALL DAY' was shown first, and the narration was silent.","from":"picture"}
+{"q":1,"answer":"Your iced coffee turns into warm coffee by 3 p.m.","from":"both"},
+{"q":2,"answer":"They left ice in a Frostline bottle in a hot car all day.","from":"both"},
+{"q":3,"answer":"Twenty-four hours later the ice is still clinking (still ice in the bottle).","from":"both"},
+{"q":4,"answer":"Frostline.","from":"both"},
+{"q":5,"answer":"The bottle in the hot car (a box labelled BOTTLE in a frame under the title HOT CAR), with a glowing 0 and the text 24 HOURS LATER? under it. Nothing else changed.","from":"picture"},
+{"q":6,"answer":"Nothing visibly moved forward. The counter stayed at 0 the whole pause; the only change was the small text ALL DAY. fading away and the 0 and question appearing.","from":"picture"},
+{"q":7,"answer":"No. The bottle was only a box with the word BOTTLE; nothing inside it was visible (no ice or coffee) until the ICE circle appeared after the pause.","from":"picture"},
+{"q":8,"answer":"24 HOURS LATER?","from":"picture"}
 ]

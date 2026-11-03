@@ -1,0 +1,12 @@
+{"things":[
+{"thing":"840 support tickets total","as":"word","sheet":1,"note":"number 840 in a yellow box with SUPPORT TICKETS text; no tickets drawn"},
+{"thing":"Login problems (412)","as":"itself","sheet":3,"note":"a tall yellow bar with 412 labelled LOGIN, a real chart bar"},
+{"thing":"Billing (268)","as":"itself","sheet":4,"note":"a shorter grey bar with 268, real chart bar, scaled roughly to value"},
+{"thing":"Shipping (97) and everything else (63)","as":"itself","sheet":6,"note":"two small bars in the chart with their numbers, after a text-only question placeholder"},
+{"thing":"The 160 combined total","as":"word","sheet":6,"note":"number 160 and strike lines over the labels, no combined bar"}
+],
+"changes":[
+{"change":"Login bar appears and is shown as almost half","as":"shown","sheet":3,"note":"bar appears; 'almost half' is a text tag, no comparison to 840 drawn"},
+{"change":"Shipping and other merge into just 160","as":"told","sheet":6,"note":"the 160 number appears and labels are struck through; bars do not combine"},
+{"change":"Fixing login makes half the queue go away","as":"missing","sheet":8,"note":"text appears; login bar stays unchanged"}
+]}

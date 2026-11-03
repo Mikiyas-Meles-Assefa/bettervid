@@ -99,6 +99,24 @@
    "q": "What did the screen show during the pause after the first crossing?",
    "a": "The first half knot pulled snug and holding.",
    "needs": "picture"
+  },
+  {
+   "q": "Which crossing was shown slower?",
+   "a": "The first one.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "What did the first half knot do during the pause?",
+   "a": "It tightened and held.",
+   "needs": "picture",
+   "hard": true
+  },
+  {
+   "q": "How many knots were on screen at the end?",
+   "a": "Two: a square knot and a granny knot.",
+   "needs": "picture",
+   "hard": true
   }
  ]
 }
