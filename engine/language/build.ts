@@ -1803,20 +1803,6 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
     const plan = stepSchedule(f.args, f.at, board.steps.length, ctx);
     const k = Number(f.root.scaleX ?? 1);
     const inScene = (b: Area): Box => ({ x: Number(f.root.x ?? 0) + b.x * k, y: Number(f.root.y ?? 0) + b.y * k, w: b.w * k, h: b.h * k });
-    // Under a camera the scene set itself, the values its steps move must stay whole in view: a value the steps carry
-    // to the edge of a close view is cut there. (The camera that follows keeps them whole on its own.)
-    if (f.still) {
-      for (let j = 0; j < plan.times.length; j++) {
-        const step = plan.from + j;
-        const shot = shots.filter((x) => x.at <= plan.times[j]!).at(-1);
-        if (!shot || shot.view.zoom <= 1.0001) continue;
-        const values: Seen[] = wordsAfter(board, made.nodes, step).map((w) => ({ id: w.id, box: inScene(w.box), line: f.line, what: "text", text: w.text, laid: false }));
-        const cut = cutFrom(shot.view, values);
-        if (!cut.length) continue;
-        report(shot.line, `With the camera on line ${shot.line} (zoom ${shot.view.zoom.toFixed(2)}), step ${step} of ${f.target} (${board.steps[step - 1]!.say}) carries ${cut.map((w) => `"${w.text}"`).slice(0, 3).join(", ")} to the edge of the view, where ${cut.length > 1 ? "they are" : "it is"} cut. Frame what the steps move: a lower zoom, the whole of ${f.target}, or no camera line, so the camera follows the work itself.`);
-        break;
-      }
-    }
     if (!f.tags.length) continue;
     for (const { c, box } of f.tags) {
       if (c.do !== "tag" || !box) continue;
@@ -1941,6 +1927,34 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
       return { problems, stats };
     }
     withheldEarly(scene, doc, momentOf, words, ctx.fps).forEach((p) => report(p.line, p.message));
+    // Under a camera the scene set itself, the values a computed thing's steps move must stay whole on screen, and all
+    // of them in view when that camera frames the thing: read from the built scene at each step, camera moves and
+    // drift included.
+    const aimed = new Map(doc.states.flatMap((st) => st.commands.flatMap((c) => (c.do === "camera" ? [[c.line, c.target ?? ""] as const] : []))));
+    for (const f of follows) {
+      if (!f.still || typeof f.root.truth !== "string" || typeof f.root.spec !== "string") continue;
+      let n = 0;
+      try {
+        n = storyOf(f.root.truth, f.target, f.root.spec, kitCtx).steps.length;
+      } catch {
+        continue;
+      }
+      const plan = stepSchedule(f.args, f.at, n, ctx);
+      for (let j = 0; j < plan.times.length; j++) {
+        const t = Math.min(ctx.frames - 1, plan.times[j]! + plan.longest);
+        const shot = shots.filter((x) => x.at <= t).at(-1);
+        if (!shot) continue;
+        // Whether the camera line in force (not a small move made to hold words) frames this thing.
+        const set = shots.filter((x) => x.at <= t && aimed.has(x.line)).at(-1);
+        const on = set ? aimed.get(set.line) : undefined;
+        const framed = !!on && (on === f.target || on.startsWith(`${f.target}.`));
+        const out = valuesOff(scene, t, f.target, ctx, framed);
+        if (!out.length) continue;
+        const line = set?.line ?? shot.line;
+        report(line, `With the camera on line ${line}, ${f.target}'s step ${plan.from + j} carries ${out.slice(0, 3).map((x) => `"${x}"`).join(", ")} ${framed ? "out of the view that frames it" : "to the edge of the view, where it is cut"}. Frame what the steps move: a lower zoom, no drift, the whole of ${f.target}, or no camera line, so the camera follows the work itself.`);
+        break;
+      }
+    }
     falseOrder(scene, doc, momentOf, ctx).forEach((p) => report(p.line, p.message));
     if (problems.length) return { problems, stats };
     stats.parts = scene.nodes.length;
@@ -1958,6 +1972,29 @@ export async function build(written: string, opts: BuildOptions): Promise<BuildR
   } catch (e) {
     return { problems: [{ line: 0, message: `The scene could not be built: ${(e as Error).message}` }], doc: sceneDoc, stats };
   }
+}
+
+// Values of a computed thing that are off the screen at a frame: cut by its edge, or, when `whole`, out of it at all.
+function valuesOff(scene: Scene, frame: number, target: string, ctx: CompileContext, whole: boolean): string[] {
+  const out: string[] = [];
+  const walk = (list: Resolved[], x: number, y: number, k: number, o: number) => {
+    for (const n of list) {
+      const op = o * Number(n.props.opacity ?? 1);
+      if (op <= 0.05) continue;
+      const [nx, ny, nk] = [x + Number(n.props.x ?? 0) * k, y + Number(n.props.y ?? 0) * k, k * Number(n.props.scaleX ?? 1)];
+      if (n.kind === "text" && n.id.startsWith(`${target}.`) && String(n.props.text ?? "").trim()) {
+        const size = Number(n.props.size ?? 40) * nk;
+        const w = estimate(String(n.props.text), Number(n.props.size ?? 40)) * nk;
+        const [l, r, t, d] = [nx - w / 2, nx + w / 2, ny - size * 0.5, ny + size * 0.5];
+        const inside = l >= 0 && r <= ctx.width && t >= 0 && d <= ctx.height;
+        const touches = r > 0 && l < ctx.width && d > 0 && t < ctx.height;
+        if (!inside && (whole || touches)) out.push(String(n.props.text));
+      }
+      walk(n.children, nx, ny, nk, op);
+    }
+  };
+  walk(evaluate(scene, frame), 0, 0, 1, 1);
+  return out;
 }
 
 // A table's last row that adds up the columns above it, with nothing that says so, reads as one more row of data. Each

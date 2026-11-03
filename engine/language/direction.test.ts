@@ -163,7 +163,7 @@ test("a text that grows a second line shows it, also when an earlier text had on
 
 test("values a step carries out of a close view the scene set are refused", async () => {
   const err = await bad(`@0\nsort s data=[5,1,7,3,6,2,8,4] algo=merge order=levels show=boxes done=7\n@4 keep\ncamera s zoom=1.4\ndo steps s from=8 to=10 pace=slow until=@30\n`);
-  assert.match(err, /step \d+ of s .* to the edge of the view/);
+  assert.match(err, /s's step \d+ carries .* (to the edge of the view|out of the view that frames it)/);
 });
 
 test("a tag riding a moving part onto the values is refused", async () => {
