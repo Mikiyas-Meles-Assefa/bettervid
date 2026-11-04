@@ -59,6 +59,8 @@ export async function render(p: Project, force = false) {
         imageFormat: "jpeg",
         concurrency,
         scale: SCALE,
+        // Loading a long scene file in a busy machine can take more than Remotion's 30 s default; several renders at once do.
+        timeoutInMilliseconds: 180_000,
         outputLocation: join(dir(p), PICTURE),
         onProgress: ({ progress }) => {
           if (progress - last >= 0.25) console.log(`  render ${Math.round(progress * 100)}%`), (last = progress);
