@@ -4,17 +4,20 @@ bettervid turns a sentence, or your own files, into a finished, narrated, source
 
 Built for the Meta Global AI Developer Hackathon (Oct 27 to Nov 4, 2026). All code here was written during the event.
 
-## Three videos to watch first
+## Videos to watch first
 
-Made start to finish by the pipeline, no hand edits. The videos live in the projects folder of the machine that made them (`projects/` is not in git, it is a volume); with the app running, each opens in its studio page.
+Made start to finish by the pipeline, no hand edits. Download them from the [v1.0 release](https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/tag/v1.0), or open them on the live site, each with its studio page: the plan, the script, the direction, the frames the reviewers saw, the sources and the spend.
 
-| Video | Style | Length | Project |
+| Video | Style | Length | What it shows |
 |---|---|---|---|
-| Why the Wrights flew while everyone else crashed | Documentary collage | 4:01 | `projects/how-did-the-wright-brothers-get-the-firs-d6a311/video.mp4`, `#/p/how-did-the-wright-brothers-get-the-firs-d6a311` |
-| Standard deviation by hand in six steps | Chalkboard | 3:29 | `projects/stats-w2/video.mp4`, `#/p/stats-w2` |
-| Her battle too (Taytu at Adwa) | Documentary collage | 2:14 | `projects/taytu-s-role-in-adwa-b9b65a/video.mp4`, `#/p/taytu-s-role-in-adwa-b9b65a` |
+| Dijkstra in Five Towns | Chalkboard | 1:30 | a graph search computed by code, each town settling on the words that say it |
+| Why the Wrights Flew While Everyone Else Crashed | Documentary collage | 4:01 | archive photographs with their credits, the wind tunnel numbers as a table |
+| Standard Deviation by Hand in Six Steps | Chalkboard | 3:29 | a worked exam example, step by step, with typeset math |
+| How Merge Sort Actually Works | Neon | 1:34 | the sort computed and played on the words, slow first, then faster |
+| Her Battle Too (Taytu at Adwa) | Documentary collage | 2:14 | history from sourced claims, with period art and credited illustrations |
+| Find Any Name in Three Tries | Neon | 0:57 | binary search with a phone book |
 
-The home page shows six, chosen in `app/showcase.json` (a list of project ids with one line each, easy to change).
+Live site: https://bettervid.fly.dev. The home page shows these six, listed in `app/showcase.json`.
 
 ## How it works
 

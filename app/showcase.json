@@ -1,10 +1,28 @@
 {
   "videos": [
-    { "id": "how-did-the-wright-brothers-get-the-firs-d6a311", "why": "Archive photographs with their credits, and the wind tunnel numbers drawn as a table." },
-    { "id": "stats-w2", "why": "A worked exam example on a chalkboard, one step at a time, with typeset math." },
-    { "id": "merge-w2", "why": "The sort is computed by code, not drawn from memory, and shown level by level." },
-    { "id": "taytu-s-role-in-adwa-b9b65a", "why": "History told from sourced claims, mixing archive pictures with Muse Image illustrations, all credited." },
-    { "id": "why-does-the-moon-always-show-us-the-sam-238f89", "why": "Under a minute, drawn as a whiteboard sketch." },
-    { "id": "how-does-a-vaccine-train-your-immune-sys-acddcc", "why": "Under a minute, flat illustration, with a quoted source on screen." }
+    {
+      "id": "explain-dijkstra-s-shortest-path-on-a-sm-f9d3a7",
+      "why": "Dijkstra's shortest path on a five-town map, chalkboard: the graph search is computed by code and each town settles on the words that say it."
+    },
+    {
+      "id": "how-did-the-wright-brothers-get-the-firs-d6a311",
+      "why": "Why the Wrights flew: archive photographs with their credits, and their wind tunnel numbers as a table."
+    },
+    {
+      "id": "stats-w2",
+      "why": "Standard deviation by hand, chalkboard: a worked exam example, one step at a time, with typeset math."
+    },
+    {
+      "id": "how-does-merge-sort-actually-work-im-lea-ce277e",
+      "why": "Merge sort, neon: the sort is computed by code and played on the words, slow first and then faster."
+    },
+    {
+      "id": "taytu-s-role-in-adwa-b9b65a",
+      "why": "Taytu at Adwa: history from sourced claims, with period paintings, archive pictures and credited illustrations."
+    },
+    {
+      "id": "binary-search-explained-with-a-phone-boo-b0ec91",
+      "why": "Binary search with a phone book, neon: the half that cannot hold the name is thrown away, page by page."
+    }
   ]
 }
