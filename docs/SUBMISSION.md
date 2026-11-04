@@ -16,7 +16,7 @@ bettervid is a video creation platform built on an agent-native video engine. Yo
 **Links:**
 - Repository: https://github.com/Mikiyas-Meles-Assefa/bettervid
 - Live product: https://bettervid.fly.dev
-- Demo video (2:58): https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/download/v1.0/bettervid-demo.mp4 (also `media/bettervid-demo.mp4` locally; upload it to YouTube as unlisted if the form wants a YouTube link)
+- Demo video (2:33): https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/download/v1.0/bettervid-demo.mp4 (also `media/bettervid-demo.mp4` locally; upload it to YouTube as unlisted if the form wants a YouTube link)
 - Showcase videos: https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/tag/v1.0
 
 ## The 3-minute demo video (record with QuickTime, voice over as you go)

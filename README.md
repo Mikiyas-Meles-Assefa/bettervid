@@ -54,6 +54,8 @@ Which Meta model does what:
 
 ## The app
 
+- **Project** (`#/project`): your files on the left, a conversation in the middle where each message asks for a video, and the project's videos on the right as a feed you scroll, with a list of titles to jump to any one. A paper in, a feed of short videos out.
+
 `app/server.ts` (plain Node, no framework) and one page, `app/public/index.html` (no build step).
 
 - **Make** (`#/`): the prompt box with file drop, the style picker (seven styles in `styles/*.json`, each with a still and a looping preview from `styles/previews/`, plus your own style from a description), length and narrator.
