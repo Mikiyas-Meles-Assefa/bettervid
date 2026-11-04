@@ -8,6 +8,7 @@ tmp=$(mktemp -t bettervid-seed).tgz
 # Everything but the heavy intermediates: the mix, the picture-only render, raw stills folders are left out.
 tar -czf "$tmp" --exclude='*/picture.mp4' --exclude='*/mix.wav' --exclude='*/narration.mp3' --exclude='*/once' --exclude='*/look*' -C projects "$@"
 echo "packed $(du -h "$tmp" | cut -f1) for $#"
-fly ssh console -C "sh -c 'cat > /tmp/seed.tgz && tar -xzf /tmp/seed.tgz -C /srv/projects && rm /tmp/seed.tgz && ls /srv/projects'" < "$tmp"
+# Streamed straight into tar on the volume: no copy on the machine's small root disk.
+fly ssh console -C "sh -c 'tar -xzf - -C /srv/projects && ls /srv/projects'" < "$tmp"
 rm -f "$tmp"
 echo "seeded; the gallery reads the volume on the next request"
