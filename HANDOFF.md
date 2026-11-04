@@ -1,4 +1,16 @@
-# HANDOFF (updated 2026-11-03, evening)
+# HANDOFF (updated 2026-11-04, 13:05 Doha)
+
+## Submission day state
+Code freeze Nov 4, 20:00 Doha; submit by 02:00 Doha Nov 5 (18:00 ET), hard 05:00. `main` is pushed and the repository is public: https://github.com/Mikiyas-Meles-Assefa/bettervid. Everything below from Nov 3 and the `fast` branch is merged into main.
+
+What main does now, by default: one-pass writer (`prompts/writer-once.md`), one-call direction with the script's computed examples given up front (`demos` from the structure step; rounds capped at 2; unknown kinds, mid-phrase holds, settings-line data and out-of-range phases mended in code), path A scene authoring with one look by every eye and one correction per section, every section written at once (`PARALLEL` 16), repairs that answer with only the changed states, build repairs at low effort, pictures only from the user's own files (`pictures: "own"`; `"find"` hunts the archives), no web research when the planner judges the topic common knowledge, render and mix together with a `mux` stage, the critic opt-in, an optional run time budget (`minutes`). The product (home, studio, gallery, batch, Docker, README) is in `app/`; `docs/briefs/product-report.md` says how it was checked. `docs/SUBMISSION.md` has the submission text, the 3-minute demo script and the checklist.
+
+Measured Nov 4 on main's defaults: a fresh 2:13 video (noise cancelling headphones, blueprint): plan 9 s, writer 50, direction 105 (now one round), voice 17, scene 284 (one section failed on a gate bug, fixed), then on resume scene 150, mix 28, render 89, mux 2. About 7 minutes for a 2-minute video; Spark's answer time per section (50 to 75 s a call at medium effort) is the floor. Miki's bar was under 5 minutes for a 1-minute video; not reached. The levers left are trades: the correction at low effort, shorter sections.
+
+Showcase batch (Nov 4, 13:00): 15 videos across all seven styles and many purposes, run three at a time by a scratch script; logs in /tmp/batch; when they finish, pick 4 to 6 for `app/showcase.json` and the README's table.
+
+Not done: hosting (Docker not installed here; the image is unbuilt), the demo video (Miki records it from `docs/SUBMISSION.md`), the form.
+
 
 For the next agent picking up bettervid. Read `AGENTS.md`, then `docs/PLAN.md` (v2, source of truth), then `research/DECISIONS.md`.
 
