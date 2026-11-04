@@ -1220,8 +1220,9 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   let usd = 0;
   const fixed: string[] = [];
   const log = (m: string) => job.log(`  ${job.range.id}: ${m}`);
-  const ask = async (user: string | unknown[]): Promise<string> => {
-    const r = await text({ system: job.system, user: user as string, effort: "medium", maxOutput: 32000 });
+  // Writing and the correction think at medium; a build repair is mechanical (resize, split, rename) and runs at low.
+  const ask = async (user: string | unknown[], effort: "low" | "medium" = "medium"): Promise<string> => {
+    const r = await text({ system: job.system, user: user as string, effort, maxOutput: 32000 });
     usd += r.usd;
     return r.value;
   };
@@ -1237,7 +1238,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   for (let tries = 0; !built(first.c) && tries < 2; tries++) {
     repairs++;
     log(`the draft does not build (${buildProblems(first.c)}); asking with its build problems`);
-    first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings])), fixed, first.source);
+    first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings]), "low"), fixed, first.source);
   }
   if (!built(first.c)) {
     looks.push("did not build");
@@ -1276,7 +1277,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   if (!built(next.c)) {
     repairs++;
     log(`the repair does not build (${buildProblems(next.c)}); asking once more with its build problems`);
-    next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings])), fixed, next.source);
+    next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings]), "low"), fixed, next.source);
   }
   if (!built(next.c)) {
     looks.push("repair did not build, kept the first");
@@ -1312,7 +1313,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
       if (!built(third.c)) {
         repairs++;
         log(`the last repair does not build (${buildProblems(third.c)}); asking once more with its build problems`);
-        third = await checkMended(job, await ask(repairRequest(job, third.source, [...third.c.problems, ...third.c.warnings])), fixed, third.source);
+        third = await checkMended(job, await ask(repairRequest(job, third.source, [...third.c.problems, ...third.c.warnings]), "low"), fixed, third.source);
       }
       if (built(third.c)) {
         next = third;
