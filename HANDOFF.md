@@ -1,4 +1,7 @@
-# HANDOFF (updated 2026-11-04, 13:05 Doha)
+# HANDOFF (updated 2026-11-04, evening Doha)
+
+**Submitted** on Nov 4 evening Doha through the Cerebral Valley form: team bettervid, Indie Developer Track, Build for Your World; repo https://github.com/Mikiyas-Meles-Assefa/bettervid, demo https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/download/v1.0/bettervid-demo.mp4 (2:33), live site https://bettervid.fly.dev. The site shows Project mode (files, chat, a scrollable feed with a title list), a simple video page with the studio behind Under the hood, and real frames for posters and style swatches.
+
 
 ## Submission day state
 Code freeze Nov 4, 20:00 Doha; submit by 02:00 Doha Nov 5 (18:00 ET), hard 05:00. `main` is pushed and the repository is public: https://github.com/Mikiyas-Meles-Assefa/bettervid. Everything below from Nov 3 and the `fast` branch is merged into main.
