@@ -1248,6 +1248,16 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
     log(`the draft does not build (${buildProblems(first.c)}); asking with its build problems`);
     first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings]), "low"), fixed, first.source);
   }
+  // A draft that two repairs could not mend is usually a bad sample: one fresh draft, with its own repair, before giving up.
+  if (!built(first.c) && left() > REPAIR_MS + CORRECTION_MS) {
+    repairs++;
+    log(`the draft still does not build (${buildProblems(first.c)}); writing it afresh`);
+    first = await checkMended(job, await ask(draft ? `${job.request}\n\nA first draft of your part, made from the director's shots:\n${draft}` : job.request), fixed);
+    if (!built(first.c)) {
+      repairs++;
+      first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings]), "low"), fixed, first.source);
+    }
+  }
   if (!built(first.c)) {
     if (left() <= REPAIR_MS) log("out of time for another build repair");
     looks.push("did not build");
