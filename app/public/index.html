@@ -672,7 +672,7 @@ async function home() {
     } catch (e) { err.textContent = e.message; go.disabled = false; }
   } },
     el("div", { class: "compose" }, area, files.view, files.err),
-    picker(opts.styles),
+    picker(opts.styles.filter((s) => !s.custom)),
     el("div", { class: "options" }, lengths(), voice.view),
     el("div", { class: "go" }, go, el("p", { class: "note" }, opts.busy ? "A video is being made right now. Yours will wait in line and start when it is done." : "A one minute video takes about a quarter of an hour. You can leave and come back; it will be in the gallery.")),
     err);
