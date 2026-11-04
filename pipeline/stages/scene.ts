@@ -898,7 +898,7 @@ function frameContent(seen: Seen, only?: Set<number>, label = "Frame", extra?: (
 const issueText = (issues: Issue[]) => issues.map((x) => `${x.id} [severity ${x.severity}, frames ${x.frames.join(", ")}] ${x.what} Should be: ${x.want}`).join("\n");
 
 async function judge(job: Job, w: Written, seen: Seen): Promise<{ judged: Judged; usd: number }> {
-  const r = await json<Judged>({ system: lookPart("Judge"), user: [{ type: "input_text", text: lookHeader(job, w) }, ...frameContent(seen)], schema: judgeSchema, schemaName: "look", effort: "medium" });
+  const r = await json<Judged>({ system: lookPart("Judge"), user: [{ type: "input_text", text: lookHeader(job, w) }, ...frameContent(seen)], schema: judgeSchema, schemaName: "look", effort: "low" });
   return { judged: r.value, usd: r.usd };
 }
 
@@ -1066,7 +1066,7 @@ const liveReview = (job: Job): ReviewCalls => ({
   see: (w, folder) => see(job, w.result.scene!, w.source, folder),
   review: async (w, seen, notes) => {
     const user = [{ type: "input_text", text: `${lookHeader(job, w)}\n\n${NOTES_HEAD}\n${notes.lines.join("\n")}` }, ...frameContent(seen, undefined, "Frame", readingsOn(job, w.result.scene!, seen))];
-    const r = await json<Judged>({ system: reviewPart("Review"), user, schema: judgeSchema, schemaName: "review", effort: "medium" });
+    const r = await json<Judged>({ system: reviewPart("Review"), user, schema: judgeSchema, schemaName: "review", effort: "low" });
     return { judged: r.value, usd: r.usd };
   },
   write: (user) => text({ system: job.system, user, effort: "medium", maxOutput: 32000 }),

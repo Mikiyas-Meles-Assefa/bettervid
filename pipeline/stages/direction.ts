@@ -514,7 +514,7 @@ export async function direction(p: Project, force = false) {
     let feedback = "";
     const shown = new Set<string>();
     for (let round = 1; ; round++) {
-      const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: round === 1 ? "high" : "medium" });
+      const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: (p.input.passes ?? "once") === "full" && round === 1 ? "high" : "medium" });
       const raw = r.value;
       const { steps, drawn, problems: refused } = demoSteps(raw, ctx, kinds);
       for (const m of clampPhases(raw, steps)) console.log(`    mended: ${m}`);

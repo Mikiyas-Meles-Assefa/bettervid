@@ -45,6 +45,7 @@ export type Input = {
   sceneAuthor?: "language" | "intent" | "toolbox";
   sceneRepair?: "once" | "check" | "full"; // once (default): write, one look, one correction; check: plus the art director's check and one last repair; full: the review rounds // toolbox: the language with the design brain's abilities (path A)
   passes?: "once" | "full"; // the writer and direction: once (default) is one call each; full is the draft, review, check and revise chain and the direction's rounds
+  critic?: boolean; // run the critic after the video is made (notes only on engine videos); off by default
   pictures?: "own" | "find" | "none"; // own (default): pictures only from the user's own files, the scene draws the rest; find: hunt the archives and make stills too; none: never
   files?: InputFile[]; // the user's own files, stored in the project's material folder
 };
@@ -62,7 +63,8 @@ export type Plan = {
   visuals: string[];
   sound: string[];
   material: string; // notes, facts or sources the user supplied, verbatim
-  notation: boolean; // understanding it means seeing worked notation, so any style uses the teaching stage
+  notation: boolean;
+  research?: "web" | "none"; // the planner's judgment: does this video need facts looked up on the web (dates, names, figures, anything disputed), or is it common knowledge the writer holds for certain // understanding it means seeing worked notation, so any style uses the teaching stage
 };
 
 export type Cost = { stage: StageName; usd: number; detail: string; at: string };
@@ -267,8 +269,8 @@ const strArr = { type: "array", items: str } as const;
 export const planSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["topic", "seconds", "story", "tone", "intent", "visuals", "sound", "material", "notation"],
-  properties: { topic: str, seconds: { type: "integer" }, story: strArr, tone: str, intent: str, visuals: strArr, sound: strArr, material: str, notation: { type: "boolean" } },
+  required: ["topic", "seconds", "story", "tone", "intent", "visuals", "sound", "material", "notation", "research"],
+  properties: { topic: str, seconds: { type: "integer" }, story: strArr, tone: str, intent: str, visuals: strArr, sound: strArr, material: str, notation: { type: "boolean" }, research: { type: "string", enum: ["web", "none"] } },
 } as const;
 
 export const factSheetSchema = {

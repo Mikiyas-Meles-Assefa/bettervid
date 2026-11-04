@@ -120,6 +120,7 @@ const wantsPictures = () => {
 };
 function skipEngine(name: StageName) {
   if (name === "board" || name === "stage") return true;
+  if (name === "critic") return p.input.critic !== true;
   return ["director", "assets", "annotate"].includes(name) && !wantsPictures();
 }
 function skip(name: StageName) {

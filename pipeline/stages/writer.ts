@@ -99,7 +99,7 @@ export async function writer(p: Project, force = false) {
     };
     const show = (s: WritingStep) => `TITLE: ${s.title}\nTAKEAWAY: ${s.takeaway}\n\n${s.narration}`;
 
-    await step("draft", () => text({ system: prompts[0]!, user: research, effort: "high" }));
+    await step("draft", () => text({ system: prompts[0]!, user: research, effort: once ? "medium" : "high" }));
     if (!once) await chain();
 
     // Structure, then check it kept every word; one retry if it didn't.

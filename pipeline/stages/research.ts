@@ -8,6 +8,14 @@ import { asked, charge, prompt, stage, topic } from "../lib/project.ts";
 import { viewer } from "./plan.ts";
 
 export async function research(p: Project, force = false) {
+  // Common knowledge needs no search: the planner judged it, and the writer is told to hold to what it knows for certain.
+  if (p.plan?.research === "none" && !materialText(p, 1)) {
+    await stage(p, "research", ["none", p.plan.topic], 0, async () => {
+      p.factSheet = { topic: p.plan!.topic, angle: "", story: "", claims: [], sources: [] };
+      console.log("  no web research: the planner judged the topic common knowledge");
+    }, force);
+    return;
+  }
   const notes = p.plan?.material
     ? `The user's own notes for this video. Treat them as leads: verify them, use what holds up, and say in the story where they are wrong:\n"""\n${p.plan.material}\n"""`
     : "";
