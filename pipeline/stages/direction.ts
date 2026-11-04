@@ -196,7 +196,10 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
     if (steps.has(key)) continue;
     const kind = e.demo.truth.kind.trim();
     if (!kinds.includes(kind)) {
-      problems.push(`event ${e.id}: the demo names truth kind "${kind}", which the engine does not have (it has ${kinds.join(", ")}); leave truth.kind empty for a demonstration no kit computes`);
+      // A kind no kit computes is a demonstration the scene draws itself: the plan keeps its phases by words, with no steps.
+      console.log(`    mended: event ${e.id} named "${kind}", which no kit computes; the scene draws that demonstration (the kits are ${kinds.join(", ")})`);
+      e.demo.truth = { kind: "", data: "" };
+      for (const ph of e.demo.phases) ph.from = ph.to = 0;
       continue;
     }
     let data: unknown;
@@ -235,6 +238,22 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
 // A phase that names steps past the end of what the kit computes is cut to the real range in code, and one that names
 // nothing real is emptied, so a plan written before the steps were seen does not cost a round for that alone. Returns
 // what was changed, in words.
+/** A settle, look or recap hold placed inside a phrase is moved to the word that ends the phrase, within its event. */
+export function mendHolds(raw: RawPlan, words: string[]): string[] {
+  const out: string[] = [];
+  for (const e of raw.events)
+    for (const h of e.holds) {
+      if (h.afterCue.trim() || !(h.purpose === "look" || h.purpose === "settle" || h.purpose === "recap")) continue;
+      if (h.afterWord < e.firstWord || h.afterWord > e.lastWord || CLAUSE_END.test(words[h.afterWord] ?? "")) continue;
+      let w = h.afterWord;
+      while (w < e.lastWord && !CLAUSE_END.test(words[w] ?? "")) w++;
+      if (!CLAUSE_END.test(words[w] ?? "")) continue;
+      out.push(`hold ${h.id} moved from after word ${h.afterWord} ("${words[h.afterWord]}") to after word ${w} ("${words[w]}"), where the phrase ends`);
+      h.afterWord = w;
+    }
+  return out;
+}
+
 export function clampPhases(raw: RawPlan, steps: Map<string, string[]>): string[] {
   const out: string[] = [];
   for (const e of raw.events.filter(hasTruth)) {
@@ -556,7 +575,7 @@ export async function direction(p: Project, force = false) {
       const r = await json<RawPlan>({ system, user: userWithSteps + feedback, schema, schemaName: "direction", effort: (p.input.passes ?? "once") === "full" && round === 1 ? "high" : "medium" });
       const raw = r.value;
       const { steps, drawn, problems: refused } = demoSteps(raw, ctx, kinds);
-      for (const m of clampPhases(raw, steps)) console.log(`    mended: ${m}`);
+      for (const m of [...clampPhases(raw, steps), ...mendHolds(raw, words)]) console.log(`    mended: ${m}`);
       const found = [...refused, ...problems(raw, words, steps), ...unspoken(raw, words, steps)];
       const unseen = [...steps.entries()].filter(([k]) => !shown.has(k));
       charge(p, "direction", r.usd, `round ${round}: ${raw.events.length} events, ${raw.cues.length} cues, ${found.length} problems${unseen.length ? `, ${unseen.length} step lists to show` : ""}`);

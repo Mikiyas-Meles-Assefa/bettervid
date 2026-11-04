@@ -2141,10 +2141,10 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
           spent.usd += w.usd;
           job.log(`  ${job.range.id}: repaired for the joined scene: ${w.problems.length ? `still ${w.problems.length} problems` : "builds"}, $${w.usd.toFixed(3)}`);
           if (w.problems.length || !w.result.scene) return;
-          // The version before cannot ship in the whole, but a repair that measures worse is tried again, not kept.
+          // The version before cannot ship in the whole. A repair that builds is kept: the gate's measures are reported as
+          // notes, never used to throw away the only version that builds (that left videos with no scene at all).
           const g = await gate(job, sections[i]!.source, w, undefined, `joined${round}`);
-          job.log(`  ${job.range.id}: the joined repair ${g.keep ? "measures no worse, kept" : "measures worse, tried again"} (${g.why})`);
-          if (!g.keep) return;
+          job.log(`  ${job.range.id}: the joined repair builds and is kept${g.keep ? "" : ` (it measures worse than the draft: ${g.why.slice(0, 200)})`}`);
           sections[i] = { ...sections[i]!, source: plainMoments(w.source, opts), rounds: sections[i]!.rounds + w.rounds, usd: +(sections[i]!.usd + w.usd).toFixed(4) };
           writeFileSync(join(job.folder, "scene.txt"), w.source);
           writeFileSync(join(job.folder, "section.json"), JSON.stringify({ key: keys[i], section: sections[i], notes: notesOf(job.folder, notes[i]!) }, null, 1));

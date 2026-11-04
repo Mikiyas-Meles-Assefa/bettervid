@@ -7,7 +7,7 @@ import type { CompileContext } from "../../engine/core/types.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { Project, Script } from "../../schemas/project.ts";
 import { truthKindNames } from "../lib/abilities.ts";
-import { applyCues, clampPhases, coverage, demoSteps, problems, scriptSteps, scriptWords, settingsFromLine, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
+import { applyCues, clampPhases, coverage, demoSteps, mendHolds, problems, scriptSteps, scriptWords, settingsFromLine, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
 import { events } from "./director.ts";
 import { SCENE_KITS } from "./scene.ts";
 
@@ -203,7 +203,7 @@ test("demonstrations are checked against the steps the kit really computes", () 
   const extra = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "sort", data: '{"data":[3,1,2],"id":"s"}' }, phases: [] } })]);
   assert.deepEqual(demoSteps(extra, ctx, kinds).problems, []); // an id only names the thing: mended out, not a round
   const unknown = plan([event("e1", 0, 13, { demo: { what: "x", truth: { kind: "teleport", data: "{}" }, phases: [] } })]);
-  assert.match(demoSteps(unknown, ctx, kinds).problems[0]!, /does not have/);
+  assert.deepEqual(demoSteps(unknown, ctx, kinds).problems, []); // an unknown kind is mended into a drawn demonstration, not a round
 });
 
 test("the planner is told how a truth thing is drawn and which way its moves go, so it can set the form", () => {
@@ -252,4 +252,22 @@ test("the script's computed examples go into the first direction request with th
   assert.match(given.text, /Name each in demo.truth[\s\S]*sort \{"data":\[3,1,2\],"algo":"insertion"\}:\n  drawn as one row/);
   assert.match(given.text, /\n  1 /);
   assert.deepEqual(scriptSteps({ script } as unknown as Project, ctx, kinds), { text: "", keys: [] });
+});
+
+test("a kind no kit computes and a hold inside a phrase are mended in code, not sent back for a round", () => {
+  const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: 1, theme: themeFrom("neon"), kits: SCENE_KITS };
+  const kinds = truthKindNames();
+  const phase = { from: 1, to: 2, pace: "slow" as const, at: { word: 7, hold: "", cue: "" }, until: none, replay: false, why: "" };
+  const rawPlan = plan([event("e1", 0, 5), event("e2", 6, 9, { demo: { what: "waves adding", truth: { kind: "wave-sum", data: "{}" }, phases: [phase] } })]);
+  const r = demoSteps(rawPlan, ctx, kinds);
+  assert.deepEqual(r.problems, []);
+  assert.equal(rawPlan.events[1]!.demo.truth.kind, "");
+  assert.deepEqual(rawPlan.events[1]!.demo.phases.map((p) => [p.from, p.to]), [[0, 0]]);
+  const words = scriptWords(script);
+  const clauseEnd = words.findIndex((w, i) => i > 0 && /[.?!:;,]$/.test(w));
+  assert.ok(clauseEnd > 0);
+  const held = plan([event("e1", 0, words.length - 1, { holds: [{ id: "h1", afterWord: clauseEnd - 1, afterCue: "", seconds: 2, purpose: "settle", does: "look", shows: "" }] })]);
+  const moved = mendHolds(held, words);
+  assert.equal(moved.length, 1);
+  assert.equal(held.events[0]!.holds[0]!.afterWord, clauseEnd);
 });
