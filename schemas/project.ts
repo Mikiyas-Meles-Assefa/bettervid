@@ -90,7 +90,9 @@ export type Beat = {
   cue?: boolean; // a short line the direction added ("Watch the first swap."), never a new fact
   of?: string; // when a cue split a writer's beat, the later part names the beat it came from, so the split can be undone
 };
-export type Script = { title: string; takeaway: string; beats: Beat[] };
+// `demos`: each process the narration works through on an example a kit computes: the kit's kind and its settings as
+// JSON text with the narration's exact values, so the direction can be given the real steps before it plans.
+export type Script = { title: string; takeaway: string; beats: Beat[]; demos?: { kind: string; data: string }[] };
 // `notes`: for a cut, the thread and what was left out; for a review, the issues it fixed.
 // `check` is a director's read of the demonstrations and examples (notes only, narration unchanged); `revise` acts on it.
 export type WritingStep = { step: "draft" | "cut" | "review" | "check" | "revise";title: string; takeaway: string; narration: string; notes: string[]; key?: string }; // key: hash of the writer inputs, for resuming
@@ -307,10 +309,11 @@ export const factSheetSchema = {
 export const scriptSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["title", "takeaway", "beats"],
+  required: ["title", "takeaway", "beats", "demos"],
   properties: {
     title: str,
     takeaway: str,
+    demos: { type: "array", items: { type: "object", additionalProperties: false, required: ["kind", "data"], properties: { kind: str, data: str } } },
     beats: {
       type: "array",
       items: {

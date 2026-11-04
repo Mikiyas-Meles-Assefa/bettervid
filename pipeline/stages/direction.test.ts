@@ -7,7 +7,7 @@ import type { CompileContext } from "../../engine/core/types.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import type { Project, Script } from "../../schemas/project.ts";
 import { truthKindNames } from "../lib/abilities.ts";
-import { applyCues, clampPhases, coverage, demoSteps, problems, scriptWords, settingsFromLine, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
+import { applyCues, clampPhases, coverage, demoSteps, problems, scriptSteps, scriptWords, settingsFromLine, stripCues, type RawEvent, type RawPlan } from "./direction.ts";
 import { events } from "./director.ts";
 import { SCENE_KITS } from "./scene.ts";
 
@@ -240,4 +240,16 @@ test("a phase past the kit's last step is cut to the real range in code instead 
   const mended = clampPhases(rawPlan, steps);
   assert.equal(mended.length, 2);
   assert.deepEqual(rawPlan.events[1]!.demo.phases.map((p) => [p.from, p.to]), [[1, 3], [0, 0]]);
+});
+
+test("the script's computed examples go into the first direction request with their steps, so no round is spent showing them", () => {
+  const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: 1, theme: themeFrom("neon"), kits: SCENE_KITS };
+  const kinds = truthKindNames();
+  const withDemo = { script: { ...script, demos: [{ kind: "sort", data: JSON.stringify({ data: [3, 1, 2], algo: "insertion" }) }, { kind: "nothing", data: "{}" }] } } as unknown as Project;
+  const given = scriptSteps(withDemo, ctx, kinds);
+  assert.equal(given.keys.length, 1);
+  assert.match(given.keys[0]!, /^sort \{"data":\[3,1,2\],"algo":"insertion"\}$/);
+  assert.match(given.text, /Name each in demo.truth[\s\S]*sort \{"data":\[3,1,2\],"algo":"insertion"\}:\n  drawn as one row/);
+  assert.match(given.text, /\n  1 /);
+  assert.deepEqual(scriptSteps({ script } as unknown as Project, ctx, kinds), { text: "", keys: [] });
 });

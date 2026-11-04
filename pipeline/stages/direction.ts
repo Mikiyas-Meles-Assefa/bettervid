@@ -16,7 +16,7 @@ import { viewer } from "./plan.ts";
 import { SCENE_KITS } from "./scene.ts";
 import { WORDS_PER_SEC } from "./writer.ts";
 
-const ROUNDS = 4; // the first plan, the computed steps shown back, and repairs
+const ROUNDS = 2; // the first plan, with the script's computed examples and their steps already in it, and one repair at most
 const CUE_WORDS = 8;
 const HOLD_SECONDS: [number, number] = [0.3, 12];
 
@@ -256,6 +256,41 @@ export function clampPhases(raw: RawPlan, steps: Map<string, string[]>): string[
     }
   }
   return out;
+}
+
+/** The steps and drawing of every computed example the script names, as text for the planner's first request, with
+ * the keys the plan will use for them. A demo the kit refuses is left out: the planner can still name one itself. */
+export function scriptSteps(p: Project, ctx: CompileContext, kinds: string[]): { text: string; keys: string[] } {
+  const blocks: string[] = [];
+  const keys: string[] = [];
+  for (const d of p.script?.demos ?? []) {
+    const kind = d.kind.trim();
+    if (!kinds.includes(kind)) continue;
+    let data: unknown;
+    try {
+      data = JSON.parse(d.data);
+    } catch {
+      data = settingsFromLine(d.data, kind);
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) continue;
+    for (const k of Object.keys(data)) if (NAMING.has(k)) delete (data as Record<string, unknown>)[k];
+    try {
+      const make = ctx.kits?.find((k) => k.kinds?.[kind])?.kinds?.[kind];
+      make?.({ id: "demo", kind, props: {}, data: data as Record<string, unknown> }, ctx);
+      const steps = truthSteps(kind, "demo", data as Record<string, unknown>, ctx);
+      const drawn = truthDrawn(kind, "demo", data as Record<string, unknown>, ctx);
+      const json = JSON.stringify(data);
+      keys.push(`${kind} ${json.replace(/\s+/g, "")}`);
+      blocks.push(`${kind} ${json}:${drawn ? `\n  ${drawn}` : ""}\n${steps.map((x, i) => `  ${i + 1} ${x}`).join("\n")}`);
+    } catch {
+      continue;
+    }
+  }
+  if (!blocks.length) return { text: "", keys };
+  return {
+    text: `The engine computed the steps of the examples the script works through. Name each in demo.truth with exactly this kind and data, and give every phase of it the steps it plays (from, to) in this plan: the steps are known now, so no phase stays at 0.\n${blocks.join("\n")}`,
+    keys,
+  };
 }
 
 // Every rule a plan must keep, in the numbering the model wrote (the script before cues). Empty when it holds.
@@ -509,12 +544,16 @@ export async function direction(p: Project, force = false) {
     `The script, ${words.length} words, every word numbered from 0 (cite these numbers):\n\n${numberedScript(base)}`,
   ].filter(Boolean).join("\n\n");
   const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: 1, theme: themeFrom(p.input.style), kits: SCENE_KITS };
+  // The script already names the examples a kit computes, so their steps and drawing go into the first request and the
+  // planner gives every phase its steps in one call. Their keys count as shown, so no round is spent on them.
+  const given = scriptSteps(p, ctx, kinds);
+  const userWithSteps = given.text ? `${user}\n\n${given.text}` : user;
 
-  await stage(p, "direction", [system, user, base, kinds], 0.3, async () => {
+  await stage(p, "direction", [system, userWithSteps, base, kinds], 0.3, async () => {
     let feedback = "";
-    const shown = new Set<string>();
+    const shown = new Set<string>(given.keys);
     for (let round = 1; ; round++) {
-      const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: (p.input.passes ?? "once") === "full" && round === 1 ? "high" : "medium" });
+      const r = await json<RawPlan>({ system, user: userWithSteps + feedback, schema, schemaName: "direction", effort: (p.input.passes ?? "once") === "full" && round === 1 ? "high" : "medium" });
       const raw = r.value;
       const { steps, drawn, problems: refused } = demoSteps(raw, ctx, kinds);
       for (const m of clampPhases(raw, steps)) console.log(`    mended: ${m}`);

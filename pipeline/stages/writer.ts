@@ -8,7 +8,7 @@
 // 5. structure: split the final prose into beats and tag claims and visuals, without changing a word.
 import type { Project, Script, WritingStep } from "../../schemas/project.ts";
 import { scriptSchema } from "../../schemas/project.ts";
-import { abilities } from "../lib/abilities.ts";
+import { abilities, truthDocs } from "../lib/abilities.ts";
 import { json, text } from "../lib/meta.ts";
 import { materialText } from "../lib/material.ts";
 import { asked, charge, persona, prompt, save, seconds, stage, topic } from "../lib/project.ts";
@@ -73,7 +73,7 @@ export async function writer(p: Project, force = false) {
   // One pass by default: the draft prompt carries the review and the director's demonstration checks, and no cut, review
   // or revise call follows. `passes: "full"` keeps the chain: draft, cut, review, check and revise rounds.
   const once = (p.input.passes ?? "once") !== "full";
-  const prompts = once ? [fill("writer-once", length), "", "", prompt("structure"), "", ""] : [fill("writer", FREE), fill("cut", length), fill("review", length), prompt("structure"), fill("demonstrate", length), fill("revise", length)];
+  const prompts = once ? [fill("writer-once", length), "", "", prompt("structure").replace("{{kits}}", truthDocs()), "", ""] : [fill("writer", FREE), fill("cut", length), fill("review", length), prompt("structure"), fill("demonstrate", length), fill("revise", length)];
   await stage(p, "writer", [prompts, research, secs, p.plan?.visuals], 0.4, async () => {
     // Each finished step is saved with the key of its inputs, so a run that fails (say, on a network drop) resumes
     // from the last finished step instead of paying for the earlier ones again.
