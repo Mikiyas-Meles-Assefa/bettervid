@@ -13,7 +13,11 @@ bettervid is a video creation platform built on an agent-native video engine. Yo
 
 **Meta tooling:** Muse Spark 1.3 (plan, research with web search, script, direction, every scene, the look review, the art director, repairs, sound cues, file reading, style writing); Muse Image (depicted things and pictures in the video's style, the style previews); SAM 3.1 (cutting depicted things and uploaded pictures into parts). Open weights: none in the loop yet.
 
-**Links:** repository (public), demo video (3 min, unlisted YouTube or a file link), live product (URL once hosted), three showcase videos (files in the repo release or links).
+**Links:**
+- Repository: https://github.com/Mikiyas-Meles-Assefa/bettervid
+- Live product: https://bettervid.fly.dev
+- Demo video (2:58): https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/download/v1.0/bettervid-demo.mp4 (also `media/bettervid-demo.mp4` locally; upload it to YouTube as unlisted if the form wants a YouTube link)
+- Showcase videos: https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/tag/v1.0
 
 ## The 3-minute demo video (record with QuickTime, voice over as you go)
 

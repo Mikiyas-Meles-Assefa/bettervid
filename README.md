@@ -19,6 +19,8 @@ Made start to finish by the pipeline, no hand edits. Download them from the [v1.
 
 Live site: https://bettervid.fly.dev. The home page shows these six, listed in `app/showcase.json`.
 
+The 3-minute demo, made from the live site: [bettervid-demo.mp4](https://github.com/Mikiyas-Meles-Assefa/bettervid/releases/download/v1.0/bettervid-demo.mp4).
+
 ## How it works
 
 One project is one folder with a `project.json`. Each stage reads what earlier stages wrote, adds its own part, and is skipped next time if its inputs did not change. Stages that do not depend on each other run at the same time.
