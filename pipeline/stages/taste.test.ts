@@ -71,3 +71,18 @@ test("a repair that answers with only the states it changes is merged into the p
   // A changed program replaces the one with its name.
   assert.match(mergeReply(base, 'program spin n=5 doc="spins"\n  text("a", { text: "y" });\nend\n@0\n  text t "uno" size=big'), /n=5[\s\S]*"uno"[\s\S]*@4 keep/);
 });
+
+test("a part that will not build ships what of it does build: failing lines cut, never rewritten", async () => {
+  const { salvagePart, sceneBuildOptions } = await import("./scene.ts");
+  const opts = sceneBuildOptions({ ...p, input: { ...p.input, sceneAuthor: "language" } } as Project);
+  const good = "@0\n  text a \"Turn the key\" size=big\n@3 keep\n  text b \"pins line up\" size=normal";
+  const r1 = await salvagePart(good, opts);
+  assert.equal(r1.source, good);
+  assert.deepEqual(r1.cut, []);
+  // One bad line: only it goes.
+  const bad = "@0\n  text a \"Turn the key\" size=big\n  frobnicate a\n@3 keep\n  text b \"pins line up\" size=normal";
+  const r2 = await salvagePart(bad, opts);
+  assert.doesNotMatch(r2.source, /frobnicate/);
+  assert.match(r2.source, /Turn the key[\s\S]*pins line up/);
+  assert.equal(r2.cut.length, 1);
+});

@@ -220,6 +220,31 @@ export function joinSections(sections: { id: string; firstWord: number; source: 
 }
 
 // The joined document with the lines each section's states fill in it, so a problem in the whole goes back to its part.
+/** What of a part builds, when the part as written does not: the lines the build names are cut, pass by pass (a state
+ * whose @ line is named goes whole), until it builds. A part that never builds keeps its background and programs and
+ * no states, so the parts around it carry its time. Code cuts and never writes: nothing is invented in its place. */
+export async function salvagePart(source: string, opts: BuildOptions): Promise<{ source: string; cut: string[] }> {
+  let src = source;
+  const cut: string[] = [];
+  for (let pass = 0; pass < 24; pass++) {
+    const r = await build(src, opts);
+    if (!r.problems.length && r.scene) return { source: src, cut };
+    const lines = src.split("\n");
+    const drop = new Set<number>();
+    for (const p of r.problems) {
+      if (!p.line || !lines[p.line - 1]) continue;
+      const i = p.line - 1;
+      if (/^\s*@/.test(lines[i]!)) for (let j = i; j < lines.length && (j === i || !/^\s*@|^program\s/.test(lines[j]!)); j++) drop.add(j);
+      else drop.add(i);
+    }
+    if (!drop.size) break;
+    for (const i of [...drop].sort((a, b) => a - b)) cut.push(lines[i]!.trim().slice(0, 100));
+    src = lines.filter((_, i) => !drop.has(i)).join("\n");
+  }
+  const pc = pieces(source);
+  return { source: [pc.bg ? `bg ${pc.bg}` : "", ...pc.programs.map((x) => x.text)].filter(Boolean).join("\n"), cut: [...cut, "every state: it never built"] };
+}
+
 export function joinWithSpans(sections: { id: string; firstWord: number; source: string }[]): { text: string; spans: { id: string; from: number; to: number }[] } {
   let bg: string | undefined;
   const programs = new Map<string, string>();
@@ -2163,6 +2188,43 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
         }));
         joined = joinWithSpans(languageParts());
         whole = await buildJoined(joined.text);
+      }
+      // A part that still will not build ships what of it does build, rather than costing the whole video: its failing
+      // lines are cut in code, and a part that never built gives its time to the parts around it. Every cut is recorded.
+      const salvaged: string[] = [];
+      if (sections.some((s) => !s.ok && s.author !== "intent") || whole.problems.length) {
+        for (const [i, s] of sections.entries()) {
+          if (s.ok || s.author === "intent") continue;
+          const r = await salvagePart(s.source, opts);
+          sections[i] = { ...s, source: plainMoments(r.source, opts), ok: true };
+          salvaged.push(`${s.id} did not build and shipped what does: cut ${r.cut.length} line${r.cut.length === 1 ? "" : "s"}${r.cut.length ? ` (${r.cut.slice(0, 4).join(" | ")})` : ""}`);
+        }
+        joined = joinWithSpans(languageParts());
+        whole = await buildJoined(joined.text);
+        // Problems that only the whole shows: the named line is cut from its part, the same way.
+        for (let pass = 0; pass < 12 && whole.problems.length; pass++) {
+          const lines = joined.text.split("\n");
+          let changed = false;
+          for (const x of whole.problems) {
+            const k = joined.spans.findIndex((sp) => x.line >= sp.from && x.line <= sp.to);
+            if (k < 0) continue;
+            const i = sections.findIndex((sec) => sec.id === joined.spans[k]!.id);
+            const text = lines[x.line - 1];
+            if (i < 0 || text === undefined) continue;
+            const own = sections[i]!.source.split("\n");
+            const at = own.indexOf(text);
+            if (at < 0) continue;
+            own.splice(at, 1);
+            sections[i] = { ...sections[i]!, source: own.join("\n") };
+            salvaged.push(`${sections[i]!.id}: cut "${text.trim().slice(0, 80)}" so the whole video builds`);
+            changed = true;
+          }
+          if (!changed) break;
+          joined = joinWithSpans(languageParts());
+          whole = await buildJoined(joined.text);
+        }
+        for (const x of salvaged) console.log(`  salvaged: ${x}`);
+        if (salvaged.length) p.scene!.decisions = [...(p.scene!.decisions ?? []), ...salvaged.map((x) => `salvaged: ${x}`)];
       }
       writeFileSync(join(root, "scene.txt"), joined.text);
       const failed = sections.filter((s) => !s.ok);
