@@ -58,3 +58,16 @@ test("frames spread over a part are evenly spaced, numbered from 1, and never re
   assert.deepEqual(spreadOf(of(10), 4), [1, 4, 7, 10]);
   assert.deepEqual(spreadOf(of(2), 5), [1, 2]);
 });
+
+test("a repair that answers with only the states it changes is merged into the part it repairs", async () => {
+  const { mergeReply } = await import("./scene.ts");
+  const base = `bg paper\nprogram spin n=3 doc="spins"\n  text("a", { text: "x" });\nend\n@0\n  text t "one" size=big\n@4 keep\n  light t\n@9\n  text u "two" size=big\n@h2 keep\n  dim u`;
+  // One state replaced, one added, one removed; the program and the rest stay.
+  const merged = mergeReply(base, "@4 keep\n  light t\n  camera t zoom=2\n@6 keep\n  dim t\n@9 remove");
+  assert.equal(merged, `bg paper\nprogram spin n=3 doc="spins"\n  text("a", { text: "x" });\nend\n@0\n  text t "one" size=big\n@4 keep\n  light t\n  camera t zoom=2\n@6 keep\n  dim t\n@h2 keep\n  dim u`);
+  // A whole part answered is taken as it is, and an answer with no state goes through untouched for the build to judge.
+  assert.equal(mergeReply(base, base), base);
+  assert.equal(mergeReply(base, "I cannot do this"), "I cannot do this");
+  // A changed program replaces the one with its name.
+  assert.match(mergeReply(base, 'program spin n=5 doc="spins"\n  text("a", { text: "y" });\nend\n@0\n  text t "uno" size=big'), /n=5[\s\S]*"uno"[\s\S]*@4 keep/);
+});

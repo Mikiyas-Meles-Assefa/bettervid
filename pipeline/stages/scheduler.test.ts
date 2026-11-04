@@ -54,7 +54,7 @@ test("the video graph keeps script, word timing, images and audio dependencies",
     for (const dep of needs) assert.ok(seen.has(dep), `${name} ran before ${dep}`);
     if (name === "voice") assert.ok(seen.has("direction"));
     if (name === "scene") assert.ok(seen.has("annotate"));
-    if (name === "render") assert.ok(seen.has("mix"));
+    if (name === "mux") assert.ok(seen.has("mix") && seen.has("render"));
     seen.add(name);
   } }));
   await schedule(tasks);

@@ -17,6 +17,7 @@ import { asked, charge, dir, prompt, save, stage, style, topic } from "../lib/pr
 import { replaceImage } from "./assets.ts";
 import { mix } from "./mix.ts";
 import { render } from "./render.ts";
+import { mux } from "./mux.ts";
 import { joinScene, SCENE_KITS } from "./scene.ts";
 import { timeline } from "./timeline.ts";
 
@@ -209,4 +210,5 @@ async function shotCritic(p: Project, video: string) {
   await timeline(p, true);
   await mix(p, true);
   await render(p, true);
+  await mux(p, true);
 }

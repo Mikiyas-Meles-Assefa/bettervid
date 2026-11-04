@@ -6,6 +6,7 @@ import { renderMedia, selectComposition } from "@remotion/renderer";
 import type { Project, Timeline } from "../../schemas/project.ts";
 import { dir, stage } from "../lib/project.ts";
 import { imageCredits } from "./timeline.ts";
+import { PICTURE } from "./mux.ts";
 
 // H.264 quality: 18 (the default) made a 5:40 video 378 MB. 23 is the usual choice for video on the web.
 const CRF = Number(process.env.RENDER_CRF ?? 23);
@@ -33,7 +34,9 @@ export function playerProps(p: Project): { timeline: Timeline; scenes: Record<st
 }
 
 export async function render(p: Project, force = false) {
-  await stage(p, "render", [p.timeline], 0, async () => {
+  // The audio is joined by the mux stage, so the render does not wait for the mix and is not redone when the mix changes.
+  const { audio: _audio, ...picture } = p.timeline!;
+  await stage(p, "render", [picture], 0, async () => {
     const t0 = Date.now();
     // Scene files first: the bundle copies the public dir as it is when bundling.
     const inputProps = playerProps(p);
@@ -56,7 +59,7 @@ export async function render(p: Project, force = false) {
         imageFormat: "jpeg",
         concurrency,
         scale: SCALE,
-        outputLocation: join(dir(p), "video.mp4"),
+        outputLocation: join(dir(p), PICTURE),
         onProgress: ({ progress }) => {
           if (progress - last >= 0.25) console.log(`  render ${Math.round(progress * 100)}%`), (last = progress);
         },
@@ -66,6 +69,6 @@ export async function render(p: Project, force = false) {
     } finally {
       await releaseBundles(resolve("video/index.ts"), resolve(dir(p)));
     }
-    p.render = { path: "video.mp4", ms: Date.now() - t0 };
+    console.log(`  render: ${PICTURE} in ${((Date.now() - t0) / 1000).toFixed(0)} s; the mux joins the sound`);
   }, force);
 }

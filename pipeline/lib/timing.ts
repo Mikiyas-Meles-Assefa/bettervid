@@ -26,6 +26,9 @@ export function effort(fallback: string): string {
 export function inStage<T>(stage: string, fn: () => Promise<T>): Promise<T> {
   return context.run({ ...context.getStore(), stage }, fn);
 }
+/** When the current invocation started (ms), or undefined outside a timed run. Stages that keep a time budget read it. */
+export const runStart = (): number | undefined => context.getStore()?.run?.start;
+
 export async function timedRun<T>(folder: string, fn: () => Promise<T>): Promise<T> {
   mkdirSync(folder, { recursive: true });
   const start = Date.now();

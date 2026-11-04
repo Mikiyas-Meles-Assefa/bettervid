@@ -16,7 +16,7 @@ import { viewer } from "./plan.ts";
 import { SCENE_KITS } from "./scene.ts";
 import { WORDS_PER_SEC } from "./writer.ts";
 
-const ROUNDS = 4; // the first plan, the computed steps shown back, and repairs
+const ROUNDS = 2; // the first plan, with the script's computed examples and their steps already in it, and one repair at most
 const CUE_WORDS = 8;
 const HOLD_SECONDS: [number, number] = [0.3, 12];
 
@@ -140,6 +140,51 @@ const truthKey = (d: RawDemo) => `${d.truth.kind.trim()} ${d.truth.data.replace(
 const hasDemo = (e: RawEvent) => !!e.demo.what.trim() || e.demo.phases.length > 0;
 const hasTruth = (e: RawEvent) => hasDemo(e) && !!e.demo.truth.kind.trim();
 
+// A truth thing's settings written as a scene line ("sort s data=[5,2] algo=merge") or as loose name=value pairs instead
+// of JSON: the pairs are read into the object the kit takes. Names that only name the thing (its kind, an id) are left
+// out. Returns undefined when the text has no name=value pairs at all, so real nonsense still goes back to the model.
+export function settingsFromLine(text: string, kind: string): Record<string, unknown> | undefined {
+  // name=value pairs, where a value is a quoted string, a bracketed list or object (nested brackets balanced), or a word.
+  const pairs: [string, string][] = [];
+  const re = /([A-Za-z_][\w-]*)=/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    let i = m.index + m[0].length;
+    let raw = "";
+    const open = text[i];
+    if (open === '"') {
+      const close = text.indexOf('"', i + 1);
+      raw = text.slice(i, close < 0 ? text.length : close + 1);
+    } else if (open === "[" || open === "{") {
+      let depth = 0;
+      let j = i;
+      for (; j < text.length; j++) {
+        if (text[j] === "[" || text[j] === "{") depth++;
+        else if (text[j] === "]" || text[j] === "}") depth--;
+        if (depth === 0) break;
+      }
+      raw = text.slice(i, j + 1);
+    } else raw = /^[^\s,]*/.exec(text.slice(i))?.[0] ?? "";
+    pairs.push([m[1]!, raw]);
+    re.lastIndex = i + raw.length;
+  }
+  if (!pairs.length) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [name, raw] of pairs) {
+    if (name === "id" || name === "kind" || name === kind) continue;
+    let v: unknown = raw;
+    try {
+      v = JSON.parse(raw);
+    } catch {
+      v = raw.replace(/^"|"$/g, "");
+    }
+    out[name] = v;
+  }
+  return out;
+}
+// A setting the kit refuses because it only names the thing (`id`, `kind`): taken out, since the plan's thing has no id.
+const NAMING = new Set(["id", "kind", "name"]);
+
 // The real steps of every truth thing the plan names, by its kind and data, and how the kit draws it on this frame
 // (which way its moves go), so the planner can match the picture to the words. A thing the kit refuses comes back as a problem.
 export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): { steps: Map<string, string[]>; drawn: Map<string, string>; problems: string[] } {
@@ -151,24 +196,35 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
     if (steps.has(key)) continue;
     const kind = e.demo.truth.kind.trim();
     if (!kinds.includes(kind)) {
-      problems.push(`event ${e.id}: the demo names truth kind "${kind}", which the engine does not have (it has ${kinds.join(", ")}); leave truth.kind empty for a demonstration no kit computes`);
+      // A kind no kit computes is a demonstration the scene draws itself: the plan keeps its phases by words, with no steps.
+      console.log(`    mended: event ${e.id} named "${kind}", which no kit computes; the scene draws that demonstration (the kits are ${kinds.join(", ")})`);
+      e.demo.truth = { kind: "", data: "" };
+      for (const ph of e.demo.phases) ph.from = ph.to = 0;
       continue;
     }
     let data: unknown;
     try {
       data = JSON.parse(e.demo.truth.data);
     } catch {
-      problems.push(`event ${e.id}: truth.data must be a JSON object of the kind's settings, and ${JSON.stringify(e.demo.truth.data)} is not JSON`);
-      continue;
+      data = settingsFromLine(e.demo.truth.data, kind);
+      if (!data) {
+        problems.push(`event ${e.id}: truth.data must be a JSON object of the kind's settings, and ${JSON.stringify(e.demo.truth.data)} is not JSON`);
+        continue;
+      }
+      console.log(`    event ${e.id}: truth.data read from a settings line into ${JSON.stringify(data)}`);
     }
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       problems.push(`event ${e.id}: truth.data must be a JSON object of the kind's settings, such as the ones its guide line shows`);
       continue;
     }
+    // Settings that only name the thing are taken out before the kit sees them: a plan's thing has no id of its own.
+    for (const k of Object.keys(data)) if (NAMING.has(k)) delete (data as Record<string, unknown>)[k];
     try {
       // Built through the kit itself, so settings it does not take are refused here as they would be in the scene.
       const make = ctx.kits?.find((k) => k.kinds?.[kind])?.kinds?.[kind];
       make?.({ id: "demo", kind, props: {}, data: data as Record<string, unknown> }, ctx);
+      // The mended settings are what the plan keeps, so every later reader sees the same JSON.
+      e.demo.truth.data = JSON.stringify(data);
       steps.set(key, truthSteps(kind, "demo", data as Record<string, unknown>, ctx));
       const how = truthDrawn(kind, "demo", data as Record<string, unknown>, ctx);
       if (how) drawn.set(key, how);
@@ -177,6 +233,83 @@ export function demoSteps(raw: RawPlan, ctx: CompileContext, kinds: string[]): {
     }
   }
   return { steps, drawn, problems };
+}
+
+// A phase that names steps past the end of what the kit computes is cut to the real range in code, and one that names
+// nothing real is emptied, so a plan written before the steps were seen does not cost a round for that alone. Returns
+// what was changed, in words.
+/** A settle, look or recap hold placed inside a phrase is moved to the word that ends the phrase, within its event. */
+export function mendHolds(raw: RawPlan, words: string[]): string[] {
+  const out: string[] = [];
+  for (const e of raw.events)
+    for (const h of e.holds) {
+      if (h.afterCue.trim() || !(h.purpose === "look" || h.purpose === "settle" || h.purpose === "recap")) continue;
+      if (h.afterWord < e.firstWord || h.afterWord > e.lastWord || CLAUSE_END.test(words[h.afterWord] ?? "")) continue;
+      let w = h.afterWord;
+      while (w < e.lastWord && !CLAUSE_END.test(words[w] ?? "")) w++;
+      if (!CLAUSE_END.test(words[w] ?? "")) continue;
+      out.push(`hold ${h.id} moved from after word ${h.afterWord} ("${words[h.afterWord]}") to after word ${w} ("${words[w]}"), where the phrase ends`);
+      h.afterWord = w;
+    }
+  return out;
+}
+
+export function clampPhases(raw: RawPlan, steps: Map<string, string[]>): string[] {
+  const out: string[] = [];
+  for (const e of raw.events.filter(hasTruth)) {
+    const real = steps.get(truthKey(e.demo));
+    if (!real) continue;
+    for (const ph of e.demo.phases) {
+      if (!ph.from && !ph.to) continue;
+      const from = Math.max(1, ph.from);
+      const to = Math.min(real.length, ph.to);
+      if (from === ph.from && to === ph.to) continue;
+      if (from > to) {
+        out.push(`event ${e.id}: a phase named steps ${ph.from} to ${ph.to}, past the ${real.length} the kit computes; it plays no steps now`);
+        ph.from = ph.to = 0;
+      } else {
+        out.push(`event ${e.id}: a phase named steps ${ph.from} to ${ph.to}; the kit computes 1 to ${real.length}, so it plays ${from} to ${to}`);
+        ph.from = from;
+        ph.to = to;
+      }
+    }
+  }
+  return out;
+}
+
+/** The steps and drawing of every computed example the script names, as text for the planner's first request, with
+ * the keys the plan will use for them. A demo the kit refuses is left out: the planner can still name one itself. */
+export function scriptSteps(p: Project, ctx: CompileContext, kinds: string[]): { text: string; keys: string[] } {
+  const blocks: string[] = [];
+  const keys: string[] = [];
+  for (const d of p.script?.demos ?? []) {
+    const kind = d.kind.trim();
+    if (!kinds.includes(kind)) continue;
+    let data: unknown;
+    try {
+      data = JSON.parse(d.data);
+    } catch {
+      data = settingsFromLine(d.data, kind);
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) continue;
+    for (const k of Object.keys(data)) if (NAMING.has(k)) delete (data as Record<string, unknown>)[k];
+    try {
+      const make = ctx.kits?.find((k) => k.kinds?.[kind])?.kinds?.[kind];
+      make?.({ id: "demo", kind, props: {}, data: data as Record<string, unknown> }, ctx);
+      const steps = truthSteps(kind, "demo", data as Record<string, unknown>, ctx);
+      const drawn = truthDrawn(kind, "demo", data as Record<string, unknown>, ctx);
+      const json = JSON.stringify(data);
+      keys.push(`${kind} ${json.replace(/\s+/g, "")}`);
+      blocks.push(`${kind} ${json}:${drawn ? `\n  ${drawn}` : ""}\n${steps.map((x, i) => `  ${i + 1} ${x}`).join("\n")}`);
+    } catch {
+      continue;
+    }
+  }
+  if (!blocks.length) return { text: "", keys };
+  return {
+    text: `The engine computed the steps of the examples the script works through. Name each in demo.truth with exactly this kind and data, and give every phase of it the steps it plays (from, to) in this plan: the steps are known now, so no phase stays at 0.\n${blocks.join("\n")}`,
+    keys,
+  };
 }
 
 // Every rule a plan must keep, in the numbering the model wrote (the script before cues). Empty when it holds.
@@ -262,6 +395,9 @@ export function problems(raw: RawPlan, words: string[], steps: Map<string, strin
         played.set(key, Math.max(done, ph.to));
       }
     }
+    // Once the steps are known, every phase of a computed demonstration names the steps it plays: the scene's parts are
+    // written at the same time and each needs to know where the ones before it leave the thing.
+    if (key && real && e.demo.phases.length && e.demo.phases.every((ph) => !ph.from && !ph.to)) out.push(`event ${e.id}: the steps of ${e.demo.truth.kind} are listed; give each phase of "${e.demo.what}" the steps it plays (from, to, counted from 1)`);
   });
   // A question the viewer is asked needs time to think before the script answers it.
   const waited = new Set(events.flatMap((e) => e.holds.map((h) => h.afterCue)));
@@ -427,14 +563,19 @@ export async function direction(p: Project, force = false) {
     `The script, ${words.length} words, every word numbered from 0 (cite these numbers):\n\n${numberedScript(base)}`,
   ].filter(Boolean).join("\n\n");
   const ctx: CompileContext = { fps: 30, width: 1080, height: 1920, frames: 1, theme: themeFrom(p.input.style), kits: SCENE_KITS };
+  // The script already names the examples a kit computes, so their steps and drawing go into the first request and the
+  // planner gives every phase its steps in one call. Their keys count as shown, so no round is spent on them.
+  const given = scriptSteps(p, ctx, kinds);
+  const userWithSteps = given.text ? `${user}\n\n${given.text}` : user;
 
-  await stage(p, "direction", [system, user, base, kinds], 0.3, async () => {
+  await stage(p, "direction", [system, userWithSteps, base, kinds], 0.3, async () => {
     let feedback = "";
-    const shown = new Set<string>();
+    const shown = new Set<string>(given.keys);
     for (let round = 1; ; round++) {
-      const r = await json<RawPlan>({ system, user: user + feedback, schema, schemaName: "direction", effort: "high" });
+      const r = await json<RawPlan>({ system, user: userWithSteps + feedback, schema, schemaName: "direction", effort: (p.input.passes ?? "once") === "full" && round === 1 ? "high" : "medium" });
       const raw = r.value;
       const { steps, drawn, problems: refused } = demoSteps(raw, ctx, kinds);
+      for (const m of [...clampPhases(raw, steps), ...mendHolds(raw, words)]) console.log(`    mended: ${m}`);
       const found = [...refused, ...problems(raw, words, steps), ...unspoken(raw, words, steps)];
       const unseen = [...steps.entries()].filter(([k]) => !shown.has(k));
       charge(p, "direction", r.usd, `round ${round}: ${raw.events.length} events, ${raw.cues.length} cues, ${found.length} problems${unseen.length ? `, ${unseen.length} step lists to show` : ""}`);
@@ -457,7 +598,7 @@ export async function direction(p: Project, force = false) {
         `\n\nYour plan so far:\n${JSON.stringify(raw)}\n\n` +
         (found.length ? `It breaks these rules. Fix each one and return the whole plan:\n${found.map((x) => `- ${x}`).join("\n")}\n\n` : "") +
         (steps.size
-          ? "The engine computed the real steps of your demonstrations. Check every phase against them: the steps a phase plays " +
+          ? "The engine computed the real steps of your demonstrations. Fill in from and to for every phase now, and check every phase against them: the steps a phase plays " +
             "must be the ones its words and holds are about, the slow first instance must cover the whole first instance, and a " +
             "hold meant to show a step must come where that step plays. Change phases, holds or cues to fit; never the script. " +
             "Under each thing is how the engine draws it on this frame and which way its moves go. Where the script's words say a direction (down, up, left, right, into, out of), the picture must move that way: when it does not, set the kit's form in truth.data (its guide line names the forms), and every part of the scene then draws it the same. " +

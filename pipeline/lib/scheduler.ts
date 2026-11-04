@@ -32,7 +32,7 @@ export const dependencies: Record<string, string[]> = {
   material: [], plan: ["material"], research: ["plan"], writer: ["research"], direction: ["writer"],
   voice: ["writer", "direction"], director: ["voice"], board: ["voice"], stage: ["voice"],
   assets: ["director"], annotate: ["assets"], scene: ["annotate", "voice"],
-  timeline: ["scene", "board", "stage", "annotate"], mix: ["timeline"], render: ["mix"], critic: ["render"],
+  timeline: ["scene", "board", "stage", "annotate"], mix: ["timeline"], render: ["timeline"], mux: ["mix", "render"], critic: ["mux"],
 };
 
 // A worker takes the next item as soon as it finishes; results stay in input order.

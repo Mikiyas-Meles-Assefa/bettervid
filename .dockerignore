@@ -1,11 +1,24 @@
+# Kept out of the image: secrets, the user's projects (mounted as a volume at run time), installed packages (npm ci
+# installs Linux builds), other sessions' worktrees and tool state, and research that the app never reads.
 .env
+.env.*
+!.env.example
 .git
+.gitignore
 .venv
+**/__pycache__
+**/.DS_Store
 node_modules
 projects
+.worktrees
+.claude
+bench/work
 media
+renders
+out
 research
 docs
 scripts
 *.mp4
 *.wav
+*.log

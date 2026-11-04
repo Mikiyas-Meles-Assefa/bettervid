@@ -13,5 +13,25 @@
     "text": "bright warm small chime for Sorted reveal, no tail",
     "seconds": 1.5,
     "gainDb": -20
+  },
+  "engine-drone-fade": {
+    "text": "low smooth engine rumble fading out to quiet, clean, no music",
+    "seconds": 1.8,
+    "gainDb": -20
+  },
+  "flip-blip": {
+    "text": "tiny soft electronic blip for wave polarity flip, clean and quiet",
+    "seconds": 0.6,
+    "gainDb": -20
+  },
+  "wobble-beat": {
+    "text": "low wobbling beat pulsing as two waves misalign, tense and quiet",
+    "seconds": 1.2,
+    "gainDb": -20
+  },
+  "sharp-clap": {
+    "text": "sharp single clap spike, dry and sudden, no reverb tail, no music",
+    "seconds": 0.8,
+    "gainDb": -20
   }
 }

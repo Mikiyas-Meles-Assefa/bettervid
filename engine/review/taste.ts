@@ -58,7 +58,7 @@ export function tasteRequest(frames: TasteFrame[], c: TasteContext): Part[] {
 // One call. The model is the caller's choice: Spark by default (cheap on the Contributor tier), Wonder for a stronger eye.
 export async function tasteReview(ask: Ask, frames: TasteFrame[], c: TasteContext, model: AskCall["model"] = "muse-spark-1.3"): Promise<TasteVerdict> {
   if (!frames.length) throw new Error("taste review: no frames to look at");
-  const v = await ask<TasteVerdict>({ model, effort: "medium", system: readFileSync(PROMPT, "utf8"), user: tasteRequest(frames, c), schema: TASTE_SCHEMA, name: "taste" });
+  const v = await ask<TasteVerdict>({ model, effort: "low", system: readFileSync(PROMPT, "utf8"), user: tasteRequest(frames, c), schema: TASTE_SCHEMA, name: "taste" });
   if (v.verdict === "revise" && !v.fixes.length) throw new Error("taste review: revise with no fixes");
   return v;
 }

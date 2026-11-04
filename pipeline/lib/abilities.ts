@@ -27,5 +27,11 @@ export function abilities(): string {
   ].filter(Boolean).join("\n\n");
 }
 
+/** The computing kits alone, one line each, for a step that must name the script's examples by kit. */
+export function truthDocs(): string {
+  const truth = new Set(truthKinds(SCENE_KITS));
+  return SCENE_KITS.flatMap((k) => Object.keys(k.kinds ?? {}).filter((n) => truth.has(n)).map((n) => `- \`${n}\`: ${k.docs?.[n] ?? ""}`)).join("\n");
+}
+
 // The kinds whose steps are computed, for checking a plan that names one.
 export const truthKindNames = () => truthKinds(SCENE_KITS);

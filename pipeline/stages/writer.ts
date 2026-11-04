@@ -8,7 +8,7 @@
 // 5. structure: split the final prose into beats and tag claims and visuals, without changing a word.
 import type { Project, Script, WritingStep } from "../../schemas/project.ts";
 import { scriptSchema } from "../../schemas/project.ts";
-import { abilities } from "../lib/abilities.ts";
+import { abilities, truthDocs } from "../lib/abilities.ts";
 import { json, text } from "../lib/meta.ts";
 import { materialText } from "../lib/material.ts";
 import { asked, charge, persona, prompt, save, seconds, stage, topic } from "../lib/project.ts";
@@ -70,7 +70,10 @@ export async function writer(p: Project, force = false) {
   const files = materialText(p, 60000);
   const own = files ? `\n\nThe video is built on the user's own material. What its files say comes first, in their terms, with their numbers and examples; the research checks and supports it. Every requirement below is met.\n\n${files}` : "";
   const research = `Topic: ${topic(p)}\n\n${viewer(p)}\n\n${wishes ? `${wishes}\n\n` : ""}Common misconception: ${f.misconception || "none"}\n\nResearch:\n${f.story}\n\n${claims}${own}`;
-  const prompts = [fill("writer", FREE), fill("cut", length), fill("review", length), prompt("structure"), fill("demonstrate", length), fill("revise", length)];
+  // One pass by default: the draft prompt carries the review and the director's demonstration checks, and no cut, review
+  // or revise call follows. `passes: "full"` keeps the chain: draft, cut, review, check and revise rounds.
+  const once = (p.input.passes ?? "once") !== "full";
+  const prompts = once ? [fill("writer-once", length), "", "", prompt("structure").replace("{{kits}}", truthDocs()), "", ""] : [fill("writer", FREE), fill("cut", length), fill("review", length), prompt("structure"), fill("demonstrate", length), fill("revise", length)];
   await stage(p, "writer", [prompts, research, secs, p.plan?.visuals], 0.4, async () => {
     // Each finished step is saved with the key of its inputs, so a run that fails (say, on a network drop) resumes
     // from the last finished step instead of paying for the earlier ones again.
@@ -96,30 +99,8 @@ export async function writer(p: Project, force = false) {
     };
     const show = (s: WritingStep) => `TITLE: ${s.title}\nTAKEAWAY: ${s.takeaway}\n\n${s.narration}`;
 
-    await step("draft", () => text({ system: prompts[0]!, user: research, effort: "high" }));
-    if (secs) await step("cut", () => text({ system: prompts[1]!, user: `${research}\n\nThe full narration:\n\n${show(steps.at(-1)!)}`, effort: "high" }));
-    // After a cut, the review must keep the editor's choice: fix coherence inside the thread, never add back what was cut.
-    const cut = steps.find((s) => s.step === "cut");
-    const kept = cut
-      ? `\nThis is a shortened video. The editor chose one thread and deliberately cut the rest:\n${cut.notes.join("\n")}\n` +
-        "Fix coherence within that thread only. Do not add back anything that was cut; if the thread feels incomplete, make it clearer, not bigger.\n"
-      : "";
-    await step("review", () => text({ system: prompts[2]!.replace("{{thread}}", kept), user: `${research}\n\nThe narration:\n\n${show(steps.at(-1)!)}`, effort: "high" }));
-
-    // Does it show its ideas working, on examples the picture can make visible? Notes go back to a revise step, and the
-    // revision is read again, until it does. Notes still open after the last round are reported, and the trail keeps them.
-    const check = async () => {
-      const read = steps.at(-1)!;
-      await step("check", () => text({ system: prompts[4]!.replace("{{thread}}", kept), user: `${research}\n\nThe narration:\n\n${show(read)}`, effort: "high" }), (reply) => parseCheck(reply, read));
-      return steps.at(-1)!.notes;
-    };
-    let notes = await check();
-    for (let round = 1; notes.length && round <= REVISIONS; round++) {
-      const user = `${research}\n\nThe narration:\n\n${show(steps.at(-1)!)}\n\nThe director's notes:\n${notes.map((n) => `- ${n}`).join("\n")}`;
-      await step("revise", () => text({ system: prompts[5]!.replace("{{thread}}", kept), user, effort: "high" }));
-      notes = await check();
-    }
-    if (notes.length) console.log(`  !!! the examples still have open notes after ${REVISIONS} revisions:\n${notes.map((n) => `    ${n}`).join("\n")}`);
+    await step("draft", () => text({ system: prompts[0]!, user: research, effort: once ? "medium" : "high" }));
+    if (!once) await chain();
 
     // Structure, then check it kept every word; one retry if it didn't.
     const final = steps.at(-1)!;
@@ -137,8 +118,38 @@ export async function writer(p: Project, force = false) {
       if (same || attempt === 2) script = r.value;
       if (!same) console.log(`  structure changed the wording${attempt === 2 ? "; keeping it anyway" : ", retrying"}`);
     }
+    await finish(script!, final);
+
+    async function chain() {
+    if (secs) await step("cut", () => text({ system: prompts[1]!, user: `${research}\n\nThe full narration:\n\n${show(steps.at(-1)!)}`, effort: "high" }));
+    // After a cut, the review must keep the editor's choice: fix coherence inside the thread, never add back what was cut.
+    const cut = steps.find((s) => s.step === "cut");
+    const kept = cut
+      ? `\nThis is a shortened video. The editor chose one thread and deliberately cut the rest:\n${cut.notes.join("\n")}\n` +
+        "Fix coherence within that thread only. Do not add back anything that was cut; if the thread feels incomplete, make it clearer, not bigger.\n"
+      : "";
+    await step("review", () => text({ system: prompts[2]!.replace("{{thread}}", kept), user: `${research}\n\nThe narration:\n\n${show(steps.at(-1)!)}`, effort: "high" }));
+
+    // Does it show its ideas working, on examples the picture can make visible? Notes go back to a revise step, and the
+    // revision is read again, until it does. Notes still open after the last round are reported, and the trail keeps them.
+    const check = async () => {
+      const read = steps.at(-1)!;
+      await step("check", () => text({ system: prompts[4]!.replace("{{thread}}", kept), user: `${research}\n\nThe narration:\n\n${show(read)}`, effort: "medium" }), (reply) => parseCheck(reply, read));
+      return steps.at(-1)!.notes;
+    };
+    let notes = await check();
+    for (let round = 1; notes.length && round <= REVISIONS; round++) {
+      const user = `${research}\n\nThe narration:\n\n${show(steps.at(-1)!)}\n\nThe director's notes:\n${notes.map((n) => `- ${n}`).join("\n")}`;
+      await step("revise", () => text({ system: prompts[5]!.replace("{{thread}}", kept), user, effort: "high" }));
+      notes = await check();
+    }
+    if (notes.length) console.log(`  !!! the examples still have open notes after ${REVISIONS} revisions:\n${notes.map((n) => `    ${n}`).join("\n")}`);
+    }
+
+    async function finish(script: Script, final: WritingStep) {
     const known = new Set(f.claims.map((c) => c.id));
     for (const b of script!.beats) b.claimIds = b.claimIds.filter((id) => known.has(id));
     p.script = script;
+    }
   }, force);
 }

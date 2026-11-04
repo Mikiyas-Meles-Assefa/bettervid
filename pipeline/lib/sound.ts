@@ -94,6 +94,6 @@ export async function reasonSound(p: Project, moments: Moment[]) {
     system: "You direct sound for a narrated video of any purpose. Reason from intent and actual compiled visual moments, never a table mapping event types to sounds. Most moments should be silent. Choose sparse effects quieter than voice (level -18 to -40 dB). At most one effect at a time and at least 1.5 seconds apart. Choose music cues only at supplied moments, especially event boundaries, changing feel, holds and reveals. Music levels are offsets from a -26 LUFS bed, -80 means silence, 0 is the maximum. Start with a cue at frame 0. Avoid swells over an important event. A music cue changes the bed with a short crossfade; use silence when it helps. Only existing music names. Prefer the existing effects, but request a reusable new effect if needed, max 20, each 0.5 to 2 seconds. New names must be lowercase letters, digits and hyphens. Explain each choice. Return a compact plan.",
     user: JSON.stringify({ intent: p.plan ?? p.input, direction: p.direction, style: p.timeline!.style, kit: KIT, moments }),
     schema: object({ effects: array(object({ moment: str, name: str, level: num, why: str })), music: array(object({ moment: str, name: str, level: num, why: str })), additions: array(object({ name: str, text: str, seconds: num })) }),
-    schemaName: "sound_plan", maxOutput: 6000,
+    schemaName: "sound_plan", maxOutput: 6000, effort: "low",
   });
 }

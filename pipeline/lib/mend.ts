@@ -22,9 +22,27 @@ export function mend(source: string, problems: Problem[]): { source: string; fix
   const lines = source.split("\n");
   const fixed: string[] = [];
   for (const p of problems) {
-    const want = / Did you mean ([^\s?]+)\?/.exec(p.message)?.[1];
-    if (!want || !p.line || !lines[p.line - 1]) continue;
+    if (!p.line || !lines[p.line - 1]) continue;
     const line = lines[p.line - 1]!;
+    const want = / Did you mean ([^\s?]+)\?/.exec(p.message)?.[1];
+    if (!want) {
+      // A setting the thing does not take, with no word it could be a slip of: the line without it is the one fix.
+      const unknown = / has no setting "([A-Za-z][\w-]*)"\. It takes:/.exec(p.message)?.[1];
+      if (unknown) {
+        const re = new RegExp(`\\s+${unknown}=("[^"]*"|\\S+)`);
+        if (re.test(line)) {
+          lines[p.line - 1] = line.replace(re, "");
+          fixed.push(`line ${p.line}: ${unknown}= taken off (${/^(\S+)/.exec(line.trim())?.[1]} has no such setting)`);
+        }
+        continue;
+      }
+      // A drop in a plain state does nothing (what is not listed leaves by itself): the line goes.
+      if (/^drop only works in a keep state/.test(p.message) && /^\s*drop\s/.test(line)) {
+        lines[p.line - 1] = "";
+        fixed.push(`line ${p.line}: drop taken out of a plain state`);
+      }
+      continue;
+    }
     // The words of the line, and the names and values of its settings, outside quotes.
     const bare = line.replace(/"[^"]*"/g, (q) => " ".repeat(q.length));
     const words = [...bare.matchAll(/[A-Za-z][\w-]*/g)].map((m) => ({ text: m[0], at: m.index! }));

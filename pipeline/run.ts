@@ -9,6 +9,7 @@ import { storeMaterial, UPLOAD_LIMITS } from "./lib/uploads.ts";
 import { dependencies, schedule } from "./lib/scheduler.ts";
 import { inStage, timedRun } from "./lib/timing.ts";
 import { hash } from "./lib/util.ts";
+import { ownPictures } from "./lib/material.ts";
 import { annotate } from "./stages/annotate.ts";
 import { assets } from "./stages/assets.ts";
 import { board } from "./stages/board.ts";
@@ -17,6 +18,7 @@ import { direction } from "./stages/direction.ts";
 import { director } from "./stages/director.ts";
 import { material } from "./stages/material.ts";
 import { mix } from "./stages/mix.ts";
+import { mux } from "./stages/mux.ts";
 import { plan } from "./stages/plan.ts";
 import { render } from "./stages/render.ts";
 import { research } from "./stages/research.ts";
@@ -41,6 +43,7 @@ const LEGACY: Run = [
   ["timeline", timeline],
   ["mix", mix],
   ["render", render],
+  ["mux", mux],
   ["critic", critic],
 ];
 // Director, assets and annotate still make pictures when the video needs them; the scene stage then builds on them.
@@ -61,6 +64,7 @@ const ENGINE: Run = [
   ["timeline", timeline],
   ["mix", mix],
   ["render", render],
+  ["mux", mux],
   ["critic", critic],
 ];
 
@@ -105,11 +109,19 @@ function skipLegacy(name: StageName) {
   const mine = p.plan?.notation ? "stage" : boardStyle ? "board" : "shots";
   return Object.entries(visuals).some(([k, list]) => k !== mine && list.includes(name));
 }
-// Engine: the scene stage draws every video. Pictures are made unless the topic is worked notation, which the engine
-// draws itself. The old teaching stage and board only run when asked for with --only.
+// Engine: the scene stage draws every video. The picture stages (director, assets, annotate) run only when the user's
+// own files bring pictures, or when the project asks for the hunt with pictures: "find"; the scene draws, computes and
+// depicts the rest. A topic of worked notation never takes pictures. The old teaching stage and board only run with --only.
+const wantsPictures = () => {
+  const mode = p.input.pictures ?? "own";
+  if (mode === "none" || p.plan?.notation) return false;
+  if (mode === "find") return true;
+  return ownPictures(p).length > 0;
+};
 function skipEngine(name: StageName) {
   if (name === "board" || name === "stage") return true;
-  return ["director", "assets", "annotate"].includes(name) && !!p.plan?.notation;
+  if (name === "critic") return p.input.critic !== true;
+  return ["director", "assets", "annotate"].includes(name) && !wantsPictures();
 }
 function skip(name: StageName) {
   if (only === name) return false;

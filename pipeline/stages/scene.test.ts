@@ -296,3 +296,14 @@ test("tickets from watching the video name the parts to send back, and a note on
   assert.deepEqual(t.map((x) => x.sections), [["s3"], ["s1"]]);
   assert.match(t[0]!.text, /predict answered \(e2b\): the answer shows/);
 });
+
+test("mends take an unknown setting off its line and a drop out of a plain state", async () => {
+  const { mend } = await import("../lib/mend.ts");
+  const src = "@0\n  stack s w=950 gap=20\n    text t \"hi\"\n  drop s_old";
+  const r = mend(src, [
+    { line: 2, message: 'stack has no setting "w". It takes: gap, align, back, role, enter, at, into, before, after.' },
+    { line: 4, message: "drop only works in a keep state. In a plain state, anything you do not list leaves by itself." },
+  ]);
+  assert.equal(r.source, "@0\n  stack s gap=20\n    text t \"hi\"\n");
+  assert.equal(r.fixed.length, 2);
+});

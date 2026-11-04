@@ -10,3 +10,7 @@ For each beat:
 - `emphasis`: one or two words from `text` worth highlighting in captions, or an empty list.
 
 Also return the `title` and `takeaway` you are given.
+
+`demos`: for each process the narration works through on a concrete example that one of the engine's kits computes, one entry: `kind` is the kit's name and `data` is a JSON object of the kit's settings with the narration's exact values, as text (for example `{"data": [5, 2, 8, 1], "algo": "merge", "show": "boxes"}`). Only the settings the kit's line names, never an id. The kits that compute:
+{{kits}}
+An empty list when the narration works through nothing a kit computes.
