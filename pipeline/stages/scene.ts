@@ -193,7 +193,9 @@ export function mergeReply(base: string, reply: string): string {
     const key = keyOf(s.text);
     const body = s.text.split("\n").filter((l) => !/^\s*@/.test(l)).join("\n").trim();
     const i = states.findIndex((x) => x.key === key);
-    if (body === "remove") {
+    // A removal is `remove` under the @ line, or on it: writers put it either way.
+    const atLine = s.text.split("\n").find((l) => /^\s*@/.test(l)) ?? "";
+    if (body === "remove" || (!body && /\sremove\s*$/.test(atLine))) {
       if (i >= 0) states.splice(i, 1);
       continue;
     }

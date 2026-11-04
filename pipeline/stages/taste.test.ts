@@ -63,7 +63,7 @@ test("a repair that answers with only the states it changes is merged into the p
   const { mergeReply } = await import("./scene.ts");
   const base = `bg paper\nprogram spin n=3 doc="spins"\n  text("a", { text: "x" });\nend\n@0\n  text t "one" size=big\n@4 keep\n  light t\n@9\n  text u "two" size=big\n@h2 keep\n  dim u`;
   // One state replaced, one added, one removed; the program and the rest stay.
-  const merged = mergeReply(base, "@4 keep\n  light t\n  camera t zoom=2\n@6 keep\n  dim t\n@9\n  remove");
+  const merged = mergeReply(base, "@4 keep\n  light t\n  camera t zoom=2\n@6 keep\n  dim t\n@9 remove");
   assert.equal(merged, `bg paper\nprogram spin n=3 doc="spins"\n  text("a", { text: "x" });\nend\n@0\n  text t "one" size=big\n@4 keep\n  light t\n  camera t zoom=2\n@6 keep\n  dim t\n@h2 keep\n  dim u`);
   // A whole part answered is taken as it is, and an answer with no state goes through untouched for the build to judge.
   assert.equal(mergeReply(base, base), base);
