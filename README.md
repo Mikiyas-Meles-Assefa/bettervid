@@ -24,14 +24,14 @@ One project is one folder with a `project.json`. Each stage reads what earlier s
 |---|---|---|
 | material | Your files are opened by code (PDF pages laid out into text, tables and pictures; Word, PowerPoint, Excel, CSV read without extra tools) and read into part cards, with anything a file requires of the video (must say, never say, end with) | Muse Spark |
 | plan | Reads your request once and sorts what you asked for: story, tone, visuals, sound, length, why you want it | Muse Spark |
-| research | Web research into a fact sheet: claims, each tied to its sources, plus the story in order and the common misconception | Muse Spark |
-| writer | Prose first: a draft, a cut, a review, then the script in beats with the claims each line rests on | Muse Spark |
-| direction | Walks the script as the viewer, moment by moment: what each stretch is for, where the eye should be, what is held back, where to pause and let it land (holds), and how a demonstration plays | Muse Spark |
+| research | Web research into a fact sheet: claims, each tied to its sources, plus the story in order and the common misconception. The planner skips it when the topic is common knowledge | Muse Spark |
+| writer | One pass: the narration, with the reviewer's checklist and the director's demonstration test built into the prompt, then the script in beats with the claims each line rests on and the examples a kit computes | Muse Spark |
+| direction | One call: walks the script as the viewer, moment by moment: what each stretch is for, where the eye should be, what is held back, where to pause and let it land (holds), and how a demonstration plays, with the kit's real steps already in hand | Muse Spark |
 | voice | Narration with word timings | ElevenLabs |
-| director, assets, annotate | Pictures when the video needs them: real archive images first (Wikimedia Commons, NASA) with their licenses, generated ones where nothing real is needed, parts cut out, marks drawn on the spoken word | Muse Spark, Muse Image, SAM |
-| scene | Each section is written in the scene language, built by the engine, measured, reviewed once by the art director and repaired in one round | Muse Spark |
-| timeline, mix, render, mux | Cut on the words, sound effects and music cued to scene moments and mastered to -14 LUFS, rendered with Remotion, picture and sound joined | Muse Spark for sound cues |
-| critic | Watches frames of the finished video and files tickets; one fix round re-renders | Muse Spark |
+| director, assets, annotate | Pictures only when your own files bring them, or when a project asks for the hunt (`pictures: "find"`): archive images (Wikimedia Commons, NASA, the Met, Smithsonian, Internet Archive) with their licenses, generated ones where nothing real is needed, parts cut out, marks drawn on the spoken word. Otherwise the scene draws, computes and depicts everything | Muse Spark, Muse Image, SAM |
+| scene | Every section is written at once in the scene language, built by the engine, measured by the instruments, looked at by a reviewer and an art director, and corrected once. Things the words are about are depicted with Muse Image and cut into parts with SAM when the writer asks | Muse Spark, Muse Image, SAM |
+| timeline, mix, render, mux | Cut on the words; sound effects and music cued to scene moments and mastered to -14 LUFS while the picture renders with Remotion; then joined | Muse Spark for sound cues |
+| critic | Optional (`critic: true`): watches frames of the finished video and files notes | Muse Spark |
 
 Which Meta model does what:
 - **Muse Spark** writes, directs, reviews and repairs: the plan, research, script, direction, every scene, the sound cues, the art director's review, the repairs, the critic, and reading your files. It also writes new styles from a description.
@@ -108,7 +108,7 @@ Every model call is written to `projects/spend.jsonl` with its project, stage an
 
 ## Honest limits
 
-- **Slow.** A new one minute video takes about fifteen minutes end to end, and only one is made at a time. Batch exists because of this; it does not make it faster.
+- **Slow.** A new video takes about seven minutes end to end for a two minute video (measured Nov 4: plan, writer, direction and voice in three minutes, the scene in about four with all sections written at once, the render in one and a half). Most of it is the model's answer time per section. Only one is made at a time by the app; Batch exists because of this.
 - **The Docker image has not been built.** Docker is not installed on the machine this was written on. The app was run in the image's shape (only the files the image would contain, the same command and settings, public mode) and every page and API answered, but a real `docker build` is still to be done.
 - **Narration is ElevenLabs,** not a Meta model.
 - **Uploaded pictures in the video:** reading files is tested on real PDFs, Word files and CSVs; the path where the director places your own picture in a shot has unit tests but no full real run yet.
