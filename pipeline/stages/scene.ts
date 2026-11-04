@@ -22,6 +22,7 @@ import { expandHolds, holdMoments, type HoldTime } from "../../engine/language/h
 import { loadLibrary } from "../../engine/language/library.ts";
 import { fontMeasure } from "../../engine/language/measure.ts";
 import { parse, vocabulary, type Item, type State } from "../../engine/language/syntax.ts";
+import { runStart } from "../lib/timing.ts";
 import { themeFrom } from "../../engine/render/theme.ts";
 import { better, decode, hide, inventory, issuesFrom, judgeSchema, keptAt, lookFrames, measureLayout, measurePixels, merge, readOf, recheckSchema, weight, wordsOnScreen, type Finding, type Issue, type Judged, type Moment, type Rechecked } from "../lib/look.ts";
 import { json, text } from "../lib/meta.ts";
@@ -641,6 +642,7 @@ export type Job = {
   review?: boolean; // false: no review round after the look (reviewRound)
   once?: boolean; // one repair round: write, build, look once, one repair with every note (writeOnce)
   check?: boolean; // in that round, the art director checks the repair and the writer gets one last request (sceneRepair: "check")
+  deadline?: number; // the run's time budget as a clock time: a correction or a repair starts only when it can finish before it
   taste?: Ask; // the taste review's model calls (Spark when not given); tests pass a fake
   // Path A: what prepares the depictions a part asks for before each build, and the toolbox they are kept in.
   toolbox?: { box: Toolbox; makers: ToolboxMakers; inflight: Map<string, Promise<void>>; save: () => void };
@@ -1232,21 +1234,31 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   const buildProblems = (c: Checked) => c.problems.slice(0, 2).join(" | ").slice(0, 200);
   const looks: string[] = [];
   let repairs = 0;
+  // Time left before the deadline. A low-effort build repair takes about 25 s, the look plus the correction about 75 s.
+  const left = () => (job.deadline ?? Infinity) - Date.now();
+  const REPAIR_MS = 25_000;
+  const CORRECTION_MS = 75_000;
 
   // 1. The draft, built. Every section gets its one look, even one whose first answer did not build.
   let first = await checkMended(job, await ask(draft ? `${job.request}\n\nA first draft of your part, made from the director's shots:\n${draft}` : job.request), fixed);
-  for (let tries = 0; !built(first.c) && tries < 2; tries++) {
+  for (let tries = 0; !built(first.c) && tries < 2 && left() > REPAIR_MS; tries++) {
     repairs++;
     log(`the draft does not build (${buildProblems(first.c)}); asking with its build problems`);
     first = await checkMended(job, await ask(repairRequest(job, first.source, [...first.c.problems, ...first.c.warnings]), "low"), fixed, first.source);
   }
   if (!built(first.c)) {
+    if (left() <= REPAIR_MS) log("out of time for another build repair");
     looks.push("did not build");
     return { ...written(first.source, first.c, 1 + repairs), usd, looks, repairs, fixed };
   }
 
   // 2. One look at the built part, by every eye at once, and one request back with everything found.
   const w = written(first.source, first.c, 1 + repairs);
+  if (left() < CORRECTION_MS) {
+    log(`no time left for the look and the correction (${Math.round(left() / 1000)} s): the draft ships as built`);
+    looks.push("shipped on time, no correction");
+    return { ...w, usd, looks, repairs, fixed };
+  }
   const scene = first.c.result.scene!;
   const seen = await see(job, scene, first.source, join(job.folder, "once"));
   const notes = measurePart(job, scene);
@@ -1274,7 +1286,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   ].filter(Boolean).join("\n\n");
   repairs++;
   let next = await checkMended(job, await ask([{ type: "input_text", text: parts }, ...frameContent(seen, shown, "Frame", readings)]), fixed, first.source);
-  if (!built(next.c)) {
+  if (!built(next.c) && left() > REPAIR_MS) {
     repairs++;
     log(`the repair does not build (${buildProblems(next.c)}); asking once more with its build problems`);
     next = await checkMended(job, await ask(repairRequest(job, next.source, [...next.c.problems, ...next.c.warnings]), "low"), fixed, next.source);
@@ -1286,7 +1298,7 @@ async function writeOnce(job: Job, draft: string): Promise<Written & { looks: st
   looks.push("repaired");
 
   // 3. The check: did what the art director asked for land on screen? One last request if not.
-  if (job.check && verdict?.verdict === "revise") {
+  if (job.check && verdict?.verdict === "revise" && left() > CORRECTION_MS + REPAIR_MS) {
     const folder = join(job.folder, "once", "check");
     const scene2 = next.c.result.scene!;
     const seen2 = await see(job, scene2, next.source, folder, true);
@@ -1938,6 +1950,12 @@ export const sceneHeader = (p: Project) => [
 ].filter(Boolean).join("\n\n") + "\n\n";
 
 export async function scene(p: Project, force = false, o: { author?: "language" | "intent" } = {}) {
+  // The time budget. The run must finish in `minutes` (default 5): what remains after the stages before this one, less
+  // what the timeline, the mix with the render and the mux need, is the scene's. Each section keeps to it: a draft
+  // always gets written and built, a repair or a correction starts only when it can finish in time.
+  // Off unless the project sets `minutes`: by default a run takes what its corrections need.
+  const RESERVE_MS = 70_000;
+  const deadline = p.input.minutes ? (runStart() ?? Date.now()) + p.input.minutes * 60_000 - RESERVE_MS : Infinity;
   const words = p.narration!.words;
   const author = o.author ?? p.input.sceneAuthor ?? SCENE_AUTHOR_DEFAULT;
   // Every part's step numbers come from the plan's demonstrations, so they must show their words before any is written.
@@ -1992,7 +2010,7 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
       const toolbox = author === "toolbox" ? toolboxFor(p, spent) : undefined;
       // once (default): write, one look, one correction. check: plus the art director's check and one last repair. full: the review rounds.
       const repairMode = p.input.sceneRepair ?? "once";
-      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox && repairMode === "full", once: repairMode !== "full", check: repairMode === "check", ...(toolbox ? { toolbox } : {}) }));
+      const jobs: Job[] = ranges.map((range, i) => ({ p, range, next: ranges[i + 1], carry: i ? cast[i - 1]!.handoff : [], handoff: cast[i]!.handoff, system, request: requestFor(p, ranges, i, cast, header, describe(pics) + drawings(p)) + (toolbox ? lookText(p) : ""), opts, folder: join(root, range.id), log: (l) => console.log(l), review: !!toolbox && repairMode === "full", once: repairMode !== "full", check: repairMode === "check", deadline, ...(toolbox ? { toolbox } : {}) }));
       // The intent path: the material read once into cards, and one plan request per part.
       let intent: { system: string; requests: string[]; cards: PartCard[]; requirements: PartCard["requirements"]; brief: string } | undefined;
       if (author === "intent") {
@@ -2102,7 +2120,9 @@ export async function scene(p: Project, force = false, o: { author?: "language" 
       const buildJoined = async (text: string): Promise<BuildResult> => (languageParts().length ? build(text, opts) : { problems: [], stats: { states: 0, parts: 0, programs: 0, programMs: 0 } });
       let joined = joinWithSpans(languageParts());
       let whole = await buildJoined(joined.text);
-      for (let round = 1; round <= JOIN_ROUNDS && whole.problems.length; round++) {
+      const joinRounds = Date.now() > deadline ? 1 : JOIN_ROUNDS;
+      if (joinRounds < JOIN_ROUNDS && whole.problems.length) console.log("  the time budget is spent: one joined repair at most");
+      for (let round = 1; round <= joinRounds && whole.problems.length; round++) {
         const lines = joined.text.split("\n");
         const byPart = new Map<number, string[]>();
         for (const x of whole.problems) {

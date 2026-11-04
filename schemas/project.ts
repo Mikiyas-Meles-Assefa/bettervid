@@ -45,6 +45,7 @@ export type Input = {
   sceneAuthor?: "language" | "intent" | "toolbox";
   sceneRepair?: "once" | "check" | "full"; // once (default): write, one look, one correction; check: plus the art director's check and one last repair; full: the review rounds // toolbox: the language with the design brain's abilities (path A)
   passes?: "once" | "full"; // the writer and direction: once (default) is one call each; full is the draft, review, check and revise chain and the direction's rounds
+  minutes?: number; // optional time budget for one run, in minutes: the scene keeps its share and corrections happen only while time is left; unset means no budget
   critic?: boolean; // run the critic after the video is made (notes only on engine videos); off by default
   pictures?: "own" | "find" | "none"; // own (default): pictures only from the user's own files, the scene draws the rest; find: hunt the archives and make stills too; none: never
   files?: InputFile[]; // the user's own files, stored in the project's material folder
