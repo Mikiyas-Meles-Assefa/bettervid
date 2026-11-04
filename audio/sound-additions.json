@@ -28,5 +28,10 @@
     "text": "low wobbling beat pulsing as two waves misalign, tense and quiet",
     "seconds": 1.2,
     "gainDb": -20
+  },
+  "sharp-clap": {
+    "text": "sharp single clap spike, dry and sudden, no reverb tail, no music",
+    "seconds": 0.8,
+    "gainDb": -20
   }
 }
