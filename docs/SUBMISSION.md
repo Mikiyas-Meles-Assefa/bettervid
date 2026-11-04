@@ -29,6 +29,29 @@ bettervid is a video creation platform built on an agent-native video engine. Yo
 
 2:50 Close, 10 s. "Any purpose, your material, a team of agents on Meta's models. bettervid."
 
+## Hosting on Fly.io
+
+Once, on this Mac (needs your Fly account and a card on it; the machine below is about $2 a day while it runs):
+
+```sh
+brew install flyctl
+fly auth login
+fly apps create bettervid
+fly volumes create projects --region fra --size 20 --yes
+fly secrets set META_API_KEY=... ELEVENLABS_API_KEY=...
+fly deploy
+```
+
+`fly deploy` builds the Dockerfile on Fly's builder (the image has never been built here, so the first build may surface a missing package; paste the error to me). The site is then at https://bettervid.fly.dev with the public limits on: 20 videos a day, 2 per visitor, a $5 cap.
+
+The hosted gallery starts empty because `projects/` is not in the image. Seed it with the showcase projects:
+
+```sh
+scripts/fly-seed.sh <project-id> <project-id> ...
+```
+
+Then open https://bettervid.fly.dev/#/gallery and each studio page once to make the thumbnails.
+
 ## Before you submit
 
 1. The repository is pushed and public (or shared with the judges).

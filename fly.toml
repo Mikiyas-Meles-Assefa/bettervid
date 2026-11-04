@@ -1,0 +1,41 @@
+# Fly.io app for the web app and the pipeline. Build: the Dockerfile. Secrets (META_API_KEY, ELEVENLABS_API_KEY) are set
+# with `fly secrets set`, never here. The projects live on a volume at /srv/projects so videos survive deploys.
+app = "bettervid"
+primary_region = "fra"
+
+[build]
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  PROJECTS_DIR = "/srv/projects"
+  BUDGET_USD = "5"
+  RENDER_CONCURRENCY = "2"
+  PYTHON = "python3"
+  RUNS_PER_DAY = "20"
+  RUNS_PER_VISITOR = "2"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # A render in progress must not be stopped under it: one machine stays up.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/api/options"
+
+[[vm]]
+  # Headless Chrome rendering at concurrency 2 wants real cores and memory.
+  size = "performance-2x"
+  memory = "4gb"
+
+[mounts]
+  source = "projects"
+  destination = "/srv/projects"
+  initial_size = "20gb"
