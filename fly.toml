@@ -31,8 +31,9 @@ primary_region = "fra"
     path = "/api/options"
 
 [[vm]]
-  # Headless Chrome rendering at concurrency 2 wants real cores and memory.
-  size = "performance-2x"
+  # Headless Chrome rendering at concurrency 2 wants cores and memory. A new account may not start performance machines
+  # (ask billing@fly.io); shared-cpu-4x renders slower but runs.
+  size = "shared-cpu-4x"
   memory = "4gb"
 
 [mounts]
