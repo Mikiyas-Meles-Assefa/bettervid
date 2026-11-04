@@ -371,7 +371,11 @@
   .proj h2 { font-family: var(--serif); font-size: 20px; margin: 0; padding: 16px 18px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .proj .pfiles .body { padding: 4px 18px 18px; overflow: auto; flex: 1; }
   .proj .pfiles .chips { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-  .proj .pfiles .chip { justify-content: space-between; }
+  .proj .pfiles .body { overflow-x: hidden; }
+  .proj .pfiles .chip { justify-content: space-between; max-width: 100%; box-sizing: border-box; display: flex; gap: 8px; align-items: center; }
+  .proj .pfiles .chip b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+  .proj .pfiles .chip small { white-space: nowrap; }
+  .proj .pfiles .hint { display: block; margin-top: 10px; color: var(--soft); font-size: 13px; }
   .proj .pfiles .drop-note { color: var(--soft); font-size: 14px; margin: 14px 0 0; line-height: 1.45; }
   .proj .pchat .log { flex: 1; overflow: auto; padding: 8px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
   .proj .msg { max-width: 82%; padding: 12px 14px; border-radius: 14px; line-height: 1.45; }
@@ -1163,7 +1167,7 @@ async function project() {
   const files = attachments(left);
   if (state.token) files.state.token = state.token;
   left.append(el("h2", {}, "Your files"), el("div", { class: "body" }, files.view, files.err,
-    el("p", { class: "drop-note" }, "Drop in PDFs, slides, spreadsheets, notes or pictures. Every video in this project is made from them, and keeps each claim tied to where it came from.")));
+    el("p", { class: "drop-note" }, "Every video in this project is made from these files, and keeps each claim tied to where it came from.")));
   // Conversation.
   const log = el("div", { class: "log", "aria-live": "polite" });
   const say = el("textarea", { placeholder: "Ask for a video. For example: a two minute explainer of chapter 3 for my class", rows: 2 });
