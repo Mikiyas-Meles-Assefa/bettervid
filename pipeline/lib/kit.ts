@@ -44,9 +44,10 @@ export function extendKit(items: { name: string; text: string; seconds: number }
   const file = "audio/sound-additions.json";
   const saved = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) as typeof KIT.sfx : {};
   for (const item of items) {
-    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(item.name) || !item.text.trim() || !Number.isFinite(item.seconds) || item.seconds < 0.5 || item.seconds > 2) throw new Error("invalid new kit item");
+    // A sound the kit cannot take (malformed, or the kit is full) is skipped: the video uses the kit it has.
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(item.name) || !item.text.trim() || !Number.isFinite(item.seconds) || item.seconds < 0.5 || item.seconds > 2) continue;
     if (KIT.sfx[item.name]) continue;
-    if (Object.keys(saved).length >= 20) throw new Error("sound kit growth limit: 20 items");
+    if (Object.keys(saved).length >= 20) continue;
     saved[item.name] = { text: item.text, seconds: item.seconds, gainDb: -20 };
   }
   writeFileSync(file, JSON.stringify(saved, null, 2) + "\n");

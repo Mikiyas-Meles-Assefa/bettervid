@@ -363,6 +363,61 @@
     .row { grid-auto-columns: 46%; gap: 14px; }
     .go .btn { width: 100%; }
   }
+
+  /* Project mode: files on the left, the conversation in the middle, the videos to scroll on the right. */
+  main.project { max-width: none; padding: 0 16px 16px; }
+  .proj { display: grid; grid-template-columns: 280px minmax(0, 1fr) 400px; gap: 16px; height: calc(100vh - 92px); }
+  .proj > section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .proj h2 { font-family: var(--serif); font-size: 20px; margin: 0; padding: 16px 18px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .proj .pfiles .body { padding: 4px 18px 18px; overflow: auto; flex: 1; }
+  .proj .pfiles .chips { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .proj .pfiles .chip { justify-content: space-between; }
+  .proj .pfiles .drop-note { color: var(--soft); font-size: 14px; margin: 14px 0 0; line-height: 1.45; }
+  .proj .pchat .log { flex: 1; overflow: auto; padding: 8px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .proj .msg { max-width: 82%; padding: 12px 14px; border-radius: 14px; line-height: 1.45; }
+  .proj .msg.you { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+  .proj .msg.bv { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 4px; }
+  .proj .msg.bv b { font-family: var(--serif); font-size: 18px; display: block; margin-bottom: 4px; }
+  .proj .msg .bar { height: 6px; background: var(--line); border-radius: 3px; margin: 10px 0 6px; overflow: hidden; }
+  .proj .msg .bar i { display: block; height: 100%; background: var(--accent); transition: width .6s; }
+  .proj .msg small { color: var(--soft); }
+  .proj .msg .open { margin-top: 10px; display: inline-flex; }
+  .proj .empty-chat { margin: auto; text-align: center; color: var(--soft); max-width: 420px; }
+  .proj .empty-chat h3 { font-family: var(--serif); color: var(--ink); font-size: 28px; margin: 0 0 8px; font-weight: 600; }
+  .proj form.say { border-top: 1px solid var(--line); padding: 12px; display: flex; gap: 10px; align-items: flex-end; }
+  .proj form.say textarea { flex: 1; min-height: 52px; max-height: 160px; resize: none; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; }
+  .proj form.say select { padding: 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; }
+  .proj .pfeed { position: relative; }
+  .proj .feed { flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; }
+  .proj .feed article { scroll-snap-align: start; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; gap: 8px; box-sizing: border-box; }
+  .proj .feed video { height: calc(100% - 44px); max-width: 100%; aspect-ratio: 9 / 16; border-radius: 12px; background: #000; object-fit: contain; }
+  .proj .feed article b { font-family: var(--serif); font-size: 17px; text-align: center; }
+  .proj .titles { position: absolute; inset: 56px 0 0; background: var(--surface); overflow: auto; padding: 4px 10px 16px; display: none; z-index: 2; }
+  .proj .titles.open { display: block; }
+  .proj .titles button { display: block; width: 100%; text-align: left; padding: 12px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: inherit; cursor: pointer; }
+  .proj .titles button:hover { background: var(--sunk); }
+  .proj .titles small { color: var(--soft); display: block; }
+  .proj .feed-label { color: var(--soft); font-size: 13px; padding: 0 18px; }
+  @media (max-width: 1000px) { .proj { grid-template-columns: 1fr; height: auto; } .proj > section { min-height: 420px; } .proj .feed { height: 640px; flex: none; } }
+  /* The video page: the video first, everything else folded away. */
+  .watch { max-width: 1040px; margin: 0 auto; padding: 24px 0 64px; display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 40px; align-items: start; }
+  .watch video { width: 100%; aspect-ratio: 9 / 16; border-radius: 14px; background: #000; }
+  .watch h1 { font-family: var(--serif); font-size: clamp(30px, 4vw, 44px); line-height: 1.08; margin: 0 0 10px; }
+  .watch .asked { color: var(--soft); margin: 0 0 22px; }
+  .watch .acts { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
+  .watch details { border-top: 1px solid var(--line); padding-top: 16px; }
+  .watch summary { cursor: pointer; font-weight: 600; }
+  .watch .script p { line-height: 1.6; }
+  .watch .making { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  .watch .making .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 14px 0 18px; }
+  .watch .making .bar i { display: block; height: 100%; background: var(--accent); transition: width .6s; }
+  .watch ol.human { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .watch ol.human li { display: flex; gap: 10px; align-items: center; color: var(--faint); }
+  .watch ol.human li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; flex: none; }
+  .watch ol.human li.done { color: var(--ink); } .watch ol.human li.done::before { background: var(--ok); border-color: var(--ok); }
+  .watch ol.human li.now { color: var(--ink); font-weight: 600; } .watch ol.human li.now::before { background: var(--accent); border-color: var(--accent); }
+  .watch .hood { font-size: 14px; color: var(--soft); margin-top: 18px; display: inline-block; }
+  @media (max-width: 800px) { .watch { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -372,7 +427,7 @@
   <nav class="main" aria-label="Main">
     <a href="#/" data-nav="home">Make</a>
     <a href="#/gallery" data-nav="gallery">Gallery</a>
-    <a href="#/batch" data-nav="batch">Batch</a>
+    <a href="#/project" data-nav="project">Project</a>
   </nav>
   <button class="theme" type="button" aria-label="Switch between light and dark" title="Light or dark"></button>
 </div></header>
@@ -1032,7 +1087,154 @@ async function batch() {
 }
 
 // Pages: #/ (make), #/gallery, #/batch, #/p/<id>[/<tab>] (studio). Older links (#<id>) still open the studio.
-const views = { home, gallery, batch };
+
+// The steps a person sees: five plain phases, from the pipeline's stages.
+const PHASES = [
+  ["Understanding your request", ["material", "plan", "research"]],
+  ["Writing the script", ["writer"]],
+  ["Directing and recording", ["direction", "voice"]],
+  ["Drawing the scenes", ["director", "assets", "annotate", "scene", "board", "stage"]],
+  ["Finishing", ["timeline", "mix", "render", "mux", "critic"]],
+];
+function phases(v) {
+  const steps = v.steps ?? [];
+  const out = PHASES.map(([label, keys]) => {
+    const mine = steps.filter((s) => keys.includes(s.key));
+    const state = !mine.length ? "next" : mine.some((s) => s.state === "now") ? "now" : mine.every((s) => s.state === "done") ? "done" : mine.some((s) => s.state === "done") ? "now" : "next";
+    return { label, state };
+  });
+  const finished = !v.running && v.video;
+  if (finished) out.forEach((p) => (p.state = "done"));
+  const done = out.filter((p) => p.state === "done").length;
+  const pct = finished ? 100 : Math.min(96, Math.round(((done + (out.some((p) => p.state === "now") ? 0.5 : 0)) / out.length) * 100));
+  return { list: out, pct, now: out.find((p) => p.state === "now")?.label };
+}
+const failedNote = (v) => !v.running && !v.queued && !v.video;
+
+// The video page: the video, three actions, and how it was made folded away.
+async function watch(id) {
+  clearTimeout(timer);
+  let v;
+  try { v = await api(`/api/videos/${id}`); } catch {
+    if (++misses < 5) { timer = setTimeout(() => watch(id), 1200); return; }
+    app.replaceChildren(el("section", { class: "empty" }, el("h1", {}, "That video was not found."), el("a", { href: "#/" }, "Back to the start")));
+    return;
+  }
+  misses = 0;
+  const title = v.title || "Your video";
+  const ph = phases(v);
+  const left = v.video && !v.running
+    ? el("video", { src: `/videos/${id}.mp4`, controls: true, playsinline: true, poster: v.thumb || undefined, preload: "metadata" })
+    : el("div", { class: "making" },
+        el("b", {}, failedNote(v) ? "This one did not finish." : v.queued ? "Waiting for its turn" : (ph.now ?? "Starting")),
+        failedNote(v) ? el("p", {}, "Something went wrong while making it. Try again with the same words.") : [
+          el("div", { class: "bar" }, el("i", { style: `width:${ph.pct}%` })),
+          el("ol", { class: "human" }, ph.list.map((p) => el("li", { class: p.state }, p.label))),
+          el("p", {}, el("small", {}, "A one minute video takes about seven minutes. You can leave this page; it will be in the gallery when it is done."))]);
+  const beats = v.beats ?? [];
+  const sources = (v.sourceList ?? []).filter((s) => s.title);
+  app.replaceChildren(el("section", { class: "watch" },
+    el("div", {}, left),
+    el("div", {},
+      el("h1", {}, title),
+      el("p", { class: "asked" }, v.prompt ? `“${v.prompt}”` : "", v.style ? ` · ${v.style}` : ""),
+      el("div", { class: "acts" },
+        v.video && !v.running ? el("a", { class: "btn", href: `/videos/${id}.mp4`, download: `${title}.mp4` }, "Download") : null,
+        el("button", { class: "btn quiet", type: "button", onclick: async (e) => { try { await navigator.clipboard.writeText(location.href); e.target.textContent = "Link copied"; } catch { e.target.textContent = location.href; } } }, "Copy link"),
+        el("a", { class: "btn quiet", href: "#/" }, "Make another")),
+      beats.length ? el("details", {}, el("summary", {}, "How it was made"),
+        el("div", { class: "script" }, el("h3", {}, "The script"), beats.map((b) => el("p", {}, b.text)),
+          sources.length ? [el("h3", {}, "Sources"), el("ul", {}, sources.map((s) => el("li", {}, s.url ? el("a", { href: s.url, target: "_blank", rel: "noopener" }, s.title) : s.title, s.publisher ? ` · ${s.publisher}` : "")))] : null)) : null,
+      el("a", { class: "hood", href: `#/p/${id}/overview` }, "Under the hood"))));
+  if (v.running || v.queued) timer = setTimeout(() => watch(id), 2500);
+}
+
+// Project mode: the user's files on the left, a conversation in the middle, the project's videos to scroll on the right.
+const PKEY = "bettervid.project";
+const pload = () => { try { return JSON.parse(localGet(PKEY) || "") || { messages: [], ids: [] }; } catch { return { messages: [], ids: [] }; } };
+const psave = (s) => localSet(PKEY, JSON.stringify(s));
+async function project() {
+  clearTimeout(timer);
+  app.classList.add("project");
+  const [opts, show] = await Promise.all([api("/api/options"), api("/api/showcase").catch(() => [])]);
+  const state = pload();
+  // Files.
+  const left = el("section", { class: "pfiles" });
+  const files = attachments(left);
+  if (state.token) files.state.token = state.token;
+  left.append(el("h2", {}, "Your files"), el("div", { class: "body" }, files.view, files.err,
+    el("p", { class: "drop-note" }, "Drop in PDFs, slides, spreadsheets, notes or pictures. Every video in this project is made from them, and keeps each claim tied to where it came from.")));
+  // Conversation.
+  const log = el("div", { class: "log", "aria-live": "polite" });
+  const say = el("textarea", { placeholder: "Ask for a video. For example: a two minute explainer of chapter 3 for my class", rows: 2 });
+  const style = el("select", { "aria-label": "Style" }, opts.styles.filter((s) => !s.custom).map((s) => el("option", { value: s.name }, s.label)));
+  const send = el("button", { class: "btn", type: "submit" }, "Make it");
+  const form = el("form", { class: "say", onsubmit: async (e) => {
+    e.preventDefault();
+    const text = say.value.trim();
+    if (!text) return;
+    send.disabled = true;
+    try {
+      const r = await post("/api/videos", { prompt: text, style: style.value, length: "auto", persona: "auto", uploads: files.state.token, keep: true });
+      state.token = files.state.token;
+      state.messages.push({ who: "you", text }, { who: "bv", id: r.id });
+      state.ids.unshift(r.id);
+      psave(state);
+      say.value = "";
+      paintLog();
+    } catch (err) { files.err.textContent = err.message; }
+    send.disabled = false;
+  } }, say, style, send);
+  say.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+  const mid = el("section", { class: "pchat" }, el("h2", {}, "Project"), log, form);
+  // Videos.
+  const feed = el("div", { class: "feed" });
+  const titles = el("div", { class: "titles", role: "dialog", "aria-label": "All videos" });
+  const listBtn = el("button", { class: "btn quiet", type: "button", "aria-expanded": "false", onclick: () => { const open = titles.classList.toggle("open"); listBtn.setAttribute("aria-expanded", String(open)); } }, "All titles");
+  const label = el("p", { class: "feed-label" });
+  const right = el("section", { class: "pfeed" }, el("h2", {}, "Videos", listBtn), label, titles, feed);
+  app.replaceChildren(el("div", { class: "proj" }, left, mid, right));
+  const seen = new IntersectionObserver((es) => es.forEach((x) => { const vid = x.target.querySelector("video"); if (!vid) return; if (x.isIntersecting && x.intersectionRatio > 0.6) vid.play().catch(() => {}); else vid.pause(); }), { root: feed, threshold: [0, 0.6, 1] });
+  let painted = "";
+  const paintFeed = (items, examples) => {
+    const key = items.map((x) => x.id).join(",");
+    if (key === painted) return;
+    painted = key;
+    label.textContent = examples ? "Examples made with bettervid. Your videos will appear here." : `${items.length} ${items.length === 1 ? "video" : "videos"} in this project`;
+    feed.replaceChildren(...items.map((x) => {
+      const a = el("article", { id: `feed-${x.id}` }, el("video", { src: `/videos/${x.id}.mp4`, poster: x.thumb || undefined, controls: true, muted: true, playsinline: true, loop: true, preload: "metadata" }), el("b", {}, x.title));
+      seen.observe(a);
+      return a;
+    }));
+    titles.replaceChildren(...items.map((x) => el("button", { type: "button", onclick: () => { titles.classList.remove("open"); listBtn.setAttribute("aria-expanded", "false"); const t = document.getElementById(`feed-${x.id}`); if (t) feed.scrollTo({ top: t.offsetTop - feed.offsetTop, behavior: "smooth" }); } }, x.title, el("small", {}, [x.style, x.seconds && clock(x.seconds)].filter(Boolean).join(" · ")))));
+  };
+  const known = new Map();
+  async function paintLog() {
+    if (!state.messages.length) {
+      log.replaceChildren(el("div", { class: "empty-chat" }, el("h3", {}, "Start a project"), el("p", {}, "Add your files on the left, then ask for videos here, one message per video. Each one appears on the right when it is done.")));
+    } else {
+      await Promise.all(state.ids.map(async (id) => { try { known.set(id, await api(`/api/videos/${id}`)); } catch {} }));
+      log.replaceChildren(...state.messages.map((m) => {
+        if (m.who === "you") return el("div", { class: "msg you" }, m.text);
+        const v = known.get(m.id);
+        if (!v) return el("div", { class: "msg bv" }, el("small", {}, "Starting..."));
+        const ph = phases(v);
+        if (v.video && !v.running) return el("div", { class: "msg bv" }, el("b", {}, v.title || "Your video is ready"), el("small", {}, "Ready. It is on the right."), el("a", { class: "btn quiet open", href: `#/p/${m.id}` }, "Open it"));
+        if (failedNote(v)) return el("div", { class: "msg bv" }, el("b", {}, "That one did not finish."), el("small", {}, "Send the same words again to retry."));
+        return el("div", { class: "msg bv" }, el("b", {}, v.title || "Making your video"), el("small", {}, v.queued ? "Waiting for its turn" : ph.now ?? "Starting"), el("div", { class: "bar" }, el("i", { style: `width:${ph.pct}%` })));
+      }));
+      log.scrollTop = log.scrollHeight;
+    }
+    const mine = state.ids.map((id) => known.get(id)).filter((v) => v && v.video && !v.running).map((v) => ({ id: v.id, title: v.title, thumb: v.thumb, style: v.style, seconds: v.seconds }));
+    paintFeed(mine.length ? mine : show, !mine.length);
+    const busy = state.ids.some((id) => { const v = known.get(id); return !v || v.running || v.queued; });
+    clearTimeout(timer);
+    if (busy && location.hash.startsWith("#/project")) timer = setTimeout(paintLog, 3000);
+  }
+  paintLog();
+}
+
+const views = { home, gallery, batch, project };
 function route() {
   clearTimeout(timer);
   replaying = undefined;
@@ -1042,9 +1244,11 @@ function route() {
   let view = "home";
   let run = home;
   if (page && views[page]) { view = page; run = views[page]; }
-  else if (page === "p" && id) { view = "studio"; run = () => studio(id, tab); }
+  else if (page === "p" && id && tab) { view = "studio"; run = () => studio(id, tab); }
+  else if (page === "p" && id) { view = "watch"; run = () => watch(id); }
   else if (page && /^[a-z0-9-]+$/.test(page)) { location.replace(`#/p/${page}`); return; }
   if (view !== "studio") delete app.dataset.studio;
+  app.classList.toggle("project", view === "project");
   for (const a of document.querySelectorAll("nav.main a")) a.toggleAttribute("aria-current", a.dataset.nav === view) && a.setAttribute("aria-current", "page");
   if (route.last !== `${view}/${id ?? ""}`) scrollTo(0, 0);
   route.last = `${view}/${id ?? ""}`;

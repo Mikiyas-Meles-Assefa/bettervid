@@ -30,6 +30,8 @@ test("fake reasoner selects moments; spacing includes full effect duration with 
 
 test("rejects invented moments and unsafe music plans", () => {
   const moments = collectMoments(project);
-  assert.throws(() => placements({ additions: [], effects: [{ moment: "missing", name: "pop", level: -20, why: "" }], music: [] }, moments, 30, 4), /unknown moment/);
-  assert.throws(() => placements({ additions: [], effects: [], music: [] }, moments, 30, 4), /must start/);
+  assert.deepEqual(placements({ additions: [], effects: [{ moment: "missing", name: "pop", level: -20, why: "" }], music: [] }, moments, 30, 4).hits, []); // a cue on a missing moment is dropped
+  const quiet = placements({ additions: [], effects: [], music: [] }, moments, 30, 4).music;
+  assert.equal(quiet[0]!.at, 0); // a plan with no bed starts in silence instead of failing
+  assert.equal(quiet[0]!.level, -80);
 });

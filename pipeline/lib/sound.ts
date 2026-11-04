@@ -62,26 +62,26 @@ export function collectMoments(p: Project): Moment[] {
 }
 
 export function placements(plan: SoundPlan, moments: Moment[], fps: number, seconds: number) {
+  // A cue on a moment or a sound that does not exist is dropped: one bad cue never costs the video its sound.
   const time = (id: string) => {
     const moment = moments.find((m) => m.id === id);
-    if (!moment) throw new Error(`sound plan names unknown moment ${id}`);
-    return moment.frame / fps;
+    return moment ? moment.frame / fps : NaN;
   };
   const hits: Hit[] = [];
-  for (const e of plan.effects.map((e) => ({ ...e, at: time(e.moment) })).sort((a, b) => a.at - b.at)) {
+  for (const e of plan.effects.map((e) => ({ ...e, at: time(e.moment) })).filter((e) => Number.isFinite(e.at)).sort((a, b) => a.at - b.at)) {
     const def = KIT.sfx[e.name];
-    if (!def) throw new Error(`unknown sound ${e.name}`);
+    if (!def) continue;
     if (!Number.isFinite(e.level)) throw new Error("invalid effect level");
     const last = hits.at(-1);
     if (e.at < 0 || e.at >= seconds || (last && e.at < last.at + Math.max(1.5, KIT.sfx[last.name]!.seconds))) continue;
     hits.push({ name: e.name, at: e.at, level: Math.min(-18, Math.max(-40, e.level)), why: e.why });
   }
-  const music = plan.music.map((e) => {
-    if (!KIT.music[e.name] || !Number.isFinite(e.level)) throw new Error(`invalid music cue ${e.name}`);
-    return { ...e, at: time(e.moment), level: Math.min(0, Math.max(-80, e.level)) };
-  }).filter((e) => e.at >= 0 && e.at < seconds).sort((a, b) => a.at - b.at);
-  if (!music.length || music[0]!.at !== 0) throw new Error("music plan must start at the video beginning; use -80 dB for silence");
-  if (new Set(music.map((e) => e.at)).size !== music.length) throw new Error("music cues must have distinct times");
+  // Music cues that name no known bed or moment are dropped, one cue per time is kept, and a plan that does not start
+  // at the beginning starts there in silence, so the mix always has a valid bed.
+  const music = plan.music.filter((e) => KIT.music[e.name] && Number.isFinite(e.level)).map((e) => ({ ...e, at: time(e.moment), level: Math.min(0, Math.max(-80, e.level)) }))
+    .filter((e) => Number.isFinite(e.at) && e.at >= 0 && e.at < seconds).sort((a, b) => a.at - b.at)
+    .filter((e, i, all) => i === 0 || e.at !== all[i - 1]!.at);
+  if (!music.length || music[0]!.at !== 0) music.unshift({ moment: "start", name: music[0]?.name ?? Object.keys(KIT.music)[0]!, level: -80, why: "silence until the first cue", at: 0 });
   return { hits, music };
 }
 

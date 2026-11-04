@@ -425,14 +425,14 @@ const server = createServer(async (req, res) => {
       // Something is being made already, or others are waiting: this one joins the line instead of being turned away.
       if (running || styling || queueState().items.length || DRY) {
         const p = await create({ prompt, style, persona, seconds: LENGTHS[b.length] ?? 0, staged: staged && join(STAGING, staged), publicSite: PUBLIC_SITE });
-        if (staged) rmSync(join(STAGING, staged), { recursive: true, force: true });
+        if (staged && b.keep !== true) rmSync(join(STAGING, staged), { recursive: true, force: true });
         enqueue([p.id]);
         pump();
         return send(res, 200, { id: p.id, queued: position(p.id) });
       }
       const id = await start(prompt, style, persona, b.length, staged);
-      // The run copied the files into its project before announcing its id.
-      if (staged) rmSync(join(STAGING, staged), { recursive: true, force: true });
+      // The run copied the files into its project before announcing its id. A project keeps them for its next videos.
+      if (staged && b.keep !== true) rmSync(join(STAGING, staged), { recursive: true, force: true });
       return send(res, 200, { id });
     }
     if (path === "/api/uploads" && req.method === "POST") {
